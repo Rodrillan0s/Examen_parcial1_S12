@@ -1,0 +1,284 @@
+<div class="min-h-screen bg-gray-50 dark:bg-slate-950 p-4 md:p-6 lg:p-8">
+  <div class="max-w-7xl mx-auto space-y-6">
+
+    <div class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-md p-5 shadow-sm">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+            Dinero Retenido
+          </h1>
+          <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">
+            Simulación y consulta de fondos retenidos por emergencia.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          (click)="cargarDatos(); cargarEmergencias()"
+          [disabled]="cargando || cargandoEmergencias"
+          class="px-4 py-2 rounded-md bg-[#0052cc] text-white text-sm font-bold hover:bg-[#003d99] disabled:opacity-50 flex items-center justify-center gap-2">
+          <div *ngIf="cargando || cargandoEmergencias" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+          {{ cargando || cargandoEmergencias ? 'Cargando...' : 'Actualizar' }}
+        </button>
+      </div>
+    </div>
+
+    <div
+      *ngIf="alerta"
+      class="p-3 rounded-md border text-sm font-semibold"
+      [ngClass]="tipoAlerta === 'ok'
+        ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900'
+        : 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-900'">
+      {{ alerta }}
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+
+      <div class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-md p-5 shadow-sm">
+        <p class="text-xs font-bold uppercase text-gray-500 dark:text-slate-400">
+          Total retenido
+        </p>
+
+        <h2 class="text-3xl font-bold text-gray-900 dark:text-white mt-2">
+          Bs. {{ formatearMonto(totalRetenido) }}
+        </h2>
+
+        <p class="text-xs text-gray-500 dark:text-slate-400 mt-2">
+          {{ esAdmin() ? 'Total retenido en el sistema.' : 'Total retenido en tus emergencias.' }}
+        </p>
+      </div>
+
+      <div class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-md p-5 shadow-sm">
+        <p class="text-xs font-bold uppercase text-gray-500 dark:text-slate-400">
+          Liberado simulado
+        </p>
+
+        <h2 class="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mt-2">
+          Bs. {{ formatearMonto(montoLiberadoSimulado) }}
+        </h2>
+
+        <p class="text-xs text-gray-500 dark:text-slate-400 mt-2">
+          Monto liberado en esta sesión de prueba.
+        </p>
+      </div>
+
+      <div class="lg:col-span-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-md p-5 shadow-sm">
+        <h2 class="text-sm font-bold text-gray-900 dark:text-white uppercase mb-4">
+          Simular retención
+        </h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <select
+            [(ngModel)]="formRetencion.nro_emergencia"
+            (change)="seleccionarEmergencia()"
+            class="px-3 py-2 rounded-md border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-[#0052cc]">
+
+            <option [ngValue]="null">
+              {{ cargandoEmergencias ? 'Cargando emergencias...' : 'Seleccionar emergencia' }}
+            </option>
+
+            <option *ngFor="let e of emergencias" [ngValue]="e.nro_emergencia">
+              #{{ e.nro_emergencia }} - {{ e.tipo_emergencia }} - {{ e.nombre_usuario || 'Sin cliente' }}
+            </option>
+          </select>
+
+          <input
+            type="number"
+            [(ngModel)]="formRetencion.monto"
+            placeholder="Monto Bs."
+            class="px-3 py-2 rounded-md border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-[#0052cc]">
+
+          <button
+            type="button"
+            (click)="retenerDinero()"
+            [disabled]="procesando || !emergenciaSeleccionada"
+            class="px-4 py-2 rounded-md bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 disabled:opacity-50 flex items-center justify-center gap-2">
+            <div *ngIf="procesando" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            {{ procesando ? 'Guardando...' : 'Retener dinero' }}
+          </button>
+        </div>
+
+        <div *ngIf="emergenciaSeleccionada" class="mt-4 border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/20 rounded-md overflow-hidden">
+          <div class="px-4 py-3 border-b border-amber-200 dark:border-amber-900">
+            <p class="text-xs font-bold uppercase text-amber-700 dark:text-amber-400">
+              Vas a retener dinero para esta emergencia
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 p-4 text-sm">
+            <div>
+              <p class="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase">Emergencia</p>
+              <p class="text-gray-900 dark:text-white font-semibold">
+                #{{ emergenciaSeleccionada.nro_emergencia }} - {{ emergenciaSeleccionada.tipo_emergencia }}
+              </p>
+            </div>
+
+            <div>
+              <p class="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase">Cliente</p>
+              <p class="text-gray-900 dark:text-white font-semibold">
+                {{ emergenciaSeleccionada.nombre_usuario || 'Sin cliente' }}
+              </p>
+            </div>
+
+            <div>
+              <p class="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase">Vehículo</p>
+              <p class="text-gray-900 dark:text-white font-semibold">
+                {{ emergenciaSeleccionada.vehiculo_marca || 'Sin vehículo' }}
+                {{ emergenciaSeleccionada.vehiculo_placa ? '(' + emergenciaSeleccionada.vehiculo_placa + ')' : '' }}
+              </p>
+            </div>
+
+            <div>
+              <p class="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase">Estado</p>
+              <p
+                class="font-bold"
+                [ngClass]="{
+                  'text-red-600': emergenciaSeleccionada.estado === 'PENDIENTE',
+                  'text-amber-600': emergenciaSeleccionada.estado === 'EN CURSO',
+                  'text-emerald-600': emergenciaSeleccionada.estado === 'RESUELTO',
+                  'text-indigo-600': emergenciaSeleccionada.estado === 'ACEPTADO' || emergenciaSeleccionada.estado === 'ACEPTADA'
+                }">
+                {{ emergenciaSeleccionada.estado }}
+              </p>
+            </div>
+
+            <div>
+              <p class="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase">Prioridad</p>
+              <p class="text-gray-900 dark:text-white font-semibold">
+                {{ emergenciaSeleccionada.prioridad || 'Sin prioridad' }}
+              </p>
+            </div>
+
+            <div>
+              <p class="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase">Monto a retener</p>
+              <p class="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                Bs. {{ formatearMonto(formRetencion.monto) }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="cargando" class="py-12 flex justify-center">
+      <div class="w-8 h-8 border-4 border-gray-200 border-t-[#0052cc] rounded-full animate-spin"></div>
+    </div>
+
+    <div *ngIf="!cargando && esAdmin()" class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-md shadow-sm overflow-hidden">
+      <div class="p-4 border-b border-gray-200 dark:border-slate-800">
+        <h2 class="text-sm font-bold text-gray-900 dark:text-white uppercase">
+          Fondos retenidos por usuario
+        </h2>
+      </div>
+
+      <div *ngIf="resumenUsuarios.length === 0" class="py-10 text-center text-sm text-gray-500 dark:text-slate-400">
+        No hay fondos retenidos para mostrar.
+      </div>
+
+      <div *ngIf="resumenUsuarios.length > 0" class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 dark:bg-slate-800 text-xs uppercase text-gray-500 dark:text-slate-400">
+            <tr>
+              <th class="text-left px-4 py-3">Cliente</th>
+              <th class="text-left px-4 py-3">Teléfono</th>
+              <th class="text-right px-4 py-3">Retenciones</th>
+              <th class="text-right px-4 py-3">Total retenido</th>
+              <th class="text-right px-4 py-3">Acción</th>
+            </tr>
+          </thead>
+
+          <tbody class="divide-y divide-gray-200 dark:divide-slate-800">
+            <tr *ngFor="let u of resumenUsuarios" class="hover:bg-gray-50 dark:hover:bg-slate-800">
+              <td class="px-4 py-3 font-semibold text-gray-900 dark:text-white">
+                {{ u.nombre_completo }}
+              </td>
+
+              <td class="px-4 py-3 text-gray-600 dark:text-slate-400">
+                {{ u.telefono || 'Sin teléfono' }}
+              </td>
+
+              <td class="px-4 py-3 text-right text-gray-600 dark:text-slate-400">
+                {{ u.cantidad_retenciones }}
+              </td>
+
+              <td class="px-4 py-3 text-right font-bold"
+                  [ngClass]="u.total_retenido > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-slate-500'">
+                Bs. {{ formatearMonto(u.total_retenido) }}
+              </td>
+
+              <td class="px-4 py-3 text-right">
+                <button
+                  type="button"
+                  (click)="liberarFondosUsuarioSimulado(u)"
+                  [disabled]="u.total_retenido <= 0 || estaUsuarioLiberado(u.nro_usuario)"
+                  class="px-3 py-1.5 rounded-md bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                  {{ estaUsuarioLiberado(u.nro_usuario) ? 'Liberado' : 'Liberar' }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div *ngIf="!cargando && !esAdmin()" class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-md shadow-sm overflow-hidden">
+      <div class="p-4 border-b border-gray-200 dark:border-slate-800">
+        <h2 class="text-sm font-bold text-gray-900 dark:text-white uppercase">
+          Mis fondos retenidos
+        </h2>
+      </div>
+
+      <div *ngIf="fondos.length === 0" class="py-10 text-center text-sm text-gray-500 dark:text-slate-400">
+        No tienes fondos retenidos.
+      </div>
+
+      <div *ngIf="fondos.length > 0" class="divide-y divide-gray-200 dark:divide-slate-800">
+        <div *ngFor="let f of fondos" class="p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div>
+            <p class="text-sm font-bold text-gray-900 dark:text-white">
+              Emergencia #{{ f.nro_emergencia }} - {{ f.tipo_emergencia }}
+            </p>
+
+            <p class="text-xs text-gray-500 dark:text-slate-400 mt-1">
+              {{ f.fecha_retencion | date:'dd/MM/yyyy HH:mm' }}
+            </p>
+
+            <p class="text-xs text-gray-500 dark:text-slate-400 mt-1">
+              {{ f.vehiculo_marca || 'Sin vehículo' }}
+              {{ f.vehiculo_placa ? '(' + f.vehiculo_placa + ')' : '' }}
+            </p>
+          </div>
+
+          <div class="text-left md:text-right">
+            <p
+              class="text-lg font-bold"
+              [ngClass]="f.estado_custodia === 'LIBERADO_SIMULADO'
+                ? 'text-gray-400 dark:text-slate-500'
+                : 'text-emerald-600 dark:text-emerald-400'">
+              Bs. {{ formatearMonto(f.monto_retenido) }}
+            </p>
+
+            <span
+              class="inline-flex mt-1 px-2 py-1 rounded-md text-[10px] font-bold uppercase border"
+              [ngClass]="{
+                'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900': f.estado_custodia === 'RETENIDO',
+                'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900': f.estado_custodia === 'LIBERADO_SIMULADO',
+                'bg-gray-50 text-gray-600 border-gray-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700': f.estado_custodia !== 'RETENIDO' && f.estado_custodia !== 'LIBERADO_SIMULADO'
+              }">
+              {{ f.estado_custodia }}
+            </span>
+
+            <button
+              type="button"
+              (click)="liberarFondoSimulado(f)"
+              [disabled]="estaFondoLiberado(f.id_custodia)"
+              class="mt-2 px-3 py-1.5 rounded-md bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed">
+              {{ estaFondoLiberado(f.id_custodia) ? 'Liberado' : 'Liberar fondos' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

@@ -1,0 +1,175 @@
+<div class="min-h-screen bg-[#f4f6f8] dark:bg-slate-900 font-sans p-4 sm:p-6 lg:p-8">
+
+  <main class="max-w-[1400px] mx-auto w-full space-y-4">
+
+    <div class="bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-700 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center p-4">
+      <div>
+        <h1 class="text-xl font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wide">Analítica Operacional y KPIs</h1>
+        <p class="text-xs text-gray-500 dark:text-slate-400 mt-0.5">Métricas de desempeño, SLAs y distribución de emergencias.</p>
+      </div>
+      
+      <button (click)="refrescarDashboard()" [disabled]="cargando"
+              class="mt-4 sm:mt-0 flex items-center gap-2 px-4 py-2 bg-[#0052cc] hover:bg-[#003d99] text-white text-xs font-bold uppercase transition-colors focus:outline-none disabled:opacity-50">
+        <div *ngIf="cargando" class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+        <svg *ngIf="!cargando" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5M20 20v-5h-5M5.5 15.5A7.5 7.5 0 0118.3 7.7L20 9.4M18.5 8.5A7.5 7.5 0 015.7 16.3L4 14.6"></path></svg>
+        <span>{{ cargando ? 'Consultando BD...' : 'Actualizar Datos' }}</span>
+      </button>
+    </div>
+
+    <div *ngIf="mensajeError && !cargando" class="bg-red-50 border-l-4 border-red-600 p-4 text-sm text-red-700 font-medium shadow-sm">
+      Error de Sincronización: {{ mensajeError }}
+    </div>
+
+    <div *ngIf="cargando" class="animate-pulse space-y-4">
+      <div class="grid grid-cols-1 sm:grid-cols-5 gap-4">
+        <div *ngFor="let i of [1,2,3,4,5]" class="h-20 bg-gray-200 dark:bg-slate-800 border border-gray-300 dark:border-slate-700"></div>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="h-64 bg-gray-200 dark:bg-slate-800 border border-gray-300 dark:border-slate-700"></div>
+        <div class="h-64 bg-gray-200 dark:bg-slate-800 border border-gray-300 dark:border-slate-700"></div>
+      </div>
+    </div>
+
+    <div *ngIf="metricas && !cargando" class="space-y-4">
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        
+        <div class="bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-700 p-4 border-t-4 border-t-blue-600 flex flex-col justify-between shadow-sm">
+          <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Volumen Total</p>
+          <div class="mt-2 flex justify-between items-end">
+            <h2 class="text-2xl font-black text-gray-800 dark:text-gray-100">{{ metricas.total_casos_historicos }}</h2>
+            <span class="text-xs text-gray-400">Casos</span>
+          </div>
+        </div>
+
+        <div class="bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-700 p-4 border-t-4 border-t-red-600 flex flex-col justify-between shadow-sm">
+          <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Casos Cancelados</p>
+          <div class="mt-2 flex justify-between items-end">
+            <h2 class="text-2xl font-black text-red-600 dark:text-red-500">{{ metricas.casos_cancelados }}</h2>
+            <span class="text-xs font-bold bg-red-100 text-red-700 px-1.5 py-0.5 rounded-sm">{{ getPorcentajeCancelados() }}%</span>
+          </div>
+        </div>
+
+        <div class="bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-700 p-4 border-t-4 border-t-emerald-500 flex flex-row justify-between items-center shadow-sm lg:col-span-1">
+          <div class="flex flex-col justify-between h-full">
+            <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Nivel de Cumplimiento SLA</p>
+            <h2 class="text-2xl font-black text-emerald-600 dark:text-emerald-500 mt-2">{{ metricas.nivel_cumplimiento_sla }}</h2>
+          </div>
+          
+          <div class="relative w-14 h-14 shrink-0">
+            <svg viewBox="0 0 36 36" class="w-full h-full transform -rotate-90">
+              <path class="text-gray-100 dark:text-slate-800"
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                fill="none" stroke="currentColor" stroke-width="3.5"
+              />
+              <path class="text-emerald-500 transition-all duration-1000 ease-out"
+                [attr.stroke-dasharray]="getSlaComoNumero() + ', 100'"
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"
+              />
+            </svg>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-700 p-4 border-t-4 border-t-slate-400 flex flex-col justify-between shadow-sm">
+          <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Tiempo Promedio de Asignación</p>
+          <div class="mt-2 flex justify-between items-end">
+            <h2 class="text-xl font-bold text-gray-800 dark:text-gray-100">{{ getTextoTiempo(metricas.tiempos_operativos.promedio_asignacion_minutos) }}</h2>
+          </div>
+        </div>
+
+        <div class="bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-700 p-4 border-t-4 border-t-slate-400 flex flex-col justify-between shadow-sm">
+          <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Tiempo Promedio Llegada</p>
+          <div class="mt-2 flex justify-between items-end">
+            <h2 class="text-xl font-bold text-gray-800 dark:text-gray-100">{{ getTextoTiempo(metricas.tiempos_operativos.promedio_llegada_minutos) }}</h2>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+        <div class="bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-700 shadow-sm flex flex-col h-80">
+          <div class="px-4 py-2 bg-[#f8f9fa] dark:bg-slate-900 border-b border-gray-300 dark:border-slate-700 flex justify-between items-center">
+            <h3 class="text-[11px] font-bold text-gray-700 dark:text-slate-300 uppercase tracking-wide">Incidentes por Tipo</h3>
+            <span class="text-[10px] text-gray-500 font-bold bg-white border border-gray-200 px-2 py-0.5">n={{ getTotalIncidentesPorTipo() }}</span>
+          </div>
+          
+          <div class="p-4 flex-1 overflow-y-auto custom-scrollbar relative">
+            <div class="space-y-4 w-full" *ngIf="metricas.incidentes_por_tipo.length > 0">
+              <div *ngFor="let item of metricas.incidentes_por_tipo; trackBy: trackByTipo" class="flex items-center text-xs">
+                <div class="w-24 font-semibold text-gray-600 dark:text-slate-300 truncate pr-2 uppercase">{{ item.tipo }}</div>
+                <div class="flex-1 flex items-center">
+                  <div class="h-4 bg-[#0052cc] transition-all duration-1000" [style.width.%]="getAnchoBarraIncidente(item.cantidad)"></div>
+                  <span class="ml-2 font-mono font-bold text-gray-800 dark:text-gray-200">{{ item.cantidad }}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div *ngIf="metricas.incidentes_por_tipo.length === 0" class="h-full flex items-center justify-center text-xs text-gray-400">
+              Sin datos para graficar.
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-700 shadow-sm flex flex-col h-80">
+          <div class="px-4 py-2 bg-[#f8f9fa] dark:bg-slate-900 border-b border-gray-300 dark:border-slate-700">
+            <h3 class="text-[11px] font-bold text-gray-700 dark:text-slate-300 uppercase tracking-wide">Talleres Mas Eficientes</h3>
+          </div>
+          
+          <div class="p-4 flex-1 overflow-y-auto custom-scrollbar">
+            <div class="space-y-4 w-full" *ngIf="metricas.talleres_eficientes.length > 0">
+              <div *ngFor="let item of metricas.talleres_eficientes; let i = index; trackBy: trackByTaller" class="flex items-center text-xs">
+                <div class="w-32 font-semibold text-gray-600 dark:text-slate-300 truncate pr-2 uppercase">{{ i + 1 }}. {{ item.taller }}</div>
+                <div class="flex-1 flex items-center">
+                  <div class="h-4 bg-[#10b981] transition-all duration-1000" [style.width.%]="getAnchoBarraTaller(item.tiempo_promedio_min)"></div>
+                  <span class="ml-2 font-mono font-bold text-gray-800 dark:text-gray-200">{{ item.tiempo_promedio_min }} min</span>
+                </div>
+              </div>
+            </div>
+
+            <div *ngIf="metricas.talleres_eficientes.length === 0" class="h-full flex items-center justify-center text-xs text-gray-400">
+              No hay talleres con métricas suficientes.
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-700 shadow-sm">
+        <div class="px-4 py-2 bg-[#f8f9fa] dark:bg-slate-900 border-b border-gray-300 dark:border-slate-700 flex justify-between items-center">
+          <h3 class="text-[11px] font-bold text-gray-700 dark:text-slate-300 uppercase tracking-wide">Data Espacial Raw (Últimos Registros)</h3>
+          <span class="text-[10px] text-gray-500 font-bold border border-gray-200 bg-white px-2 py-0.5">Límite: 10</span>
+        </div>
+        
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-gray-50 dark:bg-slate-900/50 text-gray-500 dark:text-slate-400 font-bold uppercase tracking-wider">
+                <th class="px-4 py-2 border-b border-gray-300 dark:border-slate-700 w-16 text-center">ID</th>
+                <th class="px-4 py-2 border-b border-gray-300 dark:border-slate-700">Tipo de Incidente</th>
+                <th class="px-4 py-2 border-b border-gray-300 dark:border-slate-700 font-mono">Latitud</th>
+                <th class="px-4 py-2 border-b border-gray-300 dark:border-slate-700 font-mono">Longitud</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-slate-800 text-gray-800 dark:text-gray-200">
+              <tr *ngIf="metricas.mapa_calor.length === 0">
+                <td colspan="4" class="px-4 py-6 text-center text-gray-400">Base de datos espacial vacía.</td>
+              </tr>
+              <tr *ngFor="let punto of metricas.mapa_calor | slice:0:10; let i = index; trackBy: trackByPunto" class="hover:bg-[#f8f9fa] dark:hover:bg-slate-900 transition-colors">
+                <td class="px-4 py-2 text-center text-gray-500 border-r border-gray-100 dark:border-slate-800">{{ i + 1 }}</td>
+                <td class="px-4 py-2 font-bold uppercase">{{ punto.tipo }}</td>
+                <td class="px-4 py-2 font-mono text-[11px]">{{ punto.lat | number:'1.5-5' }}</td>
+                <td class="px-4 py-2 font-mono text-[11px]">{{ punto.lng | number:'1.5-5' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>

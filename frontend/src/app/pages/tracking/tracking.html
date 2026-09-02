@@ -1,0 +1,104 @@
+<div class="flex flex-col lg:flex-row h-screen bg-[#f4f6f8] dark:bg-slate-950 font-sans overflow-hidden">
+
+  <div *ngIf="cargando" class="absolute inset-0 z-[1000] flex items-center justify-center bg-white dark:bg-slate-950">
+    <div class="flex flex-col items-center max-w-sm text-center">
+      <div class="w-8 h-8 border-4 border-gray-200 dark:border-slate-800 border-t-[#0052cc] rounded-full animate-spin"></div>
+      <p class="mt-4 text-xs font-bold text-gray-800 dark:text-gray-200 uppercase tracking-widest">{{ estadoGPS }}</p>
+      <p class="mt-1 text-[10px] text-gray-500">Sincronizando con los sistemas de despacho vial.</p>
+    </div>
+  </div>
+
+  <main class="flex-1 relative z-0 h-[50vh] lg:h-full bg-[#e5e7eb] dark:bg-slate-800 order-1 lg:order-1 border-b lg:border-b-0 border-gray-300 dark:border-slate-700">
+    <div id="mapa-tracking" class="w-full h-full z-0 outline-none"></div>
+  </main>
+
+  <aside *ngIf="!cargando && emergencia" class="w-full lg:w-[420px] h-[50vh] lg:h-full bg-white dark:bg-slate-900 lg:border-l border-gray-300 dark:border-slate-700 flex flex-col z-10 shadow-xl shrink-0 order-2 lg:order-2">
+    
+    <div class="px-5 py-4 border-b border-gray-300 dark:border-slate-700 bg-[#f8f9fa] dark:bg-slate-900 flex-shrink-0">
+      <button (click)="volver()" class="flex items-center gap-1.5 text-[11px] font-bold uppercase text-gray-500 hover:text-[#0052cc] transition-colors mb-3 focus:outline-none tracking-wider">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+        Panel de Despacho Operativo
+      </button>
+      
+      <div class="flex justify-between items-start">
+        <div>
+          <h1 class="text-lg font-extrabold text-gray-900 dark:text-white uppercase tracking-normal leading-tight">ORDEN DE TRABAJO #{{ emergencia.nro_emergencia }}</h1>
+          <p class="text-xs text-[#0052cc] font-bold mt-0.5">{{ nombreTallerBase }}</p>
+        </div>
+        <span class="bg-amber-100 text-amber-900 border border-amber-300 px-2 py-1 text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-sm rounded-sm shrink-0">
+          <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+          Unidad en Tránsito
+        </span>
+      </div>
+    </div>
+
+    <div class="flex-1 overflow-y-auto custom-scrollbar bg-white dark:bg-slate-900">
+      
+      <div class="p-5 border-b border-gray-200 dark:border-slate-800">
+        <h3 class="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-widest mb-3">Métricas de Arribo</h3>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-[#f8f9fa] dark:bg-slate-950 border border-gray-200 dark:border-slate-700 px-4 py-3 border-l-4 border-l-[#0052cc] rounded-sm">
+            <p class="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase">ETA Estimado</p>
+            <p class="text-xl font-black text-gray-900 dark:text-white mt-1">{{ tiempoEstimado }}</p>
+          </div>
+          <div class="bg-[#f8f9fa] dark:bg-slate-950 border border-gray-200 dark:border-slate-700 px-4 py-3 border-l-4 border-l-gray-400 rounded-sm">
+            <p class="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase">Distancia Restante</p>
+            <p class="text-xl font-black text-gray-900 dark:text-white mt-1">{{ distanciaKm }} <span class="text-xs text-gray-500 font-normal">km</span></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-5 border-b border-gray-200 dark:border-slate-800">
+        <h3 class="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-widest mb-3">Sujeto de Atención</h3>
+        <table class="w-full text-left text-xs border-collapse rounded-sm overflow-hidden border border-gray-200 dark:border-slate-700">
+          <tbody class="divide-y divide-gray-200 dark:divide-slate-800">
+            <tr>
+              <td class="py-2 px-3 bg-gray-50 dark:bg-slate-800 text-gray-500 dark:text-slate-300 font-semibold w-1/3 border-r border-gray-200 dark:border-slate-700">Razón Social/Nombre</td>
+              <td class="py-2 px-3 text-gray-900 dark:text-gray-200 font-bold bg-white dark:bg-slate-900">{{ emergencia.nombre_usuario || 'CLIENTE GENÉRICO' }}</td>
+            </tr>
+            <tr>
+              <td class="py-2 px-3 bg-gray-50 dark:bg-slate-800 text-gray-500 dark:text-slate-300 font-semibold border-r border-gray-200 dark:border-slate-700">Línea de Contacto</td>
+              <td class="py-2 px-3 text-[#0052cc] dark:text-blue-400 font-extrabold bg-white dark:bg-slate-900 tracking-tight">{{ emergencia.telefono_cliente || 'N/A' }}</td>
+            </tr>
+            <tr>
+              <td class="py-2 px-3 bg-gray-50 dark:bg-slate-800 text-gray-500 dark:text-slate-300 font-semibold border-r border-gray-200 dark:border-slate-700">Nivel de Urgencia</td>
+              <td class="py-2 px-3 font-bold bg-white dark:bg-slate-900 flex items-center gap-1.5" [ngClass]="emergencia.prioridad === 'ALTA' ? 'text-red-600' : 'text-gray-900 dark:text-white'">
+                <span *ngIf="emergencia.prioridad === 'ALTA'" class="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
+                {{ emergencia.prioridad }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="p-5 border-b border-gray-200 dark:border-slate-800 bg-[#f8f9fa] dark:bg-slate-900/50">
+        <h3 class="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-widest mb-3">Activo Vehicular en Siniestro</h3>
+        <div class="flex items-center gap-4 bg-white dark:bg-slate-950 border border-gray-200 dark:border-slate-700 p-3 rounded-sm shadow-inner">
+          <div class="w-10 h-10 bg-gray-100 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-sm flex items-center justify-center text-gray-400 shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+          </div>
+          <div class="min-w-0">
+            <p class="font-bold text-gray-900 dark:text-white uppercase truncate">{{ emergencia.vehiculo_marca || 'Vehículo No Registrado' }}</p>
+            <p class="text-xs font-mono font-black border border-gray-300 text-gray-700 px-2 py-0.5 mt-1 inline-block rounded-sm bg-white">{{ emergencia.vehiculo_placa || 'S/P' }}</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-5 border-b border-gray-200 dark:border-slate-800">
+        <h3 class="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-widest mb-2">Clasificación Operativa del Incidente</h3>
+        <p class="text-sm font-semibold text-gray-800 dark:text-gray-300 uppercase border-l-4 border-red-500 dark:border-red-600 pl-3 py-1 bg-red-50 dark:bg-red-950/20 rounded-r-sm">{{ emergencia.tipo_emergencia }}</p>
+      </div>
+
+    </div>
+
+    <div class="p-5 border-t border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 flex-shrink-0">
+      <button (click)="completarServicio()" [disabled]="procesando" class="w-full py-2.5 bg-[#10b981] hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-widest rounded-sm transition-colors disabled:opacity-50 flex justify-center items-center gap-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1">
+        <div *ngIf="procesando" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+        <svg *ngIf="!procesando" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+        {{ procesando ? 'Procesando Cierre...' : 'Marcar Operación como RESUELTA' }}
+      </button>
+    </div>
+
+  </aside>
+
+</div>

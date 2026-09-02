@@ -1,0 +1,148 @@
+<div class="min-h-screen bg-gray-50 dark:bg-slate-950 p-4 sm:p-6 lg:p-8 font-sans transition-colors duration-300">
+  <div class="max-w-5xl mx-auto">
+    
+    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 p-5 sm:p-6 mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 transition-colors">
+      <div>
+        <button routerLink="/talleres" class="flex items-center gap-2 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors mb-3 w-fit">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+          Volver a la Red de Talleres
+        </button>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white flex items-center gap-3">
+          Catálogo de Servicios
+          <span class="text-xs font-bold px-2.5 py-1 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 rounded-md border border-blue-200 dark:border-blue-800/50 uppercase tracking-wider mt-1 sm:mt-0">Taller #{{ nroTaller }}</span>
+        </h1>
+        <p class="text-sm text-gray-500 dark:text-slate-400 mt-1.5">Define y administra las especialidades operativas de esta sucursal.</p>
+      </div>
+      
+      <button (click)="abrirModalNuevo()" class="flex items-center justify-center gap-2 px-6 py-3 bg-blue-700 dark:bg-blue-600 hover:bg-blue-800 dark:hover:bg-blue-500 text-white text-sm font-bold rounded-lg transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 w-full sm:w-auto">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+        Registrar Servicio
+      </button>
+    </div>
+
+    <div *ngIf="mensajeError" class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-400 border border-red-200 dark:border-red-800/50 rounded-lg text-sm font-medium flex items-center gap-3 animate-fade-in-up">
+      <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      {{ mensajeError }}
+    </div>
+
+    <div class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden transition-colors relative min-h-[300px]">
+      
+      <div *ngIf="cargando" class="absolute inset-0 z-10 flex flex-col justify-center items-center bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm">
+        <div class="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 dark:border-slate-700 border-t-blue-600 dark:border-t-blue-500 mb-3"></div>
+        <span class="text-xs font-bold text-gray-500 dark:text-slate-400 tracking-widest uppercase animate-pulse">Cargando Catálogo...</span>
+      </div>
+
+      <div class="overflow-x-auto" *ngIf="!cargando">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-gray-50 dark:bg-slate-800/40 border-b border-gray-200 dark:border-slate-800 text-[11px] uppercase tracking-widest text-gray-500 dark:text-slate-400">
+              <th class="p-5 font-extrabold">Especialidad / Servicio</th>
+              <th class="p-5 font-extrabold w-1/2">Detalles Operativos</th>
+              <th class="p-5 font-extrabold hidden md:table-cell text-center">Registro</th>
+              <th class="p-5 font-extrabold text-right">Opciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-slate-800/60">
+            
+            <tr *ngFor="let s of servicios" class="hover:bg-blue-50/50 dark:hover:bg-slate-800/30 transition-colors group">
+              <td class="p-5">
+                <div class="flex items-center gap-4">
+                  <div class="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-100 dark:border-indigo-800/50 flex-shrink-0 shadow-sm">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065zM15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                  </div>
+                  <div>
+                    <p class="text-sm font-bold text-gray-900 dark:text-white">{{ s.nombre_servicio }}</p>
+                    <p class="text-[10px] text-gray-400 dark:text-slate-500 uppercase tracking-wide mt-0.5 font-semibold">ID: {{ s.nro_servicio }}</p>
+                  </div>
+                </div>
+              </td>
+              <td class="p-5">
+                <p class="text-xs text-gray-600 dark:text-slate-400 line-clamp-2 leading-relaxed">{{ s.descripcion || 'Sin especificaciones adicionales registradas.' }}</p>
+              </td>
+              <td class="p-5 hidden md:table-cell text-center">
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-medium bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-400 border border-gray-200 dark:border-slate-700">
+                  <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                  {{ s.fecha_registro | date:'dd/MM/yyyy' }}
+                </span>
+              </td>
+              <td class="p-5 text-right">
+                <div class="flex items-center justify-end gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                  <button (click)="abrirModalEdicion(s)" class="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-800 rounded-lg transition-all" title="Editar">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                  </button>
+                  <button (click)="eliminarServicio(s.nro_servicio)" class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all" title="Eliminar">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+
+            <tr *ngIf="servicios.length === 0">
+              <td colspan="4" class="p-16 text-center">
+                <div class="w-20 h-20 bg-gray-50 dark:bg-slate-800/50 rounded-full flex items-center justify-center mx-auto mb-4 border border-gray-100 dark:border-slate-800">
+                  <svg class="w-10 h-10 text-gray-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                </div>
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-1">Sin Servicios Registrados</h3>
+                <p class="text-sm text-gray-500 dark:text-slate-400 max-w-sm mx-auto">Aún no se ha definido el catálogo de asistencia para este taller. Comienza registrando el primer servicio operativo.</p>
+              </td>
+            </tr>
+
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="mostrarModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/75 dark:bg-black/80 backdrop-blur-sm transition-opacity">
+  <div class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden animate-fade-in-up">
+    
+    <div class="flex justify-between items-center p-5 border-b border-gray-200 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/30">
+      <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+        <span class="p-1.5 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-400 rounded-md">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+        </span>
+        {{ modoEdicion ? 'Actualizar Servicio' : 'Añadir Nuevo Servicio' }}
+      </h3>
+      <button (click)="cerrarModal()" class="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+    </div>
+
+    <form #form="ngForm" class="p-6 space-y-5">
+      
+      <div>
+        <label class="block text-xs font-bold text-gray-700 dark:text-slate-300 uppercase tracking-wider mb-2">Categoría del Servicio *</label>
+        <select name="servicio_predefinido" [(ngModel)]="servicioSeleccionado" required
+                class="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-700 rounded-lg p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-600 focus:border-blue-600 outline-none transition-shadow">
+          <option value="" disabled>-- Seleccione una opción --</option>
+          <option *ngFor="let s of serviciosPredefinidos" [value]="s">{{ s }}</option>
+        </select>
+      </div>
+
+      <div *ngIf="servicioSeleccionado === 'OTROS'" class="animate-fade-in-up">
+        <label class="block text-xs font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider mb-2">Especificar Nombre del Servicio *</label>
+        <input type="text" name="nombre_personalizado" [(ngModel)]="nombrePersonalizado" [required]="servicioSeleccionado === 'OTROS'" placeholder="Ej: Cambio de Parabrisas"
+               class="w-full bg-blue-50/50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/50 rounded-lg p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-600 outline-none transition-shadow">
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-gray-700 dark:text-slate-300 uppercase tracking-wider mb-2">Detalles / Alcance (Opcional)</label>
+        <textarea name="descripcion" [(ngModel)]="servicioForm.descripcion" rows="3" placeholder="Describe brevemente qué incluye este servicio..."
+                  class="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-700 rounded-lg p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-600 outline-none transition-shadow resize-none"></textarea>
+      </div>
+    </form>
+
+    <div class="p-5 border-t border-gray-200 dark:border-slate-800 bg-gray-50/80 dark:bg-slate-800/50 flex justify-end gap-3">
+      <button type="button" (click)="cerrarModal()" class="px-5 py-2.5 text-sm font-bold text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-lg transition-colors shadow-sm">
+        Cancelar
+      </button>
+      <button type="button" (click)="guardarServicio()" [disabled]="procesando || !servicioSeleccionado || (servicioSeleccionado === 'OTROS' && !nombrePersonalizado)"
+              class="px-7 py-2.5 text-sm font-bold text-white bg-blue-700 dark:bg-blue-600 hover:bg-blue-800 dark:hover:bg-blue-500 rounded-lg transition-all disabled:opacity-50 flex items-center gap-2 shadow-md">
+        <span *ngIf="procesando" class="animate-spin rounded-full h-4 w-4 border-2 border-white border-r-transparent"></span>
+        Confirmar Registro
+      </button>
+    </div>
+
+  </div>
+</div>

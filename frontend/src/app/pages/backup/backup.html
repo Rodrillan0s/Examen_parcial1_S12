@@ -1,0 +1,128 @@
+<div class="p-6 max-w-6xl mx-auto">
+  
+  <div class="flex items-center mb-8">
+    <div class="p-3 bg-slate-900 text-white rounded-full mr-4 shadow-sm">
+      <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path>
+      </svg>
+    </div>
+    <div>
+      <h1 class="text-2xl font-bold text-gray-800">Gestión de Copias de Seguridad</h1>
+      <p class="text-gray-500 text-sm mt-1">Protege la base de datos de la red de talleres mediante respaldos manuales o programados.</p>
+    </div>
+  </div>
+
+  <div *ngIf="mensaje" 
+       [ngClass]="{'bg-green-50 text-green-800 border-green-200': tipoMensaje === 'exito', 'bg-red-50 text-red-800 border-red-200': tipoMensaje === 'error'}"
+       class="p-4 mb-6 rounded-md border flex items-center shadow-sm transition-all duration-300">
+    <span class="mr-3">
+      <svg *ngIf="tipoMensaje === 'exito'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+      <svg *ngIf="tipoMensaje === 'error'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+    </span>
+    <span class="font-medium">{{ mensaje }}</span>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+      <div class="bg-gray-50 border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+        <h3 class="text-lg font-semibold text-gray-800 flex items-center">
+          <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+          Extracción Manual
+        </h3>
+        <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded">Inmediato</span>
+      </div>
+      
+      <div class="p-6 flex-grow flex flex-col justify-center text-center">
+        <p class="text-gray-600 mb-6 text-sm">
+          Descarga un archivo <strong>.sql</strong> con el estado exacto de la base de datos en este instante. Recomendado antes de realizar actualizaciones de versión o mantenimientos correctivos.
+        </p>
+
+        <button 
+          (click)="descargarBackup()" 
+          [disabled]="cargandoManual"
+          class="mx-auto inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors w-full sm:w-auto">
+          
+          <svg *ngIf="cargandoManual" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          
+          {{ cargandoManual ? 'Procesando...' : 'Descargar Ahora' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+      <div class="bg-gray-50 border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+        <h3 class="text-lg font-semibold text-gray-800 flex items-center">
+          <svg class="w-5 h-5 mr-2 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path></svg>
+          Programación en EC2 (AWS)
+        </h3>
+        <span class="px-2 py-1 bg-orange-100 text-orange-800 text-xs font-semibold rounded">Cron Job</span>
+      </div>
+      
+      <div class="p-6 flex-grow">
+        <p class="text-gray-600 mb-5 text-sm">
+          Configura una tarea en el servidor de despliegue para generar respaldos automáticos sin intervención manual.
+        </p>
+
+        <form (ngSubmit)="guardarConfiguracionAutomatica()" class="space-y-4">
+          
+          <div class="flex items-center justify-between bg-slate-50 p-3 rounded border border-slate-200">
+            <div>
+              <span class="block text-sm font-medium text-gray-700">Estado del servicio</span>
+              <span class="block text-xs text-gray-500">Activa o pausa las copias de seguridad.</span>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" name="habilitado" [(ngModel)]="configAutomatica.habilitado" class="sr-only peer">
+              <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-slate-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-slate-900"></div>
+            </label>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4" [class.opacity-50]="!configAutomatica.habilitado">
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Frecuencia</label>
+              <select name="frecuencia" [(ngModel)]="configAutomatica.frecuencia" [disabled]="!configAutomatica.habilitado" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-slate-500 focus:ring-slate-500 sm:text-sm p-2 border disabled:bg-gray-100">
+                <option value="diario">Diario</option>
+                <option value="semanal">Semanal (Domingos)</option>
+                <option value="mensual">Mensual (Día 1)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Hora de ejecución</label>
+              <input type="time" name="hora_ejecucion" [(ngModel)]="configAutomatica.hora_ejecucion" [disabled]="!configAutomatica.habilitado" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-slate-500 focus:ring-slate-500 sm:text-sm p-2 border disabled:bg-gray-100">
+            </div>
+
+            <div class="col-span-2">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Política de Retención</label>
+              <select name="retencion_dias" [(ngModel)]="configAutomatica.retencion_dias" [disabled]="!configAutomatica.habilitado" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-slate-500 focus:ring-slate-500 sm:text-sm p-2 border disabled:bg-gray-100">
+                <option [ngValue]="7">Conservar últimos 7 días</option>
+                <option [ngValue]="15">Conservar últimos 15 días</option>
+                <option [ngValue]="30">Conservar últimos 30 días</option>
+              </select>
+            </div>
+
+          </div>
+
+          <div class="pt-4 mt-4 border-t border-gray-100 text-right">
+            <button 
+              type="submit" 
+              [disabled]="cargandoAuto"
+              class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-slate-900 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 disabled:opacity-50 transition-colors">
+              <svg *ngIf="cargandoAuto" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              {{ cargandoAuto ? 'Aplicando...' : 'Guardar Configuración' }}
+            </button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+
+  </div>
+</div>

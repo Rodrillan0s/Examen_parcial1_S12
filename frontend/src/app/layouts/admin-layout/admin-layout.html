@@ -1,0 +1,270 @@
+<div class="h-screen flex overflow-hidden bg-gray-100 dark:bg-slate-950 font-sans transition-colors duration-300">
+
+  <!-- Overlay mobile -->
+  <div *ngIf="sidebarAbierto"
+       (click)="cerrarSidebarMobile()"
+       class="fixed inset-0 z-40 bg-gray-900/60 backdrop-blur-sm md:hidden transition-opacity duration-300">
+  </div>
+
+  <!-- Sidebar -->
+  <aside
+    [ngClass]="sidebarColapsado ? 'w-64 md:w-20' : 'w-64'"
+    [class.-translate-x-full]="!sidebarAbierto"
+    [class.translate-x-0]="sidebarAbierto"
+    class="fixed md:relative inset-y-0 left-0 z-50 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 transition-all duration-300 md:translate-x-0 flex flex-col h-full shadow-2xl md:shadow-none overflow-hidden">
+
+    <!-- Logo / Título -->
+    <div class="h-16 flex items-center justify-between border-b border-gray-200 dark:border-slate-800 shrink-0 gap-3"
+         [ngClass]="sidebarColapsado ? 'px-4 md:justify-center md:px-0' : 'px-6'">
+
+      <span *ngIf="!sidebarColapsado || sidebarAbierto"
+            class="text-lg font-bold tracking-wider text-gray-900 dark:text-white uppercase truncate">
+        EM.<span class="font-light">VEHICULARES</span>
+      </span>
+
+      <button (click)="cerrarSidebarMobile()"
+              class="md:hidden p-1.5 text-gray-400 hover:text-red-500 rounded-md hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Navegación -->
+    <nav class="flex-1 overflow-y-auto py-4 scrollbar-thin">
+
+      <!-- Panel General -->
+      <div class="mb-6" [ngClass]="sidebarColapsado ? 'px-4 md:px-2' : 'px-4'">
+        <a routerLink="/home"
+           (click)="cerrarSidebarMobile()"
+           [title]="sidebarColapsado ? 'Panel General' : ''"
+           class="flex items-center py-2 text-sm font-semibold text-gray-600 dark:text-slate-400 hover:text-blue-900 dark:hover:text-blue-400 bg-gray-50 dark:bg-slate-800/50 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-sm transition-colors border border-transparent hover:border-gray-200 dark:hover:border-slate-700"
+           [ngClass]="sidebarColapsado ? 'px-3 gap-3 md:justify-center md:px-0 md:gap-0' : 'px-3 gap-3'">
+          <svg class="w-5 h-5 min-w-max" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+          </svg>
+          <span *ngIf="!sidebarColapsado || sidebarAbierto">Panel General</span>
+        </a>
+      </div>
+
+      <!-- Módulos del menú -->
+      <div *ngFor="let modulo of menuFiltrado" class="mb-4">
+        <button (click)="toggleAcordeon(modulo)"
+                [title]="sidebarColapsado ? modulo.titulo : ''"
+                class="w-full flex items-center py-2.5 text-left hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors group focus:outline-none"
+                [ngClass]="sidebarColapsado ? 'px-6 md:justify-center md:px-0' : 'px-6 justify-between'">
+
+          <div class="flex items-center" [ngClass]="sidebarColapsado ? 'gap-3 md:gap-0' : 'gap-3'">
+            <svg class="w-5 h-5 min-w-max text-gray-400 dark:text-slate-500 group-hover:text-blue-900 dark:group-hover:text-blue-400 transition-colors"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" [attr.d]="modulo.icono"/>
+            </svg>
+            <span *ngIf="!sidebarColapsado || sidebarAbierto"
+                  class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-slate-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors truncate">
+              {{ modulo.titulo }}
+            </span>
+          </div>
+
+          <svg *ngIf="!sidebarColapsado || sidebarAbierto"
+               class="w-4 h-4 text-gray-400 transition-transform duration-200"
+               [class.rotate-180]="modulo.expandido"
+               fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </button>
+
+        <div *ngIf="modulo.expandido && (!sidebarColapsado || sidebarAbierto)" class="mt-1 space-y-1">
+          <a *ngFor="let sub of modulo.submenus"
+             (click)="cerrarSidebarMobile()"
+             [routerLink]="sub.ruta"
+             routerLinkActive="bg-blue-50 dark:bg-slate-800 text-blue-900 dark:text-blue-400 border-r-4 border-blue-900 dark:border-blue-500"
+             [routerLinkActiveOptions]="{exact: true}"
+             class="block pl-14 pr-6 py-2 text-sm font-medium text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors border-r-4 border-transparent truncate">
+            {{ sub.nombre }}
+          </a>
+        </div>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- Contenido principal -->
+  <div class="flex-1 flex flex-col min-w-0 bg-gray-100 dark:bg-slate-950">
+
+    <!-- Header / Topbar -->
+    <header class="h-16 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 flex items-center justify-between px-4 sm:px-6 z-10 shrink-0 transition-colors duration-300">
+
+      <div class="flex items-center">
+        <button (click)="toggleSidebar()"
+                class="p-2 mr-3 text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-md focus:outline-none transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
+        </button>
+        <span class="hidden md:inline-block text-xs text-gray-500 dark:text-slate-500 uppercase tracking-wider font-bold">
+          Portal Operativo
+        </span>
+      </div>
+
+      <div class="flex items-center gap-2 sm:gap-4" *ngIf="usuarioActual">
+
+        <!-- ============================================ -->
+        <!-- PANEL DE NOTIFICACIONES                      -->
+        <!-- ============================================ -->
+        <div class="relative" data-notif-panel>
+
+          <!-- Botón campana -->
+          <button (click)="toggleNotificaciones()"
+                  data-notif-panel
+                  class="p-2 mr-1 rounded-sm text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors relative focus:outline-none">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+            </svg>
+            <!-- Badge puntito rojo animado -->
+            <span *ngIf="cantidadNoLeidas > 0" class="absolute top-1.5 right-1.5 flex h-2.5 w-2.5">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600 border-2 border-white dark:border-slate-900"></span>
+            </span>
+          </button>
+
+          <!-- Panel desplegable -->
+          <div *ngIf="mostrarNotificaciones"
+               data-notif-panel
+               class="absolute right-0 mt-2 w-96 bg-white dark:bg-slate-900 rounded-lg shadow-2xl border border-gray-200 dark:border-slate-800 flex flex-col overflow-hidden z-[100] origin-top-right">
+
+            <!-- Cabecera del panel -->
+            <div class="px-4 py-3 border-b border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 flex justify-between items-center shrink-0">
+              <div class="flex items-center gap-2">
+                <h3 class="font-bold text-gray-900 dark:text-white text-sm">Notificaciones</h3>
+                <span *ngIf="cantidadNoLeidas > 0"
+                      class="text-[10px] font-bold bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 px-2 py-0.5 rounded-full border border-red-200 dark:border-red-800/50">
+                  {{ cantidadNoLeidas }} sin leer
+                </span>
+              </div>
+              <button (click)="marcarTodasLeidas()"
+                      *ngIf="cantidadNoLeidas > 0"
+                      class="text-[11px] text-blue-600 dark:text-blue-400 hover:underline font-medium focus:outline-none">
+                Marcar todas como leídas
+              </button>
+            </div>
+
+            <!-- Lista de notificaciones -->
+            <div class="overflow-y-auto max-h-[360px] divide-y divide-gray-100 dark:divide-slate-800/60">
+
+              <!-- Estado vacío -->
+              <div *ngIf="listaNotificaciones.length === 0" class="py-10 flex flex-col items-center gap-2">
+                <div class="w-12 h-12 rounded-full bg-gray-100 dark:bg-slate-800 flex items-center justify-center">
+                  <svg class="w-6 h-6 text-gray-400 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                          d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                  </svg>
+                </div>
+                <p class="text-sm font-medium text-gray-500 dark:text-slate-400">Todo al día</p>
+                <p class="text-xs text-gray-400 dark:text-slate-500">No tienes alertas pendientes</p>
+              </div>
+
+              <!-- Ítem de notificación -->
+              <!-- Al hacer click: marca como leída en BD si tiene id_notificacion -->
+              <div *ngFor="let noti of listaNotificaciones"
+                   (click)="leerNotificacion(noti)"
+                   class="flex gap-3 px-4 py-3 transition-colors cursor-pointer group"
+                   [ngClass]="noti.leida
+                     ? 'bg-white dark:bg-slate-900 hover:bg-gray-50 dark:hover:bg-slate-800/40'
+                     : 'bg-blue-50/60 dark:bg-blue-900/10 hover:bg-blue-50 dark:hover:bg-blue-900/20'">
+
+                <!-- Ícono dinámico según tipo_alerta / tipo_referencia -->
+                <div class="mt-0.5 flex-shrink-0">
+                  <div [ngClass]="getIconoClase(noti.tipo_alerta || noti.tipo_referencia || '')"
+                       class="w-8 h-8 rounded-lg flex items-center justify-center border">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            [attr.d]="getIconoPath(noti.tipo_alerta || noti.tipo_referencia || '')"/>
+                    </svg>
+                  </div>
+                </div>
+
+                <!-- Contenido de la notificación -->
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-start justify-between gap-2">
+                    <p class="text-xs font-bold text-gray-900 dark:text-white leading-tight">{{ noti.titulo }}</p>
+                    <!-- Punto azul si no leída -->
+                    <span *ngIf="!noti.leida"
+                          class="flex-shrink-0 w-2 h-2 mt-1 rounded-full bg-blue-500">
+                    </span>
+                  </div>
+                  <p class="text-[11px] text-gray-500 dark:text-slate-400 mt-0.5 line-clamp-2 leading-relaxed">
+                    {{ noti.cuerpo }}
+                  </p>
+                  <p class="text-[10px] text-gray-400 dark:text-slate-500 mt-1.5 flex items-center gap-1">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    {{ noti.fecha | date:'HH:mm' }} · {{ noti.fecha | date:'dd MMM' }}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Footer: enlace a pantalla completa -->
+            <div class="border-t border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/30 shrink-0">
+              <a routerLink="/notificaciones"
+                 (click)="irANotificaciones()"
+                 class="flex items-center justify-center gap-2 py-3 text-xs font-semibold text-blue-700 dark:text-blue-400 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors">
+                Ver todas las notificaciones
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+              </a>
+            </div>
+          </div>
+        </div>
+        <!-- FIN PANEL NOTIFICACIONES -->
+
+        <!-- Modo oscuro -->
+        <button (click)="alternarModoOscuro()"
+                class="p-2 rounded-md text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors">
+          <svg *ngIf="!modoOscuro" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+          </svg>
+          <svg *ngIf="modoOscuro" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+          </svg>
+        </button>
+
+        <!-- Nombre y rol del usuario -->
+        <div class="hidden md:flex flex-col items-end border-l border-gray-200 dark:border-slate-800 pl-4 sm:pl-6">
+          <span class="text-sm font-bold text-gray-900 dark:text-white">{{ usuarioActual.nombre_completo }}</span>
+          <span class="text-xs text-blue-900 dark:text-blue-500 uppercase tracking-wider">{{ usuarioActual.nombre_rol }}</span>
+        </div>
+
+        <!-- Perfil y cerrar sesión -->
+        <div class="flex items-center gap-1 border-l border-transparent md:border-gray-200 md:dark:border-slate-800 md:pl-6 ml-2 md:ml-0">
+          <button routerLink="/perfil"
+                  class="p-2 text-gray-500 dark:text-slate-400 hover:text-blue-900 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-md transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+            </svg>
+          </button>
+          <button (click)="cerrarSesion()"
+                  class="p-2 text-gray-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+            </svg>
+          </button>
+        </div>
+
+      </div>
+    </header>
+
+    <!-- Contenido de la ruta activa -->
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 w-full relative">
+      <router-outlet></router-outlet>
+    </main>
+
+  </div>
+</div>
