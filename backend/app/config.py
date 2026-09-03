@@ -1,6 +1,10 @@
 from dotenv import load_dotenv
-
 import os
+
+# Cargar .env buscando tanto en backend/ como en backend/app/
+base_dir = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(base_dir, '.env'))
+load_dotenv(os.path.join(os.path.dirname(base_dir), '.env'))
 load_dotenv()
 
 class Config:
@@ -12,7 +16,7 @@ class Config:
     DB_USER = os.getenv("DB_USER")
     DB_PASSWORD = os.getenv("DB_PASSWORD")
 
-    SCHEMA='taller'
+    SCHEMA='comercio'
     
     
     #CREDENCIALES CONFIGURACION APP

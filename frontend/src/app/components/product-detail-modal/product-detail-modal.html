@@ -1,0 +1,154 @@
+<div *ngIf="producto" class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 backdrop-blur-2xl bg-zinc-950/85 animate-fade-in">
+  
+  <!-- Backdrop Handler -->
+  <div (click)="closeModal()" class="absolute inset-0 z-0"></div>
+
+  <!-- Double Bezel Container -->
+  <div class="relative z-10 w-full max-w-4xl double-bezel shadow-2xl animate-slide-up my-auto max-h-[92vh] overflow-y-auto">
+    <div class="double-bezel-inner p-6 sm:p-8 relative grid grid-cols-1 md:grid-cols-2 gap-8">
+      
+      <!-- Close Button -->
+      <button (click)="closeModal()" class="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center">
+        <i class="ph ph-x text-lg"></i>
+      </button>
+
+      <!-- Left Column: Image Gallery -->
+      <div class="space-y-4">
+        <div class="relative aspect-[3/4] rounded-2xl overflow-hidden border border-white/10 bg-zinc-900 group">
+          <img [src]="producto.imagenes[selectedImageIndex] || producto.imagenPrincipal" [alt]="producto.nombre" class="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105" />
+          
+          <div *ngIf="producto.etiqueta" class="absolute top-4 left-4 px-3 py-1 rounded-full bg-amber-500 text-black text-[10px] font-bold uppercase tracking-wider">
+            {{ producto.etiqueta }}
+          </div>
+        </div>
+
+        <!-- Thumbnail Selector -->
+        <div class="flex items-center space-x-3 overflow-x-auto pb-2">
+          <button *ngFor="let img of producto.imagenes; let i = index" 
+                  (click)="selectImage(i)"
+                  [class.border-amber-400]="selectedImageIndex === i"
+                  [class.opacity-100]="selectedImageIndex === i"
+                  [class.opacity-50]="selectedImageIndex !== i"
+                  class="w-16 h-20 rounded-xl overflow-hidden border-2 border-transparent transition-all shrink-0">
+            <img [src]="img" class="w-full h-full object-cover" />
+          </button>
+        </div>
+      </div>
+
+      <!-- Right Column: Product Details & Specs -->
+      <div class="space-y-6 flex flex-col justify-between">
+        <div class="space-y-4">
+          
+          <!-- Category & Tag -->
+          <div class="flex items-center justify-between text-xs">
+            <span class="uppercase tracking-widest text-amber-400 font-mono font-semibold">{{ producto.categoria }}</span>
+            <span class="text-zinc-500 font-mono">Ref. #AUR-{{ producto.id }}</span>
+          </div>
+
+          <!-- Title -->
+          <h2 class="text-2xl sm:text-3xl font-editorial font-bold text-white leading-tight">
+            {{ producto.nombre }}
+          </h2>
+          <p class="text-xs text-zinc-400 italic font-editorial">{{ producto.subtitulo }}</p>
+
+          <!-- Price Badge -->
+          <div class="flex items-baseline space-x-3 pt-1">
+            <span class="text-2xl font-bold text-white font-mono">Bs. {{ producto.precio }}</span>
+            <span *ngIf="producto.precioAnterior" class="text-sm text-zinc-500 line-through font-mono">Bs. {{ producto.precioAnterior }}</span>
+            <span *ngIf="producto.precioAnterior" class="text-[10px] bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded font-mono font-semibold">
+              AHORRA {{ ((1 - producto.precio/producto.precioAnterior) * 100).toFixed(0) }}%
+            </span>
+          </div>
+
+          <p class="text-xs text-zinc-300 leading-relaxed border-t border-b border-zinc-800 py-3">
+            {{ producto.descripcion }}
+          </p>
+
+          <!-- Color Selector -->
+          <div class="space-y-2">
+            <div class="text-xs font-medium text-zinc-300 flex items-center justify-between">
+              <span>Color: <strong class="text-amber-300 font-normal">{{ producto.colores[selectedColorIndex]?.nombre }}</strong></span>
+            </div>
+            <div class="flex items-center space-x-3">
+              <button *ngFor="let col of producto.colores; let idx = index" 
+                      (click)="selectColor(idx)"
+                      [class.ring-2]="selectedColorIndex === idx"
+                      [class.ring-amber-400]="selectedColorIndex === idx"
+                      [class.ring-offset-2]="selectedColorIndex === idx"
+                      [class.ring-offset-zinc-950]="selectedColorIndex === idx"
+                      class="w-7 h-7 rounded-full border border-white/20 transition-all cursor-pointer"
+                      [style.backgroundColor]="col.hex"
+                      [title]="col.nombre">
+              </button>
+            </div>
+          </div>
+
+          <!-- Size Selector -->
+          <div class="space-y-2">
+            <div class="text-xs font-medium text-zinc-300 flex items-center justify-between">
+              <span>Talla:</span>
+              <button class="text-[10px] text-amber-400 hover:underline">Guía de Tallas</button>
+            </div>
+            <div class="flex items-center space-x-2">
+              <button *ngFor="let size of producto.tallas" 
+                      (click)="selectSize(size)"
+                      [class.bg-amber-500]="selectedSize === size"
+                      [class.text-black]="selectedSize === size"
+                      [class.font-bold]="selectedSize === size"
+                      [class.bg-zinc-900]="selectedSize !== size"
+                      [class.text-zinc-300]="selectedSize !== size"
+                      class="w-10 h-10 rounded-xl border border-zinc-800 text-xs font-mono transition-all hover:border-amber-400/50 flex items-center justify-center">
+                {{ size }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Store Branch Availability Badge (Multi-Tienda) -->
+          <div class="p-3 rounded-xl bg-zinc-900/80 border border-zinc-800 text-xs space-y-1">
+            <div class="text-zinc-400 flex items-center space-x-1.5 font-medium">
+              <i class="ph ph-storefront text-amber-400 text-sm"></i>
+              <span>Disponibilidad en Tiendas Físicas:</span>
+            </div>
+            <div class="flex flex-wrap gap-1.5 pt-1">
+              <span *ngFor="let suc of producto.sucursalesDisponibles" class="px-2 py-0.5 rounded-full bg-zinc-800 text-[10px] text-zinc-300 border border-zinc-700">
+                ✓ {{ suc }}
+              </span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Action CTAs -->
+        <div class="space-y-3 pt-2">
+          
+          <div *ngIf="addedToast" class="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs text-center font-medium animate-fade-in">
+            ✓ Producto añadido a tu Bolsa de Compras
+          </div>
+
+          <div class="flex items-center space-x-3">
+            <div class="flex items-center bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs font-mono">
+              <button (click)="decrementQuantity()" class="text-zinc-400 hover:text-white px-2">-</button>
+              <span class="px-3 text-white font-bold">{{ quantity }}</span>
+              <button (click)="incrementQuantity()" class="text-zinc-400 hover:text-white px-2">+</button>
+            </div>
+
+            <button (click)="addToCart()" class="flex-1 py-3.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs uppercase tracking-wider transition-colors border border-zinc-700">
+              Añadir a la Bolsa
+            </button>
+          </div>
+
+          <button (click)="buyNow()" class="w-full py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center space-x-2">
+            <span>Comprar Ahora</span>
+            <i class="ph ph-shopping-bag-open text-base"></i>
+          </button>
+          
+          <p *ngIf="!authService.estaAutenticado()" class="text-[10px] text-zinc-500 text-center italic">
+            ✦ Si no estás autenticado, serás dirigido al formulario de acceso para confirmar tu pedido.
+          </p>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>

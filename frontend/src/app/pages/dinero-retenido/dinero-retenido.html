@@ -8,7 +8,7 @@
             Dinero Retenido
           </h1>
           <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">
-            Simulación y consulta de fondos retenidos por emergencia.
+            Simulación y consulta de fondos retenidos por transacciones y reservas en custodia Escrow.
           </p>
         </div>
 
@@ -44,7 +44,7 @@
         </h2>
 
         <p class="text-xs text-gray-500 dark:text-slate-400 mt-2">
-          {{ esAdmin() ? 'Total retenido en el sistema.' : 'Total retenido en tus emergencias.' }}
+          {{ esAdmin() ? 'Total retenido en el sistema.' : 'Total retenido en tus transacciones.' }}
         </p>
       </div>
 
@@ -74,7 +74,7 @@
             class="px-3 py-2 rounded-md border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-[#0052cc]">
 
             <option [ngValue]="null">
-              {{ cargandoEmergencias ? 'Cargando emergencias...' : 'Seleccionar emergencia' }}
+              {{ cargandoEmergencias ? 'Cargando órdenes...' : 'Seleccionar orden' }}
             </option>
 
             <option *ngFor="let e of emergencias" [ngValue]="e.nro_emergencia">
@@ -101,13 +101,13 @@
         <div *ngIf="emergenciaSeleccionada" class="mt-4 border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/20 rounded-md overflow-hidden">
           <div class="px-4 py-3 border-b border-amber-200 dark:border-amber-900">
             <p class="text-xs font-bold uppercase text-amber-700 dark:text-amber-400">
-              Vas a retener dinero para esta emergencia
+              Vas a retener dinero para esta orden de compra
             </p>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3 p-4 text-sm">
             <div>
-              <p class="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase">Emergencia</p>
+              <p class="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase">Orden de Compra</p>
               <p class="text-gray-900 dark:text-white font-semibold">
                 #{{ emergenciaSeleccionada.nro_emergencia }} - {{ emergenciaSeleccionada.tipo_emergencia }}
               </p>
@@ -236,7 +236,7 @@
         <div *ngFor="let f of fondos" class="p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
             <p class="text-sm font-bold text-gray-900 dark:text-white">
-              Emergencia #{{ f.nro_emergencia }} - {{ f.tipo_emergencia }}
+              Transacción #{{ f.nro_emergencia }} - {{ f.tipo_emergencia }}
             </p>
 
             <p class="text-xs text-gray-500 dark:text-slate-400 mt-1">

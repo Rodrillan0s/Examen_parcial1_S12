@@ -1,0 +1,221 @@
+<div class="min-h-full space-y-8 antialiased text-slate-100">
+  
+  <!-- Header / Workspace Context Banner -->
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-slate-950/90 p-8 rounded-2xl border border-slate-800 shadow-2xl backdrop-blur-xl relative overflow-hidden">
+    <!-- Subtle Gradient Glow in Background -->
+    <div class="absolute -top-16 -right-16 w-64 h-64 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none"></div>
+
+    <div class="space-y-2 relative z-10">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-widest">
+        <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+        Ubicaciones & Sedes Físicas
+      </div>
+
+      <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-white">Gestión de Sucursales</h1>
+      <p class="text-xs sm:text-sm text-slate-400 max-w-2xl leading-relaxed">
+        Administra las sucursales vinculadas a tu tienda. Registra direcciones y coordina la operación de sedes dentro de AURA.
+      </p>
+    </div>
+
+    <!-- Primary Action Button -->
+    <div *ngIf="authService.hasPermission('sucursales.crear')" class="relative z-10 shrink-0">
+      <button (click)="abrirModalNuevo()" 
+              class="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 active:scale-[0.98] text-white text-xs font-bold rounded-xl shadow-lg shadow-indigo-500/25 transition-all ring-1 ring-white/20 focus:outline-none">
+        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+        <span>+ Nueva Sucursal</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Alert Banner -->
+  <div *ngIf="mensajeError" class="p-5 bg-rose-950/40 border border-rose-800/60 rounded-2xl text-xs sm:text-sm font-semibold text-rose-300 flex items-center gap-3 backdrop-blur-md">
+    <svg class="w-5 h-5 text-rose-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+    <span>{{ mensajeError }}</span>
+  </div>
+
+  <!-- Metric Strip -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+    <div class="bg-slate-950/80 p-6 rounded-2xl border border-slate-800 shadow-xl flex items-center justify-between group hover:border-indigo-500/40 transition-all">
+      <div class="space-y-1">
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Sucursales</p>
+        <p class="text-3xl font-black text-white tracking-tight">{{ totalSucursales }}</p>
+        <p class="text-[11px] font-medium text-indigo-400 mt-1">Sedes registradas</p>
+      </div>
+      <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0H5m14 0h2M5 21H3m16-10h-4m-6 0H5m8-4h4M9 7H5"></path></svg>
+      </div>
+    </div>
+
+    <div class="bg-slate-950/80 p-6 rounded-2xl border border-slate-800 shadow-xl flex items-center justify-between group hover:border-emerald-500/40 transition-all">
+      <div class="space-y-1">
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sucursales Activas</p>
+        <p class="text-3xl font-black text-white tracking-tight">{{ sucursalesActivas }}</p>
+        <p class="text-[11px] font-medium text-emerald-400 mt-1">En operación</p>
+      </div>
+      <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      </div>
+    </div>
+
+    <div class="bg-slate-950/80 p-6 rounded-2xl border border-slate-800 shadow-xl flex items-center justify-between group hover:border-slate-700 transition-all">
+      <div class="space-y-1">
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Inactivas</p>
+        <p class="text-3xl font-black text-white tracking-tight">{{ sucursalesInactivas }}</p>
+        <p class="text-[11px] font-medium text-slate-400 mt-1">Cerradas / Deshabilitadas</p>
+      </div>
+      <div class="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 text-slate-400 flex items-center justify-center shrink-0">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter & Control Toolbar -->
+  <div class="bg-slate-950/90 p-5 rounded-2xl border border-slate-800 shadow-xl flex items-center justify-between gap-4 backdrop-blur-xl">
+    <div class="flex items-center gap-3">
+      <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Filtrar Estado:</span>
+      <select [(ngModel)]="filtroEstado" (change)="aplicarFiltros()"
+              class="bg-slate-900 border border-slate-800 text-white text-xs font-bold rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all">
+        <option value="TODOS">Todas las Sucursales</option>
+        <option value="ACTIVO">Activas</option>
+        <option value="INACTIVO">Inactivas</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Sucursales Grid Table -->
+  <div class="bg-slate-950/90 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-xl">
+    <div *ngIf="cargando && !mostrarModal" class="p-8 space-y-4">
+      <div *ngFor="let i of [1,2,3]" class="animate-pulse flex items-center justify-between py-4 border-b border-slate-900">
+        <div class="w-36 h-4 bg-slate-900 rounded"></div>
+        <div class="w-48 h-4 bg-slate-900 rounded"></div>
+        <div class="w-16 h-4 bg-slate-900 rounded"></div>
+      </div>
+    </div>
+
+    <div *ngIf="!cargando || mostrarModal" class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-slate-900/80 border-b border-slate-800 text-[11px] font-bold uppercase tracking-widest text-slate-400">
+            <th class="py-4 px-6">Identificador / Nombre</th>
+            <th class="py-4 px-6">Dirección Física</th>
+            <th class="py-4 px-6 text-center">Estado</th>
+            <th class="py-4 px-6 text-right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-900 text-xs">
+          <tr *ngFor="let s of sucursalesFiltradas" class="hover:bg-slate-900/60 transition-colors group">
+            
+            <td class="py-4 px-6">
+              <div class="flex items-center gap-3.5">
+                <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 font-black text-xs flex items-center justify-center shrink-0">
+                  {{ obtenerIniciales(s.nombre) }}
+                </div>
+                <div>
+                  <p class="font-bold text-white text-sm group-hover:text-indigo-300 transition-colors">{{ s.nombre }}</p>
+                  <p class="text-[11px] text-slate-500 font-mono">SUCURSAL #{{ s.id_sucursal }}</p>
+                </div>
+              </div>
+            </td>
+
+            <td class="py-4 px-6 font-medium text-slate-300">
+              <div class="flex items-center gap-2">
+                <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                <span>{{ s.direccion || 'Sin dirección' }}</span>
+              </div>
+            </td>
+
+            <td class="py-4 px-6 text-center">
+              <span *ngIf="s.activo" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Activa
+              </span>
+              <span *ngIf="!s.activo" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-slate-900 text-slate-400 border border-slate-800">
+                <span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span> Inactiva
+              </span>
+            </td>
+
+            <td class="py-4 px-6 text-right">
+              <div class="flex items-center justify-end gap-1.5">
+                <button *ngIf="authService.hasPermission('sucursales.editar')" (click)="abrirModalEditar(s)" title="Editar" class="p-2 text-slate-400 hover:text-indigo-300 hover:bg-slate-900 border border-transparent hover:border-slate-800 rounded-xl transition-all">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                </button>
+                <button *ngIf="authService.hasPermission('sucursales.desactivar') && s.activo" (click)="eliminarSucursal(s.id_sucursal)" title="Desactivar" class="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 border border-transparent hover:border-rose-800/40 rounded-xl transition-all">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="sucursalesFiltradas.length === 0">
+            <td colspan="4" class="py-16 text-center text-slate-500">
+              No se encontraron sucursales registradas.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Sleek Modal Drawer -->
+<div *ngIf="mostrarModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md transition-all">
+  <div class="bg-slate-950 border border-slate-800 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden ring-1 ring-white/10">
+    
+    <div class="flex justify-between items-center px-8 py-6 border-b border-slate-800 bg-slate-900/60">
+      <h3 class="text-base font-black text-white">
+        <span *ngIf="modoEdicion">Editar Sucursal <span class="text-indigo-400 font-mono text-sm">#{{ sucursalForm.id_sucursal }}</span></span>
+        <span *ngIf="!modoEdicion">Registrar Nueva Sucursal</span>
+      </h3>
+      <button (click)="cerrarModal()" class="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-900 transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+    </div>
+
+    <div class="p-8">
+      <form #form="ngForm" class="space-y-5 text-xs">
+        
+        <div *ngIf="isGlobalAdmin">
+          <label class="block font-bold text-slate-300 mb-1.5">Empresa a la que pertenece *</label>
+          <select name="id_empresa" [(ngModel)]="sucursalForm.id_empresa" required
+                  class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-white focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all">
+            <option [ngValue]="0" disabled>Selecciona una empresa</option>
+            <option *ngFor="let emp of empresas" [ngValue]="emp.id_empresa">{{ emp.nombre_empresa }}</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-300 mb-1.5">Nombre de Sucursal *</label>
+          <input type="text" name="nombre" [(ngModel)]="sucursalForm.nombre" required placeholder="Ej. Sucursal Equipetrol"
+                 class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all">
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-300 mb-1.5">Dirección Física *</label>
+          <input type="text" name="direccion" [(ngModel)]="sucursalForm.direccion" required placeholder="Ej. Av. San Martin, 3er anillo externo"
+                 class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all">
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-300 mb-1.5">Estado Operativo</label>
+          <select name="activo" [(ngModel)]="sucursalForm.activo" required
+                  class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-white focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all">
+            <option [ngValue]="true">ACTIVA</option>
+            <option [ngValue]="false">INACTIVA</option>
+          </select>
+        </div>
+      </form>
+    </div>
+
+    <div class="px-8 py-5 border-t border-slate-800 bg-slate-900/60 flex justify-end gap-3">
+      <button type="button" (click)="cerrarModal()" 
+              class="px-5 py-2.5 text-xs font-bold text-slate-300 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl transition-all">
+        Cancelar
+      </button>
+      <button type="button" (click)="guardarSucursal()" [disabled]="form.invalid || cargando"
+              class="px-6 py-2.5 text-xs font-bold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 rounded-xl transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-indigo-500/25 ring-1 ring-white/10">
+        <span *ngIf="cargando" class="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-r-transparent"></span>
+        {{ modoEdicion ? 'Actualizar Sucursal' : 'Crear Sucursal' }}
+      </button>
+    </div>
+    
+  </div>
+</div>

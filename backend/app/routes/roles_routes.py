@@ -1,44 +1,44 @@
-from fastapi import APIRouter, Body, HTTPException, Depends
+from fastapi import APIRouter, Body, HTTPException, Depends, Request
 from app.services import roles_services
-from app.utils.security import verificar_token
+from app.utils.security import require_permission
 
 router = APIRouter(tags=["Roles"])
 
 @router.get('/')
-def get_roles(token_data: dict = Depends(verificar_token)):
+def get_roles(payload: dict = Depends(require_permission('roles.ver'))):
     try:
-        return roles_services.listar_roles()
+        return roles_services.listar_roles(payload)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
 @router.post('/')
-def create_rol(data: dict = Body(...), token_data: dict = Depends(verificar_token)):
+def create_rol(request: Request, data: dict = Body(...), payload: dict = Depends(require_permission('roles.crear'))):
     if not data:
         raise HTTPException(status_code=400, detail='El cuerpo de la petición está vacío.')
     
     try:
-        return roles_services.registrar_rol(data)
+        return roles_services.registrar_rol(data, payload, request)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error interno en BD: {str(e)}")
 
-@router.put('/{nro_rol}')
-def update_rol(nro_rol: int, data: dict = Body(...), token_data: dict = Depends(verificar_token)):
+@router.put('/{id_rol}')
+def update_rol(id_rol: int, request: Request, data: dict = Body(...), payload: dict = Depends(require_permission('roles.editar'))):
     if not data:
         raise HTTPException(status_code=400, detail='El cuerpo de la petición está vacío.')
         
     try:
-        return roles_services.actualizar_rol(nro_rol, data)
+        return roles_services.actualizar_rol(id_rol, data, payload, request)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error interno en BD: {str(e)}")
 
-@router.delete('/{nro_rol}')
-def delete_rol(nro_rol: int, token_data: dict = Depends(verificar_token)):
+@router.delete('/{id_rol}')
+def delete_rol(id_rol: int, request: Request, payload: dict = Depends(require_permission('roles.eliminar'))):
     try:
-        return roles_services.borrar_rol(nro_rol)
+        return roles_services.borrar_rol(id_rol, payload, request)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

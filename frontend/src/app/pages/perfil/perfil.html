@@ -4,14 +4,12 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex justify-between h-16">
         
-        <div class="flex items-center gap-3 cursor-pointer" (click)="navegarA('/home')">
-          <svg class="w-7 h-7 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-          </svg>
-          <span class="text-xl font-bold tracking-wider uppercase">
-            Emergencias<span class="text-blue-300 font-light">Vehiculares</span>
+        <div class="flex items-center gap-3 cursor-pointer" (click)="navegarA('/')">
+          <span class="text-xl font-editorial font-bold tracking-wider uppercase text-white">
+            AURA<span class="text-amber-400 font-light ml-1.5">ATELIER</span>
           </span>
         </div>
+
 
         <div class="flex items-center gap-4 sm:gap-6" *ngIf="perfil">
           
@@ -114,17 +112,12 @@
             </div>
             
             <div class="col-span-2 sm:col-span-1">
-              <p class="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Vehiculos Registrados</p>
+              <p class="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Sucursal Preferida</p>
               <div class="mt-1.5 flex items-center gap-2">
-                <div class="bg-blue-50 dark:bg-slate-800 p-1.5 rounded-sm border border-blue-100 dark:border-slate-700 flex items-center justify-center">
-                  <svg class="w-4 h-4 text-blue-800 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.8L2 12M2 12v4c0 .6.4 1 1 1h2m0 0c0 1.1.9 2 2 2s2-.9 2-2m-4 0h4m9 0c0 1.1.9 2 2 2s2-.9 2-2m-4 0h4m-12 0h8"></path>
-                  </svg>
-                </div>
-                <span class="text-base font-bold text-gray-900 dark:text-white">{{ perfil.cant_vehiculos }}</span>
-                <span class="text-sm font-medium text-gray-500 dark:text-slate-400">Registrados</span>
+                <span class="text-base font-bold text-amber-600 dark:text-amber-400">Sucursal Central Equipetrol</span>
               </div>
             </div>
+
 
             <div class="col-span-2 sm:col-span-1">
               <p class="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Fecha Registro</p>

@@ -1,242 +1,409 @@
-<div class="min-h-screen bg-gray-100 dark:bg-slate-950 p-4 sm:p-6 lg:p-8 font-sans transition-colors duration-300">
-  <div class="max-w-7xl mx-auto">
-    
-    <div class="flex justify-between items-center mb-6">
-      <div>
-        <button routerLink="/home" class="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-slate-400 hover:text-blue-900 dark:hover:text-blue-400 transition-colors mb-2">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-          Volver al Panel Principal
-        </button>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Gestión de Usuarios</h1>
-        <p class="text-sm text-gray-500 dark:text-slate-400">Administra los accesos, roles y asignación de empresas.</p>
+<div class="min-h-full space-y-8 antialiased text-slate-100">
+  
+  <!-- Header / Workspace Context Banner -->
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-slate-950/90 p-8 rounded-2xl border border-slate-800 shadow-2xl backdrop-blur-xl relative overflow-hidden">
+    <!-- Subtle Gradient Aura Orb in Background -->
+    <div class="absolute -top-16 -right-16 w-64 h-64 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none"></div>
+
+    <div class="space-y-2 relative z-10">
+      <!-- Eyebrow Tag -->
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-widest">
+        <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+        Contexto: {{ scope }}
       </div>
-      <button (click)="abrirModalNuevo()" class="flex items-center gap-2 px-4 py-2 bg-blue-900 dark:bg-blue-600 hover:bg-blue-800 dark:hover:bg-blue-500 text-white text-sm font-medium rounded-sm transition-colors shadow-sm">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-        Nuevo Usuario
+
+      <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-white">{{ tituloWorkspace }}</h1>
+      <p class="text-xs sm:text-sm text-slate-400 max-w-2xl leading-relaxed">
+        {{ subtituloWorkspace }}
+      </p>
+    </div>
+
+    <!-- Primary Action Button -->
+    <div class="relative z-10 shrink-0">
+      <button (click)="abrirModalNuevo()" 
+              class="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 active:scale-[0.98] text-white text-xs font-bold rounded-xl shadow-lg shadow-indigo-500/25 transition-all ring-1 ring-white/20 focus:outline-none">
+        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+        <span>{{ botonCrearTexto }}</span>
       </button>
     </div>
+  </div>
 
-    <div *ngIf="mensajeError" class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-400 border border-red-200 dark:border-red-800/50 rounded-sm text-sm font-medium">
-      {{ mensajeError }}
+  <!-- Error Alert Banner -->
+  <div *ngIf="mensajeError" class="p-5 bg-rose-950/40 border border-rose-800/60 rounded-2xl text-xs sm:text-sm font-semibold text-rose-300 flex items-center justify-between gap-4 backdrop-blur-md">
+    <div class="flex items-center gap-3">
+      <svg class="w-5 h-5 text-rose-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      <span>{{ mensajeError }}</span>
     </div>
+    <button (click)="cargarUsuarios()" class="px-4 py-1.5 bg-rose-900/60 hover:bg-rose-800 text-rose-100 rounded-xl text-xs font-bold transition-colors border border-rose-700/50">
+      Reintentar
+    </button>
+  </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-      <div class="bg-white dark:bg-slate-900 p-4 border border-gray-200 dark:border-slate-800 rounded-sm shadow-sm flex items-center justify-between">
-        <div>
-          <p class="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Total Mostrados</p>
-          <p class="text-2xl font-bold text-blue-900 dark:text-blue-400 mt-1">{{ totalUsuarios }}</p>
-        </div>
-        <div class="p-3 bg-blue-50 dark:bg-slate-800 rounded-sm text-blue-900 dark:text-blue-400">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-        </div>
+  <!-- Integrated Metrics Section Strip -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+    
+    <!-- Metric: Total Usuarios -->
+    <div class="bg-slate-950/80 p-6 rounded-2xl border border-slate-800 shadow-xl flex items-center justify-between group hover:border-indigo-500/40 transition-all">
+      <div class="space-y-1">
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{{ isGlobalAdmin ? 'Total Usuarios' : (isStoreAdmin ? 'Miembros de Empresa' : 'Personal Sucursal') }}</p>
+        <p class="text-3xl font-black text-white tracking-tight">{{ totalUsuarios }}</p>
+        <p class="text-[11px] font-medium text-slate-400 mt-1">Cuentas en ámbito</p>
       </div>
-      <div class="bg-white dark:bg-slate-900 p-4 border border-gray-200 dark:border-slate-800 rounded-sm shadow-sm flex items-center justify-between">
-        <div>
-          <p class="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Activos</p>
-          <p class="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">{{ usuariosActivos }}</p>
-        </div>
-        <div class="p-3 bg-green-50 dark:bg-green-900/20 rounded-sm text-green-600 dark:text-green-400">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-        </div>
-      </div>
-      <div class="bg-white dark:bg-slate-900 p-4 border border-gray-200 dark:border-slate-800 rounded-sm shadow-sm flex items-center justify-between">
-        <div>
-          <p class="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Inactivos</p>
-          <p class="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">{{ usuariosInactivos }}</p>
-        </div>
-        <div class="p-3 bg-red-50 dark:bg-red-900/20 rounded-sm text-red-600 dark:text-red-400">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-        </div>
+      <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
       </div>
     </div>
 
-    <div class="bg-white dark:bg-slate-900 p-4 border border-gray-200 dark:border-slate-800 rounded-sm shadow-sm flex flex-col sm:flex-row items-center justify-between mb-6 gap-4">
-      <div class="flex items-center gap-3 w-full sm:w-auto">
-        <div class="p-2 bg-blue-50 dark:bg-slate-800 rounded-sm">
-          <svg class="w-5 h-5 text-blue-900 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
+    <!-- Metric: Usuarios Activos -->
+    <div class="bg-slate-950/80 p-6 rounded-2xl border border-slate-800 shadow-xl flex items-center justify-between group hover:border-emerald-500/40 transition-all">
+      <div class="space-y-1">
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Usuarios Activos</p>
+        <p class="text-3xl font-black text-emerald-400 tracking-tight">
+          {{ usuariosActivos }}
+        </p>
+        <div class="flex items-center gap-1.5 mt-1">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <span class="text-[11px] font-medium text-emerald-400">Acceso habilitado</span>
         </div>
-        <label class="text-sm font-bold text-gray-700 dark:text-slate-300 uppercase tracking-wider hidden sm:block">Vista Tenant:</label>
+      </div>
+      <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      </div>
+    </div>
+
+    <!-- Metric: Usuarios Inactivos -->
+    <div class="bg-slate-950/80 p-6 rounded-2xl border border-slate-800 shadow-xl flex items-center justify-between group hover:border-rose-500/40 transition-all">
+      <div class="space-y-1">
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Usuarios Inactivos</p>
+        <p class="text-3xl font-black text-rose-400 tracking-tight">
+          {{ usuariosInactivos }}
+        </p>
+        <p class="text-[11px] font-medium text-slate-400 mt-1">Acceso restringido</p>
+      </div>
+      <div class="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center shrink-0">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg>
+      </div>
+    </div>
+
+    <!-- Metric: Dynamic Third Metric (Tenants / Branches) -->
+    <div class="bg-slate-950/80 p-6 rounded-2xl border border-slate-800 shadow-xl flex items-center justify-between group hover:border-violet-500/40 transition-all">
+      <div class="space-y-1">
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{{ terceraMetricaTitulo }}</p>
+        <p class="text-3xl font-black text-violet-400 tracking-tight">{{ terceraMetricaValor }}</p>
+        <p class="text-[11px] font-medium text-slate-400 mt-1">Ámbito de operación</p>
+      </div>
+      <div class="w-12 h-12 rounded-2xl bg-violet-500/10 border border-violet-500/20 text-violet-400 flex items-center justify-center shrink-0">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Integrated Workspace Control Toolbar -->
+  <div class="bg-slate-950/90 p-5 rounded-2xl border border-slate-800 shadow-xl flex flex-col lg:flex-row items-center justify-between gap-4 backdrop-blur-xl">
+    
+    <!-- Real-time Live Search Input -->
+    <div class="relative w-full lg:w-96">
+      <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+      </div>
+      <input type="text" [(ngModel)]="busquedaTexto" (input)="aplicarFiltros()"
+             placeholder="Buscar por nombre, CI, usuario o correo..."
+             class="w-full pl-10 pr-4 py-3 bg-slate-900 border border-slate-800 rounded-xl text-xs font-medium text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all">
+    </div>
+
+    <!-- Filter Control Group -->
+    <div class="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+      
+      <!-- Tenant / Company Selector (GLOBAL ADMIN ONLY) -->
+      <div *ngIf="isGlobalAdmin" class="flex items-center gap-2 flex-grow sm:flex-grow-0">
+        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Empresa:</span>
         <select [(ngModel)]="filtroEmpresa" (change)="aplicarFiltros()"
-                class="flex-grow sm:w-64 bg-gray-50 dark:bg-slate-950 border border-gray-300 dark:border-slate-700 text-gray-900 dark:text-white text-sm font-medium rounded-sm focus:ring-blue-900 focus:border-blue-900 block p-2.5 transition-colors">
-          <option value="">-- Todas las Empresas --</option>
+                class="w-full sm:w-56 bg-slate-900 border border-slate-800 text-white text-xs font-semibold rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all">
+          <option value="TODOS">Todas las organizaciones</option>
           <option *ngFor="let emp of empresas" [value]="emp.id_empresa">{{ emp.nombre_empresa }}</option>
         </select>
       </div>
-    </div>
 
-    <div *ngIf="cargando && !mostrarModal" class="flex flex-col items-center justify-center p-16 w-full bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-sm shadow-sm">
-      <div class="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-900 dark:border-blue-500 border-l-4 border-r-4 border-l-transparent border-r-transparent"></div>
-      <p class="mt-4 text-sm font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Cargando Usuarios...</p>
-    </div>
-
-    <div *ngIf="!cargando || mostrarModal" class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-sm shadow-sm overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse">
-          <thead>
-            <tr class="bg-gray-50 dark:bg-slate-800/50 border-b border-gray-200 dark:border-slate-800 text-xs uppercase tracking-wider text-gray-500 dark:text-slate-400">
-              <th class="p-4 font-bold">Usuario</th>
-              <th class="p-4 font-bold">Contacto</th>
-              <th class="p-4 font-bold">Rol y Empresa</th>
-              <th class="p-4 font-bold text-center">Estado</th>
-              <th class="p-4 font-bold text-center">Acciones</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-200 dark:divide-slate-800">
-            <tr *ngFor="let u of usuariosFiltrados" class="hover:bg-gray-50 dark:hover:bg-slate-800/30 transition-colors">
-              
-              <td class="p-4">
-                <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-sm bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 flex items-center justify-center font-bold text-sm border border-blue-200 dark:border-blue-800/50">
-                    {{ obtenerIniciales(u.nombre_completo) }}
-                  </div>
-                  <div>
-                    <p class="text-sm font-bold text-gray-900 dark:text-white">
-                      {{ u.nombre_completo }}
-                    </p>
-                    <p class="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
-                      <span class="font-bold text-blue-600 dark:text-blue-400">ID: {{ u.nro_usuario }}</span> | CI: {{ u.ci }} | Login: {{ u.nombre_usuario }}
-                    </p>
-                  </div>
-                </div>
-              </td>
-
-              <td class="p-4">
-                <p class="text-sm text-gray-900 dark:text-white">{{ u.correo || 'Sin correo' }}</p>
-                <p class="text-xs text-gray-500 dark:text-slate-400">{{ u.telefono || 'Sin teléfono' }}</p>
-              </td>
-
-              <td class="p-4">
-                <span class="inline-block px-2 py-1 bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-300 text-xs font-semibold rounded-sm border border-gray-200 dark:border-slate-700">
-                  {{ u.nombre_rol }}
-                </span>
-                <p class="text-xs text-blue-700 dark:text-blue-400 font-medium mt-1">{{ u.nombre_empresa || 'Sin Empresa' }}</p>
-              </td>
-
-              <td class="p-4 text-center">
-                <span [ngClass]="u.estado === 'ACTIVO' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 border-green-200 dark:border-green-800/50' : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400 border-red-200 dark:border-red-800/50'"
-                      class="px-2 py-1 rounded-sm text-xs font-bold border inline-block">
-                  {{ u.estado }}
-                </span>
-              </td>
-
-              <td class="p-4">
-                <div class="flex items-center justify-center gap-2">
-                  <button (click)="abrirModalEditar(u)" class="p-1.5 text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800 rounded-sm transition-colors" title="Editar">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                  </button>
-                  <button (click)="eliminarUsuario(u.nro_usuario)" class="p-1.5 text-gray-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-sm transition-colors" title="Eliminar">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                  </button>
-                </div>
-              </td>
-            </tr>
-            <tr *ngIf="usuariosFiltrados.length === 0">
-              <td colspan="5" class="p-12 text-center">
-                <svg class="w-12 h-12 text-gray-300 dark:text-slate-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                <p class="text-gray-500 dark:text-slate-400 font-medium text-lg">No se encontraron usuarios</p>
-                <p class="text-gray-400 dark:text-slate-500 text-sm mt-1">Intente cambiar el filtro de empresa.</p>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <!-- Scope Indicator Badge for Store Admins & Branch Managers -->
+      <div *ngIf="!isGlobalAdmin" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 text-emerald-400 text-xs font-bold">
+        <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+        <span>Ámbito Fijo: {{ authService.getUserCompanyName() }}</span>
       </div>
+
+      <!-- Status Filter Toggle Buttons -->
+      <div class="flex items-center bg-slate-900 p-1 rounded-xl border border-slate-800">
+        <button (click)="filtroEstado = 'TODOS'; aplicarFiltros()"
+                [ngClass]="filtroEstado === 'TODOS' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'"
+                class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all">
+          Todos
+        </button>
+        <button (click)="filtroEstado = 'ACTIVO'; aplicarFiltros()"
+                [ngClass]="filtroEstado === 'ACTIVO' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-400 hover:text-white'"
+                class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all">
+          Activos
+        </button>
+        <button (click)="filtroEstado = 'INACTIVO'; aplicarFiltros()"
+                [ngClass]="filtroEstado === 'INACTIVO' ? 'bg-rose-600 text-white shadow-md' : 'text-slate-400 hover:text-white'"
+                class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all">
+          Inactivos
+        </button>
+      </div>
+
+      <!-- Clear Filters Button -->
+      <button (click)="limpiarFiltros()" 
+              class="p-2.5 text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-xs font-bold transition-all"
+              title="Limpiar Filtros">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+      </button>
+
     </div>
   </div>
+
+  <!-- Enterprise Workspace Data Table Container -->
+  <div class="bg-slate-950/90 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-xl">
+    
+    <!-- Loading State -->
+    <div *ngIf="cargando && !mostrarModal" class="p-8 space-y-4">
+      <div *ngFor="let i of [1,2,3,4,5]" class="animate-pulse flex items-center justify-between gap-4 py-4 border-b border-slate-900">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-slate-900"></div>
+          <div class="space-y-2">
+            <div class="w-40 h-3 bg-slate-900 rounded"></div>
+            <div class="w-24 h-2 bg-slate-900 rounded"></div>
+          </div>
+        </div>
+        <div class="w-28 h-3 bg-slate-900 rounded"></div>
+        <div class="w-20 h-6 bg-slate-900 rounded-full"></div>
+        <div class="w-16 h-6 bg-slate-900 rounded-full"></div>
+      </div>
+    </div>
+
+    <!-- Data Grid Table -->
+    <div *ngIf="!cargando || mostrarModal" class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-slate-900/80 border-b border-slate-800 text-[11px] font-bold uppercase tracking-widest text-slate-400">
+            <th class="py-4 px-6">Directorio Usuario</th>
+            <th *ngIf="isGlobalAdmin" class="py-4 px-6">Empresa / Tenant</th>
+            <th class="py-4 px-6">Rol Asignado</th>
+            <th class="py-4 px-6 text-center">Estado Acceso</th>
+            <th class="py-4 px-6 text-right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-900 text-xs">
+          
+          <tr *ngFor="let u of usuariosFiltrados" class="hover:bg-slate-900/60 transition-colors group">
+            
+            <!-- Usuario Column (Avatar + Full Name + Username + Email) -->
+            <td class="py-4 px-6">
+              <div class="flex items-center gap-3.5">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-700 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-md shadow-indigo-500/20 ring-2 ring-indigo-500/20">
+                  {{ getIniciales(u.nombre_completo) }}
+                </div>
+                <div class="min-w-0">
+                  <p class="font-bold text-white text-sm truncate group-hover:text-indigo-300 transition-colors">
+                    {{ u.nombre_completo }}
+                  </p>
+                  <p class="text-[11px] text-slate-400 truncate mt-0.5">
+                    <span class="text-slate-300 font-mono">@{{ u.nombre_usuario }}</span>
+                    <span class="mx-1.5 text-slate-600">•</span>
+                    {{ u.correo || 'Sin correo' }}
+                    <span *ngIf="u.ci" class="mx-1.5 text-slate-600">•</span>
+                    <span *ngIf="u.ci">CI: {{ u.ci }}</span>
+                  </p>
+                </div>
+              </div>
+            </td>
+
+            <!-- Tenant / Empresa Column (GLOBAL ADMIN ONLY) -->
+            <td *ngIf="isGlobalAdmin" class="py-4 px-6 font-semibold text-slate-300">
+              <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 text-xs">
+                <svg class="w-3.5 h-3.5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                </svg>
+                <span class="truncate">{{ u.nombre_empresa || 'Aura Central' }}</span>
+              </div>
+            </td>
+
+            <!-- Role Badge Column -->
+            <td class="py-4 px-6">
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+                <svg class="w-3 h-3 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 0121 9z"></path></svg>
+                {{ u.nombre_rol || 'CLIENTE' }}
+              </span>
+            </td>
+
+            <!-- Status Indicator Column -->
+            <td class="py-4 px-6 text-center">
+              <span *ngIf="u.estado === 'ACTIVO'" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <span class="relative flex h-2 w-2">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                Activo
+              </span>
+              <span *ngIf="u.estado !== 'ACTIVO'" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+                Inactivo
+              </span>
+            </td>
+
+            <!-- Contextual Actions -->
+            <td class="py-4 px-6 text-right">
+              <div class="flex items-center justify-end gap-1.5">
+                <button (click)="abrirModalEditar(u)" 
+                        title="Editar usuario"
+                        class="p-2 text-slate-400 hover:text-indigo-300 hover:bg-slate-900 border border-transparent hover:border-slate-800 rounded-xl transition-all">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                </button>
+                <button (click)="eliminarUsuario(u.nro_usuario)" 
+                        title="Eliminar usuario"
+                        class="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 border border-transparent hover:border-rose-800/40 rounded-xl transition-all">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                </button>
+              </div>
+            </td>
+
+          </tr>
+
+          <!-- Empty State -->
+          <tr *ngIf="usuariosFiltrados.length === 0">
+            <td colspan="5" class="py-16 px-4 text-center">
+              <div class="max-w-sm mx-auto space-y-4">
+                <div class="w-14 h-14 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mx-auto text-slate-500">
+                  <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                </div>
+                <div>
+                  <p class="text-base font-bold text-white">No se encontraron usuarios</p>
+                  <p class="text-xs text-slate-400 mt-1">Prueba ajustando los filtros de búsqueda o empresa.</p>
+                </div>
+                <button (click)="abrirModalNuevo()" class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow-md">
+                  + Registrar usuario
+                </button>
+              </div>
+            </td>
+          </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
 </div>
 
-<div *ngIf="mostrarModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 dark:bg-black/70 backdrop-blur-sm transition-opacity">
-  <div class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-sm shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden animate-fade-in-up">
+<!-- High-End User Drawer Modal -->
+<div *ngIf="mostrarModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md transition-all">
+  <div class="bg-slate-950 border border-slate-800 rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden ring-1 ring-white/10">
     
-    <div class="flex justify-between items-center p-6 border-b border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50">
-      <h3 class="text-xl font-bold text-gray-900 dark:text-white">
-        <span *ngIf="modoEdicion">Editar Usuario <span class="text-blue-600 dark:text-blue-400 ml-1">#{{ usuarioForm.nro_usuario }}</span></span>
-        <span *ngIf="!modoEdicion">Registrar Nuevo Usuario</span>
-      </h3>
-      <button (click)="cerrarModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+    <!-- Modal Header -->
+    <div class="flex justify-between items-center px-8 py-6 border-b border-slate-800 bg-slate-900/60">
+      <div>
+        <h3 class="text-lg font-black text-white flex items-center gap-2">
+          <span *ngIf="modoEdicion">Editar Usuario <span class="text-indigo-400 font-mono text-sm">#{{ usuarioForm.nro_usuario }}</span></span>
+          <span *ngIf="!modoEdicion">Registrar Nuevo Usuario</span>
+        </h3>
+        <p class="text-xs text-slate-400 mt-1">Asigna credenciales de acceso, rol RBAC y pertenencia a empresa.</p>
+      </div>
+      <button (click)="cerrarModal()" class="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-900 transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
       </button>
     </div>
 
-    <div class="p-6 overflow-y-auto flex-grow">
-      <form (ngSubmit)="guardarUsuario()" #form="ngForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- Modal Form Body -->
+    <div class="p-8 overflow-y-auto flex-grow space-y-5 scrollbar-thin">
+      <form (ngSubmit)="guardarUsuario()" #form="ngForm" class="grid grid-cols-1 sm:grid-cols-2 gap-5 text-xs">
         
         <div>
-          <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1">Carnet (CI) *</label>
-          <input type="text" name="ci" [(ngModel)]="usuarioForm.ci" required
-                 class="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-700 rounded-sm p-2.5 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-900 dark:focus:ring-blue-500 transition-colors">
-        </div>
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1">Nombre Completo *</label>
-          <input type="text" name="nombre_completo" [(ngModel)]="usuarioForm.nombre_completo" required
-                 class="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-700 rounded-sm p-2.5 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-900 dark:focus:ring-blue-500 transition-colors">
+          <label class="block font-bold text-slate-300 mb-1.5">Carnet de Identidad (CI)</label>
+          <input type="text" name="ci" [(ngModel)]="usuarioForm.ci" placeholder="Ej. 8765432"
+                 class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all">
         </div>
 
         <div>
-          <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1">Usuario (Login) *</label>
-          <input type="text" name="nombre_usuario" [(ngModel)]="usuarioForm.nombre_usuario" required
-                 class="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-700 rounded-sm p-2.5 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-900 dark:focus:ring-blue-500 transition-colors">
-        </div>
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1">Correo Electrónico</label>
-          <input type="email" name="correo" [(ngModel)]="usuarioForm.correo"
-                 class="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-700 rounded-sm p-2.5 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-900 dark:focus:ring-blue-500 transition-colors">
+          <label class="block font-bold text-slate-300 mb-1.5">Nombre Completo *</label>
+          <input type="text" name="nombre_completo" [(ngModel)]="usuarioForm.nombre_completo" required placeholder="Ej. Ana García Toledo"
+                 class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all">
         </div>
 
         <div>
-          <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1">Teléfono</label>
-          <input type="text" name="telefono" [(ngModel)]="usuarioForm.telefono"
-                 class="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-700 rounded-sm p-2.5 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-900 dark:focus:ring-blue-500 transition-colors">
-        </div>
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1">Dirección Físico</label>
-          <input type="text" name="direccion" [(ngModel)]="usuarioForm.direccion"
-                 class="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-700 rounded-sm p-2.5 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-900 dark:focus:ring-blue-500 transition-colors">
+          <label class="block font-bold text-slate-300 mb-1.5">Nombre de Usuario (Login) *</label>
+          <input type="text" name="nombre_usuario" [(ngModel)]="usuarioForm.nombre_usuario" required placeholder="Ej. agarcia"
+                 class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all">
         </div>
 
         <div>
-          <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1">Rol en el Sistema *</label>
+          <label class="block font-bold text-slate-300 mb-1.5">Correo Electrónico</label>
+          <input type="email" name="correo" [(ngModel)]="usuarioForm.correo" placeholder="ana@aura.com"
+                 class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all">
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-300 mb-1.5">Teléfono de Contacto</label>
+          <input type="text" name="telefono" [(ngModel)]="usuarioForm.telefono" placeholder="+591 70000000"
+                 class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all">
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-300 mb-1.5">Dirección Física</label>
+          <input type="text" name="direccion" [(ngModel)]="usuarioForm.direccion" placeholder="Av. Equipetrol #123"
+                 class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all">
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-300 mb-1.5">Rol de Sistema (RBAC) *</label>
           <select name="nro_rol" [(ngModel)]="usuarioForm.nro_rol" required
-                  class="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-700 rounded-sm p-2.5 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-900 dark:focus:ring-blue-500 transition-colors">
-            <option *ngFor="let rol of rolesDisponibles" [value]="rol.id">{{ rol.nombre }}</option>
+                  class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-white focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all">
+            <option *ngFor="let rol of rolesDisponibles" [ngValue]="rol.id || rol.id_rol">{{ rol.nombre }}</option>
           </select>
         </div>
 
         <div>
-          <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1">Empresa / Tenant *</label>
+          <label class="block font-bold text-slate-300 mb-1.5">Empresa / Tienda Vinculada *</label>
           <select name="id_empresa" [(ngModel)]="usuarioForm.id_empresa" required
-                  class="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-700 rounded-sm p-2.5 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-900 dark:focus:ring-blue-500 transition-colors">
-            <option [ngValue]="null" disabled>-- Seleccione una Empresa --</option>
-            <option *ngFor="let emp of empresas" [value]="emp.id_empresa">{{ emp.nombre_empresa }}</option>
+                  class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-white focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all">
+            <option [ngValue]="null" disabled>-- Seleccione Empresa --</option>
+            <option *ngFor="let emp of empresas" [ngValue]="emp.id_empresa">{{ emp.nombre_empresa }}</option>
           </select>
         </div>
 
         <div>
-          <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1">
-            Contraseña <span *ngIf="!modoEdicion">*</span> <span *ngIf="modoEdicion" class="text-xs font-normal text-gray-400">(Opcional)</span>
+          <label class="block font-bold text-slate-300 mb-1.5">
+            Contraseña <span *ngIf="!modoEdicion" class="text-rose-400">*</span> <span *ngIf="modoEdicion" class="text-[10px] text-slate-500 font-normal">(Opcional)</span>
           </label>
-          <input type="password" name="password" [(ngModel)]="usuarioForm.password" [required]="!modoEdicion"
-                 class="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-700 rounded-sm p-2.5 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-900 dark:focus:ring-blue-500 transition-colors">
+          <input type="password" name="password" [(ngModel)]="usuarioForm.password" [required]="!modoEdicion" placeholder="••••••••"
+                 class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all">
         </div>
+
         <div>
-          <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1">Estado de la Cuenta</label>
+          <label class="block font-bold text-slate-300 mb-1.5">Estado del Usuario</label>
           <select name="estado" [(ngModel)]="usuarioForm.estado"
-                  class="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-700 rounded-sm p-2.5 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-900 dark:focus:ring-blue-500 transition-colors">
-            <option value="ACTIVO">ACTIVO</option>
-            <option value="INACTIVO">INACTIVO</option>
+                  class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-white focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all">
+            <option value="ACTIVO">ACTIVO (Habilitado)</option>
+            <option value="INACTIVO">INACTIVO (Bloqueado)</option>
           </select>
         </div>
-        
+
       </form>
     </div>
 
-    <div class="p-6 border-t border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 flex justify-end gap-3">
+    <!-- Modal Footer -->
+    <div class="px-8 py-5 border-t border-slate-800 bg-slate-900/60 flex justify-end gap-3">
       <button type="button" (click)="cerrarModal()" 
-              class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-sm transition-colors">
+              class="px-5 py-2.5 text-xs font-bold text-slate-300 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl transition-all">
         Cancelar
       </button>
       <button type="button" (click)="guardarUsuario()" [disabled]="form.invalid || cargando"
-              class="px-6 py-2 text-sm font-medium text-white bg-blue-900 dark:bg-blue-600 hover:bg-blue-800 dark:hover:bg-blue-500 rounded-sm transition-colors disabled:opacity-50 flex items-center gap-2">
-        <span *ngIf="cargando" class="animate-spin rounded-full h-4 w-4 border-2 border-white border-r-transparent"></span>
+              class="px-6 py-2.5 text-xs font-bold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 rounded-xl transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-indigo-500/25 ring-1 ring-white/10">
+        <span *ngIf="cargando" class="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-r-transparent"></span>
         {{ modoEdicion ? 'Actualizar Usuario' : 'Crear Usuario' }}
       </button>
     </div>

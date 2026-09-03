@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
 import { AuthService } from '../../../services/auth';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -52,7 +52,7 @@ export class ListaUsuariosComponent implements OnInit {
   
   private http = inject(HttpClient);
   private cdr = inject(ChangeDetectorRef);
-  private authService = inject(AuthService);
+  public authService = inject(AuthService);
   private ngZone = inject(NgZone);
   private apiUrl = environment.apiUrl;
   private destroyRef = inject(DestroyRef);
@@ -63,7 +63,16 @@ export class ListaUsuariosComponent implements OnInit {
   empresas: Empresa[] = []; 
   
   // --- VARIABLE PARA EL FILTRO ---
-  filtroEmpresa: string = ''; // '' significa "Mostrar Todas"
+  filtroEmpresa: string = 'TODOS'; // 'TODOS' significa "Mostrar Todas"
+  filtroEstado: string = 'TODOS';  // 'TODOS', 'ACTIVO', 'INACTIVO'
+  filtroTexto: string = '';   // Búsqueda por texto
+
+  get busquedaTexto(): string {
+    return this.filtroTexto;
+  }
+  set busquedaTexto(val: string) {
+    this.filtroTexto = val;
+  }
 
   cargando: boolean = false;
   mensajeError: string = '';
@@ -77,25 +86,83 @@ export class ListaUsuariosComponent implements OnInit {
   usuariosActivos: number = 0;
   usuariosInactivos: number = 0;
 
-  rolesDisponibles = [
-    { id: 1, nombre: 'ADMINISTRADOR' },
-    { id: 2, nombre: 'GERENTE TALLER' },
-    { id: 3, nombre: 'MECANICO' },
-    { id: 4, nombre: 'CLIENTE' }
+  rolesDisponibles: { id: number; id_rol?: number; nombre: string }[] = [
+    { id: 1, id_rol: 1, nombre: 'ADMINISTRADOR' },
+    { id: 2, id_rol: 2, nombre: 'CLIENTE' },
+    { id: 3, id_rol: 3, nombre: 'ADMINISTRADOR_TIENDA' },
+    { id: 4, id_rol: 4, nombre: 'ENCARGADO_SUCURSAL' },
+    { id: 5, id_rol: 5, nombre: 'CAJERO' },
+    { id: 6, id_rol: 6, nombre: 'PROVEEDOR' }
   ];
+
+  // --- PROPIEDADES DE ALCANCE Y CONTEXTO ---
+  get scope(): 'PLATAFORMA' | 'EMPRESA' | 'SUCURSAL' {
+    return this.authService.getScopeLevel();
+  }
+
+  get isGlobalAdmin(): boolean {
+    return this.authService.isGlobalAdmin();
+  }
+
+  get isStoreAdmin(): boolean {
+    return this.authService.isStoreAdmin();
+  }
+
+  get isBranchManager(): boolean {
+    return this.authService.isBranchManager();
+  }
+
+  get tituloWorkspace(): string {
+    const scope = this.scope;
+    if (scope === 'PLATAFORMA') return 'Usuarios de la plataforma';
+    if (scope === 'EMPRESA') return `Equipo de ${this.authService.getUserCompanyName()}`;
+    return `Equipo de ${this.authService.getUserBranchName()}`;
+  }
+
+  get subtituloWorkspace(): string {
+    const scope = this.scope;
+    if (scope === 'PLATAFORMA') return 'Gestiona el acceso global de usuarios y su asignación multi-tenant a empresas.';
+    if (scope === 'EMPRESA') return 'Gestiona los miembros, personal operativo y roles asignados a tu empresa.';
+    return 'Personal activo y asignado a tu sucursal.';
+  }
+
+  get botonCrearTexto(): string {
+    const scope = this.scope;
+    if (scope === 'PLATAFORMA') return '+ Nuevo usuario';
+    if (scope === 'EMPRESA') return '+ Invitar usuario';
+    return '+ Asignar personal';
+  }
+
+  get terceraMetricaTitulo(): string {
+    const scope = this.scope;
+    if (scope === 'PLATAFORMA') return 'Empresas Registradas';
+    if (scope === 'EMPRESA') return 'Sucursales';
+    return 'Sucursal Activa';
+  }
+
+  get terceraMetricaValor(): number {
+    const scope = this.scope;
+    if (scope === 'PLATAFORMA') return this.empresas.length || 1;
+    if (scope === 'EMPRESA') return 1;
+    return 1;
+  }
 
   async ngOnInit() {
     this.cargando = true;
     
-    // Esperar a que el token esté disponible (esto evita la petición 401 inicial)
+    // Esperar a que el token esté disponible
     let intentos = 0;
     while (!this.authService.obtenerToken() && intentos < 10) {
       await new Promise(r => setTimeout(r, 50)); 
       intentos++;
     }
 
-    // Si después de esperar sigue sin haber token, no hacemos nada
     if (this.authService.obtenerToken()) {
+      const currentUser = this.authService.obtenerUsuario();
+      if (!this.isGlobalAdmin && currentUser?.id_empresa) {
+        this.filtroEmpresa = String(currentUser.id_empresa);
+      }
+      this.cargarRoles();
       this.cargarEmpresas();
       this.cargarUsuarios();
     } else {
@@ -107,16 +174,49 @@ export class ListaUsuariosComponent implements OnInit {
   // --- LÓGICA DE FILTRADO Y MÉTRICAS ---
   
   aplicarFiltros() {
-    if (this.filtroEmpresa === '') {
-      // Si no hay filtro, mostramos todos
-      this.usuariosFiltrados = [...this.usuarios];
-    } else {
-      // Si hay filtro, convertimos el ID a número y filtramos
+    let resultado = [...this.usuarios];
+
+    const currentUser = this.authService.obtenerUsuario();
+
+    // Para Administrador de Tienda o Encargado de Sucursal, forzar el filtrado por su empresa
+    if (!this.isGlobalAdmin && currentUser?.id_empresa) {
+      resultado = resultado.filter(u => u.id_empresa === currentUser.id_empresa);
+    } else if (this.filtroEmpresa !== '' && this.filtroEmpresa !== 'TODOS') {
       const idBuscado = Number(this.filtroEmpresa);
-      this.usuariosFiltrados = this.usuarios.filter(u => u.id_empresa === idBuscado);
+      resultado = resultado.filter(u => u.id_empresa === idBuscado);
     }
-    // Actualizamos las métricas basándonos EN LO FILTRADO, no en el total general
+
+    // Filtro por Estado (ACTIVO / INACTIVO)
+    if (this.filtroEstado !== '' && this.filtroEstado !== 'TODOS') {
+      resultado = resultado.filter(u => u.estado === this.filtroEstado);
+    }
+
+    // Filtro por Texto (Nombre, CI, Correo, Username, Rol)
+    if (this.filtroTexto.trim() !== '') {
+      const q = this.filtroTexto.toLowerCase().trim();
+      resultado = resultado.filter(u =>
+        (u.nombre_completo && u.nombre_completo.toLowerCase().includes(q)) ||
+        (u.correo && u.correo.toLowerCase().includes(q)) ||
+        (u.ci && u.ci.toLowerCase().includes(q)) ||
+        (u.nombre_usuario && u.nombre_usuario.toLowerCase().includes(q)) ||
+        (u.nombre_rol && u.nombre_rol.toLowerCase().includes(q))
+      );
+    }
+
+    this.usuariosFiltrados = resultado;
     this.actualizarMetricas();
+  }
+
+  limpiarFiltros() {
+    const currentUser = this.authService.obtenerUsuario();
+    if (!this.isGlobalAdmin && currentUser?.id_empresa) {
+      this.filtroEmpresa = String(currentUser.id_empresa);
+    } else {
+      this.filtroEmpresa = 'TODOS';
+    }
+    this.filtroEstado = 'TODOS';
+    this.filtroTexto = '';
+    this.aplicarFiltros();
   }
 
   actualizarMetricas() {
@@ -125,8 +225,12 @@ export class ListaUsuariosComponent implements OnInit {
     this.usuariosInactivos = this.usuariosFiltrados.filter(u => u.estado === 'INACTIVO').length;
   }
 
+  getIniciales(nombre: string): string {
+    return this.obtenerIniciales(nombre);
+  }
+
   obtenerIniciales(nombre: string): string {
-    if (!nombre) return 'XX';
+    if (!nombre) return 'AU';
     const partes = nombre.trim().split(' ');
     if (partes.length >= 2) {
       return (partes[0][0] + partes[1][0]).toUpperCase();
@@ -135,25 +239,58 @@ export class ListaUsuariosComponent implements OnInit {
   }
 
   inicializarUsuario(): Usuario {
+    const currentUser = this.authService.obtenerUsuario();
+    const defaultEmpresaId = (!this.isGlobalAdmin && currentUser?.id_empresa) ? currentUser.id_empresa : null;
     return {
-      ci: '', nombre_usuario: '', nombre_completo: '', correo: '',
-      telefono: '', direccion: '', estado: 'ACTIVO', nro_rol: 4, 
-      id_empresa: null 
+      ci: '',
+      nombre_usuario: '',
+      nombre_completo: '',
+      correo: '',
+      telefono: '',
+      direccion: '',
+      estado: 'ACTIVO',
+      nro_rol: this.isBranchManager ? 5 : (this.isStoreAdmin ? 4 : 3),
+      id_empresa: defaultEmpresaId
     };
+  }
+
+  private getHeaders(): HttpHeaders {
+    const token = this.authService.obtenerToken();
+    return token ? new HttpHeaders({ 'Authorization': `Bearer ${token}` }) : new HttpHeaders();
   }
 
   // --- MÉTODOS DE RED ---
 
-  cargarEmpresas() {
-    // Obtenemos el token directamente del servicio
-    const token = this.authService.obtenerToken();
-    
-    // Creamos los headers manualmente
-    const headers = { 
-      'Authorization': `Bearer ${token}` 
-    };
+  cargarRoles() {
+    this.http.get<any>(`${this.apiUrl}/api/roles/`, { headers: this.getHeaders() })
+    .pipe(takeUntilDestroyed(this.destroyRef))
+    .subscribe({
+      next: (res) => {
+        this.ngZone.run(() => {
+          if (res.success && res.data && res.data.length > 0) {
+            const rolesMapeados = res.data.map((r: any) => ({
+              id: Number(r.id_rol || r.nro_rol),
+              nombre: String(r.nombre_rol || r.nombre || '').toUpperCase()
+            }));
 
-    this.http.get<RespuestaApiEmpresas>(`${this.apiUrl}/api/empresas`, { headers })
+            // Filtrar cualquier rol legado del proyecto anterior
+            const rolesFiltrados = rolesMapeados.filter((r: any) => 
+              !['GERENTE TALLER', 'GERENTE_TALLER', 'GERENTE', 'MECANICO', 'MECÁNICO', 'TECNICO'].includes(r.nombre)
+            );
+
+            if (rolesFiltrados.length > 0) {
+              this.rolesDisponibles = rolesFiltrados;
+            }
+          }
+          this.cdr.detectChanges();
+        });
+      },
+      error: (err) => console.log('Roles RBAC usando valores locales', err)
+    });
+  }
+
+  cargarEmpresas() {
+    this.http.get<RespuestaApiEmpresas>(`${this.apiUrl}/api/empresas`, { headers: this.getHeaders() })
     .pipe(takeUntilDestroyed(this.destroyRef))
     .subscribe({
       next: (res) => {
@@ -171,13 +308,13 @@ export class ListaUsuariosComponent implements OnInit {
   cargarUsuarios() {
     this.cargando = true;
     this.mensajeError = '';
-    
-    this.http.get<RespuestaApiUsuarios>(`${this.apiUrl}/api/usuarios/`).subscribe({
+
+    this.http.get<RespuestaApiUsuarios>(`${this.apiUrl}/api/usuarios/`, { headers: this.getHeaders() }).subscribe({
       next: (res) => {
         this.ngZone.run(() => {
           if (res.success) {
             this.usuarios = [...res.data]; 
-            this.aplicarFiltros(); // <-- LLAMAMOS AL FILTRO AL TERMINAR DE CARGAR
+            this.aplicarFiltros();
           } else {
             this.mensajeError = res.message || 'Error al obtener datos.';
           }
@@ -196,24 +333,28 @@ export class ListaUsuariosComponent implements OnInit {
   }
 
   guardarUsuario() {
-    if (!this.usuarioForm.ci || !this.usuarioForm.nombre_completo || !this.usuarioForm.nombre_usuario || !this.usuarioForm.id_empresa) {
-      alert('Por favor complete todos los campos obligatorios, incluyendo la Empresa.');
+    if (!this.usuarioForm.nombre_completo || !this.usuarioForm.nombre_usuario || !this.usuarioForm.id_empresa || !this.usuarioForm.nro_rol) {
+      alert('Por favor complete todos los campos obligatorios: Nombre Completo, Usuario, Rol y Empresa.');
       return;
     }
+
+    this.usuarioForm.nro_rol = Number(this.usuarioForm.nro_rol);
+    this.usuarioForm.id_empresa = Number(this.usuarioForm.id_empresa);
 
     this.cargando = true;
 
     if (this.modoEdicion) {
-      this.http.put(`${this.apiUrl}/api/usuarios/${this.usuarioForm.nro_usuario}`, this.usuarioForm).subscribe({
+      this.http.put(`${this.apiUrl}/api/usuarios/${this.usuarioForm.nro_usuario}`, this.usuarioForm, { headers: this.getHeaders() }).subscribe({
         next: () => {
           this.ngZone.run(() => {
             this.cerrarModal();
             this.cargarUsuarios();
           });
         },
-        error: () => {
+        error: (err) => {
           this.ngZone.run(() => {
-            alert('Error al actualizar el usuario.');
+            const detail = err.error?.detail || 'Error al actualizar el usuario.';
+            alert(detail);
             this.cargando = false;
             this.cdr.detectChanges();
           });
@@ -226,16 +367,17 @@ export class ListaUsuariosComponent implements OnInit {
         return;
       }
 
-      this.http.post(`${this.apiUrl}/api/usuarios/`, this.usuarioForm).subscribe({
+      this.http.post(`${this.apiUrl}/api/usuarios/`, this.usuarioForm, { headers: this.getHeaders() }).subscribe({
         next: () => {
           this.ngZone.run(() => {
             this.cerrarModal();
             this.cargarUsuarios();
           });
         },
-        error: () => {
+        error: (err) => {
           this.ngZone.run(() => {
-            alert('Error al crear el usuario. Verifique los datos.');
+            const detail = err.error?.detail || 'Error al crear el usuario. Verifique los datos.';
+            alert(detail);
             this.cargando = false;
             this.cdr.detectChanges();
           });
@@ -247,7 +389,7 @@ export class ListaUsuariosComponent implements OnInit {
   eliminarUsuario(id?: number) {
     if (!id) return;
     if (confirm('¿Está seguro que desea eliminar a este usuario?')) {
-      this.http.delete(`${this.apiUrl}/api/usuarios/${id}`).subscribe({
+      this.http.delete(`${this.apiUrl}/api/usuarios/${id}`, { headers: this.getHeaders() }).subscribe({
         next: () => {
           this.ngZone.run(() => {
             this.cargarUsuarios();
@@ -266,9 +408,15 @@ export class ListaUsuariosComponent implements OnInit {
     this.mostrarModal = true;
   }
 
-  abrirModalEditar(usuario: Usuario) {
+  abrirModalEditar(usuario: any) {
     this.modoEdicion = true;
-    this.usuarioForm = { ...usuario, password: '' }; 
+    const rolEncontrado = usuario.id_rol || usuario.nro_rol || 3;
+    this.usuarioForm = { 
+      ...usuario, 
+      nro_rol: Number(rolEncontrado),
+      id_empresa: usuario.id_empresa ? Number(usuario.id_empresa) : null,
+      password: '' 
+    }; 
     this.mostrarModal = true;
   }
 

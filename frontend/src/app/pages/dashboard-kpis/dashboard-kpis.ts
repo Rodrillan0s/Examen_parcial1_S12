@@ -25,6 +25,36 @@ export class DashboardKpisComponent implements OnInit {
   cargando: boolean = false;
   mensajeError: string = '';
 
+  get scope(): 'PLATAFORMA' | 'EMPRESA' | 'SUCURSAL' {
+    return this.authService.getScopeLevel();
+  }
+
+  get isGlobalAdmin(): boolean {
+    return this.authService.isGlobalAdmin();
+  }
+
+  get isStoreAdmin(): boolean {
+    return this.authService.isStoreAdmin();
+  }
+
+  get isBranchManager(): boolean {
+    return this.authService.isBranchManager();
+  }
+
+  get tituloDashboard(): string {
+    const scope = this.scope;
+    if (scope === 'PLATAFORMA') return 'Analítica Operacional & KPIs Globales';
+    if (scope === 'EMPRESA') return `Analítica & Desempeño — ${this.authService.getUserCompanyName()}`;
+    return `Rendimiento Operativo — ${this.authService.getUserBranchName()}`;
+  }
+
+  get subtituloDashboard(): string {
+    const scope = this.scope;
+    if (scope === 'PLATAFORMA') return 'Métricas de desempeño en tiempo real, niveles de servicio SLA y distribución operativa multi-tienda.';
+    if (scope === 'EMPRESA') return 'Métricas de operación, ventas, pedidos y nivel de servicio de tu empresa.';
+    return 'Monitoreo de actividad, transacciones y servicio en tu sucursal.';
+  }
+
   ngOnInit(): void {
     if (isPlatformBrowser(this.platformId)) {
       this.usuarioActual = this.authService.obtenerUsuario();

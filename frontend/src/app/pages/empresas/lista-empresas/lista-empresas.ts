@@ -9,7 +9,7 @@ import { Empresa, EmpresaService } from '../../../services/empresa';
 @Component({
   selector: 'app-lista-empresas',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule],
   templateUrl: './lista-empresas.html'
 })
 export class ListaEmpresasComponent implements OnInit {

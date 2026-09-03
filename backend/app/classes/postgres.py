@@ -21,23 +21,23 @@ class PostgreSQL():
                 user=self.db_user,
                 password=self.db_password
             )
-
             self.cur=self.conn.cursor()
-            print('CONEXION EXITOSA')
         except Exception as e:
             print(f'ERROR DE CONEXION A LA DB: {e}')
 
-    def close_connection(self,commit=False):
+    def close_connection(self, commit=False):
         try:
             if self.conn:
                 if commit:
                     self.conn.commit()
+                else:
+                    self.conn.rollback()
                 if self.cur:
                     self.cur.close()
                 self.conn.close()
-                print('CONEXION A LA DB CERRADA EXITOSAMENTE')
         except Exception as e:
             print(f'ERROR AL CERRAR LA CONEXION CON LA DB: {e}')
+
 
 
     def execute_query(self,query,params=None,fetchall=False,fetchone=False,commit=False):

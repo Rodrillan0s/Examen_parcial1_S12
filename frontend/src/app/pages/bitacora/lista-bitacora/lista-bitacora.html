@@ -1,0 +1,219 @@
+<div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
+
+    <!-- Encabezado -->
+    <div class="sm:flex sm:justify-between sm:items-center mb-8">
+        <div class="mb-4 sm:mb-0">
+            <h1 class="text-2xl md:text-3xl text-slate-800 font-bold">Bitácora de Auditoría ✨</h1>
+            <p class="text-sm text-slate-500 mt-1">Registro de eventos y acciones del sistema AURA.</p>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="bg-white p-4 shadow-sm rounded-sm border border-slate-200 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-600 mb-1">Módulo</label>
+                <select [(ngModel)]="filtros.modulo" class="form-select w-full bg-slate-50 border-slate-200 text-sm">
+                    <option value="">Todos los módulos</option>
+                    <option value="AUTENTICACION">Autenticación</option>
+                    <option value="USUARIOS">Usuarios</option>
+                    <option value="ROLES">Roles</option>
+                    <option value="SUCURSALES">Sucursales</option>
+                    <option value="EMPRESAS">Empresas / Tiendas</option>
+                </select>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-slate-600 mb-1">Nivel</label>
+                <select [(ngModel)]="filtros.nivel" class="form-select w-full bg-slate-50 border-slate-200 text-sm">
+                    <option value="">Todos</option>
+                    <option value="INFO">Información</option>
+                    <option value="WARNING">Advertencia</option>
+                    <option value="CRITICAL">Crítico</option>
+                </select>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-slate-600 mb-1">Desde</label>
+                <input type="date" [(ngModel)]="filtros.fecha_desde" class="form-input w-full bg-slate-50 border-slate-200 text-sm" />
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-slate-600 mb-1">Hasta</label>
+                <input type="date" [(ngModel)]="filtros.fecha_hasta" class="form-input w-full bg-slate-50 border-slate-200 text-sm" />
+            </div>
+            
+            <div class="lg:col-span-4 flex justify-end space-x-2 mt-2">
+                <button class="btn bg-white border-slate-200 hover:border-slate-300 text-slate-600" (click)="limpiarFiltros()">Limpiar</button>
+                <button class="btn bg-indigo-500 hover:bg-indigo-600 text-white" (click)="aplicarFiltros()">
+                    <i class="fas fa-search mr-2"></i> Filtrar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla -->
+    <div class="bg-white shadow-lg rounded-sm border border-slate-200">
+        <header class="px-5 py-4 border-b border-slate-100">
+            <h2 class="font-semibold text-slate-800">Registros <span class="text-slate-400 font-medium ml-1">({{total}})</span></h2>
+        </header>
+
+        <div>
+            <!-- Loader -->
+            <div *ngIf="cargando" class="flex justify-center items-center py-12">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
+            </div>
+
+            <!-- Empty state -->
+            <div *ngIf="!cargando && eventos.length === 0" class="text-center py-12">
+                <div class="text-5xl mb-4">📝</div>
+                <h3 class="text-lg font-medium text-slate-800">No hay registros</h3>
+                <p class="text-slate-500 mt-1">No se encontraron eventos con los filtros actuales.</p>
+            </div>
+
+            <!-- Data Table -->
+            <div class="overflow-x-auto" *ngIf="!cargando && eventos.length > 0">
+                <table class="table-auto w-full">
+                    <thead class="text-xs font-semibold uppercase text-slate-500 bg-slate-50 border-t border-b border-slate-200">
+                        <tr>
+                            <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap"><div class="font-semibold text-left">Fecha y Hora</div></th>
+                            <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap"><div class="font-semibold text-left">Usuario</div></th>
+                            <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap"><div class="font-semibold text-left">Módulo</div></th>
+                            <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap"><div class="font-semibold text-left">Acción</div></th>
+                            <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap"><div class="font-semibold text-left">Nivel</div></th>
+                            <th class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap"><div class="font-semibold text-center">Detalle</div></th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm divide-y divide-slate-200">
+                        <tr *ngFor="let evento of eventos" class="hover:bg-slate-50 transition duration-150">
+                            <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap text-slate-500">
+                                {{ evento.fecha_evento | date:'dd/MM/yyyy HH:mm:ss' }}
+                            </td>
+                            <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                <div class="font-medium text-slate-800">{{ evento.usuario_nombre || 'Sistema' }}</div>
+                            </td>
+                            <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap text-slate-500">
+                                {{ evento.modulo }}
+                            </td>
+                            <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                <div class="text-slate-800">{{ evento.accion }}</div>
+                                <div class="text-xs text-slate-500 mt-1 max-w-xs truncate">{{ evento.descripcion }}</div>
+                            </td>
+                            <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
+                                <span class="px-2.5 py-0.5 rounded-full text-xs font-medium" [ngClass]="getNivelBadgeClass(evento.nivel)">
+                                    {{ evento.nivel }}
+                                </span>
+                            </td>
+                            <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap text-center">
+                                <button class="text-indigo-500 hover:text-indigo-600" (click)="verDetalles(evento)" title="Ver detalles">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Paginación -->
+            <div class="px-5 py-4 border-t border-slate-200 flex justify-between items-center" *ngIf="!cargando && eventos.length > 0">
+                <div class="text-sm text-slate-500">
+                    Mostrando <span class="font-medium text-slate-800">{{ (page - 1) * limit + 1 }}</span> a 
+                    <span class="font-medium text-slate-800">{{ Math.min(page * limit, total) }}</span> de 
+                    <span class="font-medium text-slate-800">{{ total }}</span> registros
+                </div>
+                
+                <div class="flex space-x-1">
+                    <button class="px-3 py-1 bg-white border border-slate-200 rounded text-sm hover:bg-slate-50 disabled:opacity-50" 
+                            [disabled]="page === 1" (click)="cambiarPagina(page - 1)">
+                        Anterior
+                    </button>
+                    <button class="px-3 py-1 bg-white border border-slate-200 rounded text-sm hover:bg-slate-50 disabled:opacity-50" 
+                            [disabled]="page === pages" (click)="cambiarPagina(page + 1)">
+                        Siguiente
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Detalles de Evento -->
+<div *ngIf="eventoSeleccionado" class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="fixed inset-0 bg-slate-900 bg-opacity-75 transition-opacity" aria-hidden="true" (click)="cerrarModal()"></div>
+    
+    <div class="inline-block bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all w-full max-w-4xl mx-4 max-h-[90vh] flex flex-col">
+        <!-- Header -->
+        <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center shrink-0">
+            <div>
+                <h3 class="text-lg leading-6 font-medium text-slate-800" id="modal-title">
+                    Detalle del Evento #{{eventoSeleccionado.id_bitacora}}
+                </h3>
+                <p class="text-sm text-slate-500 mt-1">{{eventoSeleccionado.fecha_evento | date:'dd/MM/yyyy HH:mm:ss'}}</p>
+            </div>
+            <button (click)="cerrarModal()" class="text-slate-400 hover:text-slate-500">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        
+        <!-- Body -->
+        <div class="px-6 py-5 overflow-y-auto bg-white grow">
+            
+            <div *ngIf="cargandoDetalle" class="flex justify-center items-center py-12">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+            </div>
+            
+            <div *ngIf="!cargandoDetalle">
+                <!-- Info principal -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <h4 class="text-sm font-semibold text-slate-800 uppercase tracking-wider mb-3">Contexto</h4>
+                        <div class="space-y-3 text-sm">
+                            <div class="flex"><span class="text-slate-500 w-24">Usuario:</span> <span class="font-medium text-slate-800">{{eventoSeleccionado.usuario_nombre || 'N/A'}}</span></div>
+                            <div class="flex"><span class="text-slate-500 w-24">IP:</span> <span class="font-medium text-slate-800">{{eventoSeleccionado.ip || 'Desconocida'}}</span></div>
+                            <div class="flex"><span class="text-slate-500 w-24">Módulo:</span> <span class="font-medium text-slate-800">{{eventoSeleccionado.modulo}}</span></div>
+                            <div class="flex"><span class="text-slate-500 w-24">Acción:</span> <span class="font-medium text-slate-800">{{eventoSeleccionado.accion}}</span></div>
+                            <div class="flex"><span class="text-slate-500 w-24">Nivel:</span> 
+                                <span class="px-2 py-0.5 rounded text-xs font-medium" [ngClass]="getNivelBadgeClass(eventoSeleccionado.nivel)">
+                                    {{eventoSeleccionado.nivel}}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-semibold text-slate-800 uppercase tracking-wider mb-3">Descripción</h4>
+                        <div class="p-3 bg-slate-50 rounded border border-slate-200 text-sm text-slate-700 min-h-[100px]">
+                            {{eventoSeleccionado.descripcion || 'Sin descripción adicional.'}}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cambios de datos -->
+                <h4 class="text-sm font-semibold text-slate-800 uppercase tracking-wider mb-3 mt-6 border-t pt-6">Detalle de Datos</h4>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div>
+                        <h5 class="text-xs font-medium text-slate-500 uppercase mb-2">Datos Anteriores</h5>
+                        <pre class="bg-slate-800 text-slate-300 p-4 rounded-md text-xs overflow-x-auto whitespace-pre-wrap max-h-96 border border-slate-700 font-mono">{{formatearJSON(eventoSeleccionado.datos_anteriores)}}</pre>
+                    </div>
+                    <div>
+                        <h5 class="text-xs font-medium text-slate-500 uppercase mb-2">Datos Nuevos</h5>
+                        <pre class="bg-slate-800 text-slate-300 p-4 rounded-md text-xs overflow-x-auto whitespace-pre-wrap max-h-96 border border-slate-700 font-mono">{{formatearJSON(eventoSeleccionado.datos_nuevos)}}</pre>
+                    </div>
+                </div>
+                
+                <div class="mt-6 pt-6 border-t" *ngIf="eventoSeleccionado.user_agent">
+                     <h5 class="text-xs font-medium text-slate-500 uppercase mb-2">User Agent</h5>
+                     <div class="text-xs text-slate-500 bg-slate-50 p-2 rounded border break-words">
+                         {{eventoSeleccionado.user_agent}}
+                     </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-end shrink-0">
+            <button type="button" class="btn bg-white border-slate-200 hover:border-slate-300 text-slate-600" (click)="cerrarModal()">
+                Cerrar
+            </button>
+        </div>
+    </div>
+</div>
