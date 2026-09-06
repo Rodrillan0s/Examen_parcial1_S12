@@ -60,6 +60,21 @@ def inicializar_tablas_seguridad():
         );
         """
         db.execute_query(query_dispositivos, commit=True)
+
+        # 4. Tabla notificacion para notificaciones y alertas
+        query_notificacion = f"""
+        CREATE TABLE IF NOT EXISTS {schema}.notificacion (
+            id_notificacion SERIAL PRIMARY KEY,
+            titulo VARCHAR(255) NOT NULL,
+            cuerpo TEXT NOT NULL,
+            tipo_referencia VARCHAR(100) DEFAULT 'SISTEMA',
+            nro_usuario INT NOT NULL REFERENCES {schema}.t_usuario(id_usuario) ON DELETE CASCADE,
+            leido BOOLEAN DEFAULT FALSE,
+            fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            nro_emergencia INT
+        );
+        """
+        db.execute_query(query_notificacion, commit=True)
     except Exception as e:
         raise e
     finally:

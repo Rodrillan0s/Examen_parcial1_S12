@@ -9,7 +9,6 @@ import { ListaEmpresasComponent } from './pages/empresas/lista-empresas/lista-em
 import { ListaSucursalesComponent } from './pages/sucursales/lista-sucursales/lista-sucursales';
 import { ListaBitacoraComponent } from './pages/bitacora/lista-bitacora/lista-bitacora';
 import { BackupComponent } from './pages/backup/backup';
-import { DineroRetenidoComponent } from './pages/dinero-retenido/dinero-retenido';
 import { BiDashboardComponent } from './pages/bi-dashboard/bi-dashboard';
 import { TriajeChatComponent } from './pages/triaje-chat/triaje-chat';
 import { authGuard } from './guards/auth-guard';
@@ -27,7 +26,6 @@ export const routes: Routes = [
   { path: 'empresas', redirectTo: 'admin/empresas', pathMatch: 'full' },
   { path: 'bitacora', redirectTo: 'admin/bitacora', pathMatch: 'full' },
   { path: 'backup', redirectTo: 'admin/backup', pathMatch: 'full' },
-  { path: 'dinero-retenido', redirectTo: 'admin/dinero-retenido', pathMatch: 'full' },
   { path: 'bi-dashboard', redirectTo: 'admin/bi_dashboard', pathMatch: 'full' },
   { path: 'bi_dashboard', redirectTo: 'admin/bi_dashboard', pathMatch: 'full' },
   { path: 'triaje-chat', redirectTo: 'admin/triaje-chat', pathMatch: 'full' },
@@ -46,7 +44,6 @@ export const routes: Routes = [
       { path: 'sucursales', component: ListaSucursalesComponent },
       { path: 'bitacora', component: ListaBitacoraComponent },
       { path: 'backup', component: BackupComponent },
-      { path: 'dinero-retenido', component: DineroRetenidoComponent },
       { path: 'bi_dashboard', component: BiDashboardComponent },
       { path: 'bi-dashboard', component: BiDashboardComponent },
       { path: 'triaje-chat', component: TriajeChatComponent },

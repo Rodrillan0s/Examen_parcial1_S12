@@ -87,7 +87,7 @@
                     <tbody class="text-sm divide-y divide-slate-200">
                         <tr *ngFor="let evento of eventos" class="hover:bg-slate-50 transition duration-150">
                             <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap text-slate-500">
-                                {{ evento.fecha_evento | date:'dd/MM/yyyy HH:mm:ss' }}
+                                {{ (evento.fecha_hora || evento.fecha_evento) | date:'dd/MM/yyyy HH:mm:ss' }}
                             </td>
                             <td class="px-2 first:pl-5 last:pr-5 py-3 whitespace-nowrap">
                                 <div class="font-medium text-slate-800">{{ evento.usuario_nombre || 'Sistema' }}</div>
@@ -148,7 +148,7 @@
                 <h3 class="text-lg leading-6 font-medium text-slate-800" id="modal-title">
                     Detalle del Evento #{{eventoSeleccionado.id_bitacora}}
                 </h3>
-                <p class="text-sm text-slate-500 mt-1">{{eventoSeleccionado.fecha_evento | date:'dd/MM/yyyy HH:mm:ss'}}</p>
+                <p class="text-sm text-slate-500 mt-1">{{ (eventoSeleccionado.fecha_hora || eventoSeleccionado.fecha_evento) | date:'dd/MM/yyyy HH:mm:ss' }}</p>
             </div>
             <button (click)="cerrarModal()" class="text-slate-400 hover:text-slate-500">
                 <i class="fas fa-times text-xl"></i>

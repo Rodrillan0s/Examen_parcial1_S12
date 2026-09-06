@@ -6,6 +6,7 @@ import { environment } from '../../environments/environment';
 export interface BitacoraEvent {
   id_bitacora: number;
   fecha_hora: string;
+  fecha_evento?: string;
   id_usuario: number;
   usuario_nombre: string;
   id_empresa: number;
@@ -43,7 +44,7 @@ export interface BitacoraDetalleResponse {
   providedIn: 'root'
 })
 export class BitacoraService {
-  private apiUrl = `${environment.apiUrl}/api/bitacora`;
+  private apiUrl = `${environment.apiUrl}/api/bitacora/`;
 
   constructor(private http: HttpClient) {}
 
@@ -62,6 +63,6 @@ export class BitacoraService {
   }
 
   obtenerDetalleEvento(id_bitacora: number): Observable<BitacoraDetalleResponse> {
-    return this.http.get<BitacoraDetalleResponse>(`${this.apiUrl}/${id_bitacora}`);
+    return this.http.get<BitacoraDetalleResponse>(`${this.apiUrl}${id_bitacora}`);
   }
 }

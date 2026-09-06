@@ -1,7 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import Config
-from app.routes import main_routes, auth_routes, users_routes, tenant_routes, roles_routes, rbac_routes, sucursales_routes, bitacora_routes
+from app.routes import (
+    main_routes, auth_routes, users_routes, tenant_routes, 
+    roles_routes, rbac_routes, sucursales_routes, bitacora_routes,
+    notificaciones_routes, kpis_routes, backup_routes, profile_routes
+)
 from app.utils.db_init import inicializar_tablas_seguridad
 from app.utils.rbac_migration import ejecutar_migracion_rbac
 
@@ -34,5 +38,9 @@ def create_app() -> FastAPI:
     app.include_router(roles_routes.router, prefix='/api/roles')
     app.include_router(rbac_routes.router, prefix='/api/rbac')
     app.include_router(bitacora_routes.router, prefix='/api/bitacora')
+    app.include_router(notificaciones_routes.router, prefix='/api/ws')
+    app.include_router(kpis_routes.router)
+    app.include_router(backup_routes.router, prefix='/api/backup')
+    app.include_router(profile_routes.router, prefix='/api/perfil')
 
     return app

@@ -5,6 +5,7 @@ from app.services import bitacora_services
 
 router = APIRouter(tags=["Bitácora y Auditoría"])
 
+@router.get('')
 @router.get('/')
 def get_bitacora(
     page: int = Query(1, ge=1),
