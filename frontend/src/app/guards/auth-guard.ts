@@ -26,10 +26,22 @@ export const authGuard: CanActivateFn = (route, state) => {
 
   // 2. Si la ruta requiere rol administrativo/empleado (ej. /admin y sus hijas)
   const esRutaAdmin = state.url.startsWith('/admin');
-  if (esRutaAdmin && !authService.esEmpleadoOAdmin()) {
-    alert('Acceso restringido: Se requieren privilegios de empleado o administrador para acceder al panel de gestión.');
-    router.navigate(['/']);
-    return false;
+  if (esRutaAdmin) {
+    if (!authService.esEmpleadoOAdmin()) {
+      // Un cliente autenticado no tiene acceso al panel administrativo; redirigir a su perfil
+      if (authService.esCliente()) {
+        router.navigate(['/perfil']);
+      } else {
+        router.navigate(['/']);
+      }
+      return false;
+    }
+
+    // Restricciones internas: Cadena de Tiendas y Respaldo solo para Administradores de Nivel 1 y 2
+    if ((state.url.startsWith('/admin/empresas') || state.url.startsWith('/admin/backup')) && !authService.isGlobalAdmin()) {
+      router.navigate(['/admin/kpis']);
+      return false;
+    }
   }
 
   return true;

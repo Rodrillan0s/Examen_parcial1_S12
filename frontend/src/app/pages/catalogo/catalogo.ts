@@ -1,174 +1,338 @@
-import { Component, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth';
-import { ProductDetailModalComponent, ProductoFashion } from '../../components/product-detail-modal/product-detail-modal';
+import { ThemeService } from '../../services/theme';
+import { CarritoService } from '../../services/carrito';
+import { 
+  CatalogoPublicoService, 
+  TenantPublico, 
+  FiltrosCatalogoResponse, 
+  PrendaCatalogo, 
+  DetallePrendaCatalogo 
+} from '../../services/catalogo-publico';
+import { CatalogoFiltrosComponent } from './components/filtros/filtros';
+import { ProductoCardComponent } from './components/producto-card/producto-card';
+import { ProductDetailModalComponent } from '../../components/product-detail-modal/product-detail-modal';
 
 @Component({
   selector: 'app-catalogo',
   standalone: true,
-  imports: [CommonModule, FormsModule, ProductDetailModalComponent],
+  imports: [
+    CommonModule, 
+    FormsModule, 
+    RouterModule,
+    CatalogoFiltrosComponent, 
+    ProductoCardComponent, 
+    ProductDetailModalComponent
+  ],
   templateUrl: './catalogo.html'
 })
-export class CatalogoComponent {
-  public authService = inject(AuthService);
+export class CatalogoComponent implements OnInit {
+  public catalogoService = inject(CatalogoPublicoService);
+  public authService     = inject(AuthService);
+  public themeService    = inject(ThemeService);
+  public carritoService  = inject(CarritoService);
+  private route          = inject(ActivatedRoute);
+  private cdr            = inject(ChangeDetectorRef);
 
-  searchQuery = '';
-  selectedCategory = 'Todos';
-  selectedBranchFilter = 'Todas';
-  selectedSort = 'destacados';
-  selectedProductForModal: ProductoFashion | null = null;
+  // Tenants / Tiendas
+  tenants: TenantPublico[] = [];
+  selectedTenantId: number | null = null;
+  selectedTenant: TenantPublico | null = null;
 
-  categorias = ['Todos', 'Otoño 2026', 'Sastrería', 'Alta Costura', 'Esenciales', 'Accesorios'];
-  sucursales = ['Todas', 'Sucursal Central Equipetrol', 'Sucursal Calacoto Luxury', 'Sucursal Cochabamba Jardin'];
+  // Productos & Paginación
+  productos: PrendaCatalogo[] = [];
+  totalProductos: number = 0;
+  cargando: boolean = false;
+  cargandoFiltros: boolean = false;
 
-  // Catálogo completo de prendas
-  todosProductos: ProductoFashion[] = [
-    {
-      id: 101,
-      nombre: 'Abrigo Oversized Alpaca Pure',
-      subtitulo: 'Sastrería de Lana de Alpaca Boliviana & Fibras de Lujo',
-      precio: 1450,
-      precioAnterior: 1800,
-      categoria: 'Otoño 2026',
-      imagenPrincipal: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&w=800&q=80',
-      imagenes: [
-        'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=800&q=80'
-      ],
-      tallas: ['S', 'M', 'L', 'XL'],
-      colores: [
-        { nombre: 'Camel Atacama', hex: '#c19a6b' },
-        { nombre: 'Negro Azabache', hex: '#18181b' }
-      ],
-      descripcion: 'Confeccionado artesanalmente con 100% fibra de alpaca fina. Corte holgado arquitectónico con solapas cruzadas.',
-      especificaciones: ['100% Fibra de Alpaca', 'Hecho en Bolivia'],
-      sucursalesDisponibles: ['Sucursal Central Equipetrol', 'Sucursal Calacoto Luxury'],
-      etiqueta: 'Edición Limitada',
-      popularidad: 98
-    },
-    {
-      id: 102,
-      nombre: 'Blazer Neopreno Estructurado',
-      subtitulo: 'Línea de Sastrería Urbana Minimalista',
-      precio: 890,
-      precioAnterior: 1100,
-      categoria: 'Sastrería',
-      imagenPrincipal: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=800&q=80',
-      imagenes: ['https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=800&q=80'],
-      tallas: ['XS', 'S', 'M', 'L'],
-      colores: [
-        { nombre: 'Verde Botella', hex: '#1b382b' },
-        { nombre: 'Monocromo Negro', hex: '#09090b' }
-      ],
-      descripcion: 'Silueta limpia y rígida que estiliza la figura con hombreras estructuradas.',
-      especificaciones: ['Tejido Neopreno Premium', 'Construcción Rígida'],
-      sucursalesDisponibles: ['Sucursal Central Equipetrol', 'Sucursal Cochabamba Jardin'],
-      etiqueta: 'Más Vendido',
-      popularidad: 95
-    },
-    {
-      id: 103,
-      nombre: 'Vestido de Seda Italiana Marfil',
-      subtitulo: 'Colección Ceremonia & Alta Costura',
-      precio: 2100,
-      categoria: 'Alta Costura',
-      imagenPrincipal: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=800&q=80',
-      imagenes: ['https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=800&q=80'],
-      tallas: ['S', 'M', 'L'],
-      colores: [
-        { nombre: 'Marfil Perla', hex: '#fdfbf7' },
-        { nombre: 'Rosa Champán', hex: '#e8c5b0' }
-      ],
-      descripcion: 'Caída fluida de seda natural importada con espalda escotada y pliegues hechos a mano.',
-      especificaciones: ['Seda Natural 100%', 'Costuras Invisibles'],
-      sucursalesDisponibles: ['Sucursal Calacoto Luxury'],
-      etiqueta: 'Exclusivo Atelier',
-      popularidad: 99
-    },
-    {
-      id: 104,
-      nombre: 'Camisa Oxford de Lino Orgánico',
-      subtitulo: 'Esenciales de Verano & Resort Wear',
-      precio: 450,
-      precioAnterior: 550,
-      categoria: 'Esenciales',
-      imagenPrincipal: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=800&q=80',
-      imagenes: ['https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=800&q=80'],
-      tallas: ['S', 'M', 'L', 'XL'],
-      colores: [
-        { nombre: 'Blanco Lino', hex: '#ffffff' },
-        { nombre: 'Azul Celeste', hex: '#93c5fd' }
-      ],
-      descripcion: 'Lino de origen sostenible transpirable con lavado suavizado de piedra.',
-      especificaciones: ['100% Lino Orgánico', 'Lavado a Piedra'],
-      sucursalesDisponibles: ['Sucursal Central Equipetrol', 'Sucursal Calacoto Luxury', 'Sucursal Cochabamba Jardin'],
-      etiqueta: 'Tendencia',
-      popularidad: 91
-    },
-    {
-      id: 105,
-      nombre: 'Trench Coat Impermeable Obsidian',
-      subtitulo: 'Prenda de Abrigo de Alto Rendimiento & Estilo Urbano',
-      precio: 1650,
-      categoria: 'Otoño 2026',
-      imagenPrincipal: 'https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&w=800&q=80',
-      imagenes: ['https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&w=800&q=80'],
-      tallas: ['M', 'L', 'XL'],
-      colores: [
-        { nombre: 'Negro Azabache', hex: '#09090b' },
-        { nombre: 'Azul Marino', hex: '#1e3a8a' }
-      ],
-      descripcion: 'Diseño clásico militar reinterpretado con membrana hidrófuga y cinturón con hebilla de titanio.',
-      especificaciones: ['Membrana Hidrófuga', 'Cinturón Ajustable'],
-      sucursalesDisponibles: ['Sucursal Central Equipetrol', 'Sucursal Calacoto Luxury'],
-      etiqueta: 'Novedad',
-      popularidad: 94
-    },
-    {
-      id: 106,
-      nombre: 'Bolso Tote de Cuero Vacuno Encerado',
-      subtitulo: 'Marroquinería Artesanal de Lujo',
-      precio: 780,
-      precioAnterior: 920,
-      categoria: 'Accesorios',
-      imagenPrincipal: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=800&q=80',
-      imagenes: ['https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=800&q=80'],
-      tallas: ['Única'],
-      colores: [
-        { nombre: 'Cognac Roble', hex: '#7c2d12' },
-        { nombre: 'Negro Carbón', hex: '#18181b' }
-      ],
-      descripcion: 'Cuero genuino curtido vegetal con compartimento acolchado para laptop e interiores de terciopelo.',
-      especificaciones: ['100% Cuero Vacuno', 'Herrajes de Latón'],
-      sucursalesDisponibles: ['Sucursal Central Equipetrol', 'Sucursal Cochabamba Jardin'],
-      etiqueta: 'Artesanal',
-      popularidad: 97
+  // Filtros dinámicos
+  filtrosDisponibles: FiltrosCatalogoResponse = {
+    categorias: [],
+    tallas: [],
+    colores: [],
+    temporadas: [],
+    colecciones: []
+  };
+
+  // Valores de filtros activos
+  searchQuery: string = '';
+  selectedCategory: number | null = null;
+  selectedTalla: number | null = null;
+  selectedColor: number | null = null;
+  selectedTemporada: string = 'Todas';
+  selectedColeccion: string = 'Todas';
+  selectedSort: string = 'destacados';
+  precioMin: number | null = null;
+  precioMax: number | null = null;
+
+  // Paginación
+  paginaActual: number = 1;
+  limitePorPagina: number = 12;
+  totalPaginas: number = 1;
+  opcionesLimite: number[] = [12, 24, 48];
+
+  // Detalle de Prenda (Modal)
+  selectedProductForModal: DetallePrendaCatalogo | null = null;
+  cargandoDetalle: boolean = false;
+  private pendingProductId: number | null = null;
+
+  ngOnInit(): void {
+    // 1. Escuchar parámetros de ruta directa /catalogo/:id
+    this.route.params.subscribe(params => {
+      if (params['id']) {
+        const id = parseInt(params['id'], 10);
+        if (!isNaN(id)) {
+          this.pendingProductId = id;
+          this.abrirDetalle(id);
+        }
+      }
+    });
+
+    // 2. Escuchar queryParams (tenant / empresa / producto)
+    this.route.queryParams.subscribe(params => {
+      const urlTenant = params['empresa'] || params['tenant'];
+      const initialTenantId = urlTenant ? parseInt(urlTenant, 10) : null;
+      if (params['producto'] || params['id_producto']) {
+        const prodId = parseInt(params['producto'] || params['id_producto'], 10);
+        if (!isNaN(prodId)) {
+          this.pendingProductId = prodId;
+        }
+      }
+      this.cargarTenants(initialTenantId);
+    });
+  }
+
+  cargarTenants(initialTenantId: number | null = null): void {
+    this.catalogoService.obtenerTenants().subscribe({
+      next: (res) => {
+        this.tenants = res.data || [];
+        if (this.tenants.length > 0) {
+          if (initialTenantId && this.tenants.some(t => t.id_empresa === initialTenantId)) {
+            this.selectedTenantId = initialTenantId;
+          } else {
+            this.selectedTenantId = this.tenants[0].id_empresa;
+          }
+          this.selectedTenant = this.tenants.find(t => t.id_empresa === this.selectedTenantId) || this.tenants[0];
+          if (this.selectedTenantId) {
+            this.carritoService.setEmpresaId(this.selectedTenantId);
+          }
+          this.cargarFiltrosYProductos();
+
+          if (this.pendingProductId) {
+            this.abrirDetalle(this.pendingProductId);
+          }
+        }
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        console.error('Error al cargar tiendas activas:', err);
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  cambiarTenant(idEmpresa: number): void {
+    if (this.selectedTenantId === idEmpresa) return;
+    this.selectedTenantId = idEmpresa;
+    this.selectedTenant = this.tenants.find(t => t.id_empresa === idEmpresa) || null;
+    this.carritoService.setEmpresaId(idEmpresa);
+    this.limpiarFiltros(false);
+    this.cargarFiltrosYProductos();
+    this.cdr.markForCheck();
+  }
+
+  cargarFiltrosYProductos(): void {
+    if (!this.selectedTenantId) return;
+
+    this.cargandoFiltros = true;
+    this.cdr.markForCheck();
+    this.catalogoService.obtenerFiltros(this.selectedTenantId).subscribe({
+      next: (res) => {
+        this.filtrosDisponibles = res.data;
+        if (res.empresa) {
+          this.selectedTenant = res.empresa;
+        }
+        this.cargandoFiltros = false;
+        this.cdr.markForCheck();
+        this.aplicarFiltros();
+      },
+      error: (err) => {
+        console.error('Error al cargar filtros dinámicos:', err);
+        this.cargandoFiltros = false;
+        this.cdr.markForCheck();
+        this.aplicarFiltros();
+      }
+    });
+  }
+
+  aplicarFiltros(): void {
+    if (!this.selectedTenantId) return;
+    this.cargando = true;
+    this.cdr.markForCheck();
+
+    const offset = (this.paginaActual - 1) * this.limitePorPagina;
+
+    this.catalogoService.consultarProductos({
+      id_empresa: this.selectedTenantId,
+      busqueda: this.searchQuery,
+      id_categoria: this.selectedCategory || undefined,
+      id_talla: this.selectedTalla || undefined,
+      id_color: this.selectedColor || undefined,
+      temporada: this.selectedTemporada,
+      coleccion: this.selectedColeccion,
+      precio_min: this.precioMin !== null ? this.precioMin : undefined,
+      precio_max: this.precioMax !== null ? this.precioMax : undefined,
+      orden: this.selectedSort,
+      limit: this.limitePorPagina,
+      offset: offset
+    }).subscribe({
+      next: (res) => {
+        this.productos = res.data || [];
+        this.totalProductos = res.total || 0;
+        this.totalPaginas = Math.ceil(this.totalProductos / this.limitePorPagina) || 1;
+        if (this.paginaActual > this.totalPaginas && this.totalPaginas > 0) {
+          this.paginaActual = this.totalPaginas;
+        }
+        this.cargando = false;
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        console.error('Error al consultar productos:', err);
+        this.productos = [];
+        this.totalProductos = 0;
+        this.totalPaginas = 1;
+        this.cargando = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  // --- Handlers de Filtros Component ---
+  onBusquedaChange(q: string): void {
+    this.searchQuery = q;
+    this.paginaActual = 1;
+    this.aplicarFiltros();
+  }
+
+  onCategoriaChange(idCat: number | null): void {
+    this.selectedCategory = idCat;
+    this.paginaActual = 1;
+    this.aplicarFiltros();
+  }
+
+  onTallaChange(idTalla: number | null): void {
+    this.selectedTalla = idTalla;
+    this.paginaActual = 1;
+    this.aplicarFiltros();
+  }
+
+  onColorChange(idColor: number | null): void {
+    this.selectedColor = idColor;
+    this.paginaActual = 1;
+    this.aplicarFiltros();
+  }
+
+  onTemporadaChange(t: string): void {
+    this.selectedTemporada = t;
+    this.paginaActual = 1;
+    this.aplicarFiltros();
+  }
+
+  onColeccionChange(c: string): void {
+    this.selectedColeccion = c;
+    this.paginaActual = 1;
+    this.aplicarFiltros();
+  }
+
+  onOrdenChange(o: string): void {
+    this.selectedSort = o;
+    this.paginaActual = 1;
+    this.aplicarFiltros();
+  }
+
+  onPrecioMinChange(min: number | null): void {
+    this.precioMin = min;
+    this.paginaActual = 1;
+    this.aplicarFiltros();
+  }
+
+  onPrecioMaxChange(max: number | null): void {
+    this.precioMax = max;
+    this.paginaActual = 1;
+    this.aplicarFiltros();
+  }
+
+  limpiarFiltros(recargar: boolean = true): void {
+    this.searchQuery = '';
+    this.selectedCategory = null;
+    this.selectedTalla = null;
+    this.selectedColor = null;
+    this.selectedTemporada = 'Todas';
+    this.selectedColeccion = 'Todas';
+    this.selectedSort = 'destacados';
+    this.precioMin = null;
+    this.precioMax = null;
+    this.paginaActual = 1;
+
+    if (recargar) {
+      this.aplicarFiltros();
     }
-  ];
-
-  get productosFiltrados(): ProductoFashion[] {
-    return this.todosProductos
-      .filter(p => {
-        const matchesCategory = this.selectedCategory === 'Todos' || p.categoria === this.selectedCategory;
-        const matchesBranch = this.selectedBranchFilter === 'Todas' || p.sucursalesDisponibles.includes(this.selectedBranchFilter);
-        const matchesSearch = !this.searchQuery || 
-          p.nombre.toLowerCase().includes(this.searchQuery.toLowerCase()) || 
-          p.subtitulo.toLowerCase().includes(this.searchQuery.toLowerCase());
-        return matchesCategory && matchesBranch && matchesSearch;
-      })
-      .sort((a, b) => {
-        if (this.selectedSort === 'precio-menor') return a.precio - b.precio;
-        if (this.selectedSort === 'precio-mayor') return b.precio - a.precio;
-        return (b.popularidad || 0) - (a.popularidad || 0);
-      });
   }
 
-  openQuickView(prod: ProductoFashion) {
-    this.selectedProductForModal = prod;
+  // --- Handlers de Paginación ---
+  cambiarPagina(nuevaPagina: number): void {
+    if (nuevaPagina < 1 || nuevaPagina > this.totalPaginas || nuevaPagina === this.paginaActual) return;
+    this.paginaActual = nuevaPagina;
+    this.aplicarFiltros();
+    window.scrollTo({ top: 180, behavior: 'smooth' });
   }
 
-  closeQuickView() {
+  cambiarLimite(nuevoLimite: any): void {
+    const lim = parseInt(nuevoLimite, 10);
+    if (!isNaN(lim) && lim > 0 && lim !== this.limitePorPagina) {
+      this.limitePorPagina = lim;
+      this.paginaActual = 1;
+      this.aplicarFiltros();
+    }
+  }
+
+  getPaginasVisibles(): number[] {
+    const paginas: number[] = [];
+    const maxBtns = 5;
+    let start = Math.max(1, this.paginaActual - Math.floor(maxBtns / 2));
+    let end = Math.min(this.totalPaginas, start + maxBtns - 1);
+    if (end - start + 1 < maxBtns) {
+      start = Math.max(1, end - maxBtns + 1);
+    }
+    for (let i = start; i <= end; i++) {
+      paginas.push(i);
+    }
+    return paginas;
+  }
+
+  // --- Detalle de Prenda ---
+  abrirDetalle(idProducto: number): void {
+    this.cargandoDetalle = true;
+    this.cdr.markForCheck();
+    this.catalogoService.obtenerDetalleProducto(idProducto, this.selectedTenantId || undefined).subscribe({
+      next: (res) => {
+        this.selectedProductForModal = res.data;
+        this.cargandoDetalle = false;
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        console.error('Error al abrir detalle:', err);
+        this.cargandoDetalle = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  cerrarModalDetalle(): void {
     this.selectedProductForModal = null;
+    this.cdr.markForCheck();
   }
 }

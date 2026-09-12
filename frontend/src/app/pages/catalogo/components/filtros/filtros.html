@@ -1,0 +1,326 @@
+<!-- ========================================================================= -->
+<!-- BARRA DE FILTROS DESKTOP & TABLET                                         -->
+<!-- ========================================================================= -->
+<div class="p-4 sm:p-5 rounded-3xl bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800/90 shadow-sm dark:shadow-xl backdrop-blur-md space-y-4 transition-colors">
+  
+  <!-- Fila 1: Búsqueda, Temporada, Colección y Orden -->
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+    
+    <!-- Input de Búsqueda -->
+    <div class="md:col-span-5 relative">
+      <input 
+        type="text" 
+        [ngModel]="searchQuery" 
+        (ngModelChange)="onSearchInput($event)"
+        placeholder="Buscar prenda, blazer, abrigo..." 
+        class="w-full bg-zinc-50 dark:bg-zinc-950/90 border border-zinc-300 dark:border-zinc-700/80 rounded-2xl px-4 py-2.5 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:border-amber-500 pl-10 transition-colors" 
+      />
+      <svg class="w-4 h-4 text-zinc-400 absolute left-3.5 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      </svg>
+      <button *ngIf="searchQuery" 
+              (click)="limpiarBusqueda()" 
+              class="absolute right-3 top-2.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-white text-xs cursor-pointer">
+        ✕
+      </button>
+    </div>
+
+    <!-- Selector de Temporada (Desktop) -->
+    <div class="hidden md:block md:col-span-2">
+      <select 
+        [ngModel]="selectedTemporada" 
+        (ngModelChange)="onTemporadaSelect($event)"
+        class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700/80 rounded-2xl px-3 py-2.5 text-xs text-zinc-800 dark:text-zinc-200 focus:outline-none focus:border-amber-500 cursor-pointer">
+        <option value="Todas">Temporada: Todas</option>
+        <option *ngFor="let temp of filtrosDisponibles.temporadas" [value]="temp">{{ temp }}</option>
+      </select>
+    </div>
+
+    <!-- Selector de Colección (Desktop) -->
+    <div class="hidden md:block md:col-span-2">
+      <select 
+        [ngModel]="selectedColeccion" 
+        (ngModelChange)="onColeccionSelect($event)"
+        class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700/80 rounded-2xl px-3 py-2.5 text-xs text-zinc-800 dark:text-zinc-200 focus:outline-none focus:border-amber-500 cursor-pointer">
+        <option value="Todas">Colección: Todas</option>
+        <option *ngFor="let col of filtrosDisponibles.colecciones" [value]="col">{{ col }}</option>
+      </select>
+    </div>
+
+    <!-- Selector de Ordenamiento -->
+    <div class="md:col-span-3 flex items-center space-x-2">
+      <select 
+        [ngModel]="selectedSort" 
+        (ngModelChange)="onOrdenSelect($event)"
+        class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700/80 rounded-2xl px-3 py-2.5 text-xs text-zinc-800 dark:text-zinc-200 focus:outline-none focus:border-amber-500 cursor-pointer">
+        <option value="destacados">Orden: Recomendados</option>
+        <option value="precio_asc">Precio: Menor a Mayor</option>
+        <option value="precio_desc">Precio: Mayor a Menor</option>
+        <option value="nombre_asc">Nombre: A - Z</option>
+        <option value="nombre_desc">Nombre: Z - A</option>
+        <option value="recientes">Más Recientes</option>
+      </select>
+
+      <!-- Botón Filtros Móvil (Visible solo en < md) -->
+      <button 
+        (click)="toggleDrawer()"
+        class="md:hidden flex items-center space-x-1.5 px-3 py-2.5 rounded-2xl bg-amber-500 text-zinc-950 font-bold text-xs shrink-0 cursor-pointer shadow-sm">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+        </svg>
+        <span>Filtros</span>
+        <span *ngIf="contarFiltrosActivos() > 0" class="w-4 h-4 rounded-full bg-zinc-950 text-amber-400 text-[10px] flex items-center justify-center font-mono">
+          {{ contarFiltrosActivos() }}
+        </span>
+      </button>
+    </div>
+
+  </div>
+
+  <!-- Fila 2: Categorías Pills (Visible en todas las resoluciones) -->
+  <div class="pt-2 border-t border-zinc-100 dark:border-zinc-800/80 space-y-2">
+    <div class="flex items-center justify-between text-[11px] font-mono">
+      <span class="uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Categorías:</span>
+      <button *ngIf="contarFiltrosActivos() > 0" 
+              (click)="onLimpiar()" 
+              class="text-amber-600 dark:text-amber-400 hover:underline cursor-pointer">
+        Limpiar filtros ({{ contarFiltrosActivos() }})
+      </button>
+    </div>
+
+    <div class="flex items-center space-x-2 overflow-x-auto pb-1 scrollbar-none">
+      <button 
+        (click)="toggleCategoria(null)"
+        [class.bg-amber-500]="selectedCategory === null"
+        [class.text-zinc-950]="selectedCategory === null"
+        [class.font-bold]="selectedCategory === null"
+        [class.bg-zinc-100]="selectedCategory !== null"
+        [class.text-zinc-700]="selectedCategory !== null"
+        [class.dark:bg-zinc-950]="selectedCategory !== null"
+        [class.dark:text-zinc-300]="selectedCategory !== null"
+        class="px-3.5 py-1.5 rounded-full text-xs shrink-0 transition-all border border-zinc-200 dark:border-zinc-700/80 hover:border-amber-500/50 cursor-pointer flex items-center space-x-1.5 shadow-2xs">
+        <span>Todas</span>
+        <span class="text-[10px] opacity-75">({{ totalProductos }})</span>
+      </button>
+
+      <button *ngFor="let cat of filtrosDisponibles.categorias"
+        (click)="toggleCategoria(cat.id_categoria)"
+        [class.bg-amber-500]="selectedCategory === cat.id_categoria"
+        [class.text-zinc-950]="selectedCategory === cat.id_categoria"
+        [class.font-bold]="selectedCategory === cat.id_categoria"
+        [class.bg-zinc-100]="selectedCategory !== cat.id_categoria"
+        [class.text-zinc-700]="selectedCategory !== cat.id_categoria"
+        [class.dark:bg-zinc-950]="selectedCategory !== cat.id_categoria"
+        [class.dark:text-zinc-300]="selectedCategory !== cat.id_categoria"
+        class="px-3.5 py-1.5 rounded-full text-xs shrink-0 transition-all border border-zinc-200 dark:border-zinc-700/80 hover:border-amber-500/50 cursor-pointer flex items-center space-x-1.5 shadow-2xs">
+        <span>{{ cat.nombre }}</span>
+        <span class="text-[10px] opacity-75">({{ cat.total_prendas }})</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Fila 3: Tallas, Colores & Rango de Precios (Desktop & Tablet) -->
+  <div class="hidden md:flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-zinc-100 dark:border-zinc-800/80 text-xs">
+    
+    <div class="flex flex-wrap items-center gap-5">
+      <!-- Tallas -->
+      <div *ngIf="filtrosDisponibles.tallas.length > 0" class="flex items-center space-x-2">
+        <span class="text-[11px] font-mono uppercase text-zinc-500 dark:text-zinc-400">Talla:</span>
+        <div class="flex items-center space-x-1">
+          <button *ngFor="let t of filtrosDisponibles.tallas"
+                  (click)="toggleTalla(t.id_talla)"
+                  [class.bg-amber-500]="selectedTalla === t.id_talla"
+                  [class.text-zinc-950]="selectedTalla === t.id_talla"
+                  [class.font-bold]="selectedTalla === t.id_talla"
+                  [class.bg-zinc-100]="selectedTalla !== t.id_talla"
+                  [class.text-zinc-700]="selectedTalla !== t.id_talla"
+                  [class.dark:bg-zinc-950]="selectedTalla !== t.id_talla"
+                  [class.dark:text-zinc-300]="selectedTalla !== t.id_talla"
+                  class="w-7 h-7 rounded-lg border border-zinc-200 dark:border-zinc-700/80 font-mono text-[11px] flex items-center justify-center transition-all hover:border-amber-400 cursor-pointer">
+            {{ t.nombre }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Colores -->
+      <div *ngIf="filtrosDisponibles.colores.length > 0" class="flex items-center space-x-2">
+        <span class="text-[11px] font-mono uppercase text-zinc-500 dark:text-zinc-400">Color:</span>
+        <div class="flex items-center space-x-1.5">
+          <button *ngFor="let col of filtrosDisponibles.colores"
+                  (click)="toggleColor(col.id_color)"
+                  [class.ring-2]="selectedColor === col.id_color"
+                  [class.ring-amber-500]="selectedColor === col.id_color"
+                  [class.ring-offset-2]="selectedColor === col.id_color"
+                  [class.ring-offset-white]="selectedColor === col.id_color"
+                  [class.dark:ring-offset-zinc-900]="selectedColor === col.id_color"
+                  class="w-5 h-5 rounded-full border border-black/10 dark:border-white/20 transition-all hover:scale-110 cursor-pointer shadow-xs"
+                  [style.backgroundColor]="col.codigo_hex"
+                  [title]="col.nombre">
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rango de Precios -->
+    <div class="flex items-center space-x-2">
+      <span class="text-[11px] font-mono uppercase text-zinc-500 dark:text-zinc-400">Precio (Bs.):</span>
+      <div class="flex items-center space-x-1.5">
+        <input 
+          type="number" 
+          [ngModel]="precioMin" 
+          (ngModelChange)="onPrecioMinChange($event)"
+          placeholder="Mín" 
+          class="w-16 bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700/80 rounded-xl px-2 py-1 text-xs text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 focus:outline-none focus:border-amber-500 font-mono text-center"
+        />
+        <span class="text-zinc-400">-</span>
+        <input 
+          type="number" 
+          [ngModel]="precioMax" 
+          (ngModelChange)="onPrecioMaxChange($event)"
+          placeholder="Máx" 
+          class="w-16 bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700/80 rounded-xl px-2 py-1 text-xs text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 focus:outline-none focus:border-amber-500 font-mono text-center"
+        />
+      </div>
+      <!-- Preset Chips -->
+      <div class="flex items-center space-x-1 pl-1">
+        <button (click)="aplicarPresetPrecio(null, 500)" 
+                class="px-2 py-0.5 rounded-lg border border-zinc-200 dark:border-zinc-700/80 text-[10px] text-zinc-600 dark:text-zinc-400 hover:border-amber-500 hover:text-amber-500 transition-colors cursor-pointer">
+          &lt; 500
+        </button>
+        <button (click)="aplicarPresetPrecio(500, 1500)" 
+                class="px-2 py-0.5 rounded-lg border border-zinc-200 dark:border-zinc-700/80 text-[10px] text-zinc-600 dark:text-zinc-400 hover:border-amber-500 hover:text-amber-500 transition-colors cursor-pointer">
+          500-1500
+        </button>
+        <button (click)="aplicarPresetPrecio(1500, null)" 
+                class="px-2 py-0.5 rounded-lg border border-zinc-200 dark:border-zinc-700/80 text-[10px] text-zinc-600 dark:text-zinc-400 hover:border-amber-500 hover:text-amber-500 transition-colors cursor-pointer">
+          &gt; 1500
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ========================================================================= -->
+<!-- DRAWER MODAL PARA DISPOSITIVOS MÓVILES                                    -->
+<!-- ========================================================================= -->
+<div *ngIf="mostrarDrawerMovil" class="fixed inset-0 z-50 md:hidden flex justify-end animate-fade-in">
+  <!-- Backdrop -->
+  <div (click)="toggleDrawer()" class="absolute inset-0 bg-black/70 backdrop-blur-xs"></div>
+
+  <!-- Panel Deslizante Lateral -->
+  <div class="relative z-10 w-full max-w-xs sm:max-w-sm h-full bg-white dark:bg-zinc-900 border-l border-zinc-200 dark:border-zinc-800 p-6 flex flex-col justify-between shadow-2xl overflow-y-auto animate-slide-up">
+    
+    <div class="space-y-6">
+      <!-- Header Drawer -->
+      <div class="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-4">
+        <div class="flex items-center space-x-2">
+          <span class="text-amber-500 font-bold">✦</span>
+          <h3 class="text-base font-bold text-zinc-900 dark:text-white">Filtros del Catálogo</h3>
+        </div>
+        <button (click)="toggleDrawer()" class="text-zinc-400 hover:text-zinc-900 dark:hover:text-white p-1 cursor-pointer">
+          ✕
+        </button>
+      </div>
+
+      <!-- Temporadas en Móvil -->
+      <div class="space-y-2">
+        <label class="text-xs font-mono uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Temporada:</label>
+        <select [ngModel]="selectedTemporada" (ngModelChange)="onTemporadaSelect($event)"
+                class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs text-zinc-800 dark:text-zinc-200">
+          <option value="Todas">Todas las Temporadas</option>
+          <option *ngFor="let temp of filtrosDisponibles.temporadas" [value]="temp">{{ temp }}</option>
+        </select>
+      </div>
+
+      <!-- Colecciones en Móvil -->
+      <div class="space-y-2">
+        <label class="text-xs font-mono uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Colección:</label>
+        <select [ngModel]="selectedColeccion" (ngModelChange)="onColeccionSelect($event)"
+                class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs text-zinc-800 dark:text-zinc-200">
+          <option value="Todas">Todas las Colecciones</option>
+          <option *ngFor="let col of filtrosDisponibles.colecciones" [value]="col">{{ col }}</option>
+        </select>
+      </div>
+
+      <!-- Tallas en Móvil -->
+      <div *ngIf="filtrosDisponibles.tallas.length > 0" class="space-y-2">
+        <label class="text-xs font-mono uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Talla:</label>
+        <div class="flex flex-wrap gap-2">
+          <button *ngFor="let t of filtrosDisponibles.tallas"
+                  (click)="toggleTalla(t.id_talla)"
+                  [class.bg-amber-500]="selectedTalla === t.id_talla"
+                  [class.text-zinc-950]="selectedTalla === t.id_talla"
+                  [class.font-bold]="selectedTalla === t.id_talla"
+                  [class.bg-zinc-100]="selectedTalla !== t.id_talla"
+                  [class.text-zinc-700]="selectedTalla !== t.id_talla"
+                  [class.dark:bg-zinc-950]="selectedTalla !== t.id_talla"
+                  [class.dark:text-zinc-300]="selectedTalla !== t.id_talla"
+                  class="w-9 h-9 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-mono flex items-center justify-center cursor-pointer">
+            {{ t.nombre }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Colores en Móvil -->
+      <div *ngIf="filtrosDisponibles.colores.length > 0" class="space-y-2">
+        <label class="text-xs font-mono uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Color:</label>
+        <div class="flex flex-wrap gap-2.5">
+          <button *ngFor="let col of filtrosDisponibles.colores"
+                  (click)="toggleColor(col.id_color)"
+                  [class.ring-2]="selectedColor === col.id_color"
+                  [class.ring-amber-500]="selectedColor === col.id_color"
+                  [class.ring-offset-2]="selectedColor === col.id_color"
+                  class="w-7 h-7 rounded-full border border-black/10 dark:border-white/20 cursor-pointer shadow-sm"
+                  [style.backgroundColor]="col.codigo_hex"
+                  [title]="col.nombre">
+          </button>
+        </div>
+      </div>
+
+      <!-- Rango de Precios en Móvil -->
+      <div class="space-y-2 pt-1 border-t border-zinc-100 dark:border-zinc-800/80">
+        <label class="text-xs font-mono uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Rango de Precio (Bs.):</label>
+        <div class="flex items-center space-x-2">
+          <input 
+            type="number" 
+            [ngModel]="precioMin" 
+            (ngModelChange)="onPrecioMinChange($event)"
+            placeholder="Mínimo" 
+            class="w-1/2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 focus:outline-none focus:border-amber-500 font-mono text-center"
+          />
+          <span class="text-zinc-400">-</span>
+          <input 
+            type="number" 
+            [ngModel]="precioMax" 
+            (ngModelChange)="onPrecioMaxChange($event)"
+            placeholder="Máximo" 
+            class="w-1/2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 focus:outline-none focus:border-amber-500 font-mono text-center"
+          />
+        </div>
+        <div class="flex items-center space-x-2 pt-1">
+          <button (click)="aplicarPresetPrecio(null, 500)" class="flex-1 py-1 rounded-lg border border-zinc-200 dark:border-zinc-700 text-[10px] text-zinc-600 dark:text-zinc-400 hover:border-amber-500 text-center cursor-pointer">&lt; 500</button>
+          <button (click)="aplicarPresetPrecio(500, 1500)" class="flex-1 py-1 rounded-lg border border-zinc-200 dark:border-zinc-700 text-[10px] text-zinc-600 dark:text-zinc-400 hover:border-amber-500 text-center cursor-pointer">500-1500</button>
+          <button (click)="aplicarPresetPrecio(1500, null)" class="flex-1 py-1 rounded-lg border border-zinc-200 dark:border-zinc-700 text-[10px] text-zinc-600 dark:text-zinc-400 hover:border-amber-500 text-center cursor-pointer">&gt; 1500</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Botones de Acción Drawer -->
+    <div class="pt-6 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
+      <button (click)="toggleDrawer()" 
+              class="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer shadow-md">
+        Ver Resultados ({{ totalProductos }})
+      </button>
+
+      <button *ngIf="contarFiltrosActivos() > 0" 
+              (click)="onLimpiar()" 
+              class="w-full py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-semibold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors cursor-pointer">
+        Limpiar Todos los Filtros
+      </button>
+    </div>
+
+  </div>
+</div>

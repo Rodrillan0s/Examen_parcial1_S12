@@ -1,23 +1,26 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient,HttpHeaders } from '@angular/common/http';
-import { Observable ,throwError} from 'rxjs';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Observable, throwError } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { AuthService } from './auth'; 
+import { AuthService } from './auth';
+
 export interface PerfilUsuario {
+  id_usuario: number;
+  username: string;
+  nombre: string;
+  apellido: string;
+  nombre_completo: string;
+  correo: string;
+  telefono: string;
   ci: string;
-  nombre_usuario: string;
-  fecha_registro: string;
-  nro_usuario: number;
+  direccion: string;
+  ciudad: string;
   estado: string;
-  nro_rol: number;
+  fecha_registro: string;
+  id_rol: number;
+  nombre_rol: string;
   id_empresa?: number;
   nombre_empresa?: string;
-  nombre_completo: string;
-  telefono: string;
-  correo: string;
-  direccion: string;
-  nombre_rol: string;
-  cant_vehiculos: number;
 }
 
 export interface ApiResponseGet {
@@ -29,6 +32,7 @@ export interface ApiResponseGet {
 export interface ApiResponsePut {
   success: boolean;
   message: string;
+  data?: PerfilUsuario;
 }
 
 @Injectable({
@@ -36,28 +40,31 @@ export interface ApiResponsePut {
 })
 export class PerfilService {
   private http = inject(HttpClient);
-  private authService = inject(AuthService); 
+  private authService = inject(AuthService);
   private apiUrl = environment.apiUrl;
 
   private getHeaders(): HttpHeaders {
     const token = this.authService.obtenerToken();
-    
     return token ? new HttpHeaders({ 'Authorization': `Bearer ${token}` }) : new HttpHeaders();
   }
 
   obtenerPerfil(): Observable<ApiResponseGet> {
     const token = this.authService.obtenerToken();
-    
     if (!token) {
-      return throwError(() => ({ status: 401, message: 'Token no disponible' }));
+      return throwError(() => ({ status: 401, message: 'Sesión no iniciada' }));
     }
 
     const headers = new HttpHeaders({ 'Authorization': `Bearer ${token}` });
-    return this.http.get<ApiResponseGet>(`${this.apiUrl}/api/perfil`, { headers });
+    return this.http.get<ApiResponseGet>(`${this.apiUrl}/api/perfil/`, { headers });
   }
 
   actualizarPerfil(datos: any): Observable<ApiResponsePut> {
     const headers = this.getHeaders();
     return this.http.put<ApiResponsePut>(`${this.apiUrl}/api/perfil/`, datos, { headers });
+  }
+
+  cambiarPassword(datos: { password: string }): Observable<ApiResponsePut> {
+    const headers = this.getHeaders();
+    return this.http.put<ApiResponsePut>(`${this.apiUrl}/api/perfil/cambiar-password`, datos, { headers });
   }
 }

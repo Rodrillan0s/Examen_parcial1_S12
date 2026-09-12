@@ -1,169 +1,401 @@
-<div class="min-h-screen bg-gray-100 dark:bg-slate-950 flex flex-col font-sans transition-colors duration-300">
+<div class="min-h-[92vh] bg-zinc-950 text-zinc-100 py-10 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+  
+  <!-- Subtle Background Atmospheric Lighting -->
+  <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[350px] bg-gradient-to-b from-amber-600/10 via-amber-900/5 to-transparent blur-3xl pointer-events-none -z-10"></div>
+  <div class="absolute bottom-10 right-10 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl pointer-events-none -z-10"></div>
 
-  <nav class="bg-blue-900 dark:bg-slate-900 text-white shadow-md z-10 border-b border-transparent dark:border-slate-800 transition-colors duration-300">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex justify-between h-16">
+  <div class="max-w-4xl mx-auto space-y-6 animate-fade-in">
+
+    <!-- Top Navigation Bar & Breadcrumb -->
+    <div class="flex items-center justify-between">
+      <a routerLink="/catalogo" class="inline-flex items-center space-x-2 text-xs uppercase tracking-widest text-zinc-400 hover:text-amber-300 transition-colors py-2 group">
+        <i class="ph ph-arrow-left text-sm group-hover:-translate-x-1 transition-transform"></i>
+        <span>Volver al Catálogo</span>
+      </a>
+
+      <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-zinc-900/80 border border-amber-500/20 text-[11px] text-amber-300 font-mono">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>AURA Atelier • Atelier Club</span>
+      </div>
+    </div>
+
+    <!-- Alert / Toast Message -->
+    <div *ngIf="mensaje()" 
+         [class]="mensaje()?.tipo === 'exito' 
+           ? 'bg-emerald-950/80 border-emerald-500/40 text-emerald-200' 
+           : 'bg-rose-950/80 border-rose-500/40 text-rose-200'"
+         class="p-4 rounded-2xl border backdrop-blur-xl flex items-center justify-between text-xs sm:text-sm font-medium shadow-2xl animate-slide-down">
+      <div class="flex items-center space-x-3">
+        <i [class]="mensaje()?.tipo === 'exito' ? 'ph ph-check-circle text-lg text-emerald-400' : 'ph ph-warning-circle text-lg text-rose-400'"></i>
+        <span>{{ mensaje()?.texto }}</span>
+      </div>
+      <button (click)="mensaje.set(null)" class="text-zinc-400 hover:text-white text-base">
+        <i class="ph ph-x"></i>
+      </button>
+    </div>
+
+    <!-- Loader -->
+    <div *ngIf="cargando()" class="py-24 flex flex-col items-center justify-center space-y-4">
+      <div class="w-10 h-10 border-2 border-amber-400/20 border-t-amber-400 rounded-full animate-spin"></div>
+      <p class="text-xs uppercase tracking-widest text-zinc-400 font-medium font-mono">Cargando perfil exclusivo...</p>
+    </div>
+
+    <!-- Main Profile Luxury Card -->
+    <div *ngIf="!cargando() && perfil() as user" 
+         class="relative rounded-3xl bg-zinc-900/60 backdrop-blur-2xl border border-amber-500/25 p-6 sm:p-10 shadow-2xl shadow-black/80 overflow-hidden">
+      
+      <!-- Top Subtle Gold Gradient Accent Line -->
+      <div class="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-amber-400 to-transparent opacity-70"></div>
+
+      <!-- Card Header: Avatar, Name & Role -->
+      <div class="flex flex-col items-center text-center pb-8 border-b border-white/10 relative">
         
-        <div class="flex items-center gap-3 cursor-pointer" (click)="navegarA('/')">
-          <span class="text-xl font-editorial font-bold tracking-wider uppercase text-white">
-            AURA<span class="text-amber-400 font-light ml-1.5">ATELIER</span>
+        <!-- Luxury Avatar Circle with Golden Frame -->
+        <div class="relative group">
+          <div class="w-24 h-24 rounded-full p-[2px] bg-gradient-to-tr from-amber-600 via-amber-400 to-amber-200 shadow-xl shadow-amber-500/10">
+            <div class="w-full h-full rounded-full bg-zinc-950 flex items-center justify-center text-amber-300 font-editorial font-bold text-2xl tracking-wider select-none">
+              {{ obtenerIniciales() }}
+            </div>
+          </div>
+          <span class="absolute bottom-0 right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-zinc-950" title="Sesión Activa"></span>
+        </div>
+
+        <!-- Headline & User Details -->
+        <h1 class="text-2xl sm:text-3xl font-editorial font-bold text-white tracking-tight mt-4">
+          {{ user.nombre_completo || user.nombre + ' ' + user.apellido }}
+        </h1>
+
+        <div class="flex items-center space-x-2 mt-2">
+          <span class="px-3.5 py-1 rounded-full text-[10px] sm:text-xs font-mono tracking-widest uppercase bg-amber-500/15 border border-amber-500/40 text-amber-300 font-semibold">
+            {{ user.nombre_rol }}
+          </span>
+          <span *ngIf="user.nombre_empresa" class="text-xs text-zinc-400 font-light">
+            • {{ user.nombre_empresa }}
           </span>
         </div>
 
+        <p class="text-xs text-zinc-400 font-light mt-1">
+          Miembro de Atelier Club desde {{ user.fecha_registro | date:'MMMM yyyy' }}
+        </p>
 
-        <div class="flex items-center gap-4 sm:gap-6" *ngIf="perfil">
-          
-          <button (click)="alternarModoOscuro()" class="p-2 rounded-sm bg-blue-800 dark:bg-slate-800 hover:bg-blue-700 dark:hover:bg-slate-700 transition-colors text-blue-200">
-            <svg *ngIf="!modoOscuro" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
-            <svg *ngIf="modoOscuro" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+        <!-- Edit Mode Toggle & Actions (View Mode Only) -->
+        <div *ngIf="!modoEdicion()" class="mt-5 flex flex-wrap items-center justify-center gap-3">
+          <a routerLink="/mis-reservas" 
+             class="px-6 py-2.5 rounded-full bg-zinc-900/90 border border-amber-500/30 text-amber-300 hover:bg-amber-500/10 hover:border-amber-400 text-xs uppercase tracking-wider font-semibold transition-all flex items-center space-x-2 active:scale-95 shadow-sm">
+            <i class="ph ph-calendar-check text-amber-400 text-sm"></i>
+            <span>Mis Citas & Reservas</span>
+          </a>
+
+          <button (click)="activarEdicion()" 
+                  class="px-6 py-2.5 rounded-full bg-zinc-900 border border-zinc-700 text-zinc-200 hover:bg-zinc-800 hover:border-amber-400 text-xs uppercase tracking-wider font-semibold transition-all flex items-center space-x-2 active:scale-95 shadow-sm">
+            <i class="ph ph-note-pencil text-sm"></i>
+            <span>Editar Información</span>
           </button>
 
-          <div class="hidden md:flex flex-col items-end border-l border-blue-800 dark:border-slate-700 pl-6">
-            <span class="text-sm font-semibold">{{ perfil.nombre_completo }}</span>
-            <span class="text-xs text-blue-200 uppercase tracking-wider">{{ perfil.nombre_rol }}</span>
+          <button (click)="abrirModalPassword()" 
+                  class="px-6 py-2.5 rounded-full bg-zinc-900/90 border border-zinc-700 hover:border-amber-400/60 text-zinc-200 hover:text-amber-300 text-xs uppercase tracking-wider font-semibold transition-all flex items-center space-x-2 active:scale-95 shadow-sm">
+            <i class="ph ph-lock-key text-amber-400 text-sm"></i>
+            <span>Cambiar Contraseña</span>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- ======================================================== -->
+      <!-- VISTA DE LECTURA (MODO LECTURA)                          -->
+      <!-- ======================================================== -->
+      <div *ngIf="!modoEdicion()" class="grid grid-cols-1 md:grid-cols-2 gap-8 pt-8">
+        
+        <!-- Columna 1: Datos de Contacto -->
+        <div class="space-y-6">
+          <div class="flex items-center space-x-2 border-b border-white/5 pb-2">
+            <i class="ph ph-address-book text-amber-400 text-base"></i>
+            <h3 class="text-xs uppercase tracking-widest font-bold text-zinc-200">Datos de Contacto</h3>
           </div>
+
+          <div class="space-y-4">
+            <!-- Carnet CI -->
+            <div class="p-3.5 rounded-2xl bg-zinc-950/60 border border-white/5">
+              <span class="block text-[10px] uppercase tracking-wider font-semibold text-zinc-400">Carnet de Identidad (CI)</span>
+              <span class="block text-sm font-medium text-white mt-1">{{ user.ci || 'Sin registrar' }}</span>
+            </div>
+
+            <!-- Teléfono -->
+            <div class="p-3.5 rounded-2xl bg-zinc-950/60 border border-white/5">
+              <span class="block text-[10px] uppercase tracking-wider font-semibold text-zinc-400">Teléfono Móvil</span>
+              <span class="block text-sm font-medium text-white mt-1">{{ user.telefono || 'Sin registrar' }}</span>
+            </div>
+
+            <!-- Correo Electrónico -->
+            <div class="p-3.5 rounded-2xl bg-zinc-950/60 border border-white/5">
+              <span class="block text-[10px] uppercase tracking-wider font-semibold text-zinc-400">Correo Electrónico</span>
+              <span class="block text-sm font-medium text-white mt-1 break-all">{{ user.correo }}</span>
+            </div>
+
+            <!-- Dirección Física -->
+            <div class="p-3.5 rounded-2xl bg-zinc-950/60 border border-white/5">
+              <span class="block text-[10px] uppercase tracking-wider font-semibold text-zinc-400">Dirección de Entrega</span>
+              <span class="block text-sm font-medium text-white mt-1">{{ user.direccion || 'Sin dirección registrada' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Columna 2: Datos de Cuenta -->
+        <div class="space-y-6">
+          <div class="flex items-center space-x-2 border-b border-white/5 pb-2">
+            <i class="ph ph-shield-check text-amber-400 text-base"></i>
+            <h3 class="text-xs uppercase tracking-widest font-bold text-zinc-200">Datos de Cuenta</h3>
+          </div>
+
+          <div class="space-y-4">
+            <!-- Nombre de Usuario -->
+            <div class="p-3.5 rounded-2xl bg-zinc-950/60 border border-white/5">
+              <span class="block text-[10px] uppercase tracking-wider font-semibold text-zinc-400">Nombre de Usuario</span>
+              <span class="block text-sm font-mono text-amber-300 font-medium mt-1">@{{ user.username }}</span>
+            </div>
+
+            <!-- Ciudad -->
+            <div class="p-3.5 rounded-2xl bg-zinc-950/60 border border-white/5">
+              <span class="block text-[10px] uppercase tracking-wider font-semibold text-zinc-400">Ciudad de Residencia</span>
+              <span class="block text-sm font-medium text-white mt-1">{{ user.ciudad || 'Santa Cruz' }}</span>
+            </div>
+
+            <!-- Seguridad y Contraseña -->
+            <div class="p-3.5 rounded-2xl bg-zinc-950/60 border border-white/5 flex items-center justify-between">
+              <div>
+                <span class="block text-[10px] uppercase tracking-wider font-semibold text-zinc-400">Seguridad & Contraseña</span>
+                <span class="block text-xs font-mono text-zinc-400 mt-1 tracking-widest">••••••••••••</span>
+              </div>
+              <button (click)="abrirModalPassword()" class="px-3.5 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-semibold flex items-center space-x-1.5 transition-all active:scale-95">
+                <i class="ph ph-key text-xs"></i>
+                <span>Modificar</span>
+              </button>
+            </div>
+
+            <!-- Estado de Cuenta -->
+            <div class="p-3.5 rounded-2xl bg-zinc-950/60 border border-white/5 flex items-center justify-between">
+              <div>
+                <span class="block text-[10px] uppercase tracking-wider font-semibold text-zinc-400">Estado de Cuenta</span>
+                <span class="block text-sm font-medium text-white mt-0.5">Verificada</span>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-500/15 border border-emerald-500/30 text-emerald-300">
+                {{ user.estado }}
+              </span>
+            </div>
+
+            <!-- Sucursal Preferida -->
+            <div class="p-3.5 rounded-2xl bg-zinc-950/60 border border-white/5">
+              <span class="block text-[10px] uppercase tracking-wider font-semibold text-zinc-400">Sucursal Preferida</span>
+              <span class="block text-sm font-medium text-amber-400 mt-1 flex items-center space-x-1.5">
+                <i class="ph ph-storefront"></i>
+                <span>Sucursal Central Equipetrol</span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ======================================================== -->
+      <!-- MODO EDICIÓN (FORMULARIO INTERACTIVO)                    -->
+      <!-- ======================================================== -->
+      <form *ngIf="modoEdicion()" (ngSubmit)="guardarCambios()" class="pt-8 space-y-8 animate-fade-in">
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           
-          <div class="flex items-center gap-2 border-l border-transparent md:border-blue-800 md:dark:border-slate-700 md:pl-6 ml-2 md:ml-0">
-            <button (click)="cerrarSesion()" class="flex items-center gap-2 px-3 py-2 rounded-sm text-sm font-medium text-white hover:bg-blue-800 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-blue-700 dark:hover:border-slate-600">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-              <span class="hidden sm:inline">Salir</span>
+          <!-- Nombres -->
+          <div>
+            <label class="block text-xs uppercase tracking-wider font-semibold text-zinc-300 mb-1.5">
+              Nombres <span class="text-amber-400">*</span>
+            </label>
+            <input type="text" [(ngModel)]="formulario.nombre" name="nombre" required
+                   class="w-full bg-zinc-950/90 border border-zinc-700/80 focus:border-amber-400 focus:ring-1 focus:ring-amber-400/30 rounded-xl px-4 py-2.5 text-sm text-white transition-all">
+          </div>
+
+          <!-- Apellidos -->
+          <div>
+            <label class="block text-xs uppercase tracking-wider font-semibold text-zinc-300 mb-1.5">
+              Apellidos <span class="text-amber-400">*</span>
+            </label>
+            <input type="text" [(ngModel)]="formulario.apellido" name="apellido" required
+                   class="w-full bg-zinc-950/90 border border-zinc-700/80 focus:border-amber-400 focus:ring-1 focus:ring-amber-400/30 rounded-xl px-4 py-2.5 text-sm text-white transition-all">
+          </div>
+
+          <!-- Carnet CI -->
+          <div>
+            <label class="block text-xs uppercase tracking-wider font-semibold text-zinc-300 mb-1.5">
+              Carnet de Identidad (CI)
+            </label>
+            <input type="text" [(ngModel)]="formulario.ci" name="ci" placeholder="Ej: 7894521 SC"
+                   class="w-full bg-zinc-950/90 border border-zinc-700/80 focus:border-amber-400 focus:ring-1 focus:ring-amber-400/30 rounded-xl px-4 py-2.5 text-sm text-white transition-all">
+          </div>
+
+          <!-- Teléfono -->
+          <div>
+            <label class="block text-xs uppercase tracking-wider font-semibold text-zinc-300 mb-1.5">
+              Teléfono Móvil
+            </label>
+            <input type="text" [(ngModel)]="formulario.telefono" name="telefono" placeholder="+591 7XXXXXXX"
+                   class="w-full bg-zinc-950/90 border border-zinc-700/80 focus:border-amber-400 focus:ring-1 focus:ring-amber-400/30 rounded-xl px-4 py-2.5 text-sm text-white transition-all">
+          </div>
+
+          <!-- Correo -->
+          <div>
+            <label class="block text-xs uppercase tracking-wider font-semibold text-zinc-300 mb-1.5">
+              Correo Electrónico <span class="text-amber-400">*</span>
+            </label>
+            <input type="email" [(ngModel)]="formulario.correo" name="correo" required
+                   class="w-full bg-zinc-950/90 border border-zinc-700/80 focus:border-amber-400 focus:ring-1 focus:ring-amber-400/30 rounded-xl px-4 py-2.5 text-sm text-white transition-all">
+          </div>
+
+          <!-- Ciudad -->
+          <div>
+            <label class="block text-xs uppercase tracking-wider font-semibold text-zinc-300 mb-1.5">
+              Ciudad de Residencia
+            </label>
+            <input type="text" [(ngModel)]="formulario.ciudad" name="ciudad" placeholder="Santa Cruz, La Paz, Cochabamba"
+                   class="w-full bg-zinc-950/90 border border-zinc-700/80 focus:border-amber-400 focus:ring-1 focus:ring-amber-400/30 rounded-xl px-4 py-2.5 text-sm text-white transition-all">
+          </div>
+
+          <!-- Dirección Física (Full Width) -->
+          <div class="md:col-span-2">
+            <label class="block text-xs uppercase tracking-wider font-semibold text-zinc-300 mb-1.5">
+              Dirección de Entrega / Domicilio
+            </label>
+            <input type="text" [(ngModel)]="formulario.direccion" name="direccion" placeholder="Calle, Av., Número, Barrio o Condominio"
+                   class="w-full bg-zinc-950/90 border border-zinc-700/80 focus:border-amber-400 focus:ring-1 focus:ring-amber-400/30 rounded-xl px-4 py-2.5 text-sm text-white transition-all">
+          </div>
+
+        </div>
+
+        <!-- Form Actions Bar -->
+        <div class="flex flex-col-reverse sm:flex-row items-center justify-end gap-3 pt-6 border-t border-white/10">
+          
+          <button type="button" (click)="cancelarEdicion()" [disabled]="guardando()"
+                  class="w-full sm:w-auto px-6 py-3 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 text-xs uppercase tracking-wider font-semibold transition-all">
+            Cancelar
+          </button>
+
+          <button type="submit" [disabled]="guardando()"
+                  class="w-full sm:w-auto px-8 py-3 rounded-full bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-zinc-950 text-xs uppercase tracking-wider font-bold hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center space-x-2">
+            <span *ngIf="!guardando()">Guardar Cambios</span>
+            <span *ngIf="guardando()">Guardando...</span>
+            <i *ngIf="!guardando()" class="ph ph-check-bold text-sm"></i>
+          </button>
+
+        </div>
+
+      </form>
+
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- MODAL DE CAMBIO DE CONTRASEÑA (VALIDACIONES RECOVERY)    -->
+    <!-- ======================================================== -->
+    <div *ngIf="modalPasswordAbierto()" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      
+      <!-- Backdrop -->
+      <div class="absolute inset-0 bg-black/80 backdrop-blur-md transition-opacity animate-fade-in" 
+           (click)="cerrarModalPassword()"></div>
+
+      <!-- Modal Card -->
+      <div class="relative w-full max-w-md bg-zinc-900/95 border border-amber-500/30 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-black/90 overflow-hidden animate-scale-up z-10">
+        
+        <!-- Subtle Top Gold Accent Line -->
+        <div class="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-amber-400 to-transparent"></div>
+
+        <!-- Header -->
+        <div class="flex items-center justify-between pb-4 border-b border-white/10">
+          <div class="flex items-center space-x-3">
+            <div class="w-9 h-9 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+              <i class="ph ph-lock-key text-lg"></i>
+            </div>
+            <div>
+              <h3 class="text-base font-editorial font-bold text-white tracking-wide">Cambiar Contraseña</h3>
+              <p class="text-[11px] text-zinc-400 font-light">AURA Atelier • Credenciales de Acceso</p>
+            </div>
+          </div>
+          <button (click)="cerrarModalPassword()" class="text-zinc-400 hover:text-white p-1.5 rounded-lg hover:bg-white/5 transition-colors">
+            <i class="ph ph-x text-lg"></i>
+          </button>
+        </div>
+
+        <!-- Password Form -->
+        <form (ngSubmit)="guardarPassword()" class="space-y-4 pt-5">
+          
+          <!-- Nueva Contraseña -->
+          <div class="space-y-1.5">
+            <label class="text-[11px] uppercase tracking-wider font-semibold text-zinc-300">Nueva Contraseña</label>
+            <div class="relative">
+              <input [type]="mostrarNuevaPassword() ? 'text' : 'password'"
+                     [(ngModel)]="passwordForm.nueva_password" 
+                     name="nueva_password" 
+                     placeholder="••••••••" 
+                     class="w-full bg-zinc-950/90 border border-zinc-800 focus:border-amber-400/80 rounded-2xl pl-4 pr-11 py-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-amber-400/30 transition-all font-mono" />
+              <button type="button" 
+                      (click)="mostrarNuevaPassword.set(!mostrarNuevaPassword())"
+                      class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white p-1 transition-colors">
+                <i [class]="mostrarNuevaPassword() ? 'ph ph-eye-slash text-base' : 'ph ph-eye text-base'"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Confirmar Nueva Contraseña -->
+          <div class="space-y-1.5">
+            <label class="text-[11px] uppercase tracking-wider font-semibold text-zinc-300">Confirmar Nueva Contraseña</label>
+            <div class="relative">
+              <input [type]="mostrarConfirmarPassword() ? 'text' : 'password'"
+                     [(ngModel)]="passwordForm.confirmar_password" 
+                     name="confirmar_password" 
+                     placeholder="••••••••" 
+                     class="w-full bg-zinc-950/90 border border-zinc-800 focus:border-amber-400/80 rounded-2xl pl-4 pr-11 py-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-amber-400/30 transition-all font-mono" />
+              <button type="button" 
+                      (click)="mostrarConfirmarPassword.set(!mostrarConfirmarPassword())"
+                      class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white p-1 transition-colors">
+                <i [class]="mostrarConfirmarPassword() ? 'ph ph-eye-slash text-base' : 'ph ph-eye text-base'"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Badges de Requisitos y Validaciones (Exactas de Recuperación) -->
+          <div class="p-3.5 rounded-2xl bg-zinc-950/90 border border-zinc-800/90 text-[11px] space-y-1.5">
+            <div [class.text-emerald-400]="newPasswordMinLength" [class.text-zinc-500]="!newPasswordMinLength" class="flex items-center space-x-2 transition-colors">
+              <i [class]="newPasswordMinLength ? 'ph ph-check-circle text-emerald-400 text-sm' : 'ph ph-circle text-zinc-600 text-sm'"></i>
+              <span>Mínimo 8 caracteres</span>
+            </div>
+            <div [class.text-emerald-400]="newPasswordSpecialChar" [class.text-zinc-500]="!newPasswordSpecialChar" class="flex items-center space-x-2 transition-colors">
+              <i [class]="newPasswordSpecialChar ? 'ph ph-check-circle text-emerald-400 text-sm' : 'ph ph-circle text-zinc-600 text-sm'"></i>
+              <span>1 símbolo especial (!@#$%^&*...)</span>
+            </div>
+            <div [class.text-emerald-400]="passwordsMatch" [class.text-zinc-500]="!passwordsMatch" class="flex items-center space-x-2 transition-colors">
+              <i [class]="passwordsMatch ? 'ph ph-check-circle text-emerald-400 text-sm' : 'ph ph-circle text-zinc-600 text-sm'"></i>
+              <span>Las contraseñas coinciden</span>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex items-center justify-end space-x-3 pt-3">
+            <button type="button" 
+                    (click)="cerrarModalPassword()"
+                    [disabled]="cambiandoPassword()"
+                    class="px-5 py-2.5 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold uppercase tracking-wider transition-all">
+              Cancelar
+            </button>
+            <button type="submit" 
+                    [disabled]="!canSubmitPassword"
+                    class="px-6 py-2.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-400 hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed text-zinc-950 font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-amber-500/20 flex items-center space-x-2">
+              <span *ngIf="!cambiandoPassword()">Actualizar Clave</span>
+              <span *ngIf="cambiandoPassword()">Actualizando...</span>
+              <i *ngIf="!cambiandoPassword()" class="ph ph-check text-sm font-bold"></i>
+              <div *ngIf="cambiandoPassword()" class="w-3.5 h-3.5 border-2 border-zinc-950 border-t-transparent rounded-full animate-spin"></div>
             </button>
           </div>
-        </div>
 
-      </div>
-    </div>
-  </nav>
-
-  <main class="flex-grow max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
-    
-    <button (click)="navegarA('/home')" class="mb-6 flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-slate-400 hover:text-blue-900 dark:hover:text-blue-400 transition-colors">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-      </svg>
-      Volver al Panel Principal
-    </button>
-
-    <div *ngIf="mensaje" 
-        [class]="mensaje.tipo === 'exito' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
-        class="p-4 mb-4 rounded-sm transition-opacity duration-500">
-      {{ mensaje.texto }}
-    </div>
-
-    <div *ngIf="!cargando && perfil" class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-sm shadow-sm transition-colors duration-300 overflow-hidden">
-      
-      <div class="px-6 py-5 border-b border-gray-200 dark:border-slate-800 flex justify-between items-center sm:items-end flex-col sm:flex-row gap-4">
-        <div>
-          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ perfil.nombre_completo || 'Usuario' }}</h1>
-          <div class="flex items-center gap-2 mt-2">
-            <span class="text-xs font-semibold uppercase tracking-wider text-blue-800 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/30 px-2 py-1 rounded-sm border border-blue-200 dark:border-blue-800/50">
-              {{ perfil.nombre_rol }}
-            </span>
-            <span *ngIf="perfil.nombre_empresa" class="text-sm text-gray-500 dark:text-slate-400">
-              | {{ perfil.nombre_empresa }}
-            </span>
-          </div>
-        </div>
-        
-        <button *ngIf="!modoEdicion" (click)="activarEdicion()" class="flex items-center gap-2 px-4 py-2 bg-blue-900 dark:bg-slate-800 hover:bg-blue-800 dark:hover:bg-slate-700 text-white text-sm font-medium rounded-sm transition-colors border border-transparent dark:border-slate-700 dark:hover:border-slate-600">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-          Editar Información
-        </button>
-      </div>
-
-      <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-8" *ngIf="!modoEdicion">
-        <div class="space-y-5">
-          <h3 class="text-lg font-bold text-gray-900 dark:text-white border-b border-gray-200 dark:border-slate-800 pb-2">Datos de Contacto</h3>
-          <div class="grid grid-cols-2 gap-4">
-            <div class="col-span-2 sm:col-span-1">
-              <p class="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Carnet (CI)</p>
-              <p class="text-base font-medium text-gray-900 dark:text-white mt-1">{{ perfil.ci }}</p>
-            </div>
-            <div class="col-span-2 sm:col-span-1">
-              <p class="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Teléfono</p>
-              <p class="text-base font-medium text-gray-900 dark:text-white mt-1">{{ perfil.telefono }}</p>
-            </div>
-            <div class="col-span-2">
-              <p class="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Correo Electrónico</p>
-              <p class="text-base font-medium text-gray-900 dark:text-white mt-1">{{ perfil.correo }}</p>
-            </div>
-            <div class="col-span-2">
-              <p class="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Dirección Física</p>
-              <p class="text-base font-medium text-gray-900 dark:text-white mt-1">{{ perfil.direccion }}</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="space-y-5">
-          <h3 class="text-lg font-bold text-gray-900 dark:text-white border-b border-gray-200 dark:border-slate-800 pb-2">Datos del Sistema</h3>
-          <div class="grid grid-cols-2 gap-4">
-            <div class="col-span-2 sm:col-span-1">
-              <p class="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Usuario</p>
-              <p class="text-base font-medium text-gray-900 dark:text-white mt-1">{{ perfil.nombre_usuario }}</p>
-            </div>
-            <div class="col-span-2 sm:col-span-1">
-              <p class="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Estado</p>
-              <div class="mt-1">
-                <span [ngClass]="perfil.estado === 'ACTIVO' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 border-green-200 dark:border-green-800/50' : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400 border-red-200 dark:border-red-800/50'"
-                      class="px-2 py-1 rounded-sm text-xs font-bold border">
-                  {{ perfil.estado }}
-                </span>
-              </div>
-            </div>
-            
-            <div class="col-span-2 sm:col-span-1">
-              <p class="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Sucursal Preferida</p>
-              <div class="mt-1.5 flex items-center gap-2">
-                <span class="text-base font-bold text-amber-600 dark:text-amber-400">Sucursal Central Equipetrol</span>
-              </div>
-            </div>
-
-
-            <div class="col-span-2 sm:col-span-1">
-              <p class="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Fecha Registro</p>
-              <p class="text-base font-medium text-gray-900 dark:text-white mt-1">{{ perfil.fecha_registro | date:'dd/MM/yyyy' }}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="p-6 bg-gray-50 dark:bg-slate-900/50 border-t border-gray-200 dark:border-slate-800" *ngIf="modoEdicion">
-        <form (ngSubmit)="guardarPerfil()" #form="ngForm">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div>
-              <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1">Carnet de Identidad</label>
-              <input type="text" [value]="perfil.ci" disabled class="w-full bg-gray-100 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-sm p-2.5 text-gray-500 dark:text-slate-400 cursor-not-allowed">
-            </div>
-            <div>
-              <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1">Teléfono</label>
-              <input type="text" name="telefono" [(ngModel)]="perfilForm.telefono" required class="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-700 rounded-sm p-2.5 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-900 dark:focus:ring-blue-500 focus:border-blue-900 dark:focus:border-blue-500 transition-colors">
-            </div>
-            <div>
-              <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1">Correo Electrónico</label>
-              <input type="email" name="correo" [(ngModel)]="perfilForm.correo" required class="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-700 rounded-sm p-2.5 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-900 dark:focus:ring-blue-500 focus:border-blue-900 dark:focus:border-blue-500 transition-colors">
-            </div>
-            <div>
-              <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1">Dirección Física</label>
-              <input type="text" name="direccion" [(ngModel)]="perfilForm.direccion" required class="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-700 rounded-sm p-2.5 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-900 dark:focus:ring-blue-500 focus:border-blue-900 dark:focus:border-blue-500 transition-colors">
-            </div>
-            <div class="md:col-span-2 pt-4 border-t border-gray-200 dark:border-slate-800">
-              <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1">Nueva Contraseña <span class="text-xs font-normal text-gray-500 dark:text-slate-400">(Dejar vacío para mantener)</span></label>
-              <input type="password" name="password" [(ngModel)]="perfilForm.password" class="w-full md:w-1/2 bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-700 rounded-sm p-2.5 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-900 dark:focus:ring-blue-500 focus:border-blue-900 dark:focus:border-blue-500 transition-colors">
-            </div>
-          </div>
-          <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-slate-800">
-            <button type="button" (click)="cancelarEdicion()" class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-sm transition-colors">Cancelar</button>
-            <button type="submit" [disabled]="form.invalid" class="px-4 py-2 text-sm font-medium text-white bg-blue-900 dark:bg-blue-600 hover:bg-blue-800 dark:hover:bg-blue-500 rounded-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Guardar Cambios</button>
-          </div>
         </form>
+
       </div>
-
     </div>
 
-    <div *ngIf="cargando" class="flex flex-col items-center justify-center p-16 w-full">
-      <div class="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-900 dark:border-blue-500 border-l-4 border-r-4 border-l-transparent border-r-transparent"></div>
-      <p class="mt-4 text-sm font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Cargando Perfil...</p>
-    </div>
+  </div>
 
-  </main>
 </div>

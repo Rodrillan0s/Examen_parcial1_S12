@@ -1,7 +1,6 @@
 import { Component, OnInit, inject, ChangeDetectorRef, NgZone, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../../services/auth';
 import { Empresa, EmpresaService } from '../../../services/empresa';
@@ -15,7 +14,7 @@ import { Empresa, EmpresaService } from '../../../services/empresa';
 export class ListaEmpresasComponent implements OnInit {
 
   private empresaService = inject(EmpresaService);
-  private authService = inject(AuthService);
+  public authService = inject(AuthService);
   private cdr = inject(ChangeDetectorRef);
   private ngZone = inject(NgZone);
   private destroyRef = inject(DestroyRef);
@@ -24,9 +23,13 @@ export class ListaEmpresasComponent implements OnInit {
   empresasFiltradas: Empresa[] = [];
 
   filtroEstado: string = '';
+  filtroBusqueda: string = '';
 
   cargando: boolean = false;
+  guardando: boolean = false;
   mensajeError: string = '';
+  mensajeModalError: string = '';
+  mensajeExito: string = '';
 
   mostrarModal: boolean = false;
   modoEdicion: boolean = false;
@@ -37,9 +40,16 @@ export class ListaEmpresasComponent implements OnInit {
   empresasActivas: number = 0;
   empresasInactivas: number = 0;
 
+  get esSuperAdmin(): boolean {
+    const u = this.authService.obtenerUsuario();
+    if (!u) return false;
+    const rol = (u.nombre_rol || '').toUpperCase();
+    const roles = (u.roles || []).map(r => r.toUpperCase());
+    return u.id_rol === 1 || rol === 'ADMINISTRADOR' || roles.includes('ADMINISTRADOR');
+  }
+
   async ngOnInit() {
     this.cargando = true;
-
     let intentos = 0;
 
     while (!this.authService.obtenerToken() && intentos < 10) {
@@ -51,14 +61,20 @@ export class ListaEmpresasComponent implements OnInit {
       this.cargarEmpresas();
     } else {
       this.cargando = false;
-      this.mensajeError = 'No se pudo iniciar sesión. Por favor recarga.';
+      this.mensajeError = 'No se pudo iniciar sesión. Por favor recarga la página.';
     }
   }
 
   inicializarEmpresa(): Empresa {
     return {
       nombre_empresa: '',
+      razon_social: '',
       nit: '',
+      correo: '',
+      telefono: '',
+      direccion_fiscal: '',
+      ciudad: 'Santa Cruz',
+      logo: '',
       estado: 'ACTIVO'
     };
   }
@@ -72,13 +88,12 @@ export class ListaEmpresasComponent implements OnInit {
       .subscribe({
         next: (res) => {
           this.ngZone.run(() => {
-            if (res.success) {
-              this.empresas = [...res.data];
+            if (res && res.success) {
+              this.empresas = [...(res.data || [])];
               this.aplicarFiltros();
             } else {
               this.mensajeError = res.message || 'Error al obtener empresas.';
             }
-
             this.cargando = false;
             this.cdr.detectChanges();
           });
@@ -94,105 +109,179 @@ export class ListaEmpresasComponent implements OnInit {
   }
 
   aplicarFiltros() {
-    if (this.filtroEstado === '') {
-      this.empresasFiltradas = [...this.empresas];
-    } else {
-      this.empresasFiltradas = this.empresas.filter(e => e.estado === this.filtroEstado);
+    let lista = [...this.empresas];
+
+    if (this.filtroEstado !== '') {
+      lista = lista.filter(e => e.estado === this.filtroEstado);
     }
 
+    if (this.filtroBusqueda && this.filtroBusqueda.trim().length > 0) {
+      const q = this.filtroBusqueda.trim().toLowerCase();
+      lista = lista.filter(e => 
+        (e.nombre_empresa && e.nombre_empresa.toLowerCase().includes(q)) ||
+        (e.razon_social && e.razon_social.toLowerCase().includes(q)) ||
+        (e.nit && e.nit.toLowerCase().includes(q)) ||
+        (e.ciudad && e.ciudad.toLowerCase().includes(q))
+      );
+    }
+
+    this.empresasFiltradas = lista;
     this.actualizarMetricas();
   }
 
   actualizarMetricas() {
-    this.totalEmpresas = this.empresasFiltradas.length;
-    this.empresasActivas = this.empresasFiltradas.filter(e => e.estado === 'ACTIVO').length;
-    this.empresasInactivas = this.empresasFiltradas.filter(e => e.estado === 'INACTIVO').length;
+    this.totalEmpresas = this.empresas.length;
+    this.empresasActivas = this.empresas.filter(e => e.estado === 'ACTIVO').length;
+    this.empresasInactivas = this.empresas.filter(e => e.estado === 'INACTIVO').length;
   }
 
   obtenerIniciales(nombre: string): string {
-    if (!nombre) return 'EM';
-
+    if (!nombre) return 'AU';
     const partes = nombre.trim().split(' ');
-
     if (partes.length >= 2) {
       return (partes[0][0] + partes[1][0]).toUpperCase();
     }
-
     return nombre.substring(0, 2).toUpperCase();
   }
 
   abrirModalNuevo() {
     this.modoEdicion = false;
+    this.mensajeModalError = '';
     this.empresaForm = this.inicializarEmpresa();
     this.mostrarModal = true;
+    this.cdr.detectChanges();
   }
 
   abrirModalEditar(empresa: Empresa) {
     this.modoEdicion = true;
-    this.empresaForm = { ...empresa };
+    this.mensajeModalError = '';
+    this.empresaForm = { 
+      ...empresa,
+      razon_social: empresa.razon_social || empresa.nombre_empresa,
+      direccion_fiscal: empresa.direccion_fiscal || '',
+      ciudad: empresa.ciudad || 'Santa Cruz'
+    };
     this.mostrarModal = true;
+    this.cdr.detectChanges();
   }
 
   cerrarModal() {
     this.mostrarModal = false;
+    this.mensajeModalError = '';
+    this.guardando = false;
+    this.cdr.detectChanges();
+  }
+
+  mostrarNotificacionExito(mensaje: string) {
+    this.mensajeExito = mensaje;
+    setTimeout(() => {
+      this.mensajeExito = '';
+      this.cdr.detectChanges();
+    }, 4500);
   }
 
   guardarEmpresa() {
-    if (!this.empresaForm.nombre_empresa || this.empresaForm.nombre_empresa.trim().length === 0) {
-      alert('El nombre de la empresa es obligatorio.');
+    this.mensajeModalError = '';
+
+    // Validaciones de campos obligatorios
+    if (!this.empresaForm.nombre_empresa || !this.empresaForm.nombre_empresa.trim()) {
+      this.mensajeModalError = 'El Nombre comercial es obligatorio.';
       return;
     }
 
-    if (!this.empresaForm.nit || String(this.empresaForm.nit).trim().length === 0) {
-      alert('El NIT es obligatorio.');
+    if (!this.empresaForm.razon_social || !this.empresaForm.razon_social.trim()) {
+      this.empresaForm.razon_social = this.empresaForm.nombre_empresa;
+    }
+
+    if (!this.empresaForm.nit || !String(this.empresaForm.nit).trim()) {
+      this.mensajeModalError = 'El NIT / Identificación fiscal es obligatorio.';
       return;
     }
 
-    if (!this.empresaForm.estado || this.empresaForm.estado.trim().length === 0) {
-      alert('El estado es obligatorio.');
+    if (!this.empresaForm.correo || !this.empresaForm.correo.trim()) {
+      this.mensajeModalError = 'El correo empresarial es obligatorio.';
       return;
     }
 
-    this.cargando = true;
+    const emailRegex = /^[\w\.-]+@[\w\.-]+\.\w+$/;
+    if (!emailRegex.test(this.empresaForm.correo.trim())) {
+      this.mensajeModalError = 'El formato del correo electrónico empresarial no es válido.';
+      return;
+    }
+
+    if (!this.empresaForm.telefono || !this.empresaForm.telefono.trim()) {
+      this.mensajeModalError = 'El teléfono de contacto es obligatorio.';
+      return;
+    }
+
+    if (!this.empresaForm.direccion_fiscal || !this.empresaForm.direccion_fiscal.trim()) {
+      this.mensajeModalError = 'La dirección fiscal es obligatoria.';
+      return;
+    }
+
+    if (!this.empresaForm.ciudad || !this.empresaForm.ciudad.trim()) {
+      this.mensajeModalError = 'La ciudad de operación es obligatoria.';
+      return;
+    }
+
+    this.guardando = true;
+    this.cdr.detectChanges();
+
+    const payload: Empresa = {
+      ...this.empresaForm,
+      nombre_empresa: this.empresaForm.nombre_empresa.trim().toUpperCase(),
+      razon_social: this.empresaForm.razon_social.trim().toUpperCase(),
+      nit: String(this.empresaForm.nit).trim(),
+      correo: this.empresaForm.correo.trim().toLowerCase(),
+      telefono: this.empresaForm.telefono.trim(),
+      direccion_fiscal: this.empresaForm.direccion_fiscal.trim(),
+      ciudad: this.empresaForm.ciudad.trim(),
+      logo: this.empresaForm.logo ? this.empresaForm.logo.trim() : '',
+      estado: this.empresaForm.estado || 'ACTIVO'
+    };
 
     if (this.modoEdicion) {
       if (!this.empresaForm.id_empresa) {
-        alert('No se encontró el ID de la empresa.');
-        this.cargando = false;
+        this.mensajeModalError = 'No se encontró el ID de la empresa a actualizar.';
+        this.guardando = false;
         return;
       }
 
-      this.empresaService.actualizarEmpresa(this.empresaForm.id_empresa, this.empresaForm)
+      this.empresaService.actualizarEmpresa(this.empresaForm.id_empresa, payload)
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({
-          next: () => {
+          next: (res) => {
             this.ngZone.run(() => {
+              this.guardando = false;
               this.cerrarModal();
               this.cargarEmpresas();
+              this.mostrarNotificacionExito(`¡Tenant '${payload.nombre_empresa}' actualizado con éxito!`);
             });
           },
           error: (err) => {
             this.ngZone.run(() => {
-              alert(err?.error?.detail || 'Error al actualizar la empresa.');
-              this.cargando = false;
+              this.mensajeModalError = err?.error?.detail || err?.message || 'Error al actualizar el Tenant.';
+              this.guardando = false;
               this.cdr.detectChanges();
             });
           }
         });
     } else {
-      this.empresaService.crearEmpresa(this.empresaForm)
+      this.empresaService.crearEmpresa(payload)
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({
-          next: () => {
+          next: (res) => {
             this.ngZone.run(() => {
+              this.guardando = false;
               this.cerrarModal();
               this.cargarEmpresas();
+              this.mostrarNotificacionExito(`¡Tenant '${payload.nombre_empresa}' registrado exitosamente en estado ACTIVO!`);
             });
           },
           error: (err) => {
             this.ngZone.run(() => {
-              alert(err?.error?.detail || 'Error al crear la empresa. Verifique los datos.');
-              this.cargando = false;
+              this.mensajeModalError = err?.error?.detail || err?.message || 'Error al registrar el Tenant. Verifique los datos.';
+              this.guardando = false;
               this.cdr.detectChanges();
             });
           }
@@ -203,8 +292,7 @@ export class ListaEmpresasComponent implements OnInit {
   eliminarEmpresa(idEmpresa?: number) {
     if (!idEmpresa) return;
 
-    const confirmar = confirm('¿Está seguro que desea eliminar esta empresa permanentemente?');
-
+    const confirmar = confirm('¿Está seguro que desea eliminar este Tenant permanentemente? Las sucursales y productos asociados pueden verse afectados.');
     if (!confirmar) return;
 
     this.cargando = true;
@@ -215,11 +303,12 @@ export class ListaEmpresasComponent implements OnInit {
         next: () => {
           this.ngZone.run(() => {
             this.cargarEmpresas();
+            this.mostrarNotificacionExito('Tenant eliminado correctamente.');
           });
         },
         error: (err) => {
           this.ngZone.run(() => {
-            alert(err?.error?.detail || 'Error al eliminar la empresa.');
+            alert(err?.error?.detail || 'Error al eliminar el Tenant.');
             this.cargando = false;
             this.cdr.detectChanges();
           });

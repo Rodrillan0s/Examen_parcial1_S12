@@ -3,9 +3,9 @@ import os
 
 # Cargar .env buscando tanto en backend/ como en backend/app/
 base_dir = os.path.dirname(os.path.abspath(__file__))
-load_dotenv(os.path.join(base_dir, '.env'))
-load_dotenv(os.path.join(os.path.dirname(base_dir), '.env'))
-load_dotenv()
+load_dotenv(os.path.join(base_dir, '.env'), override=True)
+load_dotenv(os.path.join(os.path.dirname(base_dir), '.env'), override=True)
+load_dotenv(override=True)
 
 class Config:
     
@@ -23,3 +23,9 @@ class Config:
     SECRET_KEY = os.getenv("SECRET_KEY")
     TOKEN_KEY = os.getenv("TOKEN_KEY")
     DEBUG = os.getenv("DEBUG", True)
+
+    # CLOUDINARY MEDIA
+    CLOUDINARY_CLOUD_NAME = os.getenv("CLOUDINARY_CLOUD_NAME", "dljz1f6ns")
+    CLOUDINARY_API_KEY = os.getenv("CLOUDINARY_API_KEY", "638117962672329")
+    CLOUDINARY_API_SECRET = os.getenv("CLOUDINARY_API_SECRET", "cA7cmDDU-CDW8DkFaZ-Ym0P30KY")
+    CLOUDINARY_URL = os.getenv("CLOUDINARY_URL")

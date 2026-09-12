@@ -195,7 +195,8 @@ def iniciar_sesion(data: dict, request: Request = None) -> dict:
             "nombre_empresa": usuario_db.get('nombre_empresa'),
             "roles": nombres_roles,
             "permisos": permisos_efectivos,
-            "sucursales": sucursales_usuario
+            "sucursales": sucursales_usuario,
+            "alcance": "PLATAFORMA" if (usuario_db['id_rol'] == 1 or 'ADMINISTRADOR' in [str(r).upper() for r in nombres_roles] or 'SUPERADMIN' in [str(r).upper() for r in nombres_roles]) and not usuario_db['id_empresa'] else "EMPRESA"
         },
         "token": token
     }

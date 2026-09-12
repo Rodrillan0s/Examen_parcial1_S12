@@ -115,31 +115,30 @@ def obtener_eventos_db(
             params.extend([search_term] * 5)
             
         where_str = " AND ".join(where_clauses)
-        
-        # Count query
-        count_query = f"SELECT COUNT(*) FROM {schema}.t_bitacora WHERE {where_str}"
-        total_res = db.execute_query(count_query, tuple(params), fetchone=True)
-        total_items = total_res[0] if total_res else 0
-        
-        # Data query
+
+        # Query única de datos con COUNT(*) OVER() para reducir latencia remota a la mitad
         query = f"""
             SELECT 
                 id_bitacora, fecha_hora, id_usuario, usuario_nombre, usuario_email,
                 id_empresa, id_sucursal, modulo, accion, entidad, id_entidad,
-                descripcion, resultado, nivel
+                descripcion, resultado, nivel,
+                COUNT(*) OVER() AS full_count
             FROM {schema}.t_bitacora
             WHERE {where_str}
             ORDER BY fecha_hora DESC
             LIMIT %s OFFSET %s
         """
         
-        params.append(limit)
-        params.append(offset)
+        query_params = list(params)
+        query_params.append(limit)
+        query_params.append(offset)
         
-        resultados = db.execute_query(query, tuple(params), fetchall=True)
+        resultados = db.execute_query(query, tuple(query_params), fetchall=True)
         
+        total_items = 0
         items = []
         if resultados:
+            total_items = resultados[0][14]
             for r in resultados:
                 items.append({
                     "id_bitacora": r[0],
@@ -157,6 +156,11 @@ def obtener_eventos_db(
                     "resultado": r[12],
                     "nivel": r[13]
                 })
+        elif offset > 0:
+            # Si offset > total_items, consultar conteo exacto
+            count_query = f"SELECT COUNT(*) FROM {schema}.t_bitacora WHERE {where_str}"
+            total_res = db.execute_query(count_query, tuple(params), fetchone=True)
+            total_items = total_res[0] if total_res else 0
                 
         return {
             "total": total_items,

@@ -1,8 +1,9 @@
+from typing import Optional, List, Dict, Any
 from app.classes.postgres import PostgreSQL
 from app.config import Config
 
 # --- LEER USUARIOS ---
-def obtener_todos_los_usuarios():
+def obtener_todos_los_usuarios() -> List[Dict[str, Any]]:
     db = PostgreSQL()
     db.create_connection()
     try:
@@ -10,11 +11,16 @@ def obtener_todos_los_usuarios():
         query = f"""
             SELECT 
                 u.id_usuario, u.username, u.correo, u.nombre, u.apellido,
-                u.telefono, u.estado, u.id_empresa,
-                r.nombre AS nombre_rol, r.id_rol
+                u.telefono, u.estado, u.id_empresa, e.nombre_empresa,
+                r.nombre AS nombre_rol, r.id_rol,
+                COUNT(DISTINCT up.id_permiso) AS permisos_directos_count,
+                u.direccion, u.ciudad, u.fecha_registro
             FROM {schema}.t_usuario u
+            LEFT JOIN {schema}.empresa e ON e.id_empresa = u.id_empresa
             LEFT JOIN {schema}.t_usuario_rol ur ON ur.id_usuario = u.id_usuario
             LEFT JOIN {schema}.t_rol r ON r.id_rol = ur.id_rol
+            LEFT JOIN {schema}.t_usuario_permiso up ON up.id_usuario = u.id_usuario AND up.activo = TRUE
+            GROUP BY u.id_usuario, u.username, u.correo, u.nombre, u.apellido, u.telefono, u.estado, u.id_empresa, e.nombre_empresa, r.nombre, r.id_rol, u.direccion, u.ciudad, u.fecha_registro
             ORDER BY u.id_usuario ASC;
         """
         resultados = db.execute_query(query, fetchall=True)
@@ -31,18 +37,23 @@ def obtener_todos_los_usuarios():
                     "nombre": r[3],
                     "apellido": r[4],
                     "nombre_completo": f"{r[3] or ''} {r[4] or ''}".strip(),
-                    "telefono": r[5],
+                    "telefono": r[5] or "Sin teléfono",
                     "estado": "ACTIVO" if r[6] else "INACTIVO",
                     "id_empresa": r[7],
-                    "nombre_rol": r[8] or "CLIENTE",
-                    "id_rol": r[9] or 2,
-                    "nro_rol": r[9] or 2
+                    "nombre_empresa": r[8] or ("Plataforma Global" if r[7] is None else f"Tenant #{r[7]}"),
+                    "nombre_rol": r[9] or "CLIENTE",
+                    "id_rol": r[10] or 2,
+                    "nro_rol": r[10] or 2,
+                    "permisos_directos_count": r[11] or 0,
+                    "direccion": r[12] or "Sin dirección registrada",
+                    "ciudad": r[13] or "No especificada",
+                    "fecha_registro": r[14].strftime('%Y-%m-%d %H:%M') if r[14] else "Reciente"
                 })
         return usuarios
     finally:
         db.close_connection()
 
-def obtener_usuarios_por_empresa(id_empresa: int):
+def obtener_usuarios_por_empresa(id_empresa: int) -> List[Dict[str, Any]]:
     db = PostgreSQL()
     db.create_connection()
     try:
@@ -50,12 +61,17 @@ def obtener_usuarios_por_empresa(id_empresa: int):
         query = f"""
             SELECT 
                 u.id_usuario, u.username, u.correo, u.nombre, u.apellido,
-                u.telefono, u.estado, u.id_empresa,
-                r.nombre AS nombre_rol, r.id_rol
+                u.telefono, u.estado, u.id_empresa, e.nombre_empresa,
+                r.nombre AS nombre_rol, r.id_rol,
+                COUNT(DISTINCT up.id_permiso) AS permisos_directos_count,
+                u.direccion, u.ciudad, u.fecha_registro
             FROM {schema}.t_usuario u
+            LEFT JOIN {schema}.empresa e ON e.id_empresa = u.id_empresa
             LEFT JOIN {schema}.t_usuario_rol ur ON ur.id_usuario = u.id_usuario
             LEFT JOIN {schema}.t_rol r ON r.id_rol = ur.id_rol
+            LEFT JOIN {schema}.t_usuario_permiso up ON up.id_usuario = u.id_usuario AND up.activo = TRUE
             WHERE u.id_empresa = %s
+            GROUP BY u.id_usuario, u.username, u.correo, u.nombre, u.apellido, u.telefono, u.estado, u.id_empresa, e.nombre_empresa, r.nombre, r.id_rol, u.direccion, u.ciudad, u.fecha_registro
             ORDER BY u.id_usuario ASC;
         """
         resultados = db.execute_query(query, (id_empresa,), fetchall=True)
@@ -72,18 +88,23 @@ def obtener_usuarios_por_empresa(id_empresa: int):
                     "nombre": r[3],
                     "apellido": r[4],
                     "nombre_completo": f"{r[3] or ''} {r[4] or ''}".strip(),
-                    "telefono": r[5],
+                    "telefono": r[5] or "Sin teléfono",
                     "estado": "ACTIVO" if r[6] else "INACTIVO",
                     "id_empresa": r[7],
-                    "nombre_rol": r[8] or "CLIENTE",
-                    "id_rol": r[9] or 2,
-                    "nro_rol": r[9] or 2
+                    "nombre_empresa": r[8] or f"Tenant #{r[7]}",
+                    "nombre_rol": r[9] or "CLIENTE",
+                    "id_rol": r[10] or 2,
+                    "nro_rol": r[10] or 2,
+                    "permisos_directos_count": r[11] or 0,
+                    "direccion": r[12] or "Sin dirección registrada",
+                    "ciudad": r[13] or "No especificada",
+                    "fecha_registro": r[14].strftime('%Y-%m-%d %H:%M') if r[14] else "Reciente"
                 })
         return usuarios
     finally:
         db.close_connection()
 
-def obtener_usuario_por_id(id_usuario: int):
+def obtener_usuario_por_id(id_usuario: int) -> Optional[Dict[str, Any]]:
     db = PostgreSQL()
     db.create_connection()
     try:
@@ -91,12 +112,17 @@ def obtener_usuario_por_id(id_usuario: int):
         query = f"""
             SELECT 
                 u.id_usuario, u.username, u.correo, u.nombre, u.apellido,
-                u.telefono, u.estado, u.id_empresa,
-                r.nombre AS nombre_rol, r.id_rol
+                u.telefono, u.estado, u.id_empresa, e.nombre_empresa,
+                r.nombre AS nombre_rol, r.id_rol,
+                COUNT(DISTINCT up.id_permiso) AS permisos_directos_count,
+                u.direccion, u.ciudad, u.fecha_registro
             FROM {schema}.t_usuario u
+            LEFT JOIN {schema}.empresa e ON e.id_empresa = u.id_empresa
             LEFT JOIN {schema}.t_usuario_rol ur ON ur.id_usuario = u.id_usuario
             LEFT JOIN {schema}.t_rol r ON r.id_rol = ur.id_rol
-            WHERE u.id_usuario = %s;
+            LEFT JOIN {schema}.t_usuario_permiso up ON up.id_usuario = u.id_usuario AND up.activo = TRUE
+            WHERE u.id_usuario = %s
+            GROUP BY u.id_usuario, u.username, u.correo, u.nombre, u.apellido, u.telefono, u.estado, u.id_empresa, e.nombre_empresa, r.nombre, r.id_rol, u.direccion, u.ciudad, u.fecha_registro;
         """
         r = db.execute_query(query, (id_usuario,), fetchone=True)
         
@@ -110,107 +136,135 @@ def obtener_usuario_por_id(id_usuario: int):
                 "nombre": r[3],
                 "apellido": r[4],
                 "nombre_completo": f"{r[3] or ''} {r[4] or ''}".strip(),
-                "telefono": r[5],
+                "telefono": r[5] or "Sin teléfono",
                 "estado": "ACTIVO" if r[6] else "INACTIVO",
                 "id_empresa": r[7],
-                "nombre_rol": r[8] or "CLIENTE",
-                "id_rol": r[9] or 2,
-                "nro_rol": r[9] or 2
+                "nombre_empresa": r[8] or ("Plataforma Global" if r[7] is None else f"Tenant #{r[7]}"),
+                "nombre_rol": r[9] or "CLIENTE",
+                "id_rol": r[10] or 2,
+                "nro_rol": r[10] or 2,
+                "permisos_directos_count": r[11] or 0,
+                "direccion": r[12] or "Sin dirección registrada",
+                "ciudad": r[13] or "No especificada",
+                "fecha_registro": r[14].strftime('%Y-%m-%d %H:%M') if r[14] else "Reciente"
             }
         return None
     finally:
         db.close_connection()
 
 # --- CREAR USUARIO ---
-def crear_usuario_db(datos_persona, datos_usuario):
+def crear_usuario_db(ci: Optional[str], datos_usuario: dict) -> int:
     db = PostgreSQL()
     db.create_connection()
     try:
         schema = Config.SCHEMA or 'comercio'
-        query_usuario = f"""
-            INSERT INTO {schema}.t_usuario (username, correo, password_hash, nombre, apellido, telefono, estado, id_empresa)
-            VALUES (%s, %s, %s, %s, %s, %s, TRUE, %s)
+        id_empresa = datos_usuario.get('id_empresa')
+        if id_empresa in (0, '0', '', None):
+            id_empresa = None
+
+        query = f"""
+            INSERT INTO {schema}.t_usuario (username, correo, password, nombre, apellido, telefono, id_empresa, estado)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE)
             RETURNING id_usuario;
         """
         params = (
-            datos_usuario.get('username') or datos_usuario.get('nombre_usuario'),
+            datos_usuario.get('username'),
             datos_usuario.get('correo'),
             datos_usuario.get('password_hash'),
             datos_usuario.get('nombre'),
             datos_usuario.get('apellido'),
             datos_usuario.get('telefono'),
-            datos_usuario.get('id_empresa')
+            id_empresa
         )
-        resultado = db.execute_query(query_usuario, params, fetchone=True, commit=True)
-        id_user = resultado[0] if resultado else None
+        res = db.execute_query(query, params, fetchone=True, commit=True)
+        nuevo_id = res[0] if res else None
         
-        # Asignar rol por defecto si viene en datos
-        id_rol = datos_usuario.get('id_rol') or datos_usuario.get('nro_rol')
-        if id_user and id_rol:
-            from app.repos import rbac_repos
-            rbac_repos.asignar_roles_a_usuario(id_user, [id_rol])
+        # Asignar rol inicial
+        if nuevo_id and datos_usuario.get('id_rol'):
+            query_rol = f"""
+                INSERT INTO {schema}.t_usuario_rol (id_usuario, id_rol)
+                VALUES (%s, %s)
+                ON CONFLICT (id_usuario, id_rol) DO NOTHING;
+            """
+            db.execute_query(query_rol, (nuevo_id, int(datos_usuario['id_rol'])), commit=True)
             
-        return id_user
+        return nuevo_id
     finally:
         db.close_connection()
 
 # --- ACTUALIZAR USUARIO ---
-def actualizar_usuario_db(nro_usuario, ci, datos_persona, datos_usuario, cambiar_password=False):
+def actualizar_usuario_db(id_usuario: int, ci: Optional[str], rol: Optional[int], datos_usuario: dict, cambiar_password: bool = False):
     db = PostgreSQL()
     db.create_connection()
     try:
         schema = Config.SCHEMA or 'comercio'
-        if cambiar_password:
-            query = f"""
-                UPDATE {schema}.t_usuario
-                SET username = %s, correo = %s, password_hash = %s, nombre = %s, apellido = %s, telefono = %s, id_empresa = %s
-                WHERE id_usuario = %s;
-            """
-            params = (
-                datos_usuario.get('username'),
-                datos_usuario.get('correo'),
-                datos_usuario.get('password_hash'),
-                datos_usuario.get('nombre'),
-                datos_usuario.get('apellido'),
-                datos_usuario.get('telefono'),
-                datos_usuario.get('id_empresa'),
-                nro_usuario
+        id_empresa = datos_usuario.get('id_empresa')
+        if id_empresa in (0, '0', '', None):
+            id_empresa = None
+
+        set_clauses = [
+            "username = %s", "correo = %s", "nombre = %s", "apellido = %s",
+            "telefono = %s", "id_empresa = %s"
+        ]
+        params = [
+            datos_usuario.get('username'),
+            datos_usuario.get('correo'),
+            datos_usuario.get('nombre'),
+            datos_usuario.get('apellido'),
+            datos_usuario.get('telefono'),
+            id_empresa
+        ]
+
+        if cambiar_password and datos_usuario.get('password_hash'):
+            set_clauses.append("password = %s")
+            params.append(datos_usuario.get('password_hash'))
+
+        if 'estado' in datos_usuario:
+            estado_bool = datos_usuario['estado'] if isinstance(datos_usuario['estado'], bool) else (datos_usuario['estado'] == 'ACTIVO')
+            set_clauses.append("estado = %s")
+            params.append(estado_bool)
+
+        params.append(id_usuario)
+
+        query = f"""
+            UPDATE {schema}.t_usuario
+            SET {', '.join(set_clauses)}
+            WHERE id_usuario = %s;
+        """
+        db.execute_query(query, tuple(params), commit=True)
+
+        # Actualizar rol si se proveyó
+        if datos_usuario.get('id_rol'):
+            id_rol_nuevo = int(datos_usuario['id_rol'])
+            db.execute_query(f"DELETE FROM {schema}.t_usuario_rol WHERE id_usuario = %s;", (id_usuario,))
+            db.execute_query(
+                f"INSERT INTO {schema}.t_usuario_rol (id_usuario, id_rol) VALUES (%s, %s);",
+                (id_usuario, id_rol_nuevo),
+                commit=True
             )
-        else:
-            query = f"""
-                UPDATE {schema}.t_usuario
-                SET username = %s, correo = %s, nombre = %s, apellido = %s, telefono = %s, id_empresa = %s
-                WHERE id_usuario = %s;
-            """
-            params = (
-                datos_usuario.get('username'),
-                datos_usuario.get('correo'),
-                datos_usuario.get('nombre'),
-                datos_usuario.get('apellido'),
-                datos_usuario.get('telefono'),
-                datos_usuario.get('id_empresa'),
-                nro_usuario
-            )
-        
-        db.execute_query(query, params, commit=True)
-        
-        id_rol = datos_usuario.get('id_rol') or datos_usuario.get('nro_rol')
-        if id_rol:
-            from app.repos import rbac_repos
-            rbac_repos.asignar_roles_a_usuario(nro_usuario, [id_rol])
-            
         return True
     finally:
         db.close_connection()
 
-# --- ELIMINAR USUARIO ---
-def eliminar_usuario_db(nro_usuario: int):
+# --- ELIMINAR / DESACTIVAR USUARIO ---
+def eliminar_usuario_db(id_usuario: int):
     db = PostgreSQL()
     db.create_connection()
     try:
         schema = Config.SCHEMA or 'comercio'
         query = f"UPDATE {schema}.t_usuario SET estado = FALSE WHERE id_usuario = %s;"
-        db.execute_query(query, (nro_usuario,), commit=True)
+        db.execute_query(query, (id_usuario,), commit=True)
         return True
+    finally:
+        db.close_connection()
+
+def cambiar_estado_usuario_db(id_usuario: int, estado: bool) -> bool:
+    db = PostgreSQL()
+    db.create_connection()
+    try:
+        schema = Config.SCHEMA or 'comercio'
+        query = f"UPDATE {schema}.t_usuario SET estado = %s WHERE id_usuario = %s;"
+        filas = db.execute_query(query, (estado, id_usuario), commit=True)
+        return filas > 0
     finally:
         db.close_connection()

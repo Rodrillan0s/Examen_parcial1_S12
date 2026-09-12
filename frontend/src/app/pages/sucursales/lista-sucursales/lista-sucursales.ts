@@ -1,10 +1,10 @@
 import { Component, OnInit, inject, ChangeDetectorRef, NgZone, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../../services/auth';
 import { Sucursal, SucursalService } from '../../../services/sucursales';
+import { Ciudad, CiudadService } from '../../../services/ciudades';
 import { Empresa, EmpresaService } from '../../../services/empresa';
 
 @Component({
@@ -16,29 +16,66 @@ import { Empresa, EmpresaService } from '../../../services/empresa';
 export class ListaSucursalesComponent implements OnInit {
 
   private sucursalService = inject(SucursalService);
+  private ciudadService = inject(CiudadService);
   private empresaService = inject(EmpresaService);
   public authService = inject(AuthService);
   private cdr = inject(ChangeDetectorRef);
   private ngZone = inject(NgZone);
   private destroyRef = inject(DestroyRef);
 
+  // Tab navigation
+  tabActiva: 'SUCURSALES' | 'CIUDADES' = 'SUCURSALES';
+
+  // Branch data
   sucursales: Sucursal[] = [];
   sucursalesFiltradas: Sucursal[] = [];
-  empresas: Empresa[] = []; // List of companies for global admins
+  empresas: Empresa[] = [];
 
+  // City data
+  ciudades: Ciudad[] = [];
+  ciudadesFiltradas: Ciudad[] = [];
+
+  // Branch filters
   filtroEstado: string = 'TODOS';
+  filtroBusqueda: string = '';
+  filtroEmpresaId: number = 0;
 
+  // City filters
+  filtroCiudadDepto: string = 'TODOS';
+  filtroCiudadBusqueda: string = '';
+
+  // UI state
   cargando: boolean = false;
+  guardando: boolean = false;
   mensajeError: string = '';
+  mensajeModalError: string = '';
+  mensajeExito: string = '';
 
-  mostrarModal: boolean = false;
-  modoEdicion: boolean = false;
-
+  // Branch Modal
+  mostrarModalSucursal: boolean = false;
+  modoEdicionSucursal: boolean = false;
   sucursalForm: Sucursal = this.inicializarSucursal();
 
+  // City Modal
+  mostrarModalCiudad: boolean = false;
+  modoEdicionCiudad: boolean = false;
+  ciudadForm: Ciudad = this.inicializarCiudad();
+
+  // Autocomplete / MenuItem de Ciudades
+  inputCiudadTexto: string = '';
+  mostrarMenuCiudades: boolean = false;
+  sugerenciasCiudades: Ciudad[] = [];
+
+  readonly departamentosBolivia: string[] = [
+    'Santa Cruz', 'La Paz', 'Cochabamba', 'Chuquisaca', 
+    'Oruro', 'Potosí', 'Tarija', 'Beni', 'Pando'
+  ];
+
+  // Metrics
   totalSucursales: number = 0;
   sucursalesActivas: number = 0;
   sucursalesInactivas: number = 0;
+  totalCiudadesCobertura: number = 0;
 
   get idEmpresaSesion(): number {
     const user = this.authService.obtenerUsuario();
@@ -46,7 +83,11 @@ export class ListaSucursalesComponent implements OnInit {
   }
   
   get isGlobalAdmin(): boolean {
-    return this.authService.getScopeLevel() === 'PLATAFORMA';
+    const u = this.authService.obtenerUsuario();
+    if (!u) return false;
+    const rol = (u.nombre_rol || '').toUpperCase();
+    const roles = (u.roles || []).map(r => r.toUpperCase());
+    return u.id_rol === 1 || rol === 'ADMINISTRADOR' || roles.includes('ADMINISTRADOR') || this.authService.getScopeLevel() === 'PLATAFORMA';
   }
 
   async ngOnInit() {
@@ -62,10 +103,22 @@ export class ListaSucursalesComponent implements OnInit {
       if (this.isGlobalAdmin) {
         this.cargarEmpresas();
       }
+      this.cargarCiudades();
       this.cargarSucursales();
     } else {
       this.cargando = false;
-      this.mensajeError = 'No se pudo iniciar sesión. Por favor recarga.';
+      this.mensajeError = 'No se pudo iniciar sesión. Por favor recarga la página.';
+    }
+  }
+
+  cambiarTab(tab: 'SUCURSALES' | 'CIUDADES') {
+    this.tabActiva = tab;
+    this.mensajeError = '';
+    this.mensajeExito = '';
+    if (tab === 'CIUDADES') {
+      this.aplicarFiltrosCiudades();
+    } else {
+      this.aplicarFiltrosSucursales();
     }
   }
 
@@ -75,51 +128,54 @@ export class ListaSucursalesComponent implements OnInit {
       .subscribe({
         next: (res) => {
           this.ngZone.run(() => {
-            if (res.success) {
-              this.empresas = res.data;
+            if (res && res.success) {
+              this.empresas = res.data || [];
             }
           });
         }
       });
   }
 
-  inicializarSucursal(): Sucursal {
-    return {
-      nombre: '',
-      direccion: '',
-      id_empresa: this.idEmpresaSesion,
-      activo: true
-    };
+  cargarCiudades() {
+    this.ciudadService.listarCiudades(false)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res) => {
+          this.ngZone.run(() => {
+            if (res && res.success) {
+              this.ciudades = [...res.data];
+              this.aplicarFiltrosCiudades();
+              this.actualizarMetricas();
+            }
+          });
+        }
+      });
   }
 
   cargarSucursales() {
     this.cargando = true;
     this.mensajeError = '';
 
-    // If EMPRESA admin, only load branches for their company.
-    // Assuming backend already filters if they don't have global permission, 
-    // but passing id_empresa explicitly enforces it on the query parameter.
-    const idEmpresaParam = this.authService.getScopeLevel() !== 'PLATAFORMA' ? this.idEmpresaSesion : undefined;
+    const idEmpresaParam = (!this.isGlobalAdmin && this.idEmpresaSesion > 0) ? this.idEmpresaSesion : undefined;
 
     this.sucursalService.listarSucursales(idEmpresaParam)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res) => {
           this.ngZone.run(() => {
-            if (res.success) {
+            if (res && res.success) {
               this.sucursales = [...res.data];
-              this.aplicarFiltros();
+              this.aplicarFiltrosSucursales();
             } else {
               this.mensajeError = res.message || 'Error al obtener sucursales.';
             }
-
             this.cargando = false;
             this.cdr.detectChanges();
           });
         },
         error: (err) => {
           this.ngZone.run(() => {
-            this.mensajeError = err?.error?.detail || 'Error de conexión al cargar las sucursales.';
+            this.mensajeError = err?.error?.detail || 'Error de conexión al cargar sucursales.';
             this.cargando = false;
             this.cdr.detectChanges();
           });
@@ -127,21 +183,82 @@ export class ListaSucursalesComponent implements OnInit {
       });
   }
 
-  aplicarFiltros() {
-    if (this.filtroEstado === 'TODOS') {
-      this.sucursalesFiltradas = [...this.sucursales];
-    } else {
+  inicializarSucursal(): Sucursal {
+    const idEmpresaDefault = this.isGlobalAdmin ? 0 : this.idEmpresaSesion;
+    return {
+      nombre: '',
+      direccion: '',
+      telefono: '',
+      id_ciudad: undefined,
+      ciudad: '',
+      departamento: 'Santa Cruz',
+      id_empresa: idEmpresaDefault,
+      activo: true
+    };
+  }
+
+  inicializarCiudad(): Ciudad {
+    return {
+      nombre: '',
+      departamento: 'Santa Cruz',
+      estado: true
+    };
+  }
+
+  aplicarFiltrosSucursales() {
+    let lista = [...this.sucursales];
+
+    if (this.filtroEstado !== 'TODOS') {
       const targetActivo = this.filtroEstado === 'ACTIVO';
-      this.sucursalesFiltradas = this.sucursales.filter(s => s.activo === targetActivo);
+      lista = lista.filter(s => s.activo === targetActivo);
     }
 
+    if (this.filtroEmpresaId > 0) {
+      lista = lista.filter(s => s.id_empresa === Number(this.filtroEmpresaId));
+    }
+
+    if (this.filtroBusqueda && this.filtroBusqueda.trim().length > 0) {
+      const q = this.filtroBusqueda.trim().toLowerCase();
+      lista = lista.filter(s =>
+        (s.nombre && s.nombre.toLowerCase().includes(q)) ||
+        (s.direccion && s.direccion.toLowerCase().includes(q)) ||
+        (s.ciudad && s.ciudad.toLowerCase().includes(q)) ||
+        (s.departamento && s.departamento.toLowerCase().includes(q)) ||
+        (s.empresa_nombre && s.empresa_nombre.toLowerCase().includes(q)) ||
+        (s.telefono && s.telefono.toLowerCase().includes(q))
+      );
+    }
+
+    this.sucursalesFiltradas = lista;
     this.actualizarMetricas();
   }
 
+  aplicarFiltrosCiudades() {
+    let lista = [...this.ciudades];
+
+    if (this.filtroCiudadDepto !== 'TODOS') {
+      lista = lista.filter(c => c.departamento === this.filtroCiudadDepto);
+    }
+
+    if (this.filtroCiudadBusqueda && this.filtroCiudadBusqueda.trim().length > 0) {
+      const q = this.filtroCiudadBusqueda.trim().toLowerCase();
+      lista = lista.filter(c =>
+        (c.nombre && c.nombre.toLowerCase().includes(q)) ||
+        (c.departamento && c.departamento.toLowerCase().includes(q))
+      );
+    }
+
+    this.ciudadesFiltradas = lista;
+  }
+
   actualizarMetricas() {
-    this.totalSucursales = this.sucursalesFiltradas.length;
-    this.sucursalesActivas = this.sucursalesFiltradas.filter(s => s.activo === true).length;
-    this.sucursalesInactivas = this.sucursalesFiltradas.filter(s => s.activo === false).length;
+    this.totalSucursales = this.sucursales.length;
+    this.sucursalesActivas = this.sucursales.filter(s => s.activo === true).length;
+    this.sucursalesInactivas = this.sucursales.filter(s => s.activo === false).length;
+    
+    // Ciudades únicas cubiertas por sucursales activas
+    const ciudadesSet = new Set(this.sucursales.filter(s => s.activo && s.ciudad).map(s => s.ciudad));
+    this.totalCiudadesCobertura = ciudadesSet.size;
   }
 
   obtenerIniciales(nombre: string): string {
@@ -153,35 +270,128 @@ export class ListaSucursalesComponent implements OnInit {
     return nombre.substring(0, 2).toUpperCase();
   }
 
-  abrirModalNuevo() {
-    this.modoEdicion = false;
-    this.sucursalForm = this.inicializarSucursal();
-    this.mostrarModal = true;
+  mostrarNotificacionExito(mensaje: string) {
+    this.mensajeExito = mensaje;
+    setTimeout(() => {
+      this.mensajeExito = '';
+      this.cdr.detectChanges();
+    }, 4500);
   }
 
-  abrirModalEditar(sucursal: Sucursal) {
-    this.modoEdicion = true;
-    this.sucursalForm = { ...sucursal };
-    this.mostrarModal = true;
-  }
+  // --- AUTOCOMPLETE / MENUITEM DE CIUDADES ---
 
-  cerrarModal() {
-    this.mostrarModal = false;
-  }
+  onInputCiudad(texto: string) {
+    this.inputCiudadTexto = texto;
+    this.sucursalForm.ciudad = texto;
 
-  guardarSucursal() {
-    if (!this.sucursalForm.nombre || this.sucursalForm.nombre.trim().length === 0) {
-      alert('El nombre de la sucursal es obligatorio.');
+    if (!texto || texto.trim().length === 0) {
+      this.sugerenciasCiudades = [];
+      this.mostrarMenuCiudades = false;
       return;
     }
 
-    if (!this.sucursalForm.direccion || String(this.sucursalForm.direccion).trim().length === 0) {
-      alert('La dirección es obligatoria.');
+    const q = texto.trim().toLowerCase();
+    this.sugerenciasCiudades = this.ciudades
+      .filter(c => c.estado && (
+        c.nombre.toLowerCase().includes(q) || 
+        c.departamento.toLowerCase().includes(q)
+      ))
+      .slice(0, 8); // Top 8 sugerencias
+
+    this.mostrarMenuCiudades = true;
+    this.cdr.detectChanges();
+  }
+
+  seleccionarCiudadSugerida(c: Ciudad) {
+    this.sucursalForm.id_ciudad = c.id_ciudad;
+    this.sucursalForm.ciudad = c.nombre;
+    this.sucursalForm.departamento = c.departamento;
+    this.inputCiudadTexto = c.nombre;
+    this.mostrarMenuCiudades = false;
+    this.cdr.detectChanges();
+  }
+
+  seleccionarCiudadPersonalizada() {
+    const texto = this.inputCiudadTexto.trim();
+    if (!texto) return;
+
+    this.sucursalForm.id_ciudad = undefined;
+    this.sucursalForm.ciudad = texto;
+    // Mantiene el departamento seleccionado en el form o lo asigna
+    this.mostrarMenuCiudades = false;
+    this.cdr.detectChanges();
+  }
+
+  cerrarMenuCiudadesConRetraso() {
+    setTimeout(() => {
+      this.mostrarMenuCiudades = false;
+      this.cdr.detectChanges();
+    }, 250);
+  }
+
+  // --- MODAL SUCURSAL ---
+
+  abrirModalNuevaSucursal() {
+    this.modoEdicionSucursal = false;
+    this.mensajeModalError = '';
+    this.sucursalForm = this.inicializarSucursal();
+    this.inputCiudadTexto = '';
+    this.mostrarMenuCiudades = false;
+    this.mostrarModalSucursal = true;
+    this.cdr.detectChanges();
+  }
+
+  abrirModalEditarSucursal(sucursal: Sucursal) {
+    this.modoEdicionSucursal = true;
+    this.mensajeModalError = '';
+    this.sucursalForm = { 
+      ...sucursal,
+      departamento: sucursal.departamento || 'Santa Cruz',
+      telefono: sucursal.telefono || ''
+    };
+    this.inputCiudadTexto = sucursal.ciudad || '';
+    this.mostrarMenuCiudades = false;
+    this.mostrarModalSucursal = true;
+    this.cdr.detectChanges();
+  }
+
+  cerrarModalSucursal() {
+    this.mostrarModalSucursal = false;
+    this.mensajeModalError = '';
+    this.guardando = false;
+    this.cdr.detectChanges();
+  }
+
+  guardarSucursal() {
+    this.mensajeModalError = '';
+
+    if (!this.sucursalForm.nombre || !this.sucursalForm.nombre.trim()) {
+      this.mensajeModalError = 'El nombre de la sucursal es obligatorio.';
+      return;
+    }
+
+    if (!this.sucursalForm.ciudad || !this.sucursalForm.ciudad.trim()) {
+      this.mensajeModalError = 'Debe indicar o seleccionar una ciudad para la sucursal.';
+      return;
+    }
+
+    if (!this.sucursalForm.departamento || !this.sucursalForm.departamento.trim()) {
+      this.mensajeModalError = 'El departamento es obligatorio.';
+      return;
+    }
+
+    if (!this.sucursalForm.direccion || !this.sucursalForm.direccion.trim()) {
+      this.mensajeModalError = 'La dirección física de la sucursal es obligatoria.';
+      return;
+    }
+
+    if (!this.sucursalForm.telefono || !this.sucursalForm.telefono.trim()) {
+      this.mensajeModalError = 'El teléfono de contacto de la sucursal es obligatorio.';
       return;
     }
 
     if (this.isGlobalAdmin && (!this.sucursalForm.id_empresa || this.sucursalForm.id_empresa === 0)) {
-      alert('Debe seleccionar una empresa para la sucursal.');
+      this.mensajeModalError = 'Debe seleccionar una empresa (Tenant) para la sucursal.';
       return;
     }
 
@@ -189,46 +399,63 @@ export class ListaSucursalesComponent implements OnInit {
       this.sucursalForm.id_empresa = this.idEmpresaSesion;
     }
 
-    this.cargando = true;
+    this.guardando = true;
+    this.cdr.detectChanges();
 
-    if (this.modoEdicion) {
+    const payload: Sucursal = {
+      ...this.sucursalForm,
+      nombre: this.sucursalForm.nombre.trim(),
+      direccion: this.sucursalForm.direccion.trim(),
+      telefono: this.sucursalForm.telefono.trim(),
+      ciudad: this.sucursalForm.ciudad.trim(),
+      departamento: this.sucursalForm.departamento.trim(),
+      activo: Boolean(this.sucursalForm.activo)
+    };
+
+    if (this.modoEdicionSucursal) {
       if (!this.sucursalForm.id_sucursal) {
-        alert('No se encontró el ID de la sucursal.');
-        this.cargando = false;
+        this.mensajeModalError = 'No se encontró el identificador de la sucursal.';
+        this.guardando = false;
         return;
       }
 
-      this.sucursalService.actualizarSucursal(this.sucursalForm.id_sucursal, this.sucursalForm)
+      this.sucursalService.actualizarSucursal(this.sucursalForm.id_sucursal, payload)
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({
           next: () => {
             this.ngZone.run(() => {
-              this.cerrarModal();
+              this.guardando = false;
+              this.cerrarModalSucursal();
               this.cargarSucursales();
+              this.cargarCiudades(); // Sincronizar en caso de nueva ciudad creada
+              this.mostrarNotificacionExito(`¡Sucursal '${payload.nombre}' actualizada exitosamente!`);
             });
           },
           error: (err) => {
             this.ngZone.run(() => {
-              alert(err?.error?.detail || 'Error al actualizar la sucursal.');
-              this.cargando = false;
+              this.mensajeModalError = err?.error?.detail || err?.message || 'Error al actualizar la sucursal.';
+              this.guardando = false;
               this.cdr.detectChanges();
             });
           }
         });
     } else {
-      this.sucursalService.crearSucursal(this.sucursalForm)
+      this.sucursalService.crearSucursal(payload)
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({
           next: () => {
             this.ngZone.run(() => {
-              this.cerrarModal();
+              this.guardando = false;
+              this.cerrarModalSucursal();
               this.cargarSucursales();
+              this.cargarCiudades(); // Sincronizar en caso de nueva ciudad creada
+              this.mostrarNotificacionExito(`¡Sucursal '${payload.nombre}' registrada exitosamente!`);
             });
           },
           error: (err) => {
             this.ngZone.run(() => {
-              alert(err?.error?.detail || 'Error al crear la sucursal. Verifique los datos.');
-              this.cargando = false;
+              this.mensajeModalError = err?.error?.detail || err?.message || 'Error al registrar la sucursal.';
+              this.guardando = false;
               this.cdr.detectChanges();
             });
           }
@@ -236,26 +463,152 @@ export class ListaSucursalesComponent implements OnInit {
     }
   }
 
-  eliminarSucursal(id_sucursal?: number) {
-    if (!id_sucursal) return;
+  cambiarEstadoSucursal(s: Sucursal) {
+    if (!s.id_sucursal) return;
 
-    const confirmar = confirm('¿Está seguro que desea desactivar esta sucursal?');
-
+    const nuevoEstado = !s.activo;
+    const accion = nuevoEstado ? 'activar' : 'desactivar';
+    const confirmar = confirm(`¿Está seguro que desea ${accion} la sucursal '${s.nombre}'?`);
     if (!confirmar) return;
 
     this.cargando = true;
-
-    this.sucursalService.eliminarSucursal(id_sucursal)
+    this.sucursalService.cambiarEstadoSucursal(s.id_sucursal, nuevoEstado)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
           this.ngZone.run(() => {
             this.cargarSucursales();
+            this.mostrarNotificacionExito(`Sucursal '${s.nombre}' ${nuevoEstado ? 'activada' : 'desactivada'} correctamente.`);
           });
         },
         error: (err) => {
           this.ngZone.run(() => {
-            alert(err?.error?.detail || 'Error al desactivar la sucursal.');
+            alert(err?.error?.detail || 'Error al cambiar el estado de la sucursal.');
+            this.cargando = false;
+            this.cdr.detectChanges();
+          });
+        }
+      });
+  }
+
+  // --- MODAL CIUDADES ---
+
+  abrirModalNuevaCiudad() {
+    this.modoEdicionCiudad = false;
+    this.mensajeModalError = '';
+    this.ciudadForm = this.inicializarCiudad();
+    this.mostrarModalCiudad = true;
+    this.cdr.detectChanges();
+  }
+
+  abrirModalEditarCiudad(c: Ciudad) {
+    this.modoEdicionCiudad = true;
+    this.mensajeModalError = '';
+    this.ciudadForm = { ...c };
+    this.mostrarModalCiudad = true;
+    this.cdr.detectChanges();
+  }
+
+  cerrarModalCiudad() {
+    this.mostrarModalCiudad = false;
+    this.mensajeModalError = '';
+    this.guardando = false;
+    this.cdr.detectChanges();
+  }
+
+  guardarCiudad() {
+    this.mensajeModalError = '';
+
+    if (!this.ciudadForm.nombre || !this.ciudadForm.nombre.trim()) {
+      this.mensajeModalError = 'El nombre de la ciudad es obligatorio.';
+      return;
+    }
+
+    if (!this.ciudadForm.departamento || !this.ciudadForm.departamento.trim()) {
+      this.mensajeModalError = 'El departamento es obligatorio.';
+      return;
+    }
+
+    this.guardando = true;
+    this.cdr.detectChanges();
+
+    const payload: Ciudad = {
+      ...this.ciudadForm,
+      nombre: this.ciudadForm.nombre.trim(),
+      departamento: this.ciudadForm.departamento.trim(),
+      estado: Boolean(this.ciudadForm.estado)
+    };
+
+    if (this.modoEdicionCiudad) {
+      if (!this.ciudadForm.id_ciudad) {
+        this.mensajeModalError = 'Identificador de ciudad no válido.';
+        this.guardando = false;
+        return;
+      }
+
+      this.ciudadService.actualizarCiudad(this.ciudadForm.id_ciudad, payload)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: () => {
+            this.ngZone.run(() => {
+              this.guardando = false;
+              this.cerrarModalCiudad();
+              this.cargarCiudades();
+              this.mostrarNotificacionExito(`Ciudad '${payload.nombre}' actualizada exitosamente.`);
+            });
+          },
+          error: (err) => {
+            this.ngZone.run(() => {
+              this.mensajeModalError = err?.error?.detail || err?.message || 'Error al actualizar la ciudad.';
+              this.guardando = false;
+              this.cdr.detectChanges();
+            });
+          }
+        });
+    } else {
+      this.ciudadService.crearCiudad(payload)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: () => {
+            this.ngZone.run(() => {
+              this.guardando = false;
+              this.cerrarModalCiudad();
+              this.cargarCiudades();
+              this.mostrarNotificacionExito(`Ciudad '${payload.nombre}' registrada en ${payload.departamento}.`);
+            });
+          },
+          error: (err) => {
+            this.ngZone.run(() => {
+              this.mensajeModalError = err?.error?.detail || err?.message || 'Error al registrar la ciudad.';
+              this.guardando = false;
+              this.cdr.detectChanges();
+            });
+          }
+        });
+    }
+  }
+
+  cambiarEstadoCiudad(c: Ciudad) {
+    if (!c.id_ciudad) return;
+
+    const nuevoEstado = !c.estado;
+    const accion = nuevoEstado ? 'activar' : 'desactivar';
+    const confirmar = confirm(`¿Está seguro que desea ${accion} la ciudad '${c.nombre}' (${c.departamento})?`);
+    if (!confirmar) return;
+
+    this.cargando = true;
+    this.ciudadService.cambiarEstadoCiudad(c.id_ciudad, nuevoEstado)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.ngZone.run(() => {
+            this.cargarCiudades();
+            this.mostrarNotificacionExito(`Ciudad '${c.nombre}' ${nuevoEstado ? 'activada' : 'desactivada'} correctamente.`);
+          });
+        },
+        error: (err) => {
+          this.ngZone.run(() => {
+            alert(err?.error?.detail || 'Error al cambiar el estado de la ciudad.');
             this.cargando = false;
             this.cdr.detectChanges();
           });

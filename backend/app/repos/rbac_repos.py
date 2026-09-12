@@ -1,31 +1,165 @@
+from typing import Optional, List, Dict, Any
 from app.classes.postgres import PostgreSQL
 from app.config import Config
 
-# --- OBTENER PERMISOS EFECTIVOS DEL USUARIO (DISTINCT p.codigo) ---
-def obtener_permisos_efectivos_usuario(id_usuario: int) -> list:
+# --- JERARQUÍA DE ROLES (NIVEL NUMÉRICO: 1 ES MÁXIMA AUTORIDAD) ---
+NIVELES_JERARQUIA = {
+    'SUPERADMIN': 1,
+    'ADMINISTRADOR': 2,
+    'ADMINISTRADOR_TIENDA': 3,
+    'ENCARGADO': 4,
+    'ENCARGADO_SUCURSAL': 4,
+    'EMPLEADO': 5,
+    'CAJERO': 5,
+    'CLIENTE': 6,
+    'PROVEEDOR': 7
+}
+
+def obtener_nivel_autoridad(nombre_rol: str, id_empresa: Optional[int] = None) -> int:
+    rol_clean = (nombre_rol or '').strip().upper()
+    if rol_clean in ('ADMINISTRADOR', 'SUPERADMIN') and id_empresa is None:
+        return 1  # SUPERADMIN
+    if rol_clean == 'ADMINISTRADOR':
+        return 2  # ADMINISTRADOR
+    return NIVELES_JERARQUIA.get(rol_clean, 6)
+
+# --- OBTENER PERMISOS EFECTIVOS DEL USUARIO (HEREDADOS + DIRECTOS) ---
+def obtener_permisos_efectivos_usuario(id_usuario: int) -> List[str]:
     db = PostgreSQL()
     db.create_connection()
     try:
         schema = Config.SCHEMA or 'comercio'
+        # 1. Comprobar si el usuario es SuperAdmin (id_rol 1 o rol ADMINISTRADOR sin empresa)
+        check_admin = f"""
+            SELECT u.id_empresa, r.id_rol, r.nombre
+            FROM {schema}.t_usuario u
+            LEFT JOIN {schema}.t_usuario_rol ur ON ur.id_usuario = u.id_usuario
+            LEFT JOIN {schema}.t_rol r ON r.id_rol = ur.id_rol
+            WHERE u.id_usuario = %s AND r.activo = TRUE
+            LIMIT 1;
+        """
+        user_row = db.execute_query(check_admin, (id_usuario,), fetchone=True)
+        if user_row and user_row[1] == 1 and user_row[0] is None:
+            # Superadmin global tiene todos los permisos activos
+            all_perm = f"SELECT codigo FROM {schema}.t_permiso WHERE activo = TRUE ORDER BY codigo ASC;"
+            res_all = db.execute_query(all_perm, fetchall=True)
+            return [r[0] for r in res_all] if res_all else []
+
+        # 2. Unión de Permisos Heredados de Roles Activos + Permisos Directos
         query = f"""
             SELECT DISTINCT p.codigo
-            FROM {schema}.t_usuario_rol ur
-            INNER JOIN {schema}.t_rol_permiso rp ON rp.id_rol = ur.id_rol
-            INNER JOIN {schema}.t_permiso p ON p.id_permiso = rp.id_permiso
-            INNER JOIN {schema}.t_rol r ON r.id_rol = ur.id_rol
-            WHERE ur.id_usuario = %s AND p.activo = TRUE AND r.activo = TRUE
+            FROM (
+                -- Permisos heredados de roles
+                SELECT rp.id_permiso
+                FROM {schema}.t_usuario_rol ur
+                INNER JOIN {schema}.t_rol r ON r.id_rol = ur.id_rol
+                INNER JOIN {schema}.t_rol_permiso rp ON rp.id_rol = ur.id_rol
+                WHERE ur.id_usuario = %s AND r.activo = TRUE
+                UNION
+                -- Permisos directos asignados al usuario
+                SELECT up.id_permiso
+                FROM {schema}.t_usuario_permiso up
+                WHERE up.id_usuario = %s AND up.activo = TRUE
+            ) sub
+            INNER JOIN {schema}.t_permiso p ON p.id_permiso = sub.id_permiso
+            WHERE p.activo = TRUE
             ORDER BY p.codigo ASC;
         """
-        res = db.execute_query(query, (id_usuario,), fetchall=True)
+        res = db.execute_query(query, (id_usuario, id_usuario), fetchall=True)
         if not res:
             return []
         return [r[0] for r in res]
     finally:
         db.close_connection()
 
+# --- OBTENER PERMISOS DIRECTOS ASIGNADOS AL USUARIO ---
+def obtener_permisos_directos_usuario(id_usuario: int) -> List[Dict[str, Any]]:
+    db = PostgreSQL()
+    db.create_connection()
+    try:
+        schema = Config.SCHEMA or 'comercio'
+        query = f"""
+            SELECT p.id_permiso, p.codigo, p.nombre, p.descripcion, p.modulo, up.activo, up.created_at
+            FROM {schema}.t_usuario_permiso up
+            INNER JOIN {schema}.t_permiso p ON p.id_permiso = up.id_permiso
+            WHERE up.id_usuario = %s
+            ORDER BY p.modulo ASC, p.codigo ASC;
+        """
+        res = db.execute_query(query, (id_usuario,), fetchall=True)
+        if not res:
+            return []
+        return [{
+            "id_permiso": r[0],
+            "codigo": r[1],
+            "nombre": r[2],
+            "descripcion": r[3],
+            "modulo": r[4],
+            "activo": r[5],
+            "created_at": r[6].isoformat() if r[6] else None
+        } for r in res]
+    finally:
+        db.close_connection()
+
+# --- OBTENER PERMISOS HEREDADOS DE ROLES DEL USUARIO ---
+def obtener_permisos_heredados_usuario(id_usuario: int) -> List[Dict[str, Any]]:
+    db = PostgreSQL()
+    db.create_connection()
+    try:
+        schema = Config.SCHEMA or 'comercio'
+        query = f"""
+            SELECT DISTINCT p.id_permiso, p.codigo, p.nombre, p.descripcion, p.modulo
+            FROM {schema}.t_usuario_rol ur
+            INNER JOIN {schema}.t_rol r ON r.id_rol = ur.id_rol
+            INNER JOIN {schema}.t_rol_permiso rp ON rp.id_rol = ur.id_rol
+            INNER JOIN {schema}.t_permiso p ON p.id_permiso = rp.id_permiso
+            WHERE ur.id_usuario = %s AND r.activo = TRUE AND p.activo = TRUE
+            ORDER BY p.modulo ASC, p.codigo ASC;
+        """
+        res = db.execute_query(query, (id_usuario,), fetchall=True)
+        if not res:
+            return []
+        return [{
+            "id_permiso": r[0],
+            "codigo": r[1],
+            "nombre": r[2],
+            "descripcion": r[3],
+            "modulo": r[4]
+        } for r in res]
+    finally:
+        db.close_connection()
+
+# --- ASIGNAR PERMISOS DIRECTOS A USUARIO ---
+def asignar_permisos_directos_a_usuario(id_usuario: int, ids_permisos: List[int]) -> bool:
+    db = PostgreSQL()
+    db.create_connection()
+    try:
+        schema = Config.SCHEMA or 'comercio'
+        # 1. Eliminar asignaciones directas actuales
+        query_delete = f"DELETE FROM {schema}.t_usuario_permiso WHERE id_usuario = %s;"
+        db.execute_query(query_delete, (id_usuario,))
+
+        # 2. Insertar nuevas asignaciones directas
+        if ids_permisos:
+            for id_permiso in ids_permisos:
+                query_insert = f"""
+                    INSERT INTO {schema}.t_usuario_permiso (id_usuario, id_permiso, activo)
+                    VALUES (%s, %s, TRUE)
+                    ON CONFLICT (id_usuario, id_permiso) DO UPDATE SET activo = TRUE;
+                """
+                db.execute_query(query_insert, (id_usuario, id_permiso))
+
+        if db.conn:
+            db.conn.commit()
+        return True
+    except Exception as e:
+        if db.conn:
+            db.conn.rollback()
+        raise ValueError(f"Error al asignar permisos directos al usuario: {str(e)}")
+    finally:
+        db.close_connection()
 
 # --- OBTENER ROLES ASIGNADOS AL USUARIO ---
-def obtener_roles_usuario(id_usuario: int) -> list:
+def obtener_roles_usuario(id_usuario: int) -> List[Dict[str, Any]]:
     db = PostgreSQL()
     db.create_connection()
     try:
@@ -44,9 +178,8 @@ def obtener_roles_usuario(id_usuario: int) -> list:
     finally:
         db.close_connection()
 
-
 # --- OBTENER SUCURSALES AUTORIZADAS DEL USUARIO ---
-def obtener_sucursales_usuario(id_usuario: int) -> list:
+def obtener_sucursales_usuario(id_usuario: int) -> List[int]:
     db = PostgreSQL()
     db.create_connection()
     try:
@@ -64,9 +197,8 @@ def obtener_sucursales_usuario(id_usuario: int) -> list:
     finally:
         db.close_connection()
 
-
 # --- CRUD ROLES ---
-def obtener_todos_los_roles(solo_activos: bool = False) -> list:
+def obtener_todos_los_roles(solo_activos: bool = False) -> List[Dict[str, Any]]:
     db = PostgreSQL()
     db.create_connection()
     try:
@@ -93,7 +225,7 @@ def obtener_todos_los_roles(solo_activos: bool = False) -> list:
     finally:
         db.close_connection()
 
-def crear_rol(nombre: str, descripcion: str) -> int:
+def crear_rol(nombre: str, descripcion: str) -> Optional[int]:
     db = PostgreSQL()
     db.create_connection()
     try:
@@ -134,9 +266,8 @@ def desactivar_rol(id_rol: int) -> bool:
     finally:
         db.close_connection()
 
-
 # --- CRUD PERMISOS ---
-def obtener_todos_los_permisos() -> list:
+def obtener_todos_los_permisos() -> List[Dict[str, Any]]:
     db = PostgreSQL()
     db.create_connection()
     try:
@@ -144,6 +275,7 @@ def obtener_todos_los_permisos() -> list:
         query = f"""
             SELECT id_permiso, codigo, nombre, descripcion, modulo, activo
             FROM {schema}.t_permiso
+            WHERE activo = TRUE
             ORDER BY modulo ASC, codigo ASC;
         """
         resultados = db.execute_query(query, fetchall=True)
@@ -162,7 +294,7 @@ def obtener_todos_los_permisos() -> list:
     finally:
         db.close_connection()
 
-def crear_permiso(codigo: str, nombre: str, descripcion: str, modulo: str) -> int:
+def crear_permiso(codigo: str, nombre: str, descripcion: str, modulo: str) -> Optional[int]:
     db = PostgreSQL()
     db.create_connection()
     try:
@@ -177,9 +309,8 @@ def crear_permiso(codigo: str, nombre: str, descripcion: str, modulo: str) -> in
     finally:
         db.close_connection()
 
-
 # --- ASIGNACIÓN DE PERMISOS A ROL ---
-def obtener_permisos_de_rol(id_rol: int) -> list:
+def obtener_permisos_de_rol(id_rol: int) -> List[Dict[str, Any]]:
     db = PostgreSQL()
     db.create_connection()
     try:
@@ -198,16 +329,14 @@ def obtener_permisos_de_rol(id_rol: int) -> list:
     finally:
         db.close_connection()
 
-def asignar_permisos_a_rol(id_rol: int, ids_permisos: list) -> bool:
+def asignar_permisos_a_rol(id_rol: int, ids_permisos: List[int]) -> bool:
     db = PostgreSQL()
     db.create_connection()
     try:
         schema = Config.SCHEMA or 'comercio'
-        # 1. Eliminar asignaciones actuales del rol
         query_delete = f"DELETE FROM {schema}.t_rol_permiso WHERE id_rol = %s;"
         db.execute_query(query_delete, (id_rol,))
 
-        # 2. Insertar nuevas asignaciones
         if ids_permisos:
             for id_permiso in ids_permisos:
                 query_insert = f"""
@@ -229,18 +358,15 @@ def asignar_permisos_a_rol(id_rol: int, ids_permisos: list) -> bool:
     finally:
         db.close_connection()
 
-
 # --- ASIGNACIÓN DE ROLES A USUARIO ---
-def asignar_roles_a_usuario(id_usuario: int, ids_roles: list) -> bool:
+def asignar_roles_a_usuario(id_usuario: int, ids_roles: List[int]) -> bool:
     db = PostgreSQL()
     db.create_connection()
     try:
         schema = Config.SCHEMA or 'comercio'
-        # 1. Eliminar roles actuales del usuario
         query_delete = f"DELETE FROM {schema}.t_usuario_rol WHERE id_usuario = %s;"
         db.execute_query(query_delete, (id_usuario,))
 
-        # 2. Insertar nuevos roles
         if ids_roles:
             for id_rol in ids_roles:
                 query_insert = f"""
@@ -262,18 +388,15 @@ def asignar_roles_a_usuario(id_usuario: int, ids_roles: list) -> bool:
     finally:
         db.close_connection()
 
-
 # --- ASIGNACIÓN DE SUCURSALES A USUARIO ---
-def asignar_sucursales_a_usuario(id_usuario: int, ids_sucursales: list) -> bool:
+def asignar_sucursales_a_usuario(id_usuario: int, ids_sucursales: List[int]) -> bool:
     db = PostgreSQL()
     db.create_connection()
     try:
         schema = Config.SCHEMA or 'comercio'
-        # 1. Eliminar sucursales actuales del usuario
         query_delete = f"DELETE FROM {schema}.t_usuario_sucursal WHERE id_usuario = %s;"
         db.execute_query(query_delete, (id_usuario,))
 
-        # 2. Insertar nuevas sucursales
         if ids_sucursales:
             for id_sucursal in ids_sucursales:
                 query_insert = f"""
@@ -295,9 +418,8 @@ def asignar_sucursales_a_usuario(id_usuario: int, ids_sucursales: list) -> bool:
     finally:
         db.close_connection()
 
-
 # --- CONSULTA DE SUCURSALES ---
-def obtener_todas_las_sucursales() -> list:
+def obtener_todas_las_sucursales() -> List[Dict[str, Any]]:
     db = PostgreSQL()
     db.create_connection()
     try:

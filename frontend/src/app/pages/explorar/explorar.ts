@@ -1,7 +1,8 @@
-import { Component, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth';
+import { CatalogoPublicoService, DetallePrendaCatalogo } from '../../services/catalogo-publico';
 import { ProductDetailModalComponent, ProductoFashion } from '../../components/product-detail-modal/product-detail-modal';
 
 @Component({
@@ -10,10 +11,13 @@ import { ProductDetailModalComponent, ProductoFashion } from '../../components/p
   imports: [CommonModule, RouterLink, ProductDetailModalComponent],
   templateUrl: './explorar.html'
 })
-export class ExplorarComponent {
+export class ExplorarComponent implements OnInit {
   public authService = inject(AuthService);
+  private router = inject(Router);
+  private catalogoService = inject(CatalogoPublicoService);
+  private cdr = inject(ChangeDetectorRef);
 
-  selectedProductForModal: ProductoFashion | null = null;
+  selectedProductForModal: DetallePrendaCatalogo | ProductoFashion | null = null;
 
   // Productos de demostración de alta gama para la ropa
   productosDestacados: ProductoFashion[] = [
@@ -111,15 +115,57 @@ export class ExplorarComponent {
     }
   ];
 
-  openQuickView(prod: ProductoFashion) {
-    this.selectedProductForModal = prod;
+  ngOnInit(): void {
+    this.catalogoService.consultarProductos({ limit: 4 }).subscribe({
+      next: (res) => {
+        if (res.data && res.data.length > 0) {
+          this.productosDestacados = res.data.map(p => ({
+            id: p.id_producto,
+            nombre: p.nombre,
+            subtitulo: `${p.marca} • ${p.coleccion}`,
+            precio: p.precio,
+            categoria: p.categoria_nombre,
+            imagenPrincipal: p.imagen_principal || 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&w=800&q=80',
+            imagenes: p.imagen_principal ? [p.imagen_principal] : [],
+            tallas: [],
+            colores: [],
+            descripcion: p.descripcion,
+            popularidad: 95,
+            etiqueta: p.temporada
+          }));
+          this.cdr.markForCheck();
+        }
+      },
+      error: () => {}
+    });
   }
 
-  closeQuickView() {
+  openQuickView(prod: any): void {
+    if (prod?.id) {
+      this.catalogoService.obtenerDetalleProducto(prod.id).subscribe({
+        next: (res) => {
+          if (res.data) {
+            this.selectedProductForModal = res.data;
+          } else {
+            this.selectedProductForModal = prod;
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.router.navigate(['/catalogo']);
+        }
+      });
+    } else {
+      this.router.navigate(['/catalogo']);
+    }
+  }
+
+  closeQuickView(): void {
     this.selectedProductForModal = null;
+    this.cdr.markForCheck();
   }
 
-  openAuth(tab: 'login' | 'register' = 'login') {
+  openAuth(tab: 'login' | 'register' = 'login'): void {
     this.authService.openAuthModal(tab);
   }
 }

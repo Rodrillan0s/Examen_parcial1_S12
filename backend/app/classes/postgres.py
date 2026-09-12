@@ -1,40 +1,122 @@
 from app.config import Config
 import psycopg2
+from psycopg2 import pool
+import logging
 
-class PostgreSQL():
+logger = logging.getLogger(__name__)
+
+class PostgreSQL:
+    _pool = None
+
+    @classmethod
+    def get_pool(cls):
+        if cls._pool is None:
+            try:
+                cls._pool = pool.ThreadedConnectionPool(
+                    minconn=2,
+                    maxconn=20,
+                    host=Config.DB_HOST,
+                    port=Config.DB_PORT,
+                    dbname=Config.DB_NAME,
+                    user=Config.DB_USER,
+                    password=Config.DB_PASSWORD,
+                    connect_timeout=10
+                )
+            except Exception as e:
+                logger.error(f"Error inicializando Connection Pool: {e}")
+                cls._pool = None
+        return cls._pool
 
     def __init__(self):
-        self.db_host=Config.DB_HOST
-        self.db_port=Config.DB_PORT
-        self.db_name=Config.DB_NAME
-        self.db_user=Config.DB_USER
-        self.db_password=Config.DB_PASSWORD
-        self.conn=None
-        self.cur=None
+        self.db_host = Config.DB_HOST
+        self.db_port = Config.DB_PORT
+        self.db_name = Config.DB_NAME
+        self.db_user = Config.DB_USER
+        self.db_password = Config.DB_PASSWORD
+        self.conn = None
+        self.cur = None
+        self._from_pool = False
 
     def create_connection(self):
         try:
-            self.conn=psycopg2.connect(
-                host=self.db_host,
-                port=self.db_port,
-                dbname=self.db_name,
-                user=self.db_user,
-                password=self.db_password
-            )
-            self.cur=self.conn.cursor()
+            p = self.get_pool()
+            if p is not None:
+                self.conn = p.getconn()
+                self._from_pool = True
+                # Si la conexión se cerró por timeout en el servidor remoto, reconectar
+                if self.conn.closed != 0:
+                    self.conn = psycopg2.connect(
+                        host=self.db_host,
+                        port=self.db_port,
+                        dbname=self.db_name,
+                        user=self.db_user,
+                        password=self.db_password,
+                        connect_timeout=10
+                    )
+                    self._from_pool = False
+            else:
+                self.conn = psycopg2.connect(
+                    host=self.db_host,
+                    port=self.db_port,
+                    dbname=self.db_name,
+                    user=self.db_user,
+                    password=self.db_password,
+                    connect_timeout=10
+                )
+                self._from_pool = False
+
+            self.cur = self.conn.cursor()
         except Exception as e:
-            print(f'ERROR DE CONEXION A LA DB: {e}')
+            # Fallback en caso de error
+            try:
+                self.conn = psycopg2.connect(
+                    host=self.db_host,
+                    port=self.db_port,
+                    dbname=self.db_name,
+                    user=self.db_user,
+                    password=self.db_password,
+                    connect_timeout=10
+                )
+                self._from_pool = False
+                self.cur = self.conn.cursor()
+            except Exception as ex:
+                print(f'ERROR DE CONEXION A LA DB: {ex}')
 
     def close_connection(self, commit=False):
         try:
+            if self.cur:
+                try:
+                    self.cur.close()
+                except Exception:
+                    pass
+                self.cur = None
+
             if self.conn:
                 if commit:
-                    self.conn.commit()
+                    try:
+                        self.conn.commit()
+                    except Exception:
+                        pass
                 else:
-                    self.conn.rollback()
-                if self.cur:
-                    self.cur.close()
-                self.conn.close()
+                    try:
+                        self.conn.rollback()
+                    except Exception:
+                        pass
+
+                if self._from_pool and self._pool is not None:
+                    try:
+                        self._pool.putconn(self.conn)
+                    except Exception:
+                        try:
+                            self.conn.close()
+                        except Exception:
+                            pass
+                else:
+                    try:
+                        self.conn.close()
+                    except Exception:
+                        pass
+                self.conn = None
         except Exception as e:
             print(f'ERROR AL CERRAR LA CONEXION CON LA DB: {e}')
 

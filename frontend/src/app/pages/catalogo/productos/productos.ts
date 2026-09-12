@@ -1,0 +1,746 @@
+import { Component, OnInit, inject, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { ProductosService, Producto, ImagenProducto, VarianteProducto } from '../../../services/productos';
+import { CategoriasService, Categoria } from '../../../services/categorias';
+import { TallasColoresService, Talla, ColorPrenda } from '../../../services/tallas-colores';
+import { AuthService } from '../../../services/auth';
+import { EmpresaService, Empresa } from '../../../services/empresa';
+
+@Component({
+  selector: 'app-productos',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  templateUrl: './productos.html'
+})
+export class ProductosComponent implements OnInit {
+  private productosService = inject(ProductosService);
+  private categoriasService = inject(CategoriasService);
+  private tallasColoresService = inject(TallasColoresService);
+  private empresaService = inject(EmpresaService);
+  private authService = inject(AuthService);
+  private platformId = inject(PLATFORM_ID);
+
+  // Estados de lista
+  productos: Producto[] = [];
+  empresas: Empresa[] = [];
+  cargando: boolean = false;
+  mensajeAlerta: string = '';
+  tipoAlerta: 'exito' | 'error' | 'info' = 'info';
+
+  // Filtros
+  busqueda: string = '';
+  filtroCategoria: number | null = null;
+  filtroEstado: string = 'TODOS'; // 'TODOS' | 'ACTIVOS' | 'INACTIVOS'
+  filtroEmpresa: number | null = null;
+
+  // Catálogos activos para selección
+  categoriasDisponibles: Categoria[] = [];
+  tallasDisponibles: Talla[] = [];
+  coloresDisponibles: ColorPrenda[] = [];
+
+  // Modal Principal (Crear / Editar)
+  mostrarModal: boolean = false;
+  modoEdicion: boolean = false;
+  tabModalActiva: 'general' | 'variantes' | 'galeria' = 'general';
+  guardando: boolean = false;
+
+  // Formulario de Producto
+  productoForm: {
+    id_producto?: number;
+    id_empresa?: number;
+    id_categoria: number | null;
+    nombre: string;
+    descripcion: string;
+    codigo_producto: string;
+    precio: number | null;
+    temporada: string;
+    coleccion: string;
+    marca: string;
+    genero: string;
+    activo: boolean;
+    tallas_seleccionadas: number[];
+    colores_seleccionados: number[];
+    imagenes: ImagenProducto[];
+  } = this.getFormVacio();
+
+  // Subida de imagen
+  subiendoImagen: boolean = false;
+
+  // Modal Rápido de Galería
+  mostrarModalGaleria: boolean = false;
+  productoGaleriaSeleccionado: Producto | null = null;
+
+  // Modal de Eliminación / Desactivación
+  mostrarModalEliminar: boolean = false;
+  productoAeliminar: Producto | null = null;
+  eliminando: boolean = false;
+
+  // Modal de Zoom de Imagen
+  zoomImagenUrl: string | null = null;
+
+  // Permisos y Scope
+  get esSuperAdmin(): boolean {
+    return this.authService.getScopeLevel() === 'PLATAFORMA';
+  }
+
+  get userCompanyId(): number | undefined {
+    return this.authService.obtenerUsuario()?.id_empresa;
+  }
+
+  // Métricas computadas
+  get totalProductos(): number {
+    return this.productos.length;
+  }
+
+  get totalActivos(): number {
+    return this.productos.filter(p => p.activo).length;
+  }
+
+  get totalInactivos(): number {
+    return this.productos.filter(p => !p.activo).length;
+  }
+
+  get totalVariantes(): number {
+    return this.productos.reduce((sum, p) => sum + (p.total_variantes || 0), 0);
+  }
+
+  // Combinaciones generadas en vivo (N tallas x M colores)
+  get combinacionesGeneradas(): { talla: Talla; color: ColorPrenda }[] {
+    const res: { talla: Talla; color: ColorPrenda }[] = [];
+    const tallas = this.tallasDisponibles.filter(t => t.id_talla !== undefined && this.productoForm.tallas_seleccionadas.includes(t.id_talla));
+    const colores = this.coloresDisponibles.filter(c => c.id_color !== undefined && this.productoForm.colores_seleccionados.includes(c.id_color));
+
+    for (const t of tallas) {
+      for (const c of colores) {
+        res.push({ talla: t, color: c });
+      }
+    }
+    return res;
+  }
+
+  // Lista filtrada en cliente
+  get productosFiltrados(): Producto[] {
+    return this.productos.filter(p => {
+      // Filtro de estado
+      if (this.filtroEstado === 'ACTIVOS' && !p.activo) return false;
+      if (this.filtroEstado === 'INACTIVOS' && p.activo) return false;
+
+      // Filtro de categoría
+      if (this.filtroCategoria && p.id_categoria !== this.filtroCategoria) return false;
+
+      // Filtro de búsqueda
+      if (this.busqueda.trim()) {
+        const q = this.busqueda.toLowerCase();
+        const coincideNombre = p.nombre.toLowerCase().includes(q);
+        const coincideCodigo = (p.codigo_producto || '').toLowerCase().includes(q);
+        const coincideCat = (p.categoria_nombre || '').toLowerCase().includes(q);
+        const coincideDesc = (p.descripcion || '').toLowerCase().includes(q);
+        if (!coincideNombre && !coincideCodigo && !coincideCat && !coincideDesc) return false;
+      }
+
+      return true;
+    });
+  }
+
+  ngOnInit(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    this.cargarDatosIniciales();
+  }
+
+  cargarDatosIniciales(): void {
+    if (this.esSuperAdmin) {
+      this.cargarEmpresas();
+    } else {
+      this.filtroEmpresa = this.userCompanyId || null;
+    }
+    this.cargarProductos();
+    this.cargarCatalogosActivos(this.filtroEmpresa || undefined);
+  }
+
+  cargarEmpresas(): void {
+    this.empresaService.listarEmpresas().subscribe({
+      next: (res) => {
+        this.empresas = (res.data || []).filter(e => e.estado === 'ACTIVO');
+      },
+      error: (err) => console.error('Error al cargar empresas:', err)
+    });
+  }
+
+  onFiltroEmpresaChange(): void {
+    this.cargarProductos();
+    this.cargarCatalogosActivos(this.filtroEmpresa || undefined);
+  }
+
+  onModalEmpresaChange(): void {
+    if (this.productoForm.id_empresa) {
+      this.cargarCatalogosActivos(this.productoForm.id_empresa);
+      // Reset selected category and variants to avoid cross-tenant pollution
+      this.productoForm.id_categoria = null;
+      this.productoForm.tallas_seleccionadas = [];
+      this.productoForm.colores_seleccionados = [];
+    }
+  }
+
+  cargarProductos(): void {
+    this.cargando = true;
+    const params: any = {};
+    if (this.filtroEmpresa) params.id_empresa = this.filtroEmpresa;
+
+    this.productosService.listarProductos(params).subscribe({
+      next: (res) => {
+        this.productos = res.data || [];
+        this.cargando = false;
+      },
+      error: (err) => {
+        this.mostrarAlerta(err.error?.detail || 'Error al cargar los productos.', 'error');
+        this.cargando = false;
+      }
+    });
+  }
+
+  cargarCatalogosActivos(idEmpresa?: number): void {
+    const paramsCat: any = { solo_activas: true };
+    const paramsTallas: any = { solo_activas: true };
+    const paramsColores: any = { solo_activos: true };
+
+    if (idEmpresa) {
+      paramsCat.id_empresa = idEmpresa;
+      paramsTallas.id_empresa = idEmpresa;
+      paramsColores.id_empresa = idEmpresa;
+    }
+
+    // 1. Categorías activas
+    this.categoriasService.listarCategorias(paramsCat).subscribe({
+      next: (res) => {
+        this.categoriasDisponibles = res.data || [];
+      },
+      error: (err) => console.error('Error al cargar categorías activas:', err)
+    });
+
+    // 2. Tallas activas
+    this.tallasColoresService.listarTallas(paramsTallas).subscribe({
+      next: (res) => {
+        this.tallasDisponibles = res.data || [];
+      },
+      error: (err) => console.error('Error al cargar tallas activas:', err)
+    });
+
+    // 3. Colores activos
+    this.tallasColoresService.listarColores(paramsColores).subscribe({
+      next: (res) => {
+        this.coloresDisponibles = res.data || [];
+      },
+      error: (err) => console.error('Error al cargar colores activos:', err)
+    });
+  }
+
+  // ==============================================================================
+  // MODAL CREAR / EDITAR
+  // ==============================================================================
+
+  abrirModalCrear(): void {
+    this.modoEdicion = false;
+    this.tabModalActiva = 'general';
+    this.productoForm = this.getFormVacio();
+    this.subiendoImagen = false;
+
+    if (this.esSuperAdmin) {
+      this.productoForm.id_empresa = this.filtroEmpresa || (this.empresas[0]?.id_empresa);
+    } else {
+      this.productoForm.id_empresa = this.userCompanyId;
+    }
+
+    if (this.productoForm.id_empresa) {
+      this.cargarCatalogosActivos(this.productoForm.id_empresa);
+    }
+
+    this.mostrarModal = true;
+  }
+
+  abrirModalEditar(prod: Producto): void {
+    this.cargando = true;
+    this.productosService.obtenerProducto(prod.id_producto!).subscribe({
+      next: (res) => {
+        const p = res.data;
+        this.modoEdicion = true;
+        this.tabModalActiva = 'general';
+
+        if (p.id_empresa) {
+          this.cargarCatalogosActivos(p.id_empresa);
+        }
+
+        // Extraer IDs únicos de tallas y colores de sus variantes
+        const tallasIds = Array.from(new Set((p.variantes || []).filter(v => v.activo).map(v => v.id_talla)));
+        const coloresIds = Array.from(new Set((p.variantes || []).filter(v => v.activo).map(v => v.id_color)));
+
+        this.productoForm = {
+          id_producto: p.id_producto,
+          id_empresa: p.id_empresa,
+          id_categoria: p.id_categoria,
+          nombre: p.nombre,
+          descripcion: p.descripcion || '',
+          codigo_producto: p.codigo_producto || '',
+          precio: p.precio,
+          temporada: p.temporada || '',
+          coleccion: p.coleccion || '',
+          marca: p.marca || 'Aurora Atelier',
+          genero: p.genero || 'Femenino',
+          activo: p.activo,
+          tallas_seleccionadas: tallasIds,
+          colores_seleccionados: coloresIds,
+          imagenes: p.imagenes || []
+        };
+
+        this.mostrarModal = true;
+        this.cargando = false;
+      },
+      error: (err) => {
+        this.mostrarAlerta(err.error?.detail || 'Error al obtener el producto.', 'error');
+        this.cargando = false;
+      }
+    });
+  }
+
+  cerrarModal(): void {
+    this.mostrarModal = false;
+    this.subiendoImagen = false;
+    this.productoForm = this.getFormVacio();
+  }
+
+  guardarProducto(): void {
+    // Validaciones previas
+    if (!this.productoForm.nombre.trim()) {
+      this.mostrarAlerta('El nombre de la prenda es obligatorio.', 'error');
+      this.tabModalActiva = 'general';
+      return;
+    }
+    if (!this.productoForm.id_categoria) {
+      this.mostrarAlerta('Debe seleccionar una categoría.', 'error');
+      this.tabModalActiva = 'general';
+      return;
+    }
+    if (!this.productoForm.precio || this.productoForm.precio <= 0) {
+      this.mostrarAlerta('El precio de la prenda debe ser mayor a 0.', 'error');
+      this.tabModalActiva = 'general';
+      return;
+    }
+
+    const targetEmpresa = this.productoForm.id_empresa || this.userCompanyId;
+    if (!targetEmpresa) {
+      this.mostrarAlerta('Debe seleccionar el Tenant / Tienda correspondiente.', 'error');
+      this.tabModalActiva = 'general';
+      return;
+    }
+
+    this.guardando = true;
+
+    if (this.modoEdicion && this.productoForm.id_producto) {
+      // Actualizar
+      const payload = {
+        id_categoria: this.productoForm.id_categoria,
+        nombre: this.productoForm.nombre.trim(),
+        precio: this.productoForm.precio,
+        descripcion: this.productoForm.descripcion.trim(),
+        codigo_producto: this.productoForm.codigo_producto.trim(),
+        temporada: this.productoForm.temporada.trim(),
+        coleccion: this.productoForm.coleccion.trim(),
+        marca: this.productoForm.marca,
+        genero: this.productoForm.genero,
+        activo: this.productoForm.activo,
+        tallas_ids: this.productoForm.tallas_seleccionadas,
+        colores_ids: this.productoForm.colores_seleccionados
+      };
+
+      this.productosService.actualizarProducto(this.productoForm.id_producto, payload).subscribe({
+        next: (res) => {
+          this.mostrarAlerta(res.message || 'Producto actualizado con éxito.', 'exito');
+          this.guardando = false;
+          this.cerrarModal();
+          this.cargarProductos();
+        },
+        error: (err) => {
+          this.mostrarAlerta(err.error?.detail || 'Error al actualizar el producto.', 'error');
+          this.guardando = false;
+        }
+      });
+    } else {
+      // Crear
+      const payload = {
+        id_empresa: this.productoForm.id_empresa || this.userCompanyId,
+        id_categoria: this.productoForm.id_categoria,
+        nombre: this.productoForm.nombre.trim(),
+        precio: this.productoForm.precio,
+        descripcion: this.productoForm.descripcion.trim(),
+        codigo_producto: this.productoForm.codigo_producto.trim() || undefined,
+        temporada: this.productoForm.temporada.trim() || undefined,
+        coleccion: this.productoForm.coleccion.trim() || undefined,
+        marca: this.productoForm.marca,
+        genero: this.productoForm.genero,
+        activo: this.productoForm.activo,
+        tallas_ids: this.productoForm.tallas_seleccionadas,
+        colores_ids: this.productoForm.colores_seleccionados,
+        imagenes: this.productoForm.imagenes.map(img => ({
+          imagen_url: img.imagen_url,
+          public_id: img.public_id,
+          es_principal: img.es_principal
+        }))
+      };
+
+      this.productosService.crearProducto(payload).subscribe({
+        next: (res) => {
+          this.mostrarAlerta(res.message || 'Producto registrado exitosamente con sus variantes.', 'exito');
+          this.guardando = false;
+          this.cerrarModal();
+          this.cargarProductos();
+        },
+        error: (err) => {
+          this.mostrarAlerta(err.error?.detail || 'Error al registrar el producto.', 'error');
+          this.guardando = false;
+        }
+      });
+    }
+  }
+
+  // ==============================================================================
+  // GESTIÓN DE VARIANTES (TALLAS & COLORES)
+  // ==============================================================================
+
+  toggleTalla(tallaId?: number): void {
+    if (tallaId === undefined) return;
+    const idx = this.productoForm.tallas_seleccionadas.indexOf(tallaId);
+    if (idx > -1) {
+      this.productoForm.tallas_seleccionadas.splice(idx, 1);
+    } else {
+      this.productoForm.tallas_seleccionadas.push(tallaId);
+    }
+  }
+
+  toggleColor(colorId?: number): void {
+    if (colorId === undefined) return;
+    const idx = this.productoForm.colores_seleccionados.indexOf(colorId);
+    if (idx > -1) {
+      this.productoForm.colores_seleccionados.splice(idx, 1);
+    } else {
+      this.productoForm.colores_seleccionados.push(colorId);
+    }
+  }
+
+  seleccionarTodasTallas(): void {
+    this.productoForm.tallas_seleccionadas = this.tallasDisponibles
+      .map(t => t.id_talla)
+      .filter((id): id is number => id !== undefined);
+  }
+
+  deseleccionarTodasTallas(): void {
+    this.productoForm.tallas_seleccionadas = [];
+  }
+
+  seleccionarTodosColores(): void {
+    this.productoForm.colores_seleccionados = this.coloresDisponibles
+      .map(c => c.id_color)
+      .filter((id): id is number => id !== undefined);
+  }
+
+  deseleccionarTodosColores(): void {
+    this.productoForm.colores_seleccionados = [];
+  }
+
+  // ==============================================================================
+  // GESTIÓN DE IMÁGENES (CLOUDINARY)
+  // ==============================================================================
+
+  onFileSelected(event: any): void {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Validación de formato
+    const tiposPermitidos = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+    if (!tiposPermitidos.includes(file.type)) {
+      this.mostrarAlerta('Formato inválido. Solo se admiten archivos JPG, PNG y WEBP.', 'error');
+      event.target.value = '';
+      return;
+    }
+
+    // Validación de tamaño (máx 10 MB con optimización automática)
+    if (file.size > 10 * 1024 * 1024) {
+      this.mostrarAlerta('La imagen supera el límite permitido de 10 MB.', 'error');
+      event.target.value = '';
+      return;
+    }
+
+    this.subiendoImagen = true;
+    this.productosService.subirImagenCloudinary(file).subscribe({
+      next: (res) => {
+        const nuevaImg: ImagenProducto = {
+          imagen_url: res.data.imagen_url,
+          public_id: res.data.public_id,
+          es_principal: this.productoForm.imagenes.length === 0
+        };
+
+        // Si ya estamos editando un producto existente en BD, vincular de inmediato
+        if (this.modoEdicion && this.productoForm.id_producto) {
+          this.productosService.agregarImagenAProducto(
+            this.productoForm.id_producto,
+            nuevaImg.imagen_url,
+            nuevaImg.public_id,
+            nuevaImg.es_principal
+          ).subscribe({
+            next: (vincRes) => {
+              nuevaImg.id_imagen = vincRes.id_imagen;
+              this.productoForm.imagenes.push(nuevaImg);
+              this.subiendoImagen = false;
+              this.mostrarAlerta('Foto subida y vinculada a la prenda.', 'exito');
+            },
+            error: (err) => {
+              this.mostrarAlerta(err.error?.detail || 'Error al vincular imagen.', 'error');
+              this.subiendoImagen = false;
+            }
+          });
+        } else {
+          // En modo creación se almacena en el estado local hasta guardar el producto
+          this.productoForm.imagenes.push(nuevaImg);
+          this.subiendoImagen = false;
+          this.mostrarAlerta('Foto cargada exitosamente.', 'exito');
+        }
+        event.target.value = '';
+      },
+      error: (err) => {
+        this.mostrarAlerta(err.error?.detail || 'Error al subir la imagen a Cloudinary.', 'error');
+        this.subiendoImagen = false;
+        event.target.value = '';
+      }
+    });
+  }
+
+  establecerPortada(index: number): void {
+    const img = this.productoForm.imagenes[index];
+    if (!img) return;
+
+    if (this.modoEdicion && this.productoForm.id_producto && img.id_imagen) {
+      this.productosService.marcarPortada(this.productoForm.id_producto, img.id_imagen).subscribe({
+        next: () => {
+          this.productoForm.imagenes.forEach((im, i) => im.es_principal = (i === index));
+          this.mostrarAlerta('Portada actualizada.', 'exito');
+        },
+        error: (err) => this.mostrarAlerta(err.error?.detail || 'Error al cambiar portada.', 'error')
+      });
+    } else {
+      this.productoForm.imagenes.forEach((im, i) => im.es_principal = (i === index));
+    }
+  }
+
+  eliminarImagen(index: number): void {
+    const img = this.productoForm.imagenes[index];
+    if (!img) return;
+
+    if (this.modoEdicion && this.productoForm.id_producto && img.id_imagen) {
+      this.productosService.eliminarImagen(this.productoForm.id_producto, img.id_imagen).subscribe({
+        next: () => {
+          this.productoForm.imagenes.splice(index, 1);
+          // Si eliminamos la principal y quedan más fotos, la primera pasa a ser principal
+          if (img.es_principal && this.productoForm.imagenes.length > 0) {
+            this.productoForm.imagenes[0].es_principal = true;
+          }
+          this.mostrarAlerta('Imagen eliminada de la galería.', 'exito');
+        },
+        error: (err) => this.mostrarAlerta(err.error?.detail || 'Error al eliminar imagen.', 'error')
+      });
+    } else {
+      this.productoForm.imagenes.splice(index, 1);
+      if (img.es_principal && this.productoForm.imagenes.length > 0) {
+        this.productoForm.imagenes[0].es_principal = true;
+      }
+    }
+  }
+
+  // ==============================================================================
+  // MODAL RÁPIDO DE GALERÍA
+  // ==============================================================================
+
+  abrirModalGaleria(prod: Producto): void {
+    this.cargando = true;
+    this.productosService.obtenerProducto(prod.id_producto!).subscribe({
+      next: (res) => {
+        this.productoGaleriaSeleccionado = res.data;
+        this.mostrarModalGaleria = true;
+        this.cargando = false;
+      },
+      error: (err) => {
+        this.mostrarAlerta(err.error?.detail || 'Error al cargar fotos de la prenda.', 'error');
+        this.cargando = false;
+      }
+    });
+  }
+
+  cerrarModalGaleria(): void {
+    this.mostrarModalGaleria = false;
+    this.subiendoImagen = false;
+    this.productoGaleriaSeleccionado = null;
+    this.cargarProductos();
+  }
+
+  subirFotoGaleriaRapida(event: any): void {
+    const file = event.target.files[0];
+    if (!file || !this.productoGaleriaSeleccionado) return;
+
+    const tiposPermitidos = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+    if (!tiposPermitidos.includes(file.type)) {
+      this.mostrarAlerta('Formato inválido. Solo se admiten archivos JPG, PNG y WEBP.', 'error');
+      event.target.value = '';
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      this.mostrarAlerta('La imagen supera el límite permitido de 10 MB.', 'error');
+      event.target.value = '';
+      return;
+    }
+
+    this.subiendoImagen = true;
+    this.productosService.subirImagenCloudinary(file).subscribe({
+      next: (res) => {
+        const esPpal = (this.productoGaleriaSeleccionado!.imagenes || []).length === 0;
+        this.productosService.agregarImagenAProducto(
+          this.productoGaleriaSeleccionado!.id_producto!,
+          res.data.imagen_url,
+          res.data.public_id,
+          esPpal
+        ).subscribe({
+          next: (vincRes) => {
+            if (!this.productoGaleriaSeleccionado!.imagenes) {
+              this.productoGaleriaSeleccionado!.imagenes = [];
+            }
+            this.productoGaleriaSeleccionado!.imagenes.push({
+              id_imagen: vincRes.id_imagen,
+              imagen_url: res.data.imagen_url,
+              public_id: res.data.public_id,
+              es_principal: esPpal
+            });
+            this.subiendoImagen = false;
+            this.mostrarAlerta('Imagen agregada a la galería.', 'exito');
+          },
+          error: (err) => {
+            this.mostrarAlerta(err.error?.detail || 'Error al vincular foto.', 'error');
+            this.subiendoImagen = false;
+          }
+        });
+        event.target.value = '';
+      },
+      error: (err) => {
+        this.mostrarAlerta(err.error?.detail || 'Error al subir foto.', 'error');
+        this.subiendoImagen = false;
+        event.target.value = '';
+      }
+    });
+  }
+
+  establecerPortadaRapida(img: ImagenProducto): void {
+    if (!this.productoGaleriaSeleccionado || !img.id_imagen) return;
+    this.productosService.marcarPortada(this.productoGaleriaSeleccionado.id_producto!, img.id_imagen).subscribe({
+      next: () => {
+        this.productoGaleriaSeleccionado!.imagenes?.forEach(i => i.es_principal = (i.id_imagen === img.id_imagen));
+        this.mostrarAlerta('Portada actualizada.', 'exito');
+      },
+      error: (err) => this.mostrarAlerta(err.error?.detail || 'Error al cambiar portada.', 'error')
+    });
+  }
+
+  eliminarFotoRapida(img: ImagenProducto, idx: number): void {
+    if (!this.productoGaleriaSeleccionado || !img.id_imagen) return;
+    this.productosService.eliminarImagen(this.productoGaleriaSeleccionado.id_producto!, img.id_imagen).subscribe({
+      next: () => {
+        this.productoGaleriaSeleccionado!.imagenes?.splice(idx, 1);
+        this.mostrarAlerta('Foto eliminada.', 'exito');
+      },
+      error: (err) => this.mostrarAlerta(err.error?.detail || 'Error al borrar foto.', 'error')
+    });
+  }
+
+  // ==============================================================================
+  // CAMBIAR ESTADO Y ELIMINAR
+  // ==============================================================================
+
+  alternarEstado(prod: Producto): void {
+    const nuevoEstado = !prod.activo;
+    this.productosService.cambiarEstado(prod.id_producto!, nuevoEstado).subscribe({
+      next: () => {
+        prod.activo = nuevoEstado;
+        this.mostrarAlerta(`Prenda '${prod.nombre}' ${nuevoEstado ? 'activada' : 'desactivada'}.`, 'exito');
+      },
+      error: (err) => {
+        this.mostrarAlerta(err.error?.detail || 'Error al cambiar estado.', 'error');
+      }
+    });
+  }
+
+  confirmarEliminar(prod: Producto): void {
+    this.productoAeliminar = prod;
+    this.mostrarModalEliminar = true;
+  }
+
+  cerrarModalEliminar(): void {
+    this.mostrarModalEliminar = false;
+    this.productoAeliminar = null;
+  }
+
+  ejecutarEliminacion(): void {
+    if (!this.productoAeliminar) return;
+    this.eliminando = true;
+
+    this.productosService.eliminarProducto(this.productoAeliminar.id_producto!).subscribe({
+      next: (res) => {
+        this.mostrarAlerta(res.message, res.action === 'DESACTIVADO' ? 'info' : 'exito');
+        this.eliminando = false;
+        this.cerrarModalEliminar();
+        this.cargarProductos();
+      },
+      error: (err) => {
+        this.mostrarAlerta(err.error?.detail || 'Error al eliminar el producto.', 'error');
+        this.eliminando = false;
+      }
+    });
+  }
+
+  // ==============================================================================
+  // HELPERS
+  // ==============================================================================
+
+  abrirZoom(url: string): void {
+    this.zoomImagenUrl = url;
+  }
+
+  cerrarZoom(): void {
+    this.zoomImagenUrl = null;
+  }
+
+  mostrarAlerta(mensaje: string, tipo: 'exito' | 'error' | 'info'): void {
+    this.mensajeAlerta = mensaje;
+    this.tipoAlerta = tipo;
+    setTimeout(() => {
+      if (this.mensajeAlerta === mensaje) {
+        this.mensajeAlerta = '';
+      }
+    }, 4500);
+  }
+
+  private getFormVacio() {
+    return {
+      id_producto: undefined,
+      id_empresa: undefined,
+      id_categoria: null,
+      nombre: '',
+      descripcion: '',
+      codigo_producto: '',
+      precio: null,
+      temporada: '',
+      coleccion: '',
+      marca: 'Aurora Atelier',
+      genero: 'Femenino',
+      activo: true,
+      tallas_seleccionadas: [] as number[],
+      colores_seleccionados: [] as number[],
+      imagenes: [] as ImagenProducto[]
+    };
+  }
+}

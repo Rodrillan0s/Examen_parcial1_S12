@@ -1,27 +1,44 @@
+from typing import Optional, List, Dict, Any
 from app.classes.postgres import PostgreSQL
 from app.config import Config
 
-# --- LEER SUCURSALES POR EMPRESA ---
-def obtener_sucursales_por_empresa(id_empresa: int = None):
+# --- LEER SUCURSALES POR EMPRESA (CON CIUDAD Y DEPARTAMENTO) ---
+def obtener_sucursales_por_empresa(id_empresa: Optional[int] = None) -> List[Dict[str, Any]]:
     db = PostgreSQL()
     db.create_connection()
     try:
+        schema = Config.SCHEMA or 'comercio'
+        condiciones = []
+        params = []
+
         if id_empresa:
-            query = f"""
-                SELECT id_sucursal, nombre, direccion, activo, id_empresa 
-                FROM {Config.SCHEMA}.t_sucursal 
-                WHERE id_empresa = %s
-                ORDER BY id_sucursal ASC;
-            """
-            resultados = db.execute_query(query, (id_empresa,), fetchall=True)
-        else:
-            query = f"""
-                SELECT id_sucursal, nombre, direccion, activo, id_empresa 
-                FROM {Config.SCHEMA}.t_sucursal 
-                ORDER BY id_sucursal ASC;
-            """
-            resultados = db.execute_query(query, fetchall=True)
-            
+            condiciones.append("s.id_empresa = %s")
+            params.append(id_empresa)
+
+        where_clause = "WHERE " + " AND ".join(condiciones) if condiciones else ""
+
+        query = f"""
+            SELECT 
+                s.id_sucursal, 
+                s.nombre, 
+                s.direccion, 
+                s.telefono,
+                s.activo, 
+                s.estado,
+                s.id_empresa,
+                e.nombre_empresa,
+                s.id_ciudad,
+                c.nombre AS ciudad,
+                c.departamento,
+                s.created_at
+            FROM {schema}.t_sucursal s
+            LEFT JOIN {schema}.t_ciudad c ON s.id_ciudad = c.id_ciudad
+            LEFT JOIN {schema}.empresa e ON s.id_empresa = e.id_empresa
+            {where_clause}
+            ORDER BY s.id_sucursal ASC;
+        """
+        resultados = db.execute_query(query, tuple(params) if params else None, fetchall=True)
+        
         sucursales = []
         if resultados:
             for r in resultados:
@@ -29,36 +46,71 @@ def obtener_sucursales_por_empresa(id_empresa: int = None):
                     "id_sucursal": r[0],
                     "nombre": r[1],
                     "direccion": r[2],
-                    "activo": r[3],
-                    "id_empresa": r[4]
+                    "telefono": r[3] or "",
+                    "activo": bool(r[4] if r[4] is not None else r[5]),
+                    "estado": "ACTIVO" if (r[4] if r[4] is not None else r[5]) else "INACTIVO",
+                    "id_empresa": r[6],
+                    "empresa_nombre": r[7] or "Sin Empresa",
+                    "id_ciudad": r[8],
+                    "ciudad": r[9] or "No asignada",
+                    "departamento": r[10] or "Bolivia",
+                    "created_at": r[11].isoformat() if r[11] else None
                 })
         return sucursales
     finally:
         db.close_connection()
 
 # --- CREAR SUCURSAL ---
-def crear_sucursal_db(nombre: str, direccion: str, id_empresa: int, activo: bool = True):
+def crear_sucursal_db(
+    nombre: str, 
+    direccion: str, 
+    telefono: str, 
+    id_ciudad: Optional[int], 
+    id_empresa: int, 
+    activo: bool = True
+) -> Optional[int]:
     db = PostgreSQL()
     db.create_connection()
     try:
+        schema = Config.SCHEMA or 'comercio'
         query = f"""
-            INSERT INTO {Config.SCHEMA}.t_sucursal (nombre, direccion, id_empresa, activo) 
-            VALUES (%s, %s, %s, %s) 
+            INSERT INTO {schema}.t_sucursal (nombre, direccion, telefono, id_ciudad, id_empresa, activo, estado) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s) 
             RETURNING id_sucursal;
         """
-        resultado = db.execute_query(query, (nombre, direccion, id_empresa, activo), fetchone=True, commit=True)
+        resultado = db.execute_query(
+            query, 
+            (nombre.strip(), direccion.strip(), (telefono or "").strip(), id_ciudad, id_empresa, activo, activo), 
+            fetchone=True, 
+            commit=True
+        )
         return resultado[0] if resultado else None
     finally:
         db.close_connection()
 
 # --- LEER SUCURSAL POR ID ---
-def obtener_sucursal_por_id(id_sucursal: int):
+def obtener_sucursal_por_id(id_sucursal: int) -> Optional[Dict[str, Any]]:
     db = PostgreSQL()
     db.create_connection()
     try:
+        schema = Config.SCHEMA or 'comercio'
         query = f"""
-            SELECT s.id_sucursal, s.nombre, s.direccion, s.activo, s.id_empresa 
-            FROM {Config.SCHEMA}.t_sucursal s
+            SELECT 
+                s.id_sucursal, 
+                s.nombre, 
+                s.direccion, 
+                s.telefono,
+                s.activo, 
+                s.estado,
+                s.id_empresa,
+                e.nombre_empresa,
+                s.id_ciudad,
+                c.nombre AS ciudad,
+                c.departamento,
+                s.created_at
+            FROM {schema}.t_sucursal s
+            LEFT JOIN {schema}.t_ciudad c ON s.id_ciudad = c.id_ciudad
+            LEFT JOIN {schema}.empresa e ON s.id_empresa = e.id_empresa
             WHERE s.id_sucursal = %s;
         """
         r = db.execute_query(query, (id_sucursal,), fetchone=True)
@@ -67,35 +119,67 @@ def obtener_sucursal_por_id(id_sucursal: int):
                 "id_sucursal": r[0],
                 "nombre": r[1],
                 "direccion": r[2],
-                "activo": r[3],
-                "id_empresa": r[4]
+                "telefono": r[3] or "",
+                "activo": bool(r[4] if r[4] is not None else r[5]),
+                "estado": "ACTIVO" if (r[4] if r[4] is not None else r[5]) else "INACTIVO",
+                "id_empresa": r[6],
+                "empresa_nombre": r[7] or "Sin Empresa",
+                "id_ciudad": r[8],
+                "ciudad": r[9] or "",
+                "departamento": r[10] or "",
+                "created_at": r[11].isoformat() if r[11] else None
             }
         return None
     finally:
         db.close_connection()
 
 # --- ACTUALIZAR SUCURSAL ---
-def actualizar_sucursal_db(id_sucursal: int, nombre: str, direccion: str, id_empresa: int, activo: bool):
+def actualizar_sucursal_db(
+    id_sucursal: int, 
+    nombre: str, 
+    direccion: str, 
+    telefono: str, 
+    id_ciudad: Optional[int], 
+    id_empresa: int, 
+    activo: bool
+) -> bool:
     db = PostgreSQL()
     db.create_connection()
     try:
+        schema = Config.SCHEMA or 'comercio'
         query = f"""
-            UPDATE {Config.SCHEMA}.t_sucursal 
-            SET nombre = %s, direccion = %s, id_empresa = %s, activo = %s
+            UPDATE {schema}.t_sucursal 
+            SET nombre = %s, 
+                direccion = %s, 
+                telefono = %s, 
+                id_ciudad = %s, 
+                id_empresa = %s, 
+                activo = %s, 
+                estado = %s,
+                updated_at = CURRENT_TIMESTAMP
             WHERE id_sucursal = %s;
         """
-        filas_afectadas = db.execute_query(query, (nombre, direccion, id_empresa, activo, id_sucursal), commit=True)
+        filas_afectadas = db.execute_query(
+            query, 
+            (nombre.strip(), direccion.strip(), (telefono or "").strip(), id_ciudad, id_empresa, activo, activo, id_sucursal), 
+            commit=True
+        )
         return filas_afectadas > 0
     finally:
         db.close_connection()
 
-# --- DESACTIVAR SUCURSAL ---
-def desactivar_sucursal_db(id_sucursal: int):
+# --- CAMBIAR ESTADO / DESACTIVAR SUCURSAL ---
+def cambiar_estado_sucursal_db(id_sucursal: int, activo: bool) -> bool:
     db = PostgreSQL()
     db.create_connection()
     try:
-        query = f"UPDATE {Config.SCHEMA}.t_sucursal SET activo = FALSE WHERE id_sucursal = %s;"
-        filas_afectadas = db.execute_query(query, (id_sucursal,), commit=True)
+        schema = Config.SCHEMA or 'comercio'
+        query = f"""
+            UPDATE {schema}.t_sucursal 
+            SET activo = %s, estado = %s, updated_at = CURRENT_TIMESTAMP 
+            WHERE id_sucursal = %s;
+        """
+        filas_afectadas = db.execute_query(query, (activo, activo, id_sucursal), commit=True)
         return filas_afectadas > 0
     finally:
         db.close_connection()
