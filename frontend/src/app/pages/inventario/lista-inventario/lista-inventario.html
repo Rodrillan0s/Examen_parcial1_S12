@@ -1,0 +1,833 @@
+<div class="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
+
+  <!-- HEADER PRINCIPAL -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-200 dark:border-slate-800 pb-5">
+    <div>
+      <div class="flex items-center gap-2.5">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-2xl font-black tracking-tight text-zinc-900 dark:text-white">Gestión de Inventario</h1>
+          <p class="text-xs text-zinc-500 dark:text-slate-400 mt-0.5">Control de stock multi-sucursal por variante, reservas y trazabilidad transaccional</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Botones de Acción Global -->
+    <div class="flex items-center gap-3">
+      <button (click)="abrirHistorial()"
+              title="Consultar historial global de movimientos"
+              class="inline-flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-900 border border-stone-300 dark:border-slate-700 text-zinc-700 dark:text-slate-200 hover:bg-stone-50 dark:hover:bg-slate-800 text-xs font-semibold rounded-xl transition-all shadow-sm">
+        <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        Historial de Movimientos
+      </button>
+
+      <button (click)="cargarInventario()"
+              [disabled]="cargando"
+              title="Sincronizar inventario con el servidor"
+              class="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-md shadow-indigo-600/20 transition-all disabled:opacity-50">
+        <svg class="w-4 h-4" [class.animate-spin]="cargando" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+        Actualizar
+      </button>
+    </div>
+  </div>
+
+  <!-- ALERTA DE ÉXITO / ERROR GLOBAL -->
+  <div *ngIf="mensajeExito" class="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-medium flex items-center justify-between animate-fadeIn">
+    <div class="flex items-center gap-2">
+      <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+      </svg>
+      <span>{{ mensajeExito }}</span>
+    </div>
+    <button (click)="mensajeExito = ''" class="text-emerald-600 hover:text-emerald-800 text-lg leading-none">&times;</button>
+  </div>
+
+  <div *ngIf="mensajeError" class="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 text-xs font-medium flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <svg class="w-4 h-4 text-rose-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+      </svg>
+      <span>{{ mensajeError }}</span>
+    </div>
+    <button (click)="cargarInventario()" class="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-[11px] font-bold">
+      Reintentar
+    </button>
+  </div>
+
+  <!-- TARJETAS DE RESUMEN KPI (MANTENER EXISTENTES) -->
+  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+    <!-- Total Posiciones -->
+    <div class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-800 shadow-sm transition-all hover:shadow-md">
+      <div class="flex items-center justify-between text-zinc-500 dark:text-slate-400">
+        <span class="text-[11px] font-bold uppercase tracking-wider">Variantes</span>
+        <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+        </svg>
+      </div>
+      <div class="mt-2 text-2xl font-black text-zinc-900 dark:text-white">{{ resumen.total_posiciones | number }}</div>
+      <span class="text-[10px] text-zinc-400">Posiciones activas</span>
+    </div>
+
+    <!-- Stock Actual -->
+    <div class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-800 shadow-sm transition-all hover:shadow-md">
+      <div class="flex items-center justify-between text-zinc-500 dark:text-slate-400">
+        <span class="text-[11px] font-bold uppercase tracking-wider">Stock Físico</span>
+        <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/>
+        </svg>
+      </div>
+      <div class="mt-2 text-2xl font-black text-zinc-900 dark:text-white">{{ resumen.total_actual | number }}</div>
+      <span class="text-[10px] text-zinc-400">Unidades en tienda</span>
+    </div>
+
+    <!-- Stock Reservado -->
+    <div class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-800 shadow-sm transition-all hover:shadow-md">
+      <div class="flex items-center justify-between text-zinc-500 dark:text-slate-400">
+        <span class="text-[11px] font-bold uppercase tracking-wider">Reservadas</span>
+        <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+        </svg>
+      </div>
+      <div class="mt-2 text-2xl font-black text-amber-600 dark:text-amber-400">{{ resumen.total_reservado | number }}</div>
+      <span class="text-[10px] text-amber-500/80">Comprometidas</span>
+    </div>
+
+    <!-- Stock Disponible (Clickable filter) -->
+    <div (click)="aplicarFiltroStock('disponible')"
+         class="p-4 rounded-2xl bg-white dark:bg-slate-900 border cursor-pointer transition-all hover:shadow-md select-none"
+         [ngClass]="filtroStock === 'disponible' ? 'border-emerald-500 ring-2 ring-emerald-500/20' : 'border-stone-200 dark:border-slate-800'">
+      <div class="flex items-center justify-between text-zinc-500 dark:text-slate-400">
+        <span class="text-[11px] font-bold uppercase tracking-wider">Disponible</span>
+        <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      </div>
+      <div class="mt-2 text-2xl font-black text-emerald-600 dark:text-emerald-400">{{ resumen.total_disponible | number }}</div>
+      <span class="text-[10px] text-emerald-500/80">Listas para venta</span>
+    </div>
+
+    <!-- Alerta Bajo Stock (Clickable filter) -->
+    <div (click)="aplicarFiltroStock('bajo_stock')"
+         class="p-4 rounded-2xl bg-white dark:bg-slate-900 border cursor-pointer transition-all hover:shadow-md select-none"
+         [ngClass]="filtroStock === 'bajo_stock' ? 'border-amber-500 ring-2 ring-amber-500/20' : 'border-stone-200 dark:border-slate-800'">
+      <div class="flex items-center justify-between text-zinc-500 dark:text-slate-400">
+        <span class="text-[11px] font-bold uppercase tracking-wider">Bajo Stock</span>
+        <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+      </div>
+      <div class="mt-2 text-2xl font-black text-amber-600 dark:text-amber-400">{{ resumen.total_bajo_stock | number }}</div>
+      <span class="text-[10px] text-amber-500/80">Cercano al mínimo</span>
+    </div>
+
+    <!-- Alerta Sin Stock / Agotado (Clickable filter) -->
+    <div (click)="aplicarFiltroStock('sin_stock')"
+         class="p-4 rounded-2xl bg-white dark:bg-slate-900 border cursor-pointer transition-all hover:shadow-md select-none"
+         [ngClass]="filtroStock === 'sin_stock' ? 'border-rose-500 ring-2 ring-rose-500/20' : 'border-stone-200 dark:border-slate-800'">
+      <div class="flex items-center justify-between text-zinc-500 dark:text-slate-400">
+        <span class="text-[11px] font-bold uppercase tracking-wider">Agotados</span>
+        <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+      </div>
+      <div class="mt-2 text-2xl font-black text-rose-600 dark:text-rose-400">{{ resumen.total_sin_stock | number }}</div>
+      <span class="text-[10px] text-rose-500/80">Requiere reposición</span>
+    </div>
+  </div>
+
+  <!-- BARRA DE BÚSQUEDA Y FILTROS AJUSTADA -->
+  <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-stone-200 dark:border-slate-800 shadow-sm space-y-3">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+      <!-- 1. Buscador -->
+      <div class="lg:col-span-2 relative">
+        <input type="text"
+               [(ngModel)]="filtroBusqueda"
+               (keyup.enter)="onFiltroChange()"
+               placeholder="Buscar por producto, SKU o código de barras..."
+               class="w-full pl-9 pr-3 py-2 bg-stone-50 dark:bg-slate-800/80 border border-stone-300 dark:border-slate-700 rounded-xl text-xs text-zinc-900 dark:text-slate-100 placeholder-zinc-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all">
+        <svg class="w-4 h-4 text-zinc-400 absolute left-3 top-2.5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+      </div>
+
+      <!-- 2. Sucursal -->
+      <div>
+        <select [(ngModel)]="filtroSucursal"
+                (change)="onFiltroChange()"
+                class="w-full py-2 px-3 bg-stone-50 dark:bg-slate-800/80 border border-stone-300 dark:border-slate-700 rounded-xl text-xs text-zinc-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          <option value="">Todas las Sucursales</option>
+          <option *ngFor="let s of sucursales" [value]="s.id_sucursal">{{ s.nombre }}</option>
+        </select>
+      </div>
+
+      <!-- 3. Talla -->
+      <div>
+        <select [(ngModel)]="filtroTalla"
+                (change)="onFiltroChange()"
+                class="w-full py-2 px-3 bg-stone-50 dark:bg-slate-800/80 border border-stone-300 dark:border-slate-700 rounded-xl text-xs text-zinc-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          <option value="">Todas las Tallas</option>
+          <option *ngFor="let t of tallas" [value]="t.id_talla">{{ t.nombre }}</option>
+        </select>
+      </div>
+
+      <!-- 4. Color -->
+      <div>
+        <select [(ngModel)]="filtroColor"
+                (change)="onFiltroChange()"
+                class="w-full py-2 px-3 bg-stone-50 dark:bg-slate-800/80 border border-stone-300 dark:border-slate-700 rounded-xl text-xs text-zinc-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          <option value="">Todos los Colores</option>
+          <option *ngFor="let c of colores" [value]="c.id_color">{{ c.nombre }}</option>
+        </select>
+      </div>
+
+      <!-- 5. Estado (Todos / Normal / Bajo stock / Agotado) + Botones -->
+      <div class="flex items-center gap-2">
+        <select [(ngModel)]="filtroStock"
+                (change)="onFiltroChange()"
+                class="flex-1 py-2 px-3 bg-stone-50 dark:bg-slate-800/80 border border-stone-300 dark:border-slate-700 rounded-xl text-xs font-semibold text-zinc-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          <option value="">Estado: Todos</option>
+          <option value="disponible">Normal</option>
+          <option value="bajo_stock">Bajo stock</option>
+          <option value="sin_stock">Agotado</option>
+        </select>
+
+        <button (click)="onFiltroChange()"
+                title="Aplicar filtros"
+                class="py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl shadow-sm transition-all shrink-0">
+          Filtrar
+        </button>
+
+        <button (click)="limpiarFiltros()"
+                title="Limpiar filtros"
+                class="p-2 border border-stone-300 dark:border-slate-700 text-zinc-500 hover:text-zinc-800 dark:text-slate-400 dark:hover:text-white rounded-xl transition-all shrink-0">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLA DE INVENTARIO -->
+  <div class="bg-white dark:bg-slate-900 rounded-2xl border border-stone-200 dark:border-slate-800 shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="border-b border-stone-200 dark:border-slate-800 bg-stone-50/70 dark:bg-slate-950/40 text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-slate-400">
+            <th class="py-3.5 px-4">Producto & Variante</th>
+            <th class="py-3.5 px-4">Sucursal</th>
+            <th class="py-3.5 px-3 text-center">Talla & Color</th>
+            <th class="py-3.5 px-3 text-right">Stock Actual</th>
+            <th class="py-3.5 px-3 text-right">Reservado</th>
+            <th class="py-3.5 px-3 text-right">Disponible</th>
+            <th class="py-3.5 px-3 text-right">Mínimo</th>
+            <th class="py-3.5 px-3 text-center">Estado</th>
+            <th class="py-3.5 px-4 text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-stone-100 dark:divide-slate-800/60 text-xs">
+          <!-- Spinner de carga -->
+          <tr *ngIf="cargando">
+            <td colspan="9" class="py-12 text-center text-zinc-400">
+              <div class="inline-flex items-center gap-2">
+                <svg class="w-5 h-5 animate-spin text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                <span>Cargando inventario desde el servidor...</span>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Lista vacía -->
+          <tr *ngIf="!cargando && inventario.length === 0">
+            <td colspan="9" class="py-12 text-center text-zinc-400">
+              <div class="flex flex-col items-center justify-center gap-2">
+                <svg class="w-10 h-10 text-zinc-300 dark:text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                </svg>
+                <span class="font-medium">No se encontraron registros de inventario con los filtros aplicados.</span>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Filas de inventario -->
+          <tr *ngFor="let item of inventario"
+              class="hover:bg-stone-50/60 dark:hover:bg-slate-800/40 transition-colors">
+
+            <!-- Producto & Variante (Clickable para ver Detalle por Sucursal) -->
+            <td class="py-3.5 px-4">
+              <div class="flex items-center gap-3 cursor-pointer group"
+                   (click)="abrirDetalleVariante(item)"
+                   title="Ver detalle de stock de esta variante en todas las sucursales">
+                <div class="w-11 h-11 rounded-xl bg-stone-100 dark:bg-slate-800 overflow-hidden shrink-0 border border-stone-200 dark:border-slate-700 flex items-center justify-center group-hover:border-indigo-500 transition-colors">
+                  <img *ngIf="item.imagen_url" [src]="item.imagen_url" [alt]="item.producto_nombre" class="w-full h-full object-cover">
+                  <svg *ngIf="!item.imagen_url" class="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                  </svg>
+                </div>
+                <div class="min-w-0">
+                  <div class="font-bold text-zinc-900 dark:text-white truncate max-w-xs sm:max-w-sm group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors flex items-center gap-1.5">
+                    <span>{{ item.producto_nombre }}</span>
+                    <svg class="w-3.5 h-3.5 text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                    </svg>
+                  </div>
+                  <div class="flex items-center gap-1.5 mt-0.5">
+                    <span class="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-stone-100 dark:bg-slate-800 text-zinc-600 dark:text-slate-400 border border-stone-200 dark:border-slate-700">{{ item.sku }}</span>
+                    <span *ngIf="item.marca" class="text-[10px] text-zinc-400">{{ item.marca }}</span>
+                  </div>
+                </div>
+              </div>
+            </td>
+
+            <!-- Sucursal -->
+            <td class="py-3.5 px-4">
+              <div class="font-semibold text-zinc-800 dark:text-slate-200">{{ item.sucursal_nombre }}</div>
+              <div *ngIf="item.codigo_sucursal" class="text-[10px] text-zinc-400 font-mono">{{ item.codigo_sucursal }}</div>
+            </td>
+
+            <!-- Talla & Color -->
+            <td class="py-3.5 px-3 text-center">
+              <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-stone-100 dark:bg-slate-800 border border-stone-200 dark:border-slate-700">
+                <span class="w-3 h-3 rounded-full border border-black/20 shadow-xs" [style.background-color]="item.color_hex || '#4F46E5'"></span>
+                <span class="font-bold text-zinc-700 dark:text-slate-300 text-[11px]">{{ item.talla_nombre }}</span>
+                <span class="text-zinc-400 text-[10px]">· {{ item.color_nombre }}</span>
+              </div>
+            </td>
+
+            <!-- Stock Actual (Sólo Lectura - no editable directamente) -->
+            <td class="py-3.5 px-3 text-right select-none">
+              <span class="font-black text-sm text-zinc-900 dark:text-white">{{ item.stock_actual }}</span>
+            </td>
+
+            <!-- Reservado -->
+            <td class="py-3.5 px-3 text-right">
+              <span class="font-bold text-xs px-2 py-0.5 rounded-full"
+                    [title]="item.stock_reservado + ' unidades reservadas (no consumibles por salidas comunes)'"
+                    [ngClass]="item.stock_reservado > 0 ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300' : 'text-zinc-400'">
+                {{ item.stock_reservado }}
+              </span>
+            </td>
+
+            <!-- Disponible -->
+            <td class="py-3.5 px-3 text-right">
+              <span class="font-black text-sm"
+                    [ngClass]="{
+                      'text-emerald-600 dark:text-emerald-400': item.semaforo === 'NORMAL',
+                      'text-amber-600 dark:text-amber-400': item.semaforo === 'BAJO_STOCK',
+                      'text-rose-600 dark:text-rose-400': item.semaforo === 'SIN_STOCK'
+                    }">
+                {{ item.stock_disponible }}
+              </span>
+            </td>
+
+            <!-- Mínimo -->
+            <td class="py-3.5 px-3 text-right text-zinc-500 dark:text-slate-400 font-medium">
+              {{ item.stock_minimo }}
+            </td>
+
+            <!-- Estado Visual: Normal / Bajo stock / Agotado -->
+            <td class="py-3.5 px-3 text-center">
+              <span *ngIf="item.semaforo === 'NORMAL'"
+                    class="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                Normal
+              </span>
+              <span *ngIf="item.semaforo === 'BAJO_STOCK'"
+                    class="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800">
+                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                Bajo stock
+              </span>
+              <span *ngIf="item.semaforo === 'SIN_STOCK'"
+                    class="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800">
+                <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                Agotado
+              </span>
+            </td>
+
+            <!-- Acciones por Fila con Tooltip -->
+            <td class="py-3.5 px-4 text-center">
+              <div class="flex items-center justify-center gap-1">
+                <!-- + Registrar entrada -->
+                <button *ngIf="tienePermisoGestionar()"
+                        (click)="abrirModalMovimiento(item, 'ENTRADA')"
+                        title="Registrar entrada"
+                        class="p-1.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded-lg transition-all">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
+                  </svg>
+                </button>
+
+                <!-- − Registrar salida -->
+                <button *ngIf="tienePermisoGestionar()"
+                        (click)="abrirModalMovimiento(item, 'SALIDA')"
+                        title="Registrar salida"
+                        class="p-1.5 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-lg transition-all">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M20 12H4"/>
+                  </svg>
+                </button>
+
+                <!-- ⚙ Ajustar inventario -->
+                <button *ngIf="tienePermisoGestionar()"
+                        (click)="abrirModalMovimiento(item, 'AJUSTE')"
+                        title="Ajustar inventario"
+                        class="p-1.5 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded-lg transition-all">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                  </svg>
+                </button>
+
+                <!-- 🕘 Ver historial -->
+                <button (click)="abrirHistorial(item)"
+                        title="Ver historial de movimientos"
+                        class="p-1.5 text-zinc-500 hover:text-zinc-800 dark:hover:text-white hover:bg-stone-100 dark:hover:bg-slate-800 rounded-lg transition-all">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                </button>
+
+                <!-- Detalle por sucursal -->
+                <button (click)="abrirDetalleVariante(item)"
+                        title="Ver detalle por sucursal"
+                        class="p-1.5 text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded-lg transition-all">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                  </svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- PAGINACIÓN -->
+    <div *ngIf="totalItems > 0"
+         class="p-4 border-t border-stone-200 dark:border-slate-800 bg-stone-50/50 dark:bg-slate-950/40 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-500 dark:text-slate-400">
+      <div>
+        Mostrando {{ (paginaActual - 1) * limite + 1 }} a {{ ((paginaActual * limite) > totalItems ? totalItems : (paginaActual * limite)) }} de {{ totalItems }} registros
+      </div>
+      <div class="flex items-center gap-1">
+        <button (click)="cambiarPagina(paginaActual - 1)"
+                [disabled]="paginaActual === 1"
+                class="px-2.5 py-1.5 rounded-lg border border-stone-300 dark:border-slate-700 hover:bg-stone-100 dark:hover:bg-slate-800 disabled:opacity-40 transition-all">
+          Anterior
+        </button>
+        <span class="px-3 py-1 font-semibold text-zinc-800 dark:text-slate-200">
+          Pág. {{ paginaActual }} de {{ totalPaginas }}
+        </span>
+        <button (click)="cambiarPagina(paginaActual + 1)"
+                [disabled]="paginaActual === totalPaginas"
+                class="px-2.5 py-1.5 rounded-lg border border-stone-300 dark:border-slate-700 hover:bg-stone-100 dark:hover:bg-slate-800 disabled:opacity-40 transition-all">
+          Siguiente
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE FORMULARIOS: ENTRADA / SALIDA / AJUSTE (CON DETALLES COMPLETOS) -->
+  <div *ngIf="mostrarModalMovimiento && itemSeleccionado"
+       class="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs animate-fadeIn">
+    <div class="flex min-h-full items-center justify-center p-4 text-center">
+      <div class="bg-white dark:bg-slate-900 rounded-3xl border border-stone-200 dark:border-slate-800 shadow-2xl max-w-lg w-full max-h-[calc(100vh-2rem)] flex flex-col overflow-hidden text-left animate-scaleUp">
+
+      <!-- Header del Formulario -->
+      <div class="p-6 border-b border-stone-200 dark:border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white shadow-md"
+               [ngClass]="{
+                 'bg-emerald-600': tipoMovimientoModal === 'ENTRADA',
+                 'bg-rose-600': tipoMovimientoModal === 'SALIDA',
+                 'bg-indigo-600': tipoMovimientoModal === 'AJUSTE'
+               }">
+            <span *ngIf="tipoMovimientoModal === 'ENTRADA'" class="text-xl leading-none">+</span>
+            <span *ngIf="tipoMovimientoModal === 'SALIDA'" class="text-xl leading-none">−</span>
+            <svg *ngIf="tipoMovimientoModal === 'AJUSTE'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+          </div>
+          <div>
+            <h2 class="text-lg font-black text-zinc-900 dark:text-white">
+              {{ tipoMovimientoModal === 'ENTRADA' ? 'Registrar Entrada' : (tipoMovimientoModal === 'SALIDA' ? 'Registrar Salida' : 'Ajustar Inventario') }}
+            </h2>
+            <p class="text-xs text-zinc-500 dark:text-slate-400">Operación atómica en servidor PostgreSQL</p>
+          </div>
+        </div>
+        <button (click)="cerrarModalMovimiento()" class="text-zinc-400 hover:text-zinc-700 dark:hover:text-white text-xl leading-none">&times;</button>
+      </div>
+
+      <!-- Datos requeridos antes de confirmar: Sucursal, Producto, Variante, Stock actual, Reservado, Disponible, Mínimo -->
+      <div class="p-6 space-y-4">
+        <!-- 1. Ficha de Sucursal, Producto y Variante -->
+        <div class="p-3.5 rounded-2xl bg-stone-50 dark:bg-slate-800/60 border border-stone-200 dark:border-slate-700/80 space-y-1.5">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Sucursal:</span>
+            <span class="text-xs font-bold text-zinc-800 dark:text-slate-200">{{ itemSeleccionado.sucursal_nombre }} ({{ itemSeleccionado.codigo_sucursal || 'Central' }})</span>
+          </div>
+          <div class="flex items-center justify-between border-t border-stone-200/60 dark:border-slate-700/60 pt-1.5">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Producto:</span>
+            <span class="text-xs font-bold text-zinc-900 dark:text-white truncate max-w-xs">{{ itemSeleccionado.producto_nombre }}</span>
+          </div>
+          <div class="flex items-center justify-between border-t border-stone-200/60 dark:border-slate-700/60 pt-1.5">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Variante:</span>
+            <span class="text-xs font-mono font-semibold text-zinc-700 dark:text-slate-300">
+              SKU: {{ itemSeleccionado.sku }} · {{ itemSeleccionado.talla_nombre }} / {{ itemSeleccionado.color_nombre }}
+            </span>
+          </div>
+        </div>
+
+        <!-- 2. Métricas actuales: Stock actual, Reservado, Disponible, Mínimo -->
+        <div class="grid grid-cols-4 gap-2 text-center text-xs">
+          <div class="p-2.5 rounded-xl bg-stone-100 dark:bg-slate-800 border border-stone-200 dark:border-slate-700">
+            <div class="text-[10px] uppercase font-bold text-zinc-400">Actual</div>
+            <div class="text-base font-black text-zinc-900 dark:text-white">{{ itemSeleccionado.stock_actual }}</div>
+          </div>
+          <div class="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60">
+            <div class="text-[10px] uppercase font-bold text-amber-600 dark:text-amber-400">Reservado</div>
+            <div class="text-base font-black text-amber-700 dark:text-amber-300">{{ itemSeleccionado.stock_reservado }}</div>
+          </div>
+          <div class="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60">
+            <div class="text-[10px] uppercase font-bold text-emerald-600 dark:text-emerald-400">Disponible</div>
+            <div class="text-base font-black text-emerald-700 dark:text-emerald-300">{{ itemSeleccionado.stock_disponible }}</div>
+          </div>
+          <div class="p-2.5 rounded-xl bg-stone-100 dark:bg-slate-800 border border-stone-200 dark:border-slate-700">
+            <div class="text-[10px] uppercase font-bold text-zinc-400">Mínimo</div>
+            <div class="text-base font-bold text-zinc-600 dark:text-slate-400">{{ itemSeleccionado.stock_minimo }}</div>
+          </div>
+        </div>
+
+        <!-- REGLA PARA SALIDA: Mostrar claramente "Disponible para salida: X" -->
+        <div *ngIf="tipoMovimientoModal === 'SALIDA'"
+             class="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/60 flex items-center justify-between text-xs">
+          <span class="font-bold text-rose-900 dark:text-rose-200 flex items-center gap-1.5">
+            <svg class="w-4 h-4 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Disponible para salida:
+          </span>
+          <span class="text-base font-black text-rose-700 dark:text-rose-300">
+            {{ itemSeleccionado.stock_disponible }} unidades
+          </span>
+        </div>
+
+        <!-- 3. Formulario: Cantidad a modificar y Motivo -->
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs font-bold text-zinc-700 dark:text-slate-300 mb-1">
+              {{ tipoMovimientoModal === 'AJUSTE' ? 'Nuevo stock físico auditado:' : 'Cantidad a modificar:' }}
+            </label>
+            <input type="number"
+                   [(ngModel)]="cantidadMovimiento"
+                   (ngModelChange)="recalcularProyeccion()"
+                   min="0"
+                   class="w-full px-4 py-2.5 bg-stone-50 dark:bg-slate-800 border rounded-xl text-sm font-bold text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                   [ngClass]="validacionValida ? 'border-stone-300 dark:border-slate-700' : 'border-rose-500 ring-2 ring-rose-500/20'">
+          </div>
+
+          <!-- Alerta visual si salida excede disponible (Bloqueo) -->
+          <div *ngIf="advertenciaStock"
+               class="p-3 rounded-xl bg-rose-100 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs font-bold flex items-center gap-2">
+            <svg class="w-4 h-4 shrink-0 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            <span>{{ advertenciaStock }}</span>
+          </div>
+
+          <!-- Proyección informativa -->
+          <div *ngIf="validacionValida"
+               class="p-3 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/60 flex items-center justify-between text-xs">
+            <span class="font-bold text-indigo-950 dark:text-indigo-200">Stock resultante tras movimiento:</span>
+            <div class="flex items-center gap-3">
+              <span class="text-zinc-600 dark:text-slate-300">Actual: <strong class="text-zinc-900 dark:text-white">{{ proyeccionStockActual }}</strong></span>
+              <span class="text-emerald-600 dark:text-emerald-400">Disponible: <strong>{{ proyeccionStockDisponible }}</strong></span>
+            </div>
+          </div>
+
+          <!-- Motivo del movimiento -->
+          <div>
+            <label class="block text-xs font-bold text-zinc-700 dark:text-slate-300 mb-1">
+              Motivo o Justificación: <span class="text-rose-500">*</span>
+            </label>
+            <textarea [(ngModel)]="motivoMovimiento"
+                      rows="2"
+                      placeholder="Ej: Ingreso de proveedor, merma o daño físico, inventario general trimestral..."
+                      class="w-full px-3 py-2 bg-stone-50 dark:bg-slate-800 border border-stone-300 dark:border-slate-700 rounded-xl text-xs text-zinc-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
+          </div>
+
+          <!-- Error devuelto por el servidor con botón para recargar -->
+          <div *ngIf="modalError"
+               class="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 space-y-2">
+            <div class="text-rose-700 dark:text-rose-300 text-xs font-bold flex items-center gap-2">
+              <svg class="w-4 h-4 shrink-0 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <span>{{ modalError }}</span>
+            </div>
+            <div *ngIf="stockCambioAlerta" class="flex justify-end">
+              <button (click)="recargarInventarioTrasError()"
+                      class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-xs transition-all flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                Actualizar datos de stock vigentes
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer del Modal -->
+      <div class="p-6 border-t border-stone-200 dark:border-slate-800 bg-stone-50/50 dark:bg-slate-950/40 flex items-center justify-end gap-3">
+        <button (click)="cerrarModalMovimiento()"
+                [disabled]="procesandoMovimiento"
+                class="px-4 py-2.5 text-xs font-semibold text-zinc-700 dark:text-slate-300 hover:bg-stone-100 dark:hover:bg-slate-800 rounded-xl transition-all">
+          Cancelar
+        </button>
+        <button (click)="guardarMovimiento()"
+                [disabled]="!validacionValida || procesandoMovimiento"
+                class="px-5 py-2.5 text-xs font-bold text-white rounded-xl shadow-md transition-all flex items-center gap-2 disabled:opacity-40"
+                [ngClass]="{
+                  'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20': tipoMovimientoModal === 'ENTRADA',
+                  'bg-rose-600 hover:bg-rose-700 shadow-rose-600/20': tipoMovimientoModal === 'SALIDA',
+                  'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/20': tipoMovimientoModal === 'AJUSTE'
+                }">
+          <svg *ngIf="procesandoMovimiento" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          <span>Confirmar {{ tipoMovimientoModal === 'ENTRADA' ? 'Entrada' : (tipoMovimientoModal === 'SALIDA' ? 'Salida' : 'Ajuste') }}</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+  <!-- MODAL DE DETALLE: STOCK POR SUCURSAL DE LA VARIANTE SELECCIONADA -->
+  <div *ngIf="mostrarModalDetalle && varianteDetalle"
+       class="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs animate-fadeIn">
+    <div class="flex min-h-full items-center justify-center p-4 text-center">
+      <div class="bg-white dark:bg-slate-900 rounded-3xl border border-stone-200 dark:border-slate-800 shadow-2xl max-w-2xl w-full max-h-[calc(100vh-2rem)] flex flex-col overflow-hidden text-left animate-scaleUp">
+
+      <!-- Header del Detalle -->
+      <div class="p-6 border-b border-stone-200 dark:border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-xl bg-stone-100 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 overflow-hidden shrink-0 flex items-center justify-center">
+            <img *ngIf="varianteDetalle.imagen_url" [src]="varianteDetalle.imagen_url" [alt]="varianteDetalle.producto_nombre" class="w-full h-full object-cover">
+            <svg *ngIf="!varianteDetalle.imagen_url" class="w-6 h-6 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+            </svg>
+          </div>
+          <div>
+            <h2 class="text-lg font-black text-zinc-900 dark:text-white">{{ varianteDetalle.producto_nombre }}</h2>
+            <p class="text-xs text-zinc-500 dark:text-slate-400">
+              SKU: <span class="font-mono font-bold text-zinc-700 dark:text-slate-300">{{ varianteDetalle.sku }}</span> ·
+              Talla: <strong>{{ varianteDetalle.talla_nombre }}</strong> ·
+              Color: <strong>{{ varianteDetalle.color_nombre }}</strong>
+            </p>
+          </div>
+        </div>
+        <button (click)="cerrarDetalleVariante()" class="text-zinc-400 hover:text-zinc-700 dark:hover:text-white text-xl leading-none">&times;</button>
+      </div>
+
+      <!-- Tabla de Detalle por Sucursal: Actual | Reservado | Disponible | Mínimo -->
+      <div class="p-6 space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-slate-400">
+            Disponibilidad por Sucursal en el Tenant:
+          </h3>
+          <button (click)="abrirHistorial(varianteDetalle); cerrarDetalleVariante()"
+                  class="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Ver historial de esta variante
+          </button>
+        </div>
+
+        <div class="rounded-2xl border border-stone-200 dark:border-slate-800 overflow-hidden shadow-xs">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-stone-50 dark:bg-slate-800/80 text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-slate-400 border-b border-stone-200 dark:border-slate-800">
+                <th class="py-3 px-4">Sucursal</th>
+                <th class="py-3 px-3 text-right">Actual</th>
+                <th class="py-3 px-3 text-right">Reservado</th>
+                <th class="py-3 px-3 text-right">Disponible</th>
+                <th class="py-3 px-3 text-right">Mínimo</th>
+                <th class="py-3 px-3 text-center">Estado</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-stone-100 dark:divide-slate-800/60">
+              <tr *ngFor="let s of sucursalesVariante" class="hover:bg-stone-50/50 dark:hover:bg-slate-800/40">
+                <td class="py-3 px-4 font-bold text-zinc-800 dark:text-slate-200">
+                  {{ s.sucursal_nombre }}
+                  <span *ngIf="s.codigo_sucursal" class="text-[10px] text-zinc-400 font-mono">({{ s.codigo_sucursal }})</span>
+                </td>
+                <td class="py-3 px-3 text-right font-bold text-zinc-900 dark:text-white">{{ s.stock_actual }}</td>
+                <td class="py-3 px-3 text-right font-bold text-amber-600 dark:text-amber-400">{{ s.stock_reservado }}</td>
+                <td class="py-3 px-3 text-right font-black"
+                    [ngClass]="{
+                      'text-emerald-600 dark:text-emerald-400': s.semaforo === 'NORMAL',
+                      'text-amber-600 dark:text-amber-400': s.semaforo === 'BAJO_STOCK',
+                      'text-rose-600 dark:text-rose-400': s.semaforo === 'SIN_STOCK'
+                    }">
+                  {{ s.stock_disponible }}
+                </td>
+                <td class="py-3 px-3 text-right text-zinc-500 dark:text-slate-400">{{ s.stock_minimo }}</td>
+                <td class="py-3 px-3 text-center">
+                  <span *ngIf="s.semaforo === 'NORMAL'" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">Normal</span>
+                  <span *ngIf="s.semaforo === 'BAJO_STOCK'" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">Bajo stock</span>
+                  <span *ngIf="s.semaforo === 'SIN_STOCK'" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">Agotado</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Footer del Detalle -->
+      <div class="p-6 border-t border-stone-200 dark:border-slate-800 bg-stone-50/50 dark:bg-slate-950/40 flex items-center justify-end">
+        <button (click)="cerrarDetalleVariante()"
+                class="px-5 py-2.5 text-xs font-bold bg-zinc-800 hover:bg-zinc-900 text-white rounded-xl shadow-xs transition-all">
+          Cerrar
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+  <!-- MODAL / DRAWER DE HISTORIAL DE MOVIMIENTOS -->
+  <div *ngIf="mostrarHistorial"
+       class="fixed inset-0 z-50 flex items-center justify-end bg-black/60 backdrop-blur-xs animate-fadeIn">
+    <div class="bg-white dark:bg-slate-900 w-full max-w-2xl h-full border-l border-stone-200 dark:border-slate-800 shadow-2xl flex flex-col animate-slideLeft">
+
+      <!-- Header del Historial -->
+      <div class="p-6 border-b border-stone-200 dark:border-slate-800 flex items-center justify-between shrink-0">
+        <div>
+          <h2 class="text-lg font-black text-zinc-900 dark:text-white flex items-center gap-2">
+            <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Historial de Movimientos
+          </h2>
+          <p *ngIf="itemHistorialSeleccionado" class="text-xs text-zinc-500 dark:text-slate-400 mt-0.5">
+            Filtrado por: {{ itemHistorialSeleccionado.producto_nombre }} ({{ itemHistorialSeleccionado.sku }}) en {{ itemHistorialSeleccionado.sucursal_nombre }}
+          </p>
+          <p *ngIf="!itemHistorialSeleccionado" class="text-xs text-zinc-500 dark:text-slate-400 mt-0.5">
+            Todos los movimientos registrados en el tenant
+          </p>
+        </div>
+        <button (click)="cerrarHistorial()" class="p-2 text-zinc-400 hover:text-zinc-700 dark:hover:text-white rounded-xl hover:bg-stone-100 dark:hover:bg-slate-800 transition-all">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Filtros rápidos de Tipo de Movimiento -->
+      <div class="px-6 py-3 border-b border-stone-200 dark:border-slate-800 bg-stone-50/50 dark:bg-slate-950/40 flex items-center gap-2 overflow-x-auto shrink-0">
+        <button (click)="filtrarHistorial('')"
+                class="px-3 py-1 text-xs font-bold rounded-lg transition-all"
+                [ngClass]="filtroTipoHistorial === '' ? 'bg-indigo-600 text-white shadow-xs' : 'bg-white dark:bg-slate-800 text-zinc-600 dark:text-slate-300 border border-stone-300 dark:border-slate-700'">
+          Todos
+        </button>
+        <button (click)="filtrarHistorial('ENTRADA')"
+                class="px-3 py-1 text-xs font-bold rounded-lg transition-all"
+                [ngClass]="filtroTipoHistorial === 'ENTRADA' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 border border-stone-300 dark:border-slate-700'">
+          Entradas
+        </button>
+        <button (click)="filtrarHistorial('SALIDA')"
+                class="px-3 py-1 text-xs font-bold rounded-lg transition-all"
+                [ngClass]="filtroTipoHistorial === 'SALIDA' ? 'bg-rose-600 text-white shadow-xs' : 'bg-white dark:bg-slate-800 text-rose-700 dark:text-rose-400 border border-stone-300 dark:border-slate-700'">
+          Salidas
+        </button>
+        <button (click)="filtrarHistorial('AJUSTE')"
+                class="px-3 py-1 text-xs font-bold rounded-lg transition-all"
+                [ngClass]="filtroTipoHistorial === 'AJUSTE' ? 'bg-indigo-600 text-white shadow-xs' : 'bg-white dark:bg-slate-800 text-indigo-700 dark:text-indigo-400 border border-stone-300 dark:border-slate-700'">
+          Ajustes
+        </button>
+        <button (click)="filtrarHistorial('RESERVA')"
+                class="px-3 py-1 text-xs font-bold rounded-lg transition-all"
+                [ngClass]="filtroTipoHistorial === 'RESERVA' ? 'bg-amber-600 text-white shadow-xs' : 'bg-white dark:bg-slate-800 text-amber-700 dark:text-amber-400 border border-stone-300 dark:border-slate-700'">
+          Reservas
+        </button>
+      </div>
+
+      <!-- Lista de Movimientos -->
+      <div class="flex-1 overflow-y-auto p-6 space-y-3">
+        <!-- Spinner -->
+        <div *ngIf="cargandoHistorial" class="py-12 text-center text-zinc-400">
+          <div class="inline-flex items-center gap-2 text-xs">
+            <svg class="w-4 h-4 animate-spin text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+            <span>Cargando movimientos...</span>
+          </div>
+        </div>
+
+        <!-- Sin resultados -->
+        <div *ngIf="!cargandoHistorial && movimientos.length === 0" class="py-12 text-center text-zinc-400 text-xs">
+          No hay movimientos registrados para este criterio.
+        </div>
+
+        <!-- Tarjetas de Movimiento -->
+        <div *ngFor="let m of movimientos"
+             class="p-4 rounded-2xl bg-stone-50 dark:bg-slate-800/60 border border-stone-200 dark:border-slate-700/80 transition-all hover:shadow-xs space-y-2">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] font-black uppercase px-2 py-0.5 rounded-full"
+                    [ngClass]="{
+                      'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300': m.tipo_movimiento === 'ENTRADA',
+                      'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300': m.tipo_movimiento === 'SALIDA',
+                      'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300': m.tipo_movimiento === 'AJUSTE',
+                      'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300': m.tipo_movimiento === 'RESERVA'
+                    }">
+                {{ m.tipo_movimiento }}
+              </span>
+              <span class="text-xs font-bold text-zinc-800 dark:text-slate-200">
+                Cantidad: {{ m.cantidad }} un.
+              </span>
+            </div>
+            <span class="text-[10px] text-zinc-400">{{ m.fecha_movimiento | date:'dd/MM/yyyy HH:mm' }}</span>
+          </div>
+
+          <div class="text-xs text-zinc-700 dark:text-slate-300">
+            <strong class="text-zinc-900 dark:text-white">{{ m.producto_nombre }}</strong>
+            <span class="text-zinc-400"> ({{ m.sku }} · {{ m.talla_nombre }} / {{ m.color_nombre }})</span>
+            <div class="text-[10px] text-zinc-400 mt-0.5">Sucursal: {{ m.sucursal_nombre }}</div>
+          </div>
+
+          <!-- Variación de stock y motivo -->
+          <div class="pt-2 border-t border-stone-200/60 dark:border-slate-700/60 flex items-center justify-between text-[11px]">
+            <div class="flex items-center gap-2">
+              <span class="text-zinc-400">Stock:</span>
+              <span class="font-bold text-zinc-700 dark:text-slate-300">{{ m.stock_anterior }}</span>
+              <span class="text-zinc-400">→</span>
+              <span class="font-black text-indigo-600 dark:text-indigo-400">{{ m.stock_nuevo }}</span>
+            </div>
+            <div class="text-[10px] text-zinc-500 dark:text-slate-400 italic truncate max-w-xs" [title]="m.motivo">
+              "{{ m.motivo }}"
+            </div>
+          </div>
+
+          <div class="text-[10px] text-zinc-400 flex items-center gap-1">
+            <svg class="w-3 h-3 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+            </svg>
+            <span>Registrado por: <strong>{{ m.usuario_nombre }}</strong></span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>

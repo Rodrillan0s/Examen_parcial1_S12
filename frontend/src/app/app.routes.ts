@@ -18,6 +18,8 @@ import { CheckoutComponent } from './pages/checkout/checkout';
 import { PedidoConfirmadoComponent } from './pages/pedido-confirmado/pedido-confirmado';
 import { MisReservasComponent } from './pages/reservas/mis-reservas/mis-reservas';
 import { MisPedidosComponent } from './pages/pedidos/mis-pedidos/mis-pedidos';
+import { ListaInventarioComponent } from './pages/inventario/lista-inventario/lista-inventario';
+import { PagoComponent } from './pages/pago/pago';
 import { authGuard } from './guards/auth-guard';
 
 export const routes: Routes = [
@@ -29,6 +31,7 @@ export const routes: Routes = [
   { path: 'perfil', component: PerfilComponent, canActivate: [authGuard] },
   { path: 'checkout', component: CheckoutComponent, canActivate: [authGuard] },
   { path: 'pedido-confirmado/:id', component: PedidoConfirmadoComponent, canActivate: [authGuard] },
+  { path: 'pago/:id', component: PagoComponent, canActivate: [authGuard] },
   { path: 'mis-reservas', component: MisReservasComponent, canActivate: [authGuard] },
   { path: 'mis-pedidos', component: MisPedidosComponent, canActivate: [authGuard] },
 
@@ -41,6 +44,7 @@ export const routes: Routes = [
   { path: 'categorias', redirectTo: 'admin/categorias', pathMatch: 'full' },
   { path: 'tallas-colores', redirectTo: 'admin/tallas-colores', pathMatch: 'full' },
   { path: 'productos', redirectTo: 'admin/productos', pathMatch: 'full' },
+  { path: 'inventario', redirectTo: 'admin/inventario', pathMatch: 'full' },
   { path: 'bitacora', redirectTo: 'admin/bitacora', pathMatch: 'full' },
   { path: 'backup', redirectTo: 'admin/backup', pathMatch: 'full' },
   { path: 'bi-dashboard', redirectTo: 'admin/bi_dashboard', pathMatch: 'full' },
@@ -61,6 +65,7 @@ export const routes: Routes = [
       { path: 'categorias', component: ListaCategoriasComponent },
       { path: 'tallas-colores', component: TallasColoresComponent },
       { path: 'productos', component: ProductosComponent },
+      { path: 'inventario', component: ListaInventarioComponent },
       { path: 'bitacora', component: ListaBitacoraComponent },
       { path: 'backup', component: BackupComponent },
       { path: 'bi_dashboard', component: BiDashboardComponent },

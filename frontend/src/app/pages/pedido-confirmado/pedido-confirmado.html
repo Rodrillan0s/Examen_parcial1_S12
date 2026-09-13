@@ -198,9 +198,10 @@
       </div>
 
       <!-- ======================================================== -->
-      <!-- PREPARACIÓN DE PROCESO DE PAGO (STAGING PARA W27 / W28) -->
+      <!-- PROCESO DE PAGO Y EMISIÓN DE COMPROBANTES (W27 / W29)   -->
       <!-- ======================================================== -->
-      <div class="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 shadow-md space-y-5">
+      <div *ngIf="pedido.estado_pago === 'PENDIENTE' || pedido.estado === 'PENDIENTE_PAGO'"
+           class="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 shadow-md space-y-5">
         <div class="flex items-center space-x-3">
           <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xl shrink-0">
             <i class="ph ph-credit-card"></i>
@@ -218,47 +219,78 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
           
           <!-- Opción W27: Pago Electrónico -->
-          <div class="p-4 rounded-2xl bg-white/80 dark:bg-zinc-900/80 border border-stone-200 dark:border-zinc-800 hover:border-amber-500/50 transition-all space-y-2 relative">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-stone-900 dark:text-zinc-100 flex items-center space-x-2">
-                <i class="ph ph-qr-code text-base text-amber-500"></i>
-                <span>Pago Electrónico en Línea</span>
-              </span>
-              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30">
-                W27
-              </span>
+          <div class="p-4 rounded-2xl bg-white/90 dark:bg-zinc-900/90 border border-stone-200 dark:border-zinc-800 hover:border-amber-500/50 transition-all space-y-2 relative flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-stone-900 dark:text-zinc-100 flex items-center space-x-2">
+                  <i class="ph ph-credit-card text-base text-amber-500"></i>
+                  <span>Pago Electrónico Seguro</span>
+                </span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30">
+                  En Línea
+                </span>
+              </div>
+              <p class="text-[11px] text-stone-500 dark:text-zinc-400 mt-1">
+                Paga instantáneamente con Tarjeta de Débito/Crédito o mediante tu cuenta oficial de PayPal.
+              </p>
             </div>
-            <p class="text-[11px] text-stone-500 dark:text-zinc-400">
-              Paga instantáneamente con QR Simple, tarjeta de débito/crédito o transferencia bancaria en línea.
-            </p>
-            <button class="w-full py-2 px-3 rounded-xl bg-amber-500 text-stone-950 font-bold text-xs uppercase tracking-wider transition-all opacity-80 cursor-not-allowed">
-              Iniciar Pago Electrónico (W27)
+            <button [routerLink]="['/pago', pedido.id_pedido]"
+                    class="w-full py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer mt-2">
+              <i class="ph ph-lock-key text-sm"></i>
+              <span>Pagar Ahora (Tarjeta / PayPal)</span>
             </button>
           </div>
 
           <!-- Opción W28: Pago en Caja -->
-          <div class="p-4 rounded-2xl bg-white/80 dark:bg-zinc-900/80 border border-stone-200 dark:border-zinc-800 hover:border-amber-500/50 transition-all space-y-2 relative">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-stone-900 dark:text-zinc-100 flex items-center space-x-2">
-                <i class="ph ph-cash-register text-base text-amber-500"></i>
-                <span>Pago en Caja de Sucursal</span>
-              </span>
-              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30">
-                W28
-              </span>
+          <div class="p-4 rounded-2xl bg-white/90 dark:bg-zinc-900/90 border border-stone-200 dark:border-zinc-800 hover:border-amber-500/50 transition-all space-y-2 relative flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-stone-900 dark:text-zinc-100 flex items-center space-x-2">
+                  <i class="ph ph-storefront text-base text-amber-500"></i>
+                  <span>Pago Presencial en Sucursal</span>
+                </span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-stone-200 dark:bg-zinc-800 text-stone-700 dark:text-zinc-300">
+                  En Caja
+                </span>
+              </div>
+              <p class="text-[11px] text-stone-500 dark:text-zinc-400 mt-1">
+                Presenta tu código <strong class="font-mono text-stone-800 dark:text-zinc-200">{{ pedido.codigo_pedido }}</strong> en la caja de <strong>{{ pedido.sucursal_nombre }}</strong> para abonar en efectivo.
+              </p>
             </div>
-            <p class="text-[11px] text-stone-500 dark:text-zinc-400">
-              Presenta tu código <strong class="font-mono text-stone-800 dark:text-zinc-200">{{ pedido.codigo_pedido }}</strong> en la caja física de <strong>{{ pedido.sucursal_nombre }}</strong> para pagar en efectivo o POS.
-            </p>
-            <button class="w-full py-2 px-3 rounded-xl bg-stone-900 dark:bg-zinc-800 text-white dark:text-zinc-200 font-bold text-xs uppercase tracking-wider transition-all opacity-80 cursor-not-allowed">
-              Pago Presencial en Caja (W28)
+            <button class="w-full py-2.5 px-3 rounded-xl bg-stone-100 dark:bg-zinc-800 text-stone-700 dark:text-zinc-300 font-semibold text-xs transition-all flex items-center justify-center gap-1.5 cursor-default mt-2">
+              <i class="ph ph-receipt text-sm"></i>
+              <span>Pagar en Caja al Retirar</span>
             </button>
           </div>
 
         </div>
 
         <div class="text-center text-[11px] text-stone-500 dark:text-zinc-400 italic pt-1">
-          ✦ Tu pedido se encuentra resguardado en estado <strong>PENDIENTE_PAGO</strong>. Las existencias de inventario se descontarán formalmente al completar el pago en W27 o W28.
+          ✦ Tu pedido se encuentra resguardado en estado <strong>PENDIENTE_PAGO</strong>. Las existencias de inventario se descuentan formalmente al confirmar el pago.
+        </div>
+      </div>
+
+      <!-- ESTADO PAGADO: DESCARGA DE COMPROBANTE (W29) -->
+      <div *ngIf="pedido.estado_pago === 'PAGADO'"
+           class="p-6 sm:p-8 rounded-3xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-300 dark:border-emerald-800/80 shadow-md space-y-4 text-center animate-fade-in">
+        <div class="w-12 h-12 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-2xl mx-auto">
+          <i class="ph ph-receipt"></i>
+        </div>
+        <div>
+          <h3 class="text-base font-serif font-bold text-stone-900 dark:text-zinc-100">
+            Comprobante de Venta Emitido
+          </h3>
+          <p class="text-xs text-stone-600 dark:text-zinc-400 mt-0.5">
+            Este pedido se encuentra pagado y la venta ha sido registrada con su comprobante oficial en PDF.
+          </p>
+        </div>
+        <div>
+          <button (click)="descargarComprobante()"
+                  [disabled]="descargandoPdf"
+                  class="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs uppercase tracking-wider shadow-md transition-all inline-flex items-center gap-2">
+            <i class="ph ph-file-pdf text-base"></i>
+            <span>{{ descargandoPdf ? 'Generando PDF...' : 'Descargar Comprobante PDF' }}</span>
+          </button>
         </div>
       </div>
 

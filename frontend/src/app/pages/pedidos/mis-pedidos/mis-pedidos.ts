@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { PedidoService, PedidoResumen, PedidoData, PedidoFiltros } from '../../../services/pedido';
+import { PagoService } from '../../../services/pago';
 import { AuthService } from '../../../services/auth';
 import { ThemeService } from '../../../services/theme';
 
@@ -15,9 +16,10 @@ import { ThemeService } from '../../../services/theme';
 })
 export class MisPedidosComponent implements OnInit {
   private pedidoService = inject(PedidoService);
+  private pagoService = inject(PagoService);
   public authService = inject(AuthService);
   public themeService = inject(ThemeService);
-  private router = inject(Router);
+  public router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
 
   // Listado y Paginación
@@ -41,9 +43,8 @@ export class MisPedidosComponent implements OnInit {
   mostrarModalDetalle: boolean = false;
   cargandoDetalle: boolean = false;
 
-  // Preparación Futura Pasarela W27/W28
-  mostrarModalPagoFuturo: boolean = false;
-  pedidoParaPago: PedidoData | null = null;
+  // Estado descarga comprobante
+  descargandoPdfId: number | null = null;
 
   // Toast Feedback
   mensajeToast: { tipo: 'exito' | 'error' | 'info'; texto: string } | null = null;
@@ -133,16 +134,32 @@ export class MisPedidosComponent implements OnInit {
     this.cdr.markForCheck();
   }
 
-  abrirModalPagoFuturo(pedido: PedidoData): void {
-    this.pedidoParaPago = pedido;
-    this.mostrarModalPagoFuturo = true;
-    this.cdr.markForCheck();
+  irAPagar(idPedido: number): void {
+    this.router.navigate(['/pago', idPedido]);
   }
 
-  cerrarModalPagoFuturo(): void {
-    this.mostrarModalPagoFuturo = false;
-    this.pedidoParaPago = null;
+  descargarComprobante(idPedido: number): void {
+    this.descargandoPdfId = idPedido;
     this.cdr.markForCheck();
+
+    this.pagoService.descargarComprobantePedidoBlob(idPedido).subscribe({
+      next: (blob) => {
+        this.descargandoPdfId = null;
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `comprobante_pedido_${idPedido}.pdf`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+        this.mostrarToast('exito', 'Comprobante descargado correctamente en PDF.');
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.descargandoPdfId = null;
+        this.mostrarToast('error', err?.error?.detail || 'No se pudo generar o descargar el comprobante en PDF.');
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   copiarCodigo(codigo: string): void {

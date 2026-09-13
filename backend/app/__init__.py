@@ -7,7 +7,7 @@ from app.routes import (
     notificaciones_routes, kpis_routes, backup_routes, profile_routes,
     ciudades_routes, media_routes, categorias_routes, tallas_colores_routes,
     productos_routes, catalogo_routes, carrito_routes, pedido_routes,
-    reserva_routes
+    reserva_routes, inventario_routes, pago_routes, comprobante_routes
 )
 from app.utils.db_init import inicializar_tablas_seguridad
 from app.utils.rbac_migration import ejecutar_migracion_rbac
@@ -29,7 +29,13 @@ def create_app() -> FastAPI:
     # Configuración CORS
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=[
+            "http://localhost:4200",
+            "http://127.0.0.1:4200",
+            "http://localhost:3000",
+            "http://127.0.0.1:3000"
+        ],
+        allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -58,5 +64,8 @@ def create_app() -> FastAPI:
     app.include_router(carrito_routes.router)
     app.include_router(pedido_routes.router)
     app.include_router(reserva_routes.router)
+    app.include_router(inventario_routes.router)
+    app.include_router(pago_routes.router)
+    app.include_router(comprobante_routes.router)
 
     return app
