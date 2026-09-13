@@ -106,6 +106,7 @@ export class AuthModalComponent {
     this.errorMessage = '';
     this.successMessage = '';
     this.isLoading = false;
+    this.cdr.detectChanges();
   }
 
   // 1. INICIAR SESIÓN
@@ -113,10 +114,13 @@ export class AuthModalComponent {
     this.clearMessages();
     if (!this.loginData.login_identifier || !this.loginData.password) {
       this.errorMessage = 'Por favor ingresa tu correo/usuario y contraseña.';
+      this.cdr.detectChanges();
       return;
     }
 
     this.isLoading = true;
+    this.cdr.detectChanges();
+
     this.authService.iniciarSesion(this.loginData).subscribe({
       next: (res) => {
         this.isLoading = false;
@@ -136,10 +140,12 @@ export class AuthModalComponent {
         } else if (res.success) {
           this.authService.guardarSesion(res.token, res.usuario);
         }
+        this.cdr.detectChanges();
       },
       error: (err) => {
         this.isLoading = false;
         this.errorMessage = err.error?.detail || err.error?.message || 'Error al iniciar sesión. Verifica tus credenciales.';
+        this.cdr.detectChanges();
       }
     });
   }
@@ -149,35 +155,43 @@ export class AuthModalComponent {
     this.clearMessages();
     if (!this.registerData.correo || !this.registerData.nombre_usuario || !this.registerData.password || !this.registerData.nombre || !this.registerData.apellido) {
       this.errorMessage = 'Por favor completa todos los campos requeridos.';
+      this.cdr.detectChanges();
       return;
     }
 
     if (!this.registerData.aceptar_terminos) {
       this.errorMessage = 'Debes aceptar los Términos de Servicio y Condiciones.';
+      this.cdr.detectChanges();
       return;
     }
 
     if (!this.isPasswordValid) {
       this.errorMessage = 'La contraseña debe tener al menos 8 caracteres y 1 símbolo especial.';
+      this.cdr.detectChanges();
       return;
     }
 
     if (this.registerData.password !== this.registerData.confirm_password) {
       this.errorMessage = 'Las contraseñas no coinciden.';
+      this.cdr.detectChanges();
       return;
     }
 
     this.isLoading = true;
+    this.cdr.detectChanges();
+
     this.authService.registrarCliente(this.registerData).subscribe({
       next: (res) => {
         this.isLoading = false;
         if (res.success) {
           this.authService.guardarSesion(res.token, res.usuario);
         }
+        this.cdr.detectChanges();
       },
       error: (err) => {
         this.isLoading = false;
         this.errorMessage = err.error?.detail || err.error?.message || 'Error en el registro de usuario.';
+        this.cdr.detectChanges();
       }
     });
   }

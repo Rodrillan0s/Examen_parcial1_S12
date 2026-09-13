@@ -1,11 +1,11 @@
-import { Component, OnInit, inject, ChangeDetectorRef, NgZone } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef, NgZone, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
 import { AuthService } from '../../../services/auth';
+import { RbacService, Permiso, Rol } from '../../../services/rbac';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { DestroyRef } from '@angular/core';
 
 export interface Empresa {
   id_empresa: number;
@@ -16,30 +16,31 @@ export interface Empresa {
 
 export interface Usuario {
   nro_usuario?: number;
-  ci: string;
+  id_usuario?: number;
+  ci?: string;
   nombre_usuario: string;
+  username?: string;
   estado: string;
   id_empresa?: number | null;
   nombre_empresa?: string; 
   nombre_completo: string;
+  nombre?: string;
+  apellido?: string;
   correo: string;
   telefono: string;
-  direccion: string;
+  direccion?: string;
+  ciudad?: string;
+  fecha_registro?: string;
   nombre_rol?: string; 
-  nro_rol: number;     
+  nro_rol: number;
+  id_rol?: number;
   password?: string;
+  permisos_directos_count?: number;
 }
 
-export interface RespuestaApiUsuarios {
-  success: boolean;
-  message: string;
-  data: Usuario[];
-}
-
-export interface RespuestaApiEmpresas {
-  success: boolean;
-  message: string;
-  data: Empresa[];
+export interface ModuloPermisos {
+  modulo: string;
+  permisos: Permiso[];
 }
 
 @Component({
@@ -53,104 +54,72 @@ export class ListaUsuariosComponent implements OnInit {
   private http = inject(HttpClient);
   private cdr = inject(ChangeDetectorRef);
   public authService = inject(AuthService);
+  private rbacService = inject(RbacService);
   private ngZone = inject(NgZone);
   private apiUrl = environment.apiUrl;
   private destroyRef = inject(DestroyRef);
 
   // --- VARIABLES DE DATOS ---
   usuarios: Usuario[] = [];
-  usuariosFiltrados: Usuario[] = []; // <-- Nueva variable para la vista filtrada
+  usuariosFiltrados: Usuario[] = [];
   empresas: Empresa[] = []; 
+  rolesDisponibles: Rol[] = [];
   
-  // --- VARIABLE PARA EL FILTRO ---
-  filtroEmpresa: string = 'TODOS'; // 'TODOS' significa "Mostrar Todas"
-  filtroEstado: string = 'TODOS';  // 'TODOS', 'ACTIVO', 'INACTIVO'
-  filtroTexto: string = '';   // Búsqueda por texto
-
-  get busquedaTexto(): string {
-    return this.filtroTexto;
-  }
-  set busquedaTexto(val: string) {
-    this.filtroTexto = val;
-  }
+  // --- FILTROS ---
+  filtroEmpresa: string = 'TODOS';
+  filtroEstado: string = 'TODOS';
+  filtroRol: string = 'TODOS';
+  filtroTexto: string = '';
 
   cargando: boolean = false;
+  guardando: boolean = false;
   mensajeError: string = '';
+  mensajeModalError: string = '';
+  mensajeExito: string = '';
 
+  // --- MODAL USUARIO (CREAR / EDITAR) ---
   mostrarModal: boolean = false;
   modoEdicion: boolean = false;
-  
   usuarioForm: Usuario = this.inicializarUsuario();
 
+  // --- MODAL DETALLE DE USUARIO ---
+  mostrarModalDetalle: boolean = false;
+  cargandoDetallePermisos: boolean = false;
+  usuarioSeleccionadoDetalle: Usuario | null = null;
+  permisosDirectosDetalle: Permiso[] = [];
+  permisosHeredadosDetalle: Permiso[] = [];
+  permisosEfectivosDetalle: string[] = [];
+
+  // --- MODAL ASIGNACIÓN DE PERMISOS DIRECTOS ---
+  mostrarModalPermisos: boolean = false;
+  cargandoPermisos: boolean = false;
+  usuarioSeleccionadoPermisos: Usuario | null = null;
+  modulosPermisos: ModuloPermisos[] = [];
+  idsPermisosDirectosSeleccionados = new Set<number>();
+  codigosPermisosHeredados = new Set<string>();
+  codigosPermisosDelegables = new Set<string>();
+
+  // --- MÉTRICAS ---
   totalUsuarios: number = 0;
   usuariosActivos: number = 0;
   usuariosInactivos: number = 0;
 
-  rolesDisponibles: { id: number; id_rol?: number; nombre: string }[] = [
-    { id: 1, id_rol: 1, nombre: 'ADMINISTRADOR' },
-    { id: 2, id_rol: 2, nombre: 'CLIENTE' },
-    { id: 3, id_rol: 3, nombre: 'ADMINISTRADOR_TIENDA' },
-    { id: 4, id_rol: 4, nombre: 'ENCARGADO_SUCURSAL' },
-    { id: 5, id_rol: 5, nombre: 'CAJERO' },
-    { id: 6, id_rol: 6, nombre: 'PROVEEDOR' }
-  ];
-
-  // --- PROPIEDADES DE ALCANCE Y CONTEXTO ---
-  get scope(): 'PLATAFORMA' | 'EMPRESA' | 'SUCURSAL' {
-    return this.authService.getScopeLevel();
-  }
-
   get isGlobalAdmin(): boolean {
-    return this.authService.isGlobalAdmin();
+    return this.authService.getAuthorityLevel() <= 2;
   }
 
   get isStoreAdmin(): boolean {
-    return this.authService.isStoreAdmin();
+    return this.authService.getAuthorityLevel() === 3;
   }
 
-  get isBranchManager(): boolean {
-    return this.authService.isBranchManager();
-  }
-
-  get tituloWorkspace(): string {
-    const scope = this.scope;
-    if (scope === 'PLATAFORMA') return 'Usuarios de la plataforma';
-    if (scope === 'EMPRESA') return `Equipo de ${this.authService.getUserCompanyName()}`;
-    return `Equipo de ${this.authService.getUserBranchName()}`;
-  }
-
-  get subtituloWorkspace(): string {
-    const scope = this.scope;
-    if (scope === 'PLATAFORMA') return 'Gestiona el acceso global de usuarios y su asignación multi-tenant a empresas.';
-    if (scope === 'EMPRESA') return 'Gestiona los miembros, personal operativo y roles asignados a tu empresa.';
-    return 'Personal activo y asignado a tu sucursal.';
-  }
-
-  get botonCrearTexto(): string {
-    const scope = this.scope;
-    if (scope === 'PLATAFORMA') return '+ Nuevo usuario';
-    if (scope === 'EMPRESA') return '+ Invitar usuario';
-    return '+ Asignar personal';
-  }
-
-  get terceraMetricaTitulo(): string {
-    const scope = this.scope;
-    if (scope === 'PLATAFORMA') return 'Empresas Registradas';
-    if (scope === 'EMPRESA') return 'Sucursales';
-    return 'Sucursal Activa';
-  }
-
-  get terceraMetricaValor(): number {
-    const scope = this.scope;
-    if (scope === 'PLATAFORMA') return this.empresas.length || 1;
-    if (scope === 'EMPRESA') return 1;
-    return 1;
+  get idEmpresaSesion(): number | null {
+    const u = this.authService.obtenerUsuario();
+    return u?.id_empresa || null;
   }
 
   async ngOnInit() {
     this.cargando = true;
     
-    // Esperar a que el token esté disponible
     let intentos = 0;
     while (!this.authService.obtenerToken() && intentos < 10) {
       await new Promise(r => setTimeout(r, 50)); 
@@ -162,23 +131,119 @@ export class ListaUsuariosComponent implements OnInit {
       if (!this.isGlobalAdmin && currentUser?.id_empresa) {
         this.filtroEmpresa = String(currentUser.id_empresa);
       }
-      this.cargarRoles();
+      this.cargarRolesDelegables();
       this.cargarEmpresas();
       this.cargarUsuarios();
     } else {
       this.cargando = false;
-      this.mensajeError = "No se pudo iniciar sesión. Por favor recarga.";
+      this.mensajeError = "No se pudo iniciar sesión. Por favor recarga la página.";
     }
   }
 
-  // --- LÓGICA DE FILTRADO Y MÉTRICAS ---
-  
+  private getHeaders(): HttpHeaders {
+    const token = this.authService.obtenerToken();
+    return token ? new HttpHeaders({ 'Authorization': `Bearer ${token}` }) : new HttpHeaders();
+  }
+
+  inicializarUsuario(): Usuario {
+    const defaultEmpresaId = (!this.isGlobalAdmin && this.idEmpresaSesion) ? this.idEmpresaSesion : null;
+    return {
+      nombre_usuario: '',
+      nombre_completo: '',
+      correo: '',
+      telefono: '',
+      direccion: '',
+      estado: 'ACTIVO',
+      nro_rol: this.isStoreAdmin ? 4 : 3,
+      id_empresa: defaultEmpresaId
+    };
+  }
+
+  mostrarNotificacionExito(msg: string) {
+    this.mensajeExito = msg;
+    setTimeout(() => {
+      this.mensajeExito = '';
+      this.cdr.detectChanges();
+    }, 4500);
+  }
+
+  // --- MÉTODOS DE CARGA ---
+
+  cargarRolesDelegables() {
+    this.rbacService.listarRolesDelegables()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res) => {
+          this.ngZone.run(() => {
+            if (res && res.success) {
+              this.rolesDisponibles = res.roles || [];
+            }
+          });
+        },
+        error: () => {
+          // Fallback a roles estándar
+          this.rolesDisponibles = [
+            { id_rol: 3, nombre: 'ADMINISTRADOR_TIENDA' },
+            { id_rol: 4, nombre: 'ENCARGADO' },
+            { id_rol: 5, nombre: 'EMPLEADO' },
+            { id_rol: 2, nombre: 'CLIENTE' },
+            { id_rol: 6, nombre: 'PROVEEDOR' }
+          ];
+        }
+      });
+  }
+
+  cargarEmpresas() {
+    this.http.get<any>(`${this.apiUrl}/api/empresas/`, { headers: this.getHeaders() })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res) => {
+          this.ngZone.run(() => {
+            if (res && res.success) {
+              this.empresas = (res.data || []).filter((e: any) => e.estado === 'ACTIVO');
+            }
+          });
+        }
+      });
+  }
+
+  cargarUsuarios() {
+    this.cargando = true;
+    this.mensajeError = '';
+
+    this.http.get<any>(`${this.apiUrl}/api/usuarios/`, { headers: this.getHeaders() })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res) => {
+          this.ngZone.run(() => {
+            if (res && res.success) {
+              this.usuarios = [...(res.data || [])];
+              this.aplicarFiltros();
+            } else {
+              this.mensajeError = res.message || 'Error al obtener usuarios.';
+            }
+            this.cargando = false;
+            this.cdr.detectChanges();
+          });
+        },
+        error: (err) => {
+          this.ngZone.run(() => {
+            this.mensajeError = err?.error?.detail || 'Error de conexión al cargar usuarios.';
+            this.cargando = false;
+            this.cdr.detectChanges();
+          });
+        }
+      });
+  }
+
+  // --- FILTRADO Y MÉTRICAS ---
+
   aplicarFiltros() {
     let resultado = [...this.usuarios];
 
     const currentUser = this.authService.obtenerUsuario();
 
-    // Para Administrador de Tienda o Encargado de Sucursal, forzar el filtrado por su empresa
+    // Aislamiento Multi-Tenant para administradores de tienda
     if (!this.isGlobalAdmin && currentUser?.id_empresa) {
       resultado = resultado.filter(u => u.id_empresa === currentUser.id_empresa);
     } else if (this.filtroEmpresa !== '' && this.filtroEmpresa !== 'TODOS') {
@@ -186,20 +251,26 @@ export class ListaUsuariosComponent implements OnInit {
       resultado = resultado.filter(u => u.id_empresa === idBuscado);
     }
 
-    // Filtro por Estado (ACTIVO / INACTIVO)
+    // Filtro por Estado
     if (this.filtroEstado !== '' && this.filtroEstado !== 'TODOS') {
       resultado = resultado.filter(u => u.estado === this.filtroEstado);
     }
 
-    // Filtro por Texto (Nombre, CI, Correo, Username, Rol)
-    if (this.filtroTexto.trim() !== '') {
+    // Filtro por Rol
+    if (this.filtroRol !== '' && this.filtroRol !== 'TODOS') {
+      const idRolBuscado = Number(this.filtroRol);
+      resultado = resultado.filter(u => (u.id_rol || u.nro_rol) === idRolBuscado);
+    }
+
+    // Filtro por Texto
+    if (this.filtroTexto && this.filtroTexto.trim().length > 0) {
       const q = this.filtroTexto.toLowerCase().trim();
       resultado = resultado.filter(u =>
         (u.nombre_completo && u.nombre_completo.toLowerCase().includes(q)) ||
         (u.correo && u.correo.toLowerCase().includes(q)) ||
-        (u.ci && u.ci.toLowerCase().includes(q)) ||
         (u.nombre_usuario && u.nombre_usuario.toLowerCase().includes(q)) ||
-        (u.nombre_rol && u.nombre_rol.toLowerCase().includes(q))
+        (u.nombre_rol && u.nombre_rol.toLowerCase().includes(q)) ||
+        (u.nombre_empresa && u.nombre_empresa.toLowerCase().includes(q))
       );
     }
 
@@ -207,26 +278,10 @@ export class ListaUsuariosComponent implements OnInit {
     this.actualizarMetricas();
   }
 
-  limpiarFiltros() {
-    const currentUser = this.authService.obtenerUsuario();
-    if (!this.isGlobalAdmin && currentUser?.id_empresa) {
-      this.filtroEmpresa = String(currentUser.id_empresa);
-    } else {
-      this.filtroEmpresa = 'TODOS';
-    }
-    this.filtroEstado = 'TODOS';
-    this.filtroTexto = '';
-    this.aplicarFiltros();
-  }
-
   actualizarMetricas() {
     this.totalUsuarios = this.usuariosFiltrados.length;
     this.usuariosActivos = this.usuariosFiltrados.filter(u => u.estado === 'ACTIVO').length;
     this.usuariosInactivos = this.usuariosFiltrados.filter(u => u.estado === 'INACTIVO').length;
-  }
-
-  getIniciales(nombre: string): string {
-    return this.obtenerIniciales(nombre);
   }
 
   obtenerIniciales(nombre: string): string {
@@ -238,182 +293,23 @@ export class ListaUsuariosComponent implements OnInit {
     return nombre.substring(0, 2).toUpperCase();
   }
 
-  inicializarUsuario(): Usuario {
-    const currentUser = this.authService.obtenerUsuario();
-    const defaultEmpresaId = (!this.isGlobalAdmin && currentUser?.id_empresa) ? currentUser.id_empresa : null;
-    return {
-      ci: '',
-      nombre_usuario: '',
-      nombre_completo: '',
-      correo: '',
-      telefono: '',
-      direccion: '',
-      estado: 'ACTIVO',
-      nro_rol: this.isBranchManager ? 5 : (this.isStoreAdmin ? 4 : 3),
-      id_empresa: defaultEmpresaId
-    };
-  }
-
-  private getHeaders(): HttpHeaders {
-    const token = this.authService.obtenerToken();
-    return token ? new HttpHeaders({ 'Authorization': `Bearer ${token}` }) : new HttpHeaders();
-  }
-
-  // --- MÉTODOS DE RED ---
-
-  cargarRoles() {
-    this.http.get<any>(`${this.apiUrl}/api/roles/`, { headers: this.getHeaders() })
-    .pipe(takeUntilDestroyed(this.destroyRef))
-    .subscribe({
-      next: (res) => {
-        this.ngZone.run(() => {
-          if (res.success && res.data && res.data.length > 0) {
-            const rolesMapeados = res.data.map((r: any) => ({
-              id: Number(r.id_rol || r.nro_rol),
-              nombre: String(r.nombre_rol || r.nombre || '').toUpperCase()
-            }));
-
-            // Filtrar cualquier rol legado del proyecto anterior
-            const rolesFiltrados = rolesMapeados.filter((r: any) => 
-              !['GERENTE TALLER', 'GERENTE_TALLER', 'GERENTE', 'MECANICO', 'MECÁNICO', 'TECNICO'].includes(r.nombre)
-            );
-
-            if (rolesFiltrados.length > 0) {
-              this.rolesDisponibles = rolesFiltrados;
-            }
-          }
-          this.cdr.detectChanges();
-        });
-      },
-      error: (err) => console.log('Roles RBAC usando valores locales', err)
-    });
-  }
-
-  cargarEmpresas() {
-    this.http.get<RespuestaApiEmpresas>(`${this.apiUrl}/api/empresas`, { headers: this.getHeaders() })
-    .pipe(takeUntilDestroyed(this.destroyRef))
-    .subscribe({
-      next: (res) => {
-        this.ngZone.run(() => {
-          if (res.success) {
-            this.empresas = res.data.filter(e => e.estado === 'ACTIVO');
-          }
-          this.cdr.detectChanges();
-        });
-      },
-      error: (err) => console.error('Error cargando empresas:', err)
-    });
-  }
-
-  cargarUsuarios() {
-    this.cargando = true;
-    this.mensajeError = '';
-
-    this.http.get<RespuestaApiUsuarios>(`${this.apiUrl}/api/usuarios/`, { headers: this.getHeaders() }).subscribe({
-      next: (res) => {
-        this.ngZone.run(() => {
-          if (res.success) {
-            this.usuarios = [...res.data]; 
-            this.aplicarFiltros();
-          } else {
-            this.mensajeError = res.message || 'Error al obtener datos.';
-          }
-          this.cargando = false;
-          this.cdr.detectChanges(); 
-        });
-      },
-      error: (err) => {
-        this.ngZone.run(() => {
-          this.mensajeError = 'Error de conexión al cargar los usuarios.';
-          this.cargando = false;
-          this.cdr.detectChanges();
-        });
-      }
-    });
-  }
-
-  guardarUsuario() {
-    if (!this.usuarioForm.nombre_completo || !this.usuarioForm.nombre_usuario || !this.usuarioForm.id_empresa || !this.usuarioForm.nro_rol) {
-      alert('Por favor complete todos los campos obligatorios: Nombre Completo, Usuario, Rol y Empresa.');
-      return;
-    }
-
-    this.usuarioForm.nro_rol = Number(this.usuarioForm.nro_rol);
-    this.usuarioForm.id_empresa = Number(this.usuarioForm.id_empresa);
-
-    this.cargando = true;
-
-    if (this.modoEdicion) {
-      this.http.put(`${this.apiUrl}/api/usuarios/${this.usuarioForm.nro_usuario}`, this.usuarioForm, { headers: this.getHeaders() }).subscribe({
-        next: () => {
-          this.ngZone.run(() => {
-            this.cerrarModal();
-            this.cargarUsuarios();
-          });
-        },
-        error: (err) => {
-          this.ngZone.run(() => {
-            const detail = err.error?.detail || 'Error al actualizar el usuario.';
-            alert(detail);
-            this.cargando = false;
-            this.cdr.detectChanges();
-          });
-        }
-      });
-    } else {
-      if (!this.usuarioForm.password) {
-        alert('La contraseña es obligatoria para usuarios nuevos.');
-        this.cargando = false;
-        return;
-      }
-
-      this.http.post(`${this.apiUrl}/api/usuarios/`, this.usuarioForm, { headers: this.getHeaders() }).subscribe({
-        next: () => {
-          this.ngZone.run(() => {
-            this.cerrarModal();
-            this.cargarUsuarios();
-          });
-        },
-        error: (err) => {
-          this.ngZone.run(() => {
-            const detail = err.error?.detail || 'Error al crear el usuario. Verifique los datos.';
-            alert(detail);
-            this.cargando = false;
-            this.cdr.detectChanges();
-          });
-        }
-      });
-    }
-  }
-
-  eliminarUsuario(id?: number) {
-    if (!id) return;
-    if (confirm('¿Está seguro que desea eliminar a este usuario?')) {
-      this.http.delete(`${this.apiUrl}/api/usuarios/${id}`, { headers: this.getHeaders() }).subscribe({
-        next: () => {
-          this.ngZone.run(() => {
-            this.cargarUsuarios();
-          });
-        },
-        error: () => alert('Error al eliminar el usuario.')
-      });
-    }
-  }
-
-  // --- CONTROL DEL MODAL ---
+  // --- GESTIÓN DE USUARIO (CREAR / EDITAR) ---
 
   abrirModalNuevo() {
     this.modoEdicion = false;
+    this.mensajeModalError = '';
     this.usuarioForm = this.inicializarUsuario();
     this.mostrarModal = true;
   }
 
-  abrirModalEditar(usuario: any) {
+  abrirModalEditar(usuario: Usuario) {
     this.modoEdicion = true;
-    const rolEncontrado = usuario.id_rol || usuario.nro_rol || 3;
+    this.mensajeModalError = '';
+    const rolEncontrado = usuario.id_rol || usuario.nro_rol || 2;
     this.usuarioForm = { 
       ...usuario, 
       nro_rol: Number(rolEncontrado),
+      id_rol: Number(rolEncontrado),
       id_empresa: usuario.id_empresa ? Number(usuario.id_empresa) : null,
       password: '' 
     }; 
@@ -422,5 +318,319 @@ export class ListaUsuariosComponent implements OnInit {
 
   cerrarModal() {
     this.mostrarModal = false;
+    this.guardando = false;
+    this.mensajeModalError = '';
+  }
+
+  guardarUsuario() {
+    this.mensajeModalError = '';
+
+    if (!this.usuarioForm.nombre_completo || !this.usuarioForm.nombre_completo.trim()) {
+      this.mensajeModalError = 'El Nombre Completo es obligatorio.';
+      return;
+    }
+
+    if (!this.usuarioForm.nombre_usuario || !this.usuarioForm.nombre_usuario.trim()) {
+      this.mensajeModalError = 'El Nombre de Usuario es obligatorio.';
+      return;
+    }
+
+    if (!this.usuarioForm.nro_rol) {
+      this.mensajeModalError = 'Debe seleccionar un Rol para el usuario.';
+      return;
+    }
+
+    if (!this.isGlobalAdmin && !this.usuarioForm.id_empresa) {
+      this.usuarioForm.id_empresa = this.idEmpresaSesion;
+    }
+
+    this.guardando = true;
+
+    const payload: any = {
+      ...this.usuarioForm,
+      nombre_completo: this.usuarioForm.nombre_completo.trim(),
+      nombre_usuario: this.usuarioForm.nombre_usuario.trim().toLowerCase(),
+      id_rol: Number(this.usuarioForm.nro_rol),
+      nro_rol: Number(this.usuarioForm.nro_rol),
+      id_empresa: this.usuarioForm.id_empresa ? Number(this.usuarioForm.id_empresa) : null
+    };
+
+    const targetId = this.usuarioForm.id_usuario || this.usuarioForm.nro_usuario;
+
+    if (this.modoEdicion && targetId) {
+      this.http.put<any>(`${this.apiUrl}/api/usuarios/${targetId}`, payload, { headers: this.getHeaders() })
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: () => {
+            this.ngZone.run(() => {
+              this.guardando = false;
+              this.cerrarModal();
+              this.cargarUsuarios();
+              this.mostrarNotificacionExito(`Usuario '${payload.nombre_completo}' actualizado exitosamente.`);
+            });
+          },
+          error: (err) => {
+            this.ngZone.run(() => {
+              this.mensajeModalError = err?.error?.detail || 'Error al actualizar el usuario.';
+              this.guardando = false;
+              this.cdr.detectChanges();
+            });
+          }
+        });
+    } else {
+      if (!this.usuarioForm.password || !this.usuarioForm.password.trim()) {
+        this.mensajeModalError = 'La contraseña es obligatoria para nuevos usuarios.';
+        this.guardando = false;
+        return;
+      }
+
+      this.http.post<any>(`${this.apiUrl}/api/usuarios/`, payload, { headers: this.getHeaders() })
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: () => {
+            this.ngZone.run(() => {
+              this.guardando = false;
+              this.cerrarModal();
+              this.cargarUsuarios();
+              this.mostrarNotificacionExito(`Usuario '${payload.nombre_completo}' registrado exitosamente.`);
+            });
+          },
+          error: (err) => {
+            this.ngZone.run(() => {
+              this.mensajeModalError = err?.error?.detail || 'Error al registrar el usuario. Verifique los datos.';
+              this.guardando = false;
+              this.cdr.detectChanges();
+            });
+          }
+        });
+    }
+  }
+
+  cambiarEstadoUsuario(usuario: Usuario) {
+    const id = usuario.id_usuario || usuario.nro_usuario;
+    if (!id) return;
+
+    const nuevoActivo = usuario.estado !== 'ACTIVO';
+    const accion = nuevoActivo ? 'activar' : 'desactivar';
+    const confirmar = confirm(`¿Está seguro que desea ${accion} al usuario '${usuario.nombre_completo || usuario.nombre_usuario}'?`);
+    if (!confirmar) return;
+
+    this.cargando = true;
+    this.http.put<any>(`${this.apiUrl}/api/usuarios/${id}/estado`, { activo: nuevoActivo }, { headers: this.getHeaders() })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.ngZone.run(() => {
+            this.cargarUsuarios();
+            this.mostrarNotificacionExito(`Usuario ${nuevoActivo ? 'activado' : 'desactivado'} correctamente.`);
+          });
+        },
+        error: (err) => {
+          this.ngZone.run(() => {
+            alert(err?.error?.detail || 'Error al cambiar estado del usuario.');
+            this.cargando = false;
+            this.cdr.detectChanges();
+          });
+        }
+      });
+  }
+
+  // --- GESTIÓN DE PERMISOS DIRECTOS ---
+
+  abrirModalPermisos(usuario: Usuario) {
+    const id = usuario.id_usuario || usuario.nro_usuario;
+    if (!id) return;
+
+    this.usuarioSeleccionadoPermisos = usuario;
+    this.mostrarModalPermisos = true;
+    this.cargandoPermisos = true;
+    this.mensajeModalError = '';
+    this.idsPermisosDirectosSeleccionados.clear();
+    this.codigosPermisosHeredados.clear();
+    this.codigosPermisosDelegables.clear();
+
+    // 1. Cargar permisos delegables por el admin actual
+    this.rbacService.listarPermisosDelegables()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res) => {
+          if (res && res.success) {
+            this.codigosPermisosDelegables = new Set(res.permisos.map(p => p.codigo));
+          }
+        }
+      });
+
+    // 2. Cargar todos los permisos del sistema agrupados por módulo
+    this.rbacService.listarPermisos()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res) => {
+          if (res && res.success) {
+            const agrupados: { [key: string]: Permiso[] } = {};
+            for (const p of res.permisos) {
+              const mod = (p.modulo || 'GENERAL').toUpperCase();
+              if (!agrupados[mod]) agrupados[mod] = [];
+              agrupados[mod].push(p);
+            }
+            this.modulosPermisos = Object.keys(agrupados).map(mod => ({
+              modulo: mod,
+              permisos: agrupados[mod]
+            }));
+          }
+        }
+      });
+
+    // 3. Cargar estado actual de permisos del usuario destino
+    this.rbacService.obtenerPermisosUsuario(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res) => {
+          this.ngZone.run(() => {
+            if (res && res.success) {
+              for (const p of (res.permisos_directos || [])) {
+                this.idsPermisosDirectosSeleccionados.add(p.id_permiso);
+              }
+              for (const p of (res.permisos_heredados || [])) {
+                this.codigosPermisosHeredados.add(p.codigo);
+              }
+            }
+            this.cargandoPermisos = false;
+            this.cdr.detectChanges();
+          });
+        },
+        error: (err) => {
+          this.ngZone.run(() => {
+            this.mensajeModalError = err?.error?.detail || 'Error al obtener permisos del usuario.';
+            this.cargandoPermisos = false;
+            this.cdr.detectChanges();
+          });
+        }
+      });
+  }
+
+  cerrarModalPermisos() {
+    this.mostrarModalPermisos = false;
+    this.usuarioSeleccionadoPermisos = null;
+    this.guardando = false;
+    this.mensajeModalError = '';
+  }
+
+  togglePermisoDirecto(p: Permiso) {
+    if (this.idsPermisosDirectosSeleccionados.has(p.id_permiso)) {
+      this.idsPermisosDirectosSeleccionados.delete(p.id_permiso);
+    } else {
+      this.idsPermisosDirectosSeleccionados.add(p.id_permiso);
+    }
+    this.cdr.detectChanges();
+  }
+
+  esPermisoDelegable(p: Permiso): boolean {
+    if (this.isGlobalAdmin) return true;
+    return this.codigosPermisosDelegables.has(p.codigo);
+  }
+
+  guardarPermisosDirectos() {
+    if (!this.usuarioSeleccionadoPermisos) return;
+    const id = this.usuarioSeleccionadoPermisos.id_usuario || this.usuarioSeleccionadoPermisos.nro_usuario;
+    if (!id) return;
+
+    this.guardando = true;
+    this.mensajeModalError = '';
+
+    const ids = Array.from(this.idsPermisosDirectosSeleccionados);
+
+    this.rbacService.asignarPermisosDirectosUsuario(id, ids)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res) => {
+          this.ngZone.run(() => {
+            this.guardando = false;
+            this.cerrarModalPermisos();
+            this.cargarUsuarios();
+            this.mostrarNotificacionExito(`Permisos directos asignados con éxito a '${this.usuarioSeleccionadoPermisos?.nombre_completo}'.`);
+          });
+        },
+        error: (err) => {
+          this.ngZone.run(() => {
+            this.mensajeModalError = err?.error?.detail || 'Error al guardar los permisos directos.';
+            this.guardando = false;
+            this.cdr.detectChanges();
+          });
+        }
+      });
+  }
+
+  // ==============================================================
+  // MODAL DETALLE DE USUARIO (FICHA DE PERFIL)
+  // ==============================================================
+
+  abrirModalDetalle(usuario: Usuario) {
+    this.usuarioSeleccionadoDetalle = usuario;
+    this.mostrarModalDetalle = true;
+    this.cargandoDetallePermisos = true;
+    this.permisosDirectosDetalle = [];
+    this.permisosHeredadosDetalle = [];
+    this.permisosEfectivosDetalle = [];
+
+    const id = usuario.id_usuario || usuario.nro_usuario;
+    if (!id) {
+      this.cargandoDetallePermisos = false;
+      return;
+    }
+
+    this.rbacService.obtenerPermisosUsuario(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res) => {
+          this.ngZone.run(() => {
+            if (res.success) {
+              this.permisosDirectosDetalle = res.permisos_directos || [];
+              this.permisosHeredadosDetalle = res.permisos_heredados || [];
+              this.permisosEfectivosDetalle = res.permisos_efectivos || [];
+            }
+            this.cargandoDetallePermisos = false;
+            this.cdr.detectChanges();
+          });
+        },
+        error: () => {
+          this.ngZone.run(() => {
+            this.cargandoDetallePermisos = false;
+            this.cdr.detectChanges();
+          });
+        }
+      });
+  }
+
+  cerrarModalDetalle() {
+    this.mostrarModalDetalle = false;
+    this.usuarioSeleccionadoDetalle = null;
+    this.permisosDirectosDetalle = [];
+    this.permisosHeredadosDetalle = [];
+    this.permisosEfectivosDetalle = [];
+  }
+
+  abrirEdicionDesdeDetalle() {
+    if (!this.usuarioSeleccionadoDetalle) return;
+    const u = { ...this.usuarioSeleccionadoDetalle };
+    this.cerrarModalDetalle();
+    this.abrirModalEditar(u);
+  }
+
+  abrirPermisosDesdeDetalle() {
+    if (!this.usuarioSeleccionadoDetalle) return;
+    const u = { ...this.usuarioSeleccionadoDetalle };
+    this.cerrarModalDetalle();
+    this.abrirModalPermisos(u);
+  }
+
+  getNivelJerarquia(rol: string | undefined): number {
+    const r = (rol || '').toUpperCase();
+    if (r === 'ADMINISTRADOR') return 1;
+    if (r === 'ADMINISTRADOR_TIENDA') return 3;
+    if (r === 'ENCARGADO' || r === 'ENCARGADO_SUCURSAL') return 4;
+    if (r === 'EMPLEADO' || r === 'CAJERO') return 5;
+    if (r === 'CLIENTE') return 6;
+    if (r === 'PROVEEDOR') return 7;
+    return 6;
   }
 }

@@ -8,8 +8,15 @@ export interface Sucursal {
   id_sucursal?: number;
   nombre: string;
   direccion: string;
+  telefono?: string;
   id_empresa: number;
+  empresa_nombre?: string;
+  id_ciudad?: number;
+  ciudad?: string;
+  departamento?: string;
   activo: boolean;
+  estado?: string;
+  created_at?: string;
 }
 
 export interface RespuestaApiSucursales {
@@ -32,16 +39,20 @@ export class SucursalService {
   }
 
   listarSucursales(id_empresa?: number): Observable<RespuestaApiSucursales> {
-    const url = id_empresa ? `${this.apiUrl}?id_empresa=${id_empresa}` : this.apiUrl;
+    const url = id_empresa ? `${this.apiUrl}/?id_empresa=${id_empresa}` : `${this.apiUrl}/`;
     return this.http.get<RespuestaApiSucursales>(url, { headers: this.getHeaders() });
   }
 
   crearSucursal(sucursal: Sucursal): Observable<any> {
-    return this.http.post(this.apiUrl, sucursal, { headers: this.getHeaders() });
+    return this.http.post(`${this.apiUrl}/`, sucursal, { headers: this.getHeaders() });
   }
 
   actualizarSucursal(id_sucursal: number, sucursal: Sucursal): Observable<any> {
     return this.http.put(`${this.apiUrl}/${id_sucursal}`, sucursal, { headers: this.getHeaders() });
+  }
+
+  cambiarEstadoSucursal(id_sucursal: number, activo: boolean): Observable<any> {
+    return this.http.put(`${this.apiUrl}/${id_sucursal}/estado`, { activo }, { headers: this.getHeaders() });
   }
 
   eliminarSucursal(id_sucursal: number): Observable<any> {

@@ -1,154 +1,443 @@
-<div *ngIf="producto" class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 backdrop-blur-2xl bg-zinc-950/85 animate-fade-in">
+<div *ngIf="producto" 
+     class="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/80 dark:bg-zinc-950/90 backdrop-blur-md animate-fade-in transition-colors overflow-y-auto">
   
-  <!-- Backdrop Handler -->
-  <div (click)="closeModal()" class="absolute inset-0 z-0"></div>
+  <!-- Backdrop Click Handler -->
+  <div (click)="closeModal()" class="fixed inset-0 z-0 cursor-pointer"></div>
 
-  <!-- Double Bezel Container -->
-  <div class="relative z-10 w-full max-w-4xl double-bezel shadow-2xl animate-slide-up my-auto max-h-[92vh] overflow-y-auto">
-    <div class="double-bezel-inner p-6 sm:p-8 relative grid grid-cols-1 md:grid-cols-2 gap-8">
+  <!-- Luxury Dynamic Modal Card: Altura flexible (máx 88vh), ancho responsivo, con pie sticky permanente donde los botones NUNCA se salen de la tarjeta -->
+  <div class="relative z-10 w-full max-w-4xl lg:max-w-5xl max-h-[92vh] sm:max-h-[88vh] rounded-2xl sm:rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl text-zinc-900 dark:text-zinc-100 flex flex-col overflow-hidden animate-slide-up transition-all my-auto">
+    
+    <!-- ========================================================================= -->
+    <!-- 1. ENCABEZADO STICKY (Siempre visible arriba)                             -->
+    <!-- ========================================================================= -->
+    <div class="px-4 sm:px-6 py-3.5 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/90 dark:bg-zinc-950/60 shrink-0 gap-3">
       
-      <!-- Close Button -->
-      <button (click)="closeModal()" class="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center">
-        <i class="ph ph-x text-lg"></i>
-      </button>
+      <!-- Marca y Referencia de la Prenda -->
+      <div class="flex items-center space-x-2 sm:space-x-3 text-xs overflow-hidden">
+        <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
+        <span class="font-mono uppercase tracking-widest text-zinc-500 dark:text-zinc-400 font-bold truncate max-w-[150px] sm:max-w-[240px]">
+          {{ esDetalleReal(producto) ? producto.empresa_nombre : 'Atelier Boutique' }}
+        </span>
+        <span class="text-zinc-300 dark:text-zinc-700 shrink-0">•</span>
+        <span *ngIf="esDetalleReal(producto) && producto.codigo_producto" class="font-mono text-[11px] text-zinc-400 dark:text-zinc-500 shrink-0">
+          Ref. {{ producto.codigo_producto }}
+        </span>
 
-      <!-- Left Column: Image Gallery -->
-      <div class="space-y-4">
-        <div class="relative aspect-[3/4] rounded-2xl overflow-hidden border border-white/10 bg-zinc-900 group">
-          <img [src]="producto.imagenes[selectedImageIndex] || producto.imagenPrincipal" [alt]="producto.nombre" class="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105" />
-          
-          <div *ngIf="producto.etiqueta" class="absolute top-4 left-4 px-3 py-1 rounded-full bg-amber-500 text-black text-[10px] font-bold uppercase tracking-wider">
-            {{ producto.etiqueta }}
-          </div>
-        </div>
-
-        <!-- Thumbnail Selector -->
-        <div class="flex items-center space-x-3 overflow-x-auto pb-2">
-          <button *ngFor="let img of producto.imagenes; let i = index" 
-                  (click)="selectImage(i)"
-                  [class.border-amber-400]="selectedImageIndex === i"
-                  [class.opacity-100]="selectedImageIndex === i"
-                  [class.opacity-50]="selectedImageIndex !== i"
-                  class="w-16 h-20 rounded-xl overflow-hidden border-2 border-transparent transition-all shrink-0">
-            <img [src]="img" class="w-full h-full object-cover" />
-          </button>
-        </div>
+        <!-- Badge de Disponibilidad General -->
+        <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono font-medium"
+              [class.bg-emerald-500/10]="getStockTotalVarianteSeleccionada() > 0"
+              [class.text-emerald-700]="getStockTotalVarianteSeleccionada() > 0"
+              [class.dark:text-emerald-400]="getStockTotalVarianteSeleccionada() > 0"
+              [class.bg-rose-500/10]="getStockTotalVarianteSeleccionada() <= 0"
+              [class.text-rose-600]="getStockTotalVarianteSeleccionada() <= 0"
+              [class.dark:text-rose-400]="getStockTotalVarianteSeleccionada() <= 0">
+          {{ getStockTotalVarianteSeleccionada() > 0 ? ('✓ ' + getStockTotalVarianteSeleccionada() + ' un. en tiendas') : 'Agotado temporalmente' }}
+        </span>
       </div>
 
-      <!-- Right Column: Product Details & Specs -->
-      <div class="space-y-6 flex flex-col justify-between">
-        <div class="space-y-4">
-          
-          <!-- Category & Tag -->
-          <div class="flex items-center justify-between text-xs">
-            <span class="uppercase tracking-widest text-amber-400 font-mono font-semibold">{{ producto.categoria }}</span>
-            <span class="text-zinc-500 font-mono">Ref. #AUR-{{ producto.id }}</span>
-          </div>
+      <!-- Botón de Cierre (✕) -->
+      <button (click)="closeModal()" 
+              title="Cerrar modal (Esc)"
+              class="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center transition-all cursor-pointer shrink-0">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
 
-          <!-- Title -->
-          <h2 class="text-2xl sm:text-3xl font-editorial font-bold text-white leading-tight">
-            {{ producto.nombre }}
-          </h2>
-          <p class="text-xs text-zinc-400 italic font-editorial">{{ producto.subtitulo }}</p>
-
-          <!-- Price Badge -->
-          <div class="flex items-baseline space-x-3 pt-1">
-            <span class="text-2xl font-bold text-white font-mono">Bs. {{ producto.precio }}</span>
-            <span *ngIf="producto.precioAnterior" class="text-sm text-zinc-500 line-through font-mono">Bs. {{ producto.precioAnterior }}</span>
-            <span *ngIf="producto.precioAnterior" class="text-[10px] bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded font-mono font-semibold">
-              AHORRA {{ ((1 - producto.precio/producto.precioAnterior) * 100).toFixed(0) }}%
-            </span>
-          </div>
-
-          <p class="text-xs text-zinc-300 leading-relaxed border-t border-b border-zinc-800 py-3">
-            {{ producto.descripcion }}
-          </p>
-
-          <!-- Color Selector -->
-          <div class="space-y-2">
-            <div class="text-xs font-medium text-zinc-300 flex items-center justify-between">
-              <span>Color: <strong class="text-amber-300 font-normal">{{ producto.colores[selectedColorIndex]?.nombre }}</strong></span>
-            </div>
-            <div class="flex items-center space-x-3">
-              <button *ngFor="let col of producto.colores; let idx = index" 
-                      (click)="selectColor(idx)"
-                      [class.ring-2]="selectedColorIndex === idx"
-                      [class.ring-amber-400]="selectedColorIndex === idx"
-                      [class.ring-offset-2]="selectedColorIndex === idx"
-                      [class.ring-offset-zinc-950]="selectedColorIndex === idx"
-                      class="w-7 h-7 rounded-full border border-white/20 transition-all cursor-pointer"
-                      [style.backgroundColor]="col.hex"
-                      [title]="col.nombre">
-              </button>
-            </div>
-          </div>
-
-          <!-- Size Selector -->
-          <div class="space-y-2">
-            <div class="text-xs font-medium text-zinc-300 flex items-center justify-between">
-              <span>Talla:</span>
-              <button class="text-[10px] text-amber-400 hover:underline">Guía de Tallas</button>
-            </div>
-            <div class="flex items-center space-x-2">
-              <button *ngFor="let size of producto.tallas" 
-                      (click)="selectSize(size)"
-                      [class.bg-amber-500]="selectedSize === size"
-                      [class.text-black]="selectedSize === size"
-                      [class.font-bold]="selectedSize === size"
-                      [class.bg-zinc-900]="selectedSize !== size"
-                      [class.text-zinc-300]="selectedSize !== size"
-                      class="w-10 h-10 rounded-xl border border-zinc-800 text-xs font-mono transition-all hover:border-amber-400/50 flex items-center justify-center">
-                {{ size }}
-              </button>
-            </div>
-          </div>
-
-          <!-- Store Branch Availability Badge (Multi-Tienda) -->
-          <div class="p-3 rounded-xl bg-zinc-900/80 border border-zinc-800 text-xs space-y-1">
-            <div class="text-zinc-400 flex items-center space-x-1.5 font-medium">
-              <i class="ph ph-storefront text-amber-400 text-sm"></i>
-              <span>Disponibilidad en Tiendas Físicas:</span>
-            </div>
-            <div class="flex flex-wrap gap-1.5 pt-1">
-              <span *ngFor="let suc of producto.sucursalesDisponibles" class="px-2 py-0.5 rounded-full bg-zinc-800 text-[10px] text-zinc-300 border border-zinc-700">
-                ✓ {{ suc }}
-              </span>
-            </div>
-          </div>
-
+    <!-- ========================================================================= -->
+    <!-- 2. CUERPO DEL MODAL (Scrollable interno, fluido y dinámico)               -->
+    <!-- ========================================================================= -->
+    <div class="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 md:p-8 space-y-6">
+      
+      <!-- --------------------------------------------------------------------- -->
+      <!-- CASO A: RESERVA EXITOSA (PANTALLA DE CONFIRMACIÓN INMEDIATA)           -->
+      <!-- --------------------------------------------------------------------- -->
+      <div *ngIf="reservaExitosa" class="max-w-lg mx-auto py-6 sm:py-10 text-center space-y-6 animate-fade-in">
+        
+        <div class="w-20 h-20 rounded-full bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 flex items-center justify-center mx-auto text-4xl shadow-xl shadow-emerald-500/10 animate-bounce">
+          ✓
         </div>
 
-        <!-- Action CTAs -->
-        <div class="space-y-3 pt-2">
-          
-          <div *ngIf="addedToast" class="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs text-center font-medium animate-fade-in">
-            ✓ Producto añadido a tu Bolsa de Compras
-          </div>
+        <div class="space-y-2">
+          <span class="text-xs font-mono uppercase tracking-widest text-emerald-600 dark:text-emerald-400 font-bold">
+            Reserva Registrada Exitosamente
+          </span>
+          <h2 class="text-2xl sm:text-3xl font-serif font-bold text-zinc-900 dark:text-white">
+            ¡Prenda Apartada & Cita Confirmada!
+          </h2>
+          <p class="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 max-w-md mx-auto leading-relaxed">
+            Hemos bloqueado <strong class="text-zinc-900 dark:text-zinc-100">{{ quantity }} unidad(es)</strong> de tu prenda en inventario para que puedas probártela con tranquilidad.
+          </p>
+        </div>
 
-          <div class="flex items-center space-x-3">
-            <div class="flex items-center bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs font-mono">
-              <button (click)="decrementQuantity()" class="text-zinc-400 hover:text-white px-2">-</button>
-              <span class="px-3 text-white font-bold">{{ quantity }}</span>
-              <button (click)="incrementQuantity()" class="text-zinc-400 hover:text-white px-2">+</button>
+        <!-- Tarjeta con Código de Reserva -->
+        <div class="p-4 sm:p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2 max-w-md mx-auto shadow-inner">
+          <span class="text-[11px] uppercase tracking-wider text-amber-800 dark:text-amber-400 font-bold block">
+            Código de Verificación en Tienda
+          </span>
+          <div class="text-xl sm:text-2xl font-mono font-bold text-amber-600 dark:text-amber-300 tracking-wider">
+            {{ codigoReservaGenerado }}
+          </div>
+          <p class="text-[11px] text-zinc-500 dark:text-zinc-400">
+            Presenta este código al ingresar a la sucursal asignada.
+          </p>
+        </div>
+
+        <!-- Detalles de la Visita -->
+        <div class="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/80 border border-zinc-200 dark:border-zinc-800 text-left text-xs space-y-2 max-w-md mx-auto">
+          <div class="flex items-center justify-between">
+            <span class="text-zinc-500">Sucursal:</span>
+            <strong class="text-zinc-900 dark:text-white">{{ getSucursalSeleccionadaObj()?.nombre || 'Sucursal Seleccionada' }}</strong>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-zinc-500">Ciudad:</span>
+            <span class="text-zinc-800 dark:text-zinc-200">{{ getSucursalSeleccionadaObj()?.ciudad }}</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-zinc-500">Fecha y Hora:</span>
+            <strong class="text-amber-600 dark:text-amber-400 font-mono">{{ fechaReserva }} — {{ horaReserva }}</strong>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-zinc-500">Prenda:</span>
+            <span class="text-zinc-800 dark:text-zinc-200 truncate max-w-[200px]">{{ producto.nombre }} ({{ selectedSizeName }})</span>
+          </div>
+        </div>
+
+        <!-- Botones de Acción de Confirmación -->
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          <button (click)="irAMisReservas()" 
+                  class="w-full sm:w-auto px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs uppercase tracking-wider transition-all shadow-md shadow-amber-500/20 cursor-pointer">
+            📅 Ir a Mis Citas y Reservas
+          </button>
+          <button (click)="closeModal()" 
+                  class="w-full sm:w-auto px-6 py-3 rounded-xl bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-200 font-semibold text-xs transition-colors cursor-pointer">
+            Cerrar & Seguir Explorando
+          </button>
+        </div>
+
+      </div>
+
+      <!-- --------------------------------------------------------------------- -->
+      <!-- CASO B: DETALLE DE PRENDA + FORMULARIO DE RESERVA INTEGRADO            -->
+      <!-- --------------------------------------------------------------------- -->
+      <div *ngIf="!reservaExitosa" class="grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-8">
+        
+        <!-- =================================================================== -->
+        <!-- Columna Izquierda: Galería y Fotos de la Prenda (5 columnas)       -->
+        <!-- =================================================================== -->
+        <div class="md:col-span-5 space-y-4">
+          
+          <!-- Foto Principal con Aspect Ratio Proporcional -->
+          <div class="relative aspect-[3/4] max-h-[48vh] sm:max-h-[52vh] rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-950 shadow-inner group mx-auto">
+            <img 
+              [src]="getImagenes()[selectedImageIndex] || getImagenes()[0]" 
+              [alt]="producto.nombre" 
+              class="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105" 
+            />
+            
+            <!-- Etiqueta de Temporada -->
+            <div *ngIf="esDetalleReal(producto) && producto.temporada" 
+                 class="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-amber-500 text-zinc-950 text-[10px] font-bold uppercase tracking-wider shadow-lg backdrop-blur-sm">
+              {{ producto.temporada }}
             </div>
 
-            <button (click)="addToCart()" class="flex-1 py-3.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs uppercase tracking-wider transition-colors border border-zinc-700">
-              Añadir a la Bolsa
+            <!-- Botón 3D / Realidad Aumentada (si la prenda lo soporta) -->
+            <button *ngIf="esDetalleReal(producto) && producto.permite_vestidor_ra" 
+                    (click)="toggleVistaRA()"
+                    class="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-mono font-bold flex items-center space-x-1 shadow-lg backdrop-blur-sm transition-all cursor-pointer">
+              <span>AR</span>
+              <span>✦ 3D</span>
             </button>
           </div>
 
-          <button (click)="buyNow()" class="w-full py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center space-x-2">
-            <span>Comprar Ahora</span>
-            <i class="ph ph-shopping-bag-open text-base"></i>
-          </button>
+          <!-- Miniaturas (Ribbon Horizontal) -->
+          <div *ngIf="getImagenes().length > 1" class="flex items-center space-x-2.5 overflow-x-auto pb-1">
+            <button *ngFor="let img of getImagenes(); let i = index" 
+                    (click)="selectImage(i)"
+                    [class.border-amber-500]="selectedImageIndex === i"
+                    [class.ring-2]="selectedImageIndex === i"
+                    [class.ring-amber-500/40]="selectedImageIndex === i"
+                    [class.opacity-100]="selectedImageIndex === i"
+                    [class.opacity-50]="selectedImageIndex !== i"
+                    class="w-14 h-18 sm:w-16 sm:h-20 rounded-xl overflow-hidden border-2 border-transparent transition-all shrink-0 cursor-pointer hover:opacity-90 bg-zinc-100 dark:bg-zinc-950">
+              <img [src]="img" class="w-full h-full object-cover object-center" />
+            </button>
+          </div>
+
+          <!-- Simulador RA en Acordeón si se activa -->
+          <div *ngIf="mostrarVistaRA" class="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-xs space-y-2 animate-fade-in">
+            <div class="flex items-center justify-between">
+              <strong class="text-indigo-600 dark:text-indigo-400 font-mono font-bold">✦ Simulador WebXR / 3D</strong>
+              <button (click)="toggleVistaRA()" class="text-[11px] text-zinc-400 hover:text-zinc-600">Ocultar</button>
+            </div>
+            <p class="text-zinc-600 dark:text-zinc-400 text-[11px]">
+              Visualización tridimensional calibrada para dispositivos móviles con soporte de realidad aumentada.
+            </p>
+          </div>
+
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- Columna Derecha: Datos, Variantes y Panel de Reserva (7 columnas)   -->
+        <!-- =================================================================== -->
+        <div class="md:col-span-7 space-y-5">
           
-          <p *ngIf="!authService.estaAutenticado()" class="text-[10px] text-zinc-500 text-center italic">
-            ✦ Si no estás autenticado, serás dirigido al formulario de acceso para confirmar tu pedido.
-          </p>
+          <!-- Encabezado de la Prenda -->
+          <div class="space-y-1.5 border-b border-zinc-200 dark:border-zinc-800 pb-3.5">
+            <div class="flex items-center justify-between text-xs">
+              <span class="uppercase tracking-widest text-amber-600 dark:text-amber-400 font-mono font-semibold">
+                {{ esDetalleReal(producto) ? producto.categoria_nombre : producto.categoria }}
+              </span>
+              <span *ngIf="esDetalleReal(producto) && producto.coleccion" class="text-zinc-500 text-[11px] font-mono">
+                Colección: {{ producto.coleccion }}
+              </span>
+            </div>
+
+            <h1 class="text-xl sm:text-2xl lg:text-3xl font-serif font-bold text-zinc-900 dark:text-white leading-tight">
+              {{ producto.nombre }}
+            </h1>
+
+            <div class="flex items-baseline space-x-3 pt-1">
+              <span class="text-2xl sm:text-3xl font-mono font-bold text-amber-600 dark:text-amber-300">
+                Bs. {{ getPrecioActual() | number:'1.2-2' }}
+              </span>
+              <span *ngIf="!esDetalleReal(producto) && producto.precioAnterior" class="text-sm text-zinc-400 line-through font-mono">
+                Bs. {{ producto.precioAnterior }}
+              </span>
+            </div>
+
+            <p class="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed pt-1">
+              {{ producto.descripcion || 'Confección de alta gama con telas nobles, acabados de autor y costuras reforzadas.' }}
+            </p>
+          </div>
+
+          <!-- Selector de Colores Disponibles -->
+          <div *ngIf="getColores().length > 0" class="space-y-2">
+            <div class="flex items-center justify-between text-xs">
+              <span class="font-bold text-zinc-700 dark:text-zinc-300">Color Seleccionado:</span>
+              <span class="font-mono text-amber-600 dark:text-amber-400 font-medium">
+                {{ getVarianteSeleccionada()?.color_nombre || 'Selecciona un color' }}
+              </span>
+            </div>
+            
+            <div class="flex items-center space-x-2.5 flex-wrap gap-y-2">
+              <button *ngFor="let c of getColores()" 
+                      (click)="selectColor(c.hex)"
+                      [class.ring-2]="selectedColorHex.toLowerCase() === c.hex.toLowerCase()"
+                      [class.ring-amber-500]="selectedColorHex.toLowerCase() === c.hex.toLowerCase()"
+                      [class.ring-offset-2]="selectedColorHex.toLowerCase() === c.hex.toLowerCase()"
+                      [class.ring-offset-white]="selectedColorHex.toLowerCase() === c.hex.toLowerCase()"
+                      [class.dark:ring-offset-zinc-900]="selectedColorHex.toLowerCase() === c.hex.toLowerCase()"
+                      class="w-7 h-7 rounded-full border border-black/10 dark:border-white/20 transition-all cursor-pointer shadow-xs hover:scale-110"
+                      [style.backgroundColor]="c.hex"
+                      [title]="c.nombre">
+              </button>
+            </div>
+          </div>
+
+          <!-- Selector de Tallas Disponibles -->
+          <div *ngIf="getTallas().length > 0" class="space-y-2">
+            <div class="flex items-center justify-between text-xs">
+              <span class="font-bold text-zinc-700 dark:text-zinc-300">Talla:</span>
+              <span class="text-[11px] text-zinc-400 font-mono">Corte Regular</span>
+            </div>
+
+            <div class="flex items-center space-x-2 flex-wrap gap-y-2">
+              <button *ngFor="let t of getTallas()" 
+                      (click)="selectSize(t.nombre)"
+                      [class.bg-amber-500]="selectedSizeName === t.nombre"
+                      [class.text-zinc-950]="selectedSizeName === t.nombre"
+                      [class.font-bold]="selectedSizeName === t.nombre"
+                      [class.border-amber-500]="selectedSizeName === t.nombre"
+                      [class.bg-zinc-100]="selectedSizeName !== t.nombre"
+                      [class.dark:bg-zinc-800]="selectedSizeName !== t.nombre"
+                      [class.text-zinc-700]="selectedSizeName !== t.nombre"
+                      [class.dark:text-zinc-300]="selectedSizeName !== t.nombre"
+                      class="min-w-[42px] h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-mono transition-all hover:border-amber-400 flex items-center justify-center cursor-pointer shadow-xs">
+                {{ t.nombre }}
+              </button>
+            </div>
+          </div>
+
+          <!-- ================================================================= -->
+          <!-- PANEL INTEGRADO: RESERVA & DISPONIBILIDAD EN SUCURSAL             -->
+          <!-- ================================================================= -->
+          <div class="rounded-2xl border border-amber-500/30 bg-amber-500/5 dark:bg-amber-500/[0.03] p-4 sm:p-5 space-y-4 shadow-sm">
+            
+            <div class="flex items-start justify-between gap-2 border-b border-amber-500/20 pb-3">
+              <div>
+                <h3 class="text-sm font-serif font-bold text-zinc-900 dark:text-white flex items-center space-x-2">
+                  <span class="text-amber-500 text-base">📅</span>
+                  <span>Apartar Prenda & Agendar Cita en Tienda</span>
+                </h3>
+                <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+                  Reserva sin costo anticipado. Bloquea tu prenda en el inventario de la tienda elegida.
+                </p>
+              </div>
+
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase shrink-0"
+                    [class.bg-emerald-500/15]="getStockSucursalSeleccionada() > 0"
+                    [class.text-emerald-700]="getStockSucursalSeleccionada() > 0"
+                    [class.dark:text-emerald-300]="getStockSucursalSeleccionada() > 0"
+                    [class.bg-rose-500/15]="getStockSucursalSeleccionada() <= 0"
+                    [class.text-rose-700]="getStockSucursalSeleccionada() <= 0"
+                    [class.dark:text-rose-300]="getStockSucursalSeleccionada() <= 0">
+                {{ getStockSucursalSeleccionada() > 0 ? ('✓ ' + getStockSucursalSeleccionada() + ' un. disponibles') : '✕ Sin stock aquí' }}
+              </span>
+            </div>
+
+            <!-- Selector de Sucursal Física -->
+            <div class="space-y-1.5">
+              <label class="font-bold text-xs text-zinc-800 dark:text-zinc-200 flex items-center justify-between">
+                <span>Sucursal donde retirarás o te probarás la prenda:</span>
+              </label>
+              
+              <select [ngModel]="sucursalReservaSeleccionada" 
+                      (ngModelChange)="onSucursalChange($event)"
+                      class="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3.5 py-2.5 text-xs text-zinc-900 dark:text-white font-medium focus:outline-none focus:border-amber-500 cursor-pointer transition-colors shadow-2xs">
+                <option *ngFor="let s of getSucursalesStock()" [value]="s.id_sucursal">
+                  {{ s.nombre }} ({{ s.ciudad }}) — {{ getStockVarianteEnSucursal(s) > 0 ? ('✓ ' + getStockVarianteEnSucursal(s) + ' disponibles') : 'Agotado en esta tienda' }}
+                </option>
+                <option *ngIf="getSucursalesStock().length === 0" [value]="null" disabled>
+                  No hay sucursales registradas para esta tienda
+                </option>
+              </select>
+            </div>
+
+            <!-- Selector de Fecha y Hora de Visita -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              
+              <div class="space-y-1">
+                <label class="font-bold text-xs text-zinc-700 dark:text-zinc-300">Fecha estimada de visita:</label>
+                <input type="date" [(ngModel)]="fechaReserva" 
+                       class="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500 shadow-2xs" />
+              </div>
+
+              <div class="space-y-1">
+                <label class="font-bold text-xs text-zinc-700 dark:text-zinc-300">Horario sugerido de atención:</label>
+                <select [(ngModel)]="horaReserva" 
+                        class="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500 shadow-2xs">
+                  <option value="10:00">10:00 AM (Apertura)</option>
+                  <option value="11:30">11:30 AM (Mañana)</option>
+                  <option value="13:00">01:00 PM (Mediodía)</option>
+                  <option value="15:00">03:00 PM (Tarde)</option>
+                  <option value="16:30">04:30 PM (Tarde)</option>
+                  <option value="18:00">06:00 PM (Atardecer)</option>
+                  <option value="19:30">07:30 PM (Cierre)</option>
+                </select>
+              </div>
+
+            </div>
+
+            <!-- Observaciones Opcionales para el Asesor -->
+            <div class="space-y-1">
+              <label class="font-medium text-[11px] text-zinc-500 dark:text-zinc-400">Notas para tu asesor en tienda (opcional):</label>
+              <input type="text" [(ngModel)]="observacionesReserva" 
+                     placeholder="Ej: Deseo probármela con tacones, llegaré con un acompañante..."
+                     class="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-1.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500 shadow-2xs" />
+            </div>
+
+            <!-- ALERTA DE ERROR SI FALLA LA RESERVA -->
+            <div *ngIf="errorReserva" 
+                 class="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs flex items-center space-x-2 animate-shake">
+              <span class="text-base font-bold shrink-0">⚠️</span>
+              <span class="flex-1">{{ errorReserva }}</span>
+            </div>
+
+            <!-- ALERTA DE NO AUTENTICADO -->
+            <div *ngIf="!authService.estaAutenticado()" 
+                 class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-800 dark:text-amber-300 text-xs flex items-center justify-between gap-2">
+              <span class="text-[11px]">✦ Inicia sesión o regístrate para reservar esta prenda a tu nombre.</span>
+              <button (click)="authService.openAuthModal('login')" 
+                      class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-[11px] uppercase tracking-wider shrink-0 cursor-pointer shadow-xs transition-colors">
+                Acceder
+              </button>
+            </div>
+
+          </div>
+
+          <!-- Toast Feedback de Carrito -->
+          <div *ngIf="addedToast" 
+               [class.bg-rose-100]="toastEsError"
+               [class.border-rose-300]="toastEsError"
+               [class.text-rose-800]="toastEsError"
+               [class.dark:bg-rose-500/15]="toastEsError"
+               [class.dark:border-rose-500/30]="toastEsError"
+               [class.dark:text-rose-300]="toastEsError"
+               [class.bg-emerald-100]="!toastEsError"
+               [class.border-emerald-300]="!toastEsError"
+               [class.text-emerald-800]="!toastEsError"
+               [class.dark:bg-emerald-500/15]="!toastEsError"
+               [class.dark:border-emerald-500/30]="!toastEsError"
+               [class.dark:text-emerald-300]="!toastEsError"
+               class="p-3 rounded-xl border text-xs text-center font-medium animate-fade-in flex items-center justify-center space-x-2">
+            <span>{{ toastMessage }}</span>
+          </div>
+
         </div>
 
       </div>
 
     </div>
+
+    <!-- ========================================================================= -->
+    <!-- 3. BARRA STICKY INFERIOR DE ACCIÓN (NUNCA se desborda, NUNCA se pierde)   -->
+    <!-- ========================================================================= -->
+    <div *ngIf="!reservaExitosa" 
+         class="shrink-0 px-4 sm:px-6 py-3.5 bg-zinc-50/95 dark:bg-zinc-950/95 backdrop-blur-md border-t border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg">
+      
+      <!-- Selector de Cantidad & Subtotal Estimado -->
+      <div class="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-start">
+        <div class="flex items-center bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-2.5 py-1.5 text-xs font-mono">
+          <button (click)="decrementQuantity()" 
+                  title="Disminuir cantidad"
+                  class="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white px-2 cursor-pointer font-bold transition-colors">
+            -
+          </button>
+          <span class="px-2.5 text-zinc-900 dark:text-white font-bold">{{ quantity }}</span>
+          <button (click)="incrementQuantity()" 
+                  title="Aumentar cantidad"
+                  class="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white px-2 cursor-pointer font-bold transition-colors">
+            +
+          </button>
+        </div>
+
+        <span class="text-xs text-zinc-500 font-mono">
+          Subtotal: <strong class="text-zinc-900 dark:text-white">Bs {{ (getPrecioActual() * quantity) | number:'1.2-2' }}</strong>
+        </span>
+      </div>
+
+      <!-- BOTONES DE ACCIÓN PRINCIPALES -->
+      <div class="flex items-center space-x-2 sm:space-x-3 w-full sm:w-auto justify-end">
+        
+        <!-- BOTÓN 1: RESERVAR CITA EN SUCURSAL (ACCIÓN ESTRELLA) -->
+        <button (click)="reservarCita()" 
+                [disabled]="cargandoReserva"
+                class="flex-1 sm:flex-none px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs uppercase tracking-wider transition-all shadow-md shadow-amber-500/20 flex items-center justify-center space-x-1.5 cursor-pointer disabled:opacity-50">
+          <span *ngIf="cargandoReserva" class="w-3.5 h-3.5 border-2 border-zinc-950/30 border-t-zinc-950 rounded-full animate-spin"></span>
+          <span *ngIf="!cargandoReserva">📅</span>
+          <span>{{ cargandoReserva ? 'Bloqueando prenda...' : 'Reservar en Sucursal' }}</span>
+        </button>
+
+        <!-- BOTÓN 2: AÑADIR A LA BOLSA (CARRITO) -->
+        <button (click)="addToCart()" 
+                [disabled]="cargandoBolsa"
+                class="flex-1 sm:flex-none px-4 sm:px-5 py-2.5 rounded-xl bg-zinc-900 dark:bg-zinc-800 hover:bg-zinc-800 dark:hover:bg-zinc-700 text-white font-bold text-xs uppercase tracking-wider transition-all border border-zinc-700 flex items-center justify-center space-x-1.5 cursor-pointer disabled:opacity-50">
+          <span *ngIf="cargandoBolsa" class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+          <span *ngIf="!cargandoBolsa">🛍</span>
+          <span>{{ cargandoBolsa ? 'Guardando...' : 'Añadir a la Bolsa' }}</span>
+        </button>
+
+        <!-- BOTÓN 3: COMPRA INMEDIATA -->
+        <button (click)="buyNow()" 
+                class="hidden lg:flex px-4 py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-amber-700 dark:text-amber-400 border border-amber-500/40 font-bold text-xs uppercase tracking-wider transition-all items-center space-x-1 cursor-pointer">
+          <span>Comprar</span>
+          <span>→</span>
+        </button>
+      </div>
+
+    </div>
+
   </div>
 </div>

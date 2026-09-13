@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from app.utils.security import verificar_token, require_permission
 from app.repos import rbac_repos
+from app.services import rbac_services
 
 router = APIRouter(tags=["Administración de RBAC (Roles y Permisos)"])
 
@@ -29,6 +30,13 @@ def listar_roles(solo_activos: bool = False):
     return {
         "success": True,
         "roles": rbac_repos.obtener_todos_los_roles(solo_activos=solo_activos)
+    }
+
+@router.get('/roles-delegables')
+def listar_roles_delegables(payload: dict = Depends(verificar_token)):
+    return {
+        "success": True,
+        "roles": rbac_services.obtener_roles_delegables(payload)
     }
 
 @router.post('/roles', dependencies=[Depends(require_permission('roles.crear'))])
@@ -63,13 +71,19 @@ def desactivar_rol_existente(id_rol: int):
         raise HTTPException(status_code=404, detail="Rol no encontrado.")
     return {"success": True, "message": "Rol desactivado exitosamente."}
 
-
 # --- PERMISOS ---
 @router.get('/permisos', dependencies=[Depends(require_permission('permisos.ver'))])
 def listar_permisos():
     return {
         "success": True,
         "permisos": rbac_repos.obtener_todos_los_permisos()
+    }
+
+@router.get('/permisos-delegables')
+def listar_permisos_delegables(payload: dict = Depends(verificar_token)):
+    return {
+        "success": True,
+        "permisos": rbac_services.obtener_permisos_delegables(payload)
     }
 
 @router.post('/permisos', dependencies=[Depends(require_permission('permisos.ver'))])
@@ -86,7 +100,6 @@ def crear_nuevo_permiso(data: dict = Body(...)):
         return {"success": True, "message": "Permiso creado exitosamente.", "id_permiso": id_permiso}
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"No se pudo crear el permiso: {str(e)}")
-
 
 # --- ASIGNACIÓN DE PERMISOS A ROL ---
 @router.get('/roles/{id_rol}/permisos', dependencies=[Depends(require_permission('permisos.ver'))])
@@ -106,10 +119,16 @@ def asignar_permisos_a_rol(id_rol: int, data: dict = Body(...)):
     rbac_repos.asignar_permisos_a_rol(id_rol, ids_permisos)
     return {"success": True, "message": f"Permisos actualizados correctamente para el rol ID {id_rol}."}
 
+# --- ASIGNACIÓN DE ROLES A USUARIO (CON VALIDACIÓN DE JERARQUÍA) ---
+@router.get('/usuarios/{id_usuario}/roles')
+def obtener_roles_de_usuario(id_usuario: int, payload: dict = Depends(require_permission('usuarios.ver'))):
+    from app.repos import users_repos
+    from app.utils.tenant_guard import validar_acceso_recurso_tenant
+    user_db = users_repos.obtener_usuario_por_id(id_usuario)
+    if not user_db:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado.")
+    validar_acceso_recurso_tenant(payload, user_db.get('id_empresa'), "usuario")
 
-# --- ASIGNACIÓN DE ROLES A USUARIO ---
-@router.get('/usuarios/{id_usuario}/roles', dependencies=[Depends(require_permission('usuarios.ver'))])
-def obtener_roles_de_usuario(id_usuario: int):
     return {
         "success": True,
         "id_usuario": id_usuario,
@@ -117,14 +136,57 @@ def obtener_roles_de_usuario(id_usuario: int):
     }
 
 @router.post('/usuarios/{id_usuario}/roles', dependencies=[Depends(require_permission('usuarios.editar'))])
-def asignar_roles_a_usuario(id_usuario: int, data: dict = Body(...)):
+def asignar_roles_a_usuario(id_usuario: int, data: dict = Body(...), payload: dict = Depends(verificar_token)):
+    from app.repos import users_repos
+    from app.utils.tenant_guard import validar_acceso_recurso_tenant
+    user_db = users_repos.obtener_usuario_por_id(id_usuario)
+    if not user_db:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado.")
+    validar_acceso_recurso_tenant(payload, user_db.get('id_empresa'), "usuario")
+
     ids_roles = data.get('ids_roles', [])
     if not isinstance(ids_roles, list):
         raise HTTPException(status_code=400, detail="'ids_roles' debe ser un arreglo numérico de IDs de roles.")
     
-    rbac_repos.asignar_roles_a_usuario(id_usuario, ids_roles)
-    return {"success": True, "message": f"Roles asignados correctamente al usuario ID {id_usuario}."}
+    try:
+        # Validar jerarquía para cada rol que se pretende asignar
+        for id_r in ids_roles:
+            rbac_services.validar_asignacion_rol(payload, id_r)
+        
+        rbac_repos.asignar_roles_a_usuario(id_usuario, ids_roles)
+        return {"success": True, "message": f"Roles asignados correctamente al usuario ID {id_usuario}."}
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
 
+# --- PERMISOS DIRECTOS DE USUARIO (HEREDADOS + DIRECTOS) ---
+@router.get('/usuarios/{id_usuario}/permisos')
+def consultar_permisos_usuario(id_usuario: int, payload: dict = Depends(require_permission('permisos.ver'))):
+    try:
+        return rbac_services.obtener_permisos_completos_usuario(id_usuario, payload)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+
+@router.post('/usuarios/{id_usuario}/permisos')
+def asignar_permisos_directos_usuario(
+    id_usuario: int, 
+    request: Request,
+    data: dict = Body(...), 
+    payload: dict = Depends(require_permission('permisos.asignar'))
+):
+    ids_permisos = data.get('ids_permisos', [])
+    if not isinstance(ids_permisos, list):
+        raise HTTPException(status_code=400, detail="'ids_permisos' debe ser una lista de enteros con IDs de permisos.")
+    
+    try:
+        return rbac_services.asignar_permisos_directos(id_usuario, ids_permisos, payload, request)
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
 # --- SUCURSALES Y ALCANCE ---
 @router.get('/sucursales', dependencies=[Depends(require_permission('sucursales.ver'))])

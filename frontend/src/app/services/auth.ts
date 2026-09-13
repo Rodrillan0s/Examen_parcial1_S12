@@ -100,20 +100,70 @@ export class AuthService {
 
   // --- MÉTODOS DE AUTORIZACIÓN BASADOS EN PERMISOS ---
 
+  getAuthorityLevel(): number {
+    const u = this.obtenerUsuario();
+    if (!u) return 7;
+    const rol = (u.nombre_rol || '').toUpperCase();
+    const roles = (u.roles || []).map(r => r.toUpperCase());
+    if ((u.id_rol === 1 || rol === 'ADMINISTRADOR' || roles.includes('ADMINISTRADOR')) && (!u.id_empresa || u.id_empresa === 0)) {
+      return 1; // SUPERADMIN
+    }
+    if (u.id_rol === 1 || rol === 'ADMINISTRADOR' || roles.includes('ADMINISTRADOR')) {
+      return 2; // ADMINISTRADOR
+    }
+    if (u.id_rol === 3 || rol === 'ADMINISTRADOR_TIENDA' || roles.includes('ADMINISTRADOR_TIENDA')) {
+      return 3; // ADMINISTRADOR_TIENDA
+    }
+    if (u.id_rol === 4 || rol === 'ENCARGADO' || rol === 'ENCARGADO_SUCURSAL' || roles.includes('ENCARGADO') || roles.includes('ENCARGADO_SUCURSAL')) {
+      return 4; // ENCARGADO
+    }
+    if (u.id_rol === 5 || rol === 'EMPLEADO' || rol === 'CAJERO' || roles.includes('EMPLEADO') || roles.includes('CAJERO')) {
+      return 5; // EMPLEADO
+    }
+    if (u.id_rol === 2 || rol === 'CLIENTE' || roles.includes('CLIENTE')) {
+      return 6; // CLIENTE
+    }
+    return 7; // PROVEEDOR
+  }
+
   hasPermission(codigo: string): boolean {
     if (!codigo) return true;
+    const u = this.obtenerUsuario();
+    if (u) {
+      const rol = (u.nombre_rol || '').toUpperCase();
+      const roles = (u.roles || []).map(r => r.toUpperCase());
+      if (u.id_rol === 1 || rol === 'ADMINISTRADOR' || roles.includes('ADMINISTRADOR')) {
+        return true;
+      }
+    }
     const perms = this.permissions();
     return perms.includes(codigo);
   }
 
   hasAnyPermission(codigos: string[]): boolean {
     if (!codigos || codigos.length === 0) return true;
+    const u = this.obtenerUsuario();
+    if (u) {
+      const rol = (u.nombre_rol || '').toUpperCase();
+      const roles = (u.roles || []).map(r => r.toUpperCase());
+      if (u.id_rol === 1 || rol === 'ADMINISTRADOR' || roles.includes('ADMINISTRADOR')) {
+        return true;
+      }
+    }
     const perms = this.permissions();
     return codigos.some(c => perms.includes(c));
   }
 
   hasAllPermissions(codigos: string[]): boolean {
     if (!codigos || codigos.length === 0) return true;
+    const u = this.obtenerUsuario();
+    if (u) {
+      const rol = (u.nombre_rol || '').toUpperCase();
+      const roles = (u.roles || []).map(r => r.toUpperCase());
+      if (u.id_rol === 1 || rol === 'ADMINISTRADOR' || roles.includes('ADMINISTRADOR')) {
+        return true;
+      }
+    }
     const perms = this.permissions();
     return codigos.every(c => perms.includes(c));
   }
@@ -208,13 +258,30 @@ export class AuthService {
     }
   }
 
-  esEmpleadoOAdmin(): boolean {
+  esCliente(): boolean {
     const user = this.obtenerUsuario();
     if (!user) return false;
     const rol = (user.nombre_rol || '').toUpperCase();
-    if (rol === 'ADMINISTRADOR' || user.id_rol === 1) return true;
+    const roles = (user.roles || []).map(r => r.toUpperCase());
+    if (rol === 'ADMINISTRADOR' || user.id_rol === 1 || roles.includes('ADMINISTRADOR')) return false;
+    if (rol === 'ADMINISTRADOR_TIENDA' || user.id_rol === 3 || roles.includes('ADMINISTRADOR_TIENDA')) return false;
+    if (rol === 'ENCARGADO' || rol === 'ENCARGADO_SUCURSAL' || user.id_rol === 4) return false;
+    if (rol === 'EMPLEADO' || rol === 'CAJERO' || user.id_rol === 5) return false;
+    return rol === 'CLIENTE' || user.id_rol === 2 || roles.includes('CLIENTE');
+  }
+
+  esEmpleadoOAdmin(): boolean {
+    const user = this.obtenerUsuario();
+    if (!user) return false;
+    if (this.esCliente()) return false;
+    const rol = (user.nombre_rol || '').toUpperCase();
+    const roles = (user.roles || []).map(r => r.toUpperCase());
+    if (rol === 'ADMINISTRADOR' || user.id_rol === 1 || roles.includes('ADMINISTRADOR')) return true;
+    if (rol === 'ADMINISTRADOR_TIENDA' || user.id_rol === 3 || roles.includes('ADMINISTRADOR_TIENDA')) return true;
+    if (rol === 'ENCARGADO' || rol === 'ENCARGADO_SUCURSAL' || user.id_rol === 4 || roles.includes('ENCARGADO')) return true;
+    if (rol === 'EMPLEADO' || rol === 'CAJERO' || user.id_rol === 5 || roles.includes('EMPLEADO')) return true;
     if (this.hasPermission('admin.acceder')) return true;
-    return user.id_rol !== 2;
+    return false;
   }
 
   obtenerNombreRol(): string {

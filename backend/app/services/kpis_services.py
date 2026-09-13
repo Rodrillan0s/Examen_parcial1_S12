@@ -1,33 +1,50 @@
 from app.repos import kpis_repos
+from app.services.rbac_services import obtener_nivel_actor
 
 def procesar_etl_diario(token_data: dict):
-    if token_data.get('nombre_rol', '').upper() != 'ADMINISTRADOR':
-        raise ValueError("Operación crítica. Solo el administrador puede disparar el ETL.")
+    nivel = obtener_nivel_actor(token_data)
+    if nivel > 2:
+        raise ValueError("Operación crítica restringida. Solo el SuperAdministrador puede disparar el recálculo analítico.")
     
     filas = kpis_repos.ejecutar_extraccion_y_carga_etl_db()
     return {
         "success": True, 
-        "message": f"Proceso ETL completado exitosamente. Bloques analíticos generados: {filas}"
+        "message": f"Consolidación analítica de Aurora Store completada. Tablas actualizadas: {filas}"
     }
 
 def generar_dashboard(token_data: dict):
-    rol = token_data.get('nombre_rol', '').upper()
+    nivel = obtener_nivel_actor(token_data)
     id_empresa = token_data.get('id_empresa')
+    id_sucursal = (token_data.get('sucursales') or [1])[0] if token_data.get('sucursales') else 1
+    id_usuario = token_data.get('nro_usuario') or token_data.get('id_usuario') or 1
 
-    if rol == 'ADMINISTRADOR':
-        # El administrador ve la métrica global (pasamos None para no filtrar)
-        metricas = kpis_repos.obtener_metricas_dashboard_db()
-        mensaje = "KPIs operacionales GLOBALES calculados exitosamente."
-    
-    elif rol == 'GERENTE TALLER':
-        # El gerente solo ve la información de su tenant/empresa
+    # Nivel 6 o superior: CLIENTE / PROVEEDOR
+    if nivel >= 6:
+        raise ValueError("Acceso restringido: El panel analítico interno es exclusivo para el personal operativo y administrativo.")
+
+    # Nivel 1 y 2: SUPERADMIN Y ADMIN PLATAFORMA
+    if nivel <= 2:
+        metricas = kpis_repos.obtener_metricas_globales_db()
+        mensaje = "KPIs operacionales GLOBALES del ecosistema Aurora Store calculados exitosamente."
+
+    # Nivel 3: ADMINISTRADOR DE TIENDA (TENANT)
+    elif nivel == 3:
         if not id_empresa:
-            raise ValueError("Configuración de cuenta errónea. No perteneces a una empresa.")
-        metricas = kpis_repos.obtener_metricas_dashboard_db()
-        mensaje = "KPIs operacionales DE SUCURSAL calculados exitosamente."
-    
+            metricas = kpis_repos.obtener_metricas_globales_db()
+            mensaje = "KPIs de empresa calculados."
+        else:
+            metricas = kpis_repos.obtener_metricas_empresa_db(id_empresa)
+            mensaje = f"KPIs operacionales de empresa calculados exitosamente."
+
+    # Nivel 4: ENCARGADO DE SUCURSAL
+    elif nivel == 4:
+        metricas = kpis_repos.obtener_metricas_sucursal_db(id_sucursal, id_empresa)
+        mensaje = "KPIs de sucursal calculados exitosamente."
+
+    # Nivel 5: EMPLEADO / CAJERO
     else:
-        raise ValueError("No tienes permisos suficientes para acceder a la analítica.")
+        metricas = kpis_repos.obtener_metricas_operativo_db(id_usuario)
+        mensaje = "Métricas de turno operativo calculadas exitosamente."
 
     return {
         "success": True,

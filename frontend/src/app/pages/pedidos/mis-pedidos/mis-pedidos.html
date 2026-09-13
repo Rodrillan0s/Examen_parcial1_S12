@@ -1,0 +1,538 @@
+<div class="min-h-screen py-8 sm:py-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 animate-fade-in transition-colors text-zinc-900 dark:text-zinc-100">
+  
+  <!-- ========================================================================= -->
+  <!-- HEADER EDITORIAL DE LA PÁGINA                                             -->
+  <!-- ========================================================================= -->
+  <div class="border-b border-zinc-200 dark:border-zinc-800 pb-6 space-y-4">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      
+      <div class="space-y-2">
+        <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-amber-600 dark:text-amber-300 text-[10px] uppercase font-mono tracking-widest shadow-2xs">
+          <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+          <span>Historial de Compras & Envíos</span>
+          <span class="text-zinc-300 dark:text-zinc-600">•</span>
+          <span class="text-zinc-500 dark:text-zinc-400 font-sans">AURA Atelier</span>
+        </div>
+
+        <h1 class="text-3xl sm:text-5xl font-serif font-bold text-zinc-900 dark:text-white tracking-tight">
+          Mis <span class="text-gradient-gold font-light italic">Pedidos</span>
+        </h1>
+
+        <p class="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 max-w-2xl leading-relaxed">
+          Consulta el historial de tus adquisiciones, estado de despacho, comprobantes de compra y desglose histórico de prendas por sucursal.
+        </p>
+      </div>
+
+      <!-- Acceso Rápido al Catálogo -->
+      <div class="flex items-center space-x-3 self-start md:self-auto">
+        <a routerLink="/catalogo" 
+           class="px-5 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs uppercase tracking-wider transition-all shadow-md shadow-amber-500/15 flex items-center space-x-2 cursor-pointer">
+          <span>🛍</span>
+          <span>Seguir Comprando</span>
+        </a>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Toast Notification Feedback -->
+  <div *ngIf="mensajeToast" 
+       [class.bg-emerald-500/15]="mensajeToast.tipo === 'exito'"
+       [class.border-emerald-500/30]="mensajeToast.tipo === 'exito'"
+       [class.text-emerald-700]="mensajeToast.tipo === 'exito'"
+       [class.dark:text-emerald-300]="mensajeToast.tipo === 'exito'"
+       [class.bg-rose-500/15]="mensajeToast.tipo === 'error'"
+       [class.border-rose-500/30]="mensajeToast.tipo === 'error'"
+       [class.text-rose-700]="mensajeToast.tipo === 'error'"
+       [class.dark:text-rose-300]="mensajeToast.tipo === 'error'"
+       [class.bg-blue-500/15]="mensajeToast.tipo === 'info'"
+       [class.border-blue-500/30]="mensajeToast.tipo === 'info'"
+       [class.text-blue-700]="mensajeToast.tipo === 'info'"
+       [class.dark:text-blue-300]="mensajeToast.tipo === 'info'"
+       class="p-4 rounded-2xl border text-xs sm:text-sm flex items-center justify-between gap-3 animate-fade-in shadow-sm backdrop-blur-md">
+    <span>{{ mensajeToast.texto }}</span>
+    <button (click)="mensajeToast = null" class="font-bold opacity-60 hover:opacity-100">✕</button>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- BARRA DE FILTROS AVANZADA (ESTADO, ESTADO PAGO, RANGO FECHAS, CÓDIGO)     -->
+  <!-- ========================================================================= -->
+  <div class="p-4 sm:p-6 rounded-3xl bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4">
+    
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5">
+      
+      <!-- 1. Búsqueda por Código de Pedido (4 cols) -->
+      <div class="lg:col-span-4 space-y-1">
+        <label class="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 font-mono">Buscar por Código:</label>
+        <div class="relative">
+          <input type="text" 
+                 [(ngModel)]="filtroCodigo"
+                 (keyup.enter)="aplicarFiltros()"
+                 placeholder="Ej. PED-2026... o número" 
+                 class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3.5 py-2 text-xs text-zinc-900 dark:text-white font-mono focus:outline-none focus:border-amber-500 transition-colors" />
+          <button *ngIf="filtroCodigo" (click)="filtroCodigo = ''; aplicarFiltros()" class="absolute right-2.5 top-2 text-xs text-zinc-400 hover:text-zinc-600">✕</button>
+        </div>
+      </div>
+
+      <!-- 2. Filtro por Estado de Pedido (3 cols) -->
+      <div class="lg:col-span-3 space-y-1">
+        <label class="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 font-mono">Estado del Pedido:</label>
+        <select [(ngModel)]="filtroEstado" 
+                (ngModelChange)="aplicarFiltros()"
+                class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs text-zinc-900 dark:text-white font-semibold focus:outline-none focus:border-amber-500 cursor-pointer">
+          <option value="TODOS">Todos los estados</option>
+          <option value="PENDIENTE_PAGO">Pendiente de Pago</option>
+          <option value="CONFIRMADO">Confirmado</option>
+          <option value="EN_PREPARACION">En Preparación</option>
+          <option value="ENVIADO">Enviado / En Tránsito</option>
+          <option value="ENTREGADO">Entregado</option>
+          <option value="CANCELADO">Cancelado</option>
+        </select>
+      </div>
+
+      <!-- 3. Filtro por Estado de Pago (2 cols) -->
+      <div class="lg:col-span-2 space-y-1">
+        <label class="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 font-mono">Estado de Pago:</label>
+        <select [(ngModel)]="filtroEstadoPago" 
+                (ngModelChange)="aplicarFiltros()"
+                class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs text-zinc-900 dark:text-white font-semibold focus:outline-none focus:border-amber-500 cursor-pointer">
+          <option value="TODOS">Todos</option>
+          <option value="PAGADO">Pagado</option>
+          <option value="PENDIENTE">Pendiente</option>
+          <option value="CANCELADO">Cancelado</option>
+        </select>
+      </div>
+
+      <!-- 4. Fechas Desde / Hasta (3 cols) -->
+      <div class="lg:col-span-3 grid grid-cols-2 gap-2">
+        <div class="space-y-1">
+          <label class="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 font-mono">Desde:</label>
+          <input type="date" [(ngModel)]="filtroFechaInicio" (ngModelChange)="aplicarFiltros()"
+                 class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-2.5 py-1.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500" />
+        </div>
+        <div class="space-y-1">
+          <label class="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 font-mono">Hasta:</label>
+          <input type="date" [(ngModel)]="filtroFechaFin" (ngModelChange)="aplicarFiltros()"
+                 class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-2.5 py-1.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500" />
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Botón de Limpieza de Filtros -->
+    <div *ngIf="filtroEstado !== 'TODOS' || filtroEstadoPago !== 'TODOS' || filtroFechaInicio || filtroFechaFin || filtroCodigo"
+         class="flex items-center justify-end space-x-2 pt-1 border-t border-zinc-100 dark:border-zinc-800/80 text-xs">
+      <span class="text-zinc-400 text-[11px]">Filtros activos</span>
+      <button (click)="limpiarFiltros()" 
+              class="text-amber-600 dark:text-amber-400 hover:underline font-bold cursor-pointer">
+        ✕ Restablecer todos los filtros
+      </button>
+    </div>
+
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- ESTADO DE CARGA (SHIMMER SKELETONS)                                       -->
+  <!-- ========================================================================= -->
+  <div *ngIf="cargando" class="space-y-4 animate-pulse">
+    <div *ngFor="let i of [1,2,3]" class="p-6 rounded-3xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 space-y-4">
+      <div class="flex items-center justify-between">
+        <div class="h-5 bg-zinc-200 dark:bg-zinc-800 rounded w-1/4"></div>
+        <div class="h-5 bg-zinc-200 dark:bg-zinc-800 rounded w-1/6"></div>
+      </div>
+      <div class="h-4 bg-zinc-100 dark:bg-zinc-800/50 rounded w-1/2"></div>
+      <div class="h-16 bg-zinc-100 dark:bg-zinc-800/30 rounded-2xl"></div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- ESTADO VACÍO (SIN PEDIDOS REGISTRADOS O NINGUNO COINCIDE)                -->
+  <!-- ========================================================================= -->
+  <div *ngIf="!cargando && pedidos.length === 0" 
+       class="py-16 sm:py-24 text-center space-y-5 bg-white dark:bg-zinc-900/60 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-6 sm:p-12 max-w-lg mx-auto shadow-sm">
+    <div class="w-16 h-16 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/30 flex items-center justify-center mx-auto text-3xl">
+      🛍
+    </div>
+    <div class="space-y-1.5">
+      <h3 class="text-xl font-serif font-bold text-zinc-900 dark:text-white">
+        No se encontraron pedidos
+      </h3>
+      <p class="text-xs text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto leading-relaxed">
+        {{ (filtroEstado !== 'TODOS' || filtroCodigo || filtroFechaInicio) 
+            ? 'No hay pedidos que coincidan con los filtros seleccionados. Intenta restablecer los filtros.' 
+            : 'Aún no has realizado ninguna compra en nuestra tienda. Visita nuestro catálogo para descubrir colecciones exclusivas.' }}
+      </p>
+    </div>
+    <div class="pt-2 flex items-center justify-center gap-3">
+      <button *ngIf="filtroEstado !== 'TODOS' || filtroCodigo || filtroFechaInicio" 
+              (click)="limpiarFiltros()"
+              class="px-5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 text-xs font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+        Limpiar Filtros
+      </button>
+      <a routerLink="/catalogo" 
+         class="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs uppercase tracking-wider transition-all shadow-md shadow-amber-500/20">
+        Explorar Catálogo
+      </a>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- LISTADO DE TARJETAS DE PEDIDOS                                            -->
+  <!-- ========================================================================= -->
+  <div *ngIf="!cargando && pedidos.length > 0" class="space-y-4">
+    
+    <div *ngFor="let p of pedidos" 
+         class="p-5 sm:p-6 rounded-3xl bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 shadow-sm hover:border-amber-500/40 transition-all duration-300 space-y-4">
+      
+      <!-- Fila 1: Código, Fecha, Badges de Estado -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-100 dark:border-zinc-800/80 pb-4">
+        
+        <!-- Código de Pedido & Copiado -->
+        <div class="flex items-center space-x-2.5">
+          <span class="text-base sm:text-lg font-mono font-bold text-zinc-900 dark:text-white tracking-wide">
+            {{ p.codigo_pedido }}
+          </span>
+          <button (click)="copiarCodigo(p.codigo_pedido)" 
+                  title="Copiar código de pedido"
+                  class="w-7 h-7 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-amber-500 flex items-center justify-center text-xs transition-colors cursor-pointer">
+            📋
+          </button>
+          <span class="text-zinc-300 dark:text-zinc-700">•</span>
+          <span class="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
+            {{ p.fecha_pedido | date:'d/MMM/y, HH:mm' }}
+          </span>
+        </div>
+
+        <!-- Badges de Estado (Pedido & Pago) -->
+        <div class="flex items-center space-x-2">
+          <!-- Estado del Pedido -->
+          <span [class]="getEstadoClase(p.estado)" 
+                class="px-3 py-1 rounded-full border text-[11px] font-mono font-bold uppercase tracking-wider">
+            {{ getEstadoLabel(p.estado) }}
+          </span>
+
+          <!-- Estado del Pago -->
+          <span [class]="getEstadoPagoClase(p.estado_pago)" 
+                class="px-2.5 py-0.5 rounded-full border text-[10px] font-mono font-bold uppercase tracking-wider">
+            {{ getEstadoPagoLabel(p.estado_pago) }}
+          </span>
+        </div>
+
+      </div>
+
+      <!-- Fila 2: Modalidad de Entrega & Sucursal -->
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+        
+        <!-- Datos de Sucursal / Entrega (5 cols) -->
+        <div class="md:col-span-5 space-y-1 text-xs">
+          <div class="flex items-center space-x-1.5 text-zinc-500 dark:text-zinc-400">
+            <span class="font-bold uppercase tracking-wider text-[10px]">
+              {{ p.modalidad_compra === 'ENTREGA_DOMICILIO' ? '🚚 Entrega a Domicilio' : '🏬 Retiro en Sucursal' }}
+            </span>
+          </div>
+          <div class="font-medium text-zinc-900 dark:text-zinc-100">
+            {{ p.sucursal_nombre }} ({{ p.sucursal_ciudad }})
+          </div>
+          <div class="text-[11px] text-zinc-500 font-mono">
+            Tienda: {{ p.nombre_empresa }}
+          </div>
+        </div>
+
+        <!-- Resumen de Miniaturas de Prendas (5 cols) -->
+        <div class="md:col-span-4">
+          <div class="flex items-center space-x-2 overflow-x-auto py-1">
+            <div *ngFor="let item of p.items_resumen.slice(0, 4)" 
+                 class="relative w-12 h-16 rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 shrink-0 group"
+                 [title]="item.producto_nombre + ' (' + item.talla_nombre + ' / ' + item.color_nombre + ')'">
+              <img *ngIf="item.imagen_url" [src]="item.imagen_url" [alt]="item.producto_nombre" class="w-full h-full object-cover" />
+              <div *ngIf="!item.imagen_url" class="w-full h-full flex items-center justify-center text-xs text-zinc-400 font-bold">
+                👗
+              </div>
+              <span class="absolute bottom-0.5 right-0.5 px-1 py-0.2 rounded bg-black/80 text-[9px] font-mono text-white font-bold">
+                x{{ item.cantidad }}
+              </span>
+            </div>
+
+            <div *ngIf="p.items_resumen.length > 4" 
+                 class="w-12 h-16 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center text-xs font-mono font-bold text-zinc-600 dark:text-zinc-300 shrink-0">
+              +{{ p.items_resumen.length - 4 }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Total y Acción Detalle (3 cols) -->
+        <div class="md:col-span-3 flex md:flex-col items-center md:items-end justify-between gap-2 border-t md:border-t-0 pt-3 md:pt-0 border-zinc-100 dark:border-zinc-800/80">
+          <div class="text-left md:text-right">
+            <span class="text-[10px] text-zinc-400 uppercase font-mono block">Monto Total</span>
+            <span class="text-lg sm:text-xl font-bold font-mono text-amber-600 dark:text-amber-300">
+              Bs. {{ p.total | number:'1.2-2' }}
+            </span>
+            <span class="text-[11px] text-zinc-500 font-mono block">
+              {{ p.total_items }} prenda(s)
+            </span>
+          </div>
+
+          <button (click)="abrirDetalle(p.id_pedido)" 
+                  class="px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white font-semibold text-xs transition-colors flex items-center space-x-1.5 cursor-pointer shrink-0">
+            <span>Ver Detalle</span>
+            <span>↗</span>
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ======================================================================= -->
+    <!-- BARRA DE PAGINACIÓN RESPONSIVE                                          -->
+    <!-- ======================================================================= -->
+    <div class="p-4 sm:p-5 rounded-3xl bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 mt-6">
+      
+      <!-- Contador de Resultados -->
+      <div class="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
+        Mostrando <strong class="text-zinc-800 dark:text-zinc-200">{{ ((paginaActual - 1) * limitePorPagina) + 1 }}</strong> - 
+        <strong class="text-zinc-800 dark:text-zinc-200">{{ ((paginaActual - 1) * limitePorPagina) + pedidos.length }}</strong> de 
+        <strong class="text-amber-600 dark:text-amber-400 font-bold">{{ total }}</strong> pedidos
+      </div>
+
+      <!-- Controles de Página -->
+      <div class="flex items-center space-x-4">
+        
+        <div class="flex items-center space-x-2 text-xs text-zinc-500">
+          <span class="hidden sm:inline">Por pág:</span>
+          <select [ngModel]="limitePorPagina" (ngModelChange)="cambiarLimite($event)"
+                  class="bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-2.5 py-1 text-xs text-zinc-800 dark:text-zinc-200 font-mono focus:outline-none focus:border-amber-500 cursor-pointer">
+            <option *ngFor="let lim of opcionesLimite" [value]="lim">{{ lim }}</option>
+          </select>
+        </div>
+
+        <div class="flex items-center space-x-1.5 font-mono text-xs">
+          <button (click)="cargarPedidos(paginaActual - 1)" 
+                  [disabled]="paginaActual <= 1"
+                  class="px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 text-zinc-700 dark:text-zinc-300 disabled:opacity-40 disabled:cursor-not-allowed hover:border-amber-500/60 transition-colors cursor-pointer">
+            ← Prev
+          </button>
+          
+          <span class="px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-bold">
+            {{ paginaActual }} / {{ totalPaginas }}
+          </span>
+
+          <button (click)="cargarPedidos(paginaActual + 1)" 
+                  [disabled]="paginaActual >= totalPaginas"
+                  class="px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 text-zinc-700 dark:text-zinc-300 disabled:opacity-40 disabled:cursor-not-allowed hover:border-amber-500/60 transition-colors cursor-pointer">
+            Sig →
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL DE DETALLE COMPLETO DEL PEDIDO                                      -->
+  <!-- ========================================================================= -->
+  <div *ngIf="mostrarModalDetalle" 
+       class="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/80 dark:bg-zinc-950/90 backdrop-blur-md animate-fade-in">
+    
+    <!-- Backdrop Click to close -->
+    <div (click)="cerrarDetalle()" class="fixed inset-0 z-0 cursor-pointer"></div>
+
+    <!-- Modal Card (Dynamic & Scrollable) -->
+    <div class="relative z-10 w-full max-w-3xl max-h-[92vh] sm:max-h-[88vh] rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl text-zinc-900 dark:text-zinc-100 flex flex-col overflow-hidden animate-slide-up my-auto">
+      
+      <!-- Top Bar Modal -->
+      <div class="px-5 sm:px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/90 dark:bg-zinc-950/60 shrink-0">
+        <div class="flex items-center space-x-3 overflow-hidden">
+          <span class="font-mono text-base sm:text-lg font-bold text-zinc-900 dark:text-white truncate">
+            Pedido #{{ pedidoDetalle?.codigo_pedido || 'Cargando...' }}
+          </span>
+          <span *ngIf="pedidoDetalle" [class]="getEstadoClase(pedidoDetalle.estado)" 
+                class="px-2.5 py-0.5 rounded-full border text-[10px] font-mono font-bold uppercase shrink-0">
+            {{ getEstadoLabel(pedidoDetalle.estado) }}
+          </span>
+        </div>
+
+        <button (click)="cerrarDetalle()" 
+                class="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-400 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0">
+          ✕
+        </button>
+      </div>
+
+      <!-- Shimmer mientras carga detalle -->
+      <div *ngIf="cargandoDetalle" class="p-8 text-center space-y-3">
+        <div class="w-8 h-8 border-3 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+        <p class="text-xs text-zinc-500 font-mono">Cargando desglose completo del pedido...</p>
+      </div>
+
+      <!-- Contenido Detallado del Pedido -->
+      <div *ngIf="!cargandoDetalle && pedidoDetalle" class="flex-1 min-h-0 overflow-y-auto overscroll-contain p-5 sm:p-6 space-y-6">
+        
+        <!-- Ficha de Datos Generales -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/70 border border-zinc-200 dark:border-zinc-800 text-xs">
+          
+          <div class="space-y-1">
+            <span class="text-[10px] text-zinc-400 uppercase font-mono block">Información de Sucursal</span>
+            <strong class="text-zinc-900 dark:text-white block">{{ pedidoDetalle.sucursal_nombre }}</strong>
+            <p class="text-zinc-500 text-[11px]">{{ pedidoDetalle.sucursal_direccion }}</p>
+            <p *ngIf="pedidoDetalle.sucursal_telefono" class="text-zinc-500 text-[11px]">Tel: {{ pedidoDetalle.sucursal_telefono }}</p>
+          </div>
+
+          <div class="space-y-1">
+            <span class="text-[10px] text-zinc-400 uppercase font-mono block">Modalidad & Contacto</span>
+            <div class="font-semibold text-zinc-900 dark:text-white">
+              {{ pedidoDetalle.modalidad_compra === 'ENTREGA_DOMICILIO' ? '🚚 Entrega a Domicilio' : '🏬 Retiro en Tienda' }}
+            </div>
+            <p class="text-zinc-600 dark:text-zinc-300">{{ pedidoDetalle.nombre_contacto }} • {{ pedidoDetalle.telefono_contacto }}</p>
+            <p *ngIf="pedidoDetalle.direccion_entrega" class="text-zinc-500 text-[11px] italic">
+              Dir: {{ pedidoDetalle.direccion_entrega }} ({{ pedidoDetalle.ciudad_entrega }})
+            </p>
+          </div>
+
+        </div>
+
+        <!-- ================================================================= -->
+        <!-- TABLA / LISTA DE PRENDAS COMPRADAS (PRECIOS HISTÓRICOS)           -->
+        <!-- ================================================================= -->
+        <div class="space-y-2.5">
+          <h3 class="text-xs font-mono uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-bold">
+            Prendas Adquiridas ({{ pedidoDetalle.total_items }} unidades)
+          </h3>
+
+          <div class="divide-y divide-zinc-200 dark:divide-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden bg-white dark:bg-zinc-950/40">
+            <div *ngFor="let it of pedidoDetalle.items" class="p-3.5 sm:p-4 flex items-center justify-between gap-3 text-xs">
+              
+              <!-- Miniatura e Info -->
+              <div class="flex items-center space-x-3">
+                <div class="w-12 h-16 rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shrink-0">
+                  <img *ngIf="it.imagen_url" [src]="it.imagen_url" [alt]="it.producto_nombre" class="w-full h-full object-cover" />
+                  <div *ngIf="!it.imagen_url" class="w-full h-full flex items-center justify-center text-zinc-400">👗</div>
+                </div>
+
+                <div class="space-y-0.5">
+                  <h4 class="font-serif font-bold text-zinc-900 dark:text-white text-sm">
+                    {{ it.producto_nombre }}
+                  </h4>
+                  <div class="flex items-center space-x-2 text-[11px] text-zinc-500">
+                    <span class="font-mono">Talla: <strong class="text-zinc-800 dark:text-zinc-200">{{ it.talla_nombre }}</strong></span>
+                    <span>•</span>
+                    <span class="flex items-center space-x-1 font-mono">
+                      <span>Color:</span>
+                      <span class="w-2.5 h-2.5 rounded-full inline-block border border-black/20" [style.backgroundColor]="it.codigo_hex"></span>
+                      <strong class="text-zinc-800 dark:text-zinc-200">{{ it.color_nombre }}</strong>
+                    </span>
+                  </div>
+                  <span *ngIf="it.sku" class="text-[10px] text-zinc-400 font-mono block">SKU: {{ it.sku }}</span>
+                </div>
+              </div>
+
+              <!-- Precio Unitario Histórico y Subtotal -->
+              <div class="text-right shrink-0">
+                <div class="font-mono text-zinc-500 text-[11px]">
+                  {{ it.cantidad }} x Bs. {{ it.precio_unitario | number:'1.2-2' }}
+                </div>
+                <div class="font-mono font-bold text-sm text-zinc-900 dark:text-white">
+                  Bs. {{ it.subtotal | number:'1.2-2' }}
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- ================================================================= -->
+        <!-- RESUMEN FINANCIERO                                                -->
+        <!-- ================================================================= -->
+        <div class="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/70 border border-zinc-200 dark:border-zinc-800 space-y-2 text-xs">
+          <div class="flex justify-between text-zinc-500">
+            <span>Subtotal de prendas:</span>
+            <span class="font-mono">Bs. {{ pedidoDetalle.subtotal | number:'1.2-2' }}</span>
+          </div>
+          <div class="flex justify-between text-zinc-500">
+            <span>Costo de Envío:</span>
+            <span class="font-mono">{{ pedidoDetalle.costo_envio > 0 ? ('Bs. ' + (pedidoDetalle.costo_envio | number:'1.2-2')) : 'Gratis (Retiro en Sucursal)' }}</span>
+          </div>
+          <div *ngIf="pedidoDetalle.descuento > 0" class="flex justify-between text-emerald-600 dark:text-emerald-400">
+            <span>Descuento aplicado:</span>
+            <span class="font-mono">- Bs. {{ pedidoDetalle.descuento | number:'1.2-2' }}</span>
+          </div>
+          <div class="pt-2 border-t border-zinc-200 dark:border-zinc-800 flex justify-between items-baseline text-sm font-bold">
+            <span class="text-zinc-900 dark:text-white">Total del Pedido:</span>
+            <span class="font-mono text-lg text-amber-600 dark:text-amber-300">
+              Bs. {{ pedidoDetalle.total | number:'1.2-2' }}
+            </span>
+          </div>
+        </div>
+
+        <!-- ================================================================= -->
+        <!-- PREPARACIÓN DE PASARELA DE PAGO W27/W28 (BOTÓN PREPARADO)          -->
+        <!-- ================================================================= -->
+        <div *ngIf="pedidoDetalle.estado_pago === 'PENDIENTE' || pedidoDetalle.estado === 'PENDIENTE_PAGO'" 
+             class="p-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 space-y-3">
+          <div class="flex items-center space-x-2 text-amber-800 dark:text-amber-300 text-xs font-bold">
+            <span class="text-base">💳</span>
+            <span>Módulo de Pago Seguro (Preparado para Fase W27 / W28)</span>
+          </div>
+          <p class="text-[11px] text-zinc-600 dark:text-zinc-300 leading-relaxed">
+            Tu orden está confirmada y guardada. La pasarela de pago en línea (QR / Tarjetas de Débito y Crédito) estará disponible próximamente.
+          </p>
+          <button (click)="abrirModalPagoFuturo(pedidoDetalle)" 
+                  class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs uppercase tracking-wider transition-all shadow-md shadow-amber-500/20 cursor-pointer flex items-center justify-center space-x-2">
+            <span>💳</span>
+            <span>Proceder al Pago (W27 / W28)</span>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-5 sm:px-6 py-3.5 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50/90 dark:bg-zinc-950/80 flex items-center justify-between shrink-0">
+        <button (click)="copiarCodigo(pedidoDetalle?.codigo_pedido || '')" 
+                class="text-xs text-zinc-500 hover:text-amber-500 font-mono cursor-pointer flex items-center space-x-1">
+          <span>📋 Copiar Código</span>
+        </button>
+        <button (click)="cerrarDetalle()" 
+                class="px-5 py-2 rounded-xl bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-200 font-semibold text-xs transition-colors cursor-pointer">
+          Cerrar
+        </button>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL INFORMATIVO DE PASARELA DE PAGO FUTURA (W27/W28)                    -->
+  <!-- ========================================================================= -->
+  <div *ngIf="mostrarModalPagoFuturo" 
+       class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 dark:bg-zinc-950/90 backdrop-blur-md animate-fade-in">
+    <div (click)="cerrarModalPagoFuturo()" class="fixed inset-0 z-0"></div>
+
+    <div class="relative z-10 w-full max-w-md rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 sm:p-8 text-center space-y-5 shadow-2xl animate-slide-up">
+      <div class="w-16 h-16 rounded-full bg-amber-500/15 text-amber-500 border border-amber-500/30 flex items-center justify-center mx-auto text-3xl">
+        💳
+      </div>
+      <div class="space-y-2">
+        <h3 class="text-xl font-serif font-bold text-zinc-900 dark:text-white">
+          Pasarela de Pago Seguro W27/W28
+        </h3>
+        <p class="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+          El módulo de transacciones y procesamiento de pagos en línea se implementará formalmente en los casos de uso **W27 y W28**.
+        </p>
+      </div>
+
+      <div class="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-xs text-left space-y-1.5 font-mono">
+        <div><strong>Pedido:</strong> {{ pedidoParaPago?.codigo_pedido }}</div>
+        <div><strong>Total a Pagar:</strong> Bs. {{ pedidoParaPago?.total | number:'1.2-2' }}</div>
+        <div><strong>Estado actual:</strong> PENDIENTE_PAGO</div>
+      </div>
+
+      <button (click)="cerrarModalPagoFuturo()" 
+              class="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer shadow-md">
+        Entendido, Volver al Pedido
+      </button>
+    </div>
+  </div>
+
+</div>

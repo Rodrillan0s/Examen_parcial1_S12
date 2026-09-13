@@ -31,17 +31,24 @@ def generar_codigo_seguridad() -> str:
 
 # Genera el token JWT de acceso para la sesión del usuario con sus claims RBAC.
 def create_access_token(nro_usuario, username, id_rol, id_empresa, nombre, apellido, roles=None, permisos=None, sucursales=None, nombre_empresa=None, minutes=120):
+    roles_list = roles or []
+    roles_upper = [str(r).upper() for r in roles_list]
+    es_global = (id_rol == 1 or 'ADMINISTRADOR' in roles_upper or 'SUPERADMIN' in roles_upper) and (id_empresa is None or id_empresa == 0)
+    alcance = 'PLATAFORMA' if es_global else 'EMPRESA'
+
     payload = {
         'nro_usuario': nro_usuario,
+        'id_usuario': nro_usuario,
         'username': username,
         'id_rol': id_rol,
         'id_empresa': id_empresa,
         'nombre_empresa': nombre_empresa,
         'nombre': nombre,
         'apellido': apellido,
-        'roles': roles or [],
+        'roles': roles_list,
         'permisos': permisos or [],
         'sucursales': sucursales or [],
+        'alcance': alcance,
         'exp': datetime.now(timezone.utc) + timedelta(minutes=minutes),
         'iat': datetime.now(timezone.utc)
     }
@@ -75,7 +82,19 @@ def verificar_token(credentials: HTTPAuthorizationCredentials = Depends(bearer_s
     resultado = decode_access_token(token)
     if not resultado.get('success'):
         raise HTTPException(status_code=401, detail=resultado.get('message'))
-    return resultado.get('payload')
+    payload = resultado.get('payload')
+    
+    # Garantizar consistencia de id_usuario y alcance
+    if 'id_usuario' not in payload and 'nro_usuario' in payload:
+        payload['id_usuario'] = payload['nro_usuario']
+    if 'alcance' not in payload:
+        roles_upper = [str(r).upper() for r in payload.get('roles', [])]
+        id_rol = payload.get('id_rol')
+        id_emp = payload.get('id_empresa')
+        es_glob = (id_rol == 1 or 'ADMINISTRADOR' in roles_upper or 'SUPERADMIN' in roles_upper) and (id_emp is None or id_emp == 0)
+        payload['alcance'] = 'PLATAFORMA' if es_glob else 'EMPRESA'
+        
+    return payload
 
 # Dependencia reutilizable FastAPI para autorizar según el permiso requerido (<recurso>.<accion>)
 def require_permission(codigo_permiso: str):

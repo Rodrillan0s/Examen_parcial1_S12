@@ -13,20 +13,28 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
     catchError((error) => {
       // SOLO si el error es 401
       if (error.status === 401) {
+        // Ignorar rutas de autenticación pública (login, registro, etc.):
+        // Un 401 en login significa "credenciales incorrectas", NO "sesión caducada".
+        const esRutaAuth = req.url.includes('/api/auth/login') ||
+                           req.url.includes('/api/auth/register') ||
+                           req.url.includes('/api/auth/verify-device') ||
+                           req.url.includes('/api/auth/forgot-password') ||
+                           req.url.includes('/api/auth/reset-password');
+
+        if (esRutaAuth) {
+          return throwError(() => error);
+        }
+
         const token = authService.obtenerToken();
-        
-        // ¡CAMBIO CLAVE! 
-        // Si el token es null o está vacío, NO cierres la sesión todavía.
-        // Es probable que la página se esté recargando.
         if (!token) {
           console.warn('Petición 401 sin token (posible carga inicial). Ignorando...');
           return throwError(() => error);
         }
 
-        // Si SÍ hay token y aun así el backend dice 401, entonces sí caducó
+        // Si SÍ hay token en una ruta protegida y el backend da 401, entonces sí caducó
         console.warn('El backend rechazó el token. Sesión caducada.');
         authService.cerrarSesion();
-        setTimeout(() => router.navigate(['/login']), 0);
+        setTimeout(() => router.navigate(['/']), 0);
       }
       return throwError(() => error);
     })

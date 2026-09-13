@@ -41,7 +41,7 @@ def guardar_notificacion_db(titulo: str, cuerpo: str, tipo_referencia: str, nro_
     db.create_connection()
     try:
         query = f"""
-            INSERT INTO {Config.SCHEMA}.notificacion 
+            INSERT INTO {Config.SCHEMA}.t_notificacion 
             (titulo, cuerpo, tipo_referencia, nro_usuario, nro_emergencia) 
             VALUES (%s, %s, %s, %s, %s);
         """
@@ -59,7 +59,7 @@ def obtener_notificaciones_por_usuario_db(nro_usuario: int):
     try:
         query = f"""
             SELECT id_notificacion, titulo, cuerpo, tipo_referencia, leido, fecha_creacion, nro_emergencia
-            FROM {Config.SCHEMA}.notificacion
+            FROM {Config.SCHEMA}.t_notificacion
             WHERE nro_usuario = %s
             ORDER BY fecha_creacion DESC;
         """
@@ -88,7 +88,7 @@ def marcar_notificacion_leida_db(id_notificacion: int, nro_usuario: int):
     db.create_connection()
     try:
         query = f"""
-            UPDATE {Config.SCHEMA}.notificacion
+            UPDATE {Config.SCHEMA}.t_notificacion
             SET leido = TRUE
             WHERE id_notificacion = %s AND nro_usuario = %s;
         """
@@ -105,7 +105,7 @@ def marcar_todas_las_notificaciones_leidas_db(nro_usuario: int):
     db.create_connection()
     try:
         query = f"""
-            UPDATE {Config.SCHEMA}.notificacion
+            UPDATE {Config.SCHEMA}.t_notificacion
             SET leido = TRUE
             WHERE nro_usuario = %s AND leido = FALSE;
         """

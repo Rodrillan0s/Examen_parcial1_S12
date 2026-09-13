@@ -1,107 +1,213 @@
+import re
 from app.repos import tenant_repos
 from fastapi import Request
 from app.services import bitacora_services
 
-def listar_empresas():
+from app.utils.tenant_guard import (
+    es_administrador_global,
+    validar_acceso_recurso_tenant,
+    obtener_alcance_usuario
+)
+
+def listar_empresas(payload: dict = None):
     empresas = tenant_repos.obtener_todas_las_empresas()
+    
+    # Si el usuario no es de alcance global (Plataforma), solo puede ver su propia empresa
+    if payload and not es_administrador_global(payload):
+        id_empresa_usuario = payload.get('id_empresa')
+        empresas = [e for e in empresas if e.get('id_empresa') == id_empresa_usuario]
+        
     return {
         "success": True,
-        "message": "Empresas recuperadas exitosamente",
+        "message": "Empresas (Tenants) recuperadas exitosamente",
         "data": empresas
     }
 
-def registrar_empresa(data: dict, payload: dict, request: Request = None):
-    nombre_empresa = data.get('nombre_empresa')
-    nit = data.get('nit')
-    
-    if not nombre_empresa or len(nombre_empresa.strip()) == 0:
-        raise ValueError("El campo 'nombre_empresa' es obligatorio.")
-    if not nit or len(str(nit).strip()) == 0:
-        raise ValueError("El campo 'nit' es obligatorio.")
-
-    nuevo_id = tenant_repos.crear_empresa_db(nombre_empresa.upper(), nit)
-
-    bitacora_services.registrar_accion(
-        modulo="EMPRESAS", accion="EMPRESA_CREADA", nivel="INFO", resultado="EXITO",
-        payload_jwt=payload, entidad="Empresa", id_entidad=str(nuevo_id),
-        descripcion=f"Empresa creada: {nombre_empresa.upper()}",
-        datos_nuevos={"nombre_empresa": nombre_empresa.upper(), "nit": nit},
-        request=request
-    )
-
+def obtener_empresa(id_empresa: int, payload: dict = None):
+    if payload:
+        validar_acceso_recurso_tenant(payload, id_empresa, "Empresa (Tenant)")
+        
+    empresa = tenant_repos.obtener_empresa_por_id_db(id_empresa)
+    if not empresa:
+        raise ValueError("La empresa solicitada no existe.")
     return {
         "success": True,
-        "message": "Empresas registrada exitosamente",
-        "id_empresa": nuevo_id
+        "data": empresa
+    }
+
+def registrar_empresa(data: dict, payload: dict, request: Request = None):
+    nombre_comercial = data.get('nombre_empresa') or data.get('nombre_comercial')
+    razon_social = data.get('razon_social')
+    nit = data.get('nit')
+    correo = data.get('correo')
+    telefono = data.get('telefono')
+    direccion_fiscal = data.get('direccion_fiscal') or data.get('direccion')
+    ciudad = data.get('ciudad')
+    logo = data.get('logo')
+
+    # Validaciones de obligatoriedad
+    if not nombre_comercial or not str(nombre_comercial).strip():
+        raise ValueError("El Nombre Comercial de la tienda/empresa es obligatorio.")
+    if not razon_social or not str(razon_social).strip():
+        razon_social = nombre_comercial
+    if not nit or not str(nit).strip():
+        raise ValueError("El NIT / Identificación Fiscal es obligatorio.")
+    if not correo or not str(correo).strip():
+        raise ValueError("El correo electrónico empresarial es obligatorio.")
+    if not re.match(r'^[\w\.-]+@[\w\.-]+\.\w+$', str(correo).strip()):
+        raise ValueError("El formato del correo electrónico empresarial no es válido.")
+    if not telefono or not str(telefono).strip():
+        raise ValueError("El teléfono de contacto es obligatorio.")
+    if not direccion_fiscal or not str(direccion_fiscal).strip():
+        raise ValueError("La dirección fiscal es obligatoria.")
+    if not ciudad or not str(ciudad).strip():
+        raise ValueError("La ciudad de la empresa es obligatoria.")
+
+    # Validación de unicidad de NIT
+    nit_limpio = str(nit).strip()
+    if tenant_repos.existe_nit_db(nit_limpio):
+        raise ValueError(f"Ya existe un Tenant registrado con el NIT '{nit_limpio}'. No se permiten duplicados.")
+
+    datos_tenant = {
+        "nombre_empresa": str(nombre_comercial).strip().upper(),
+        "razon_social": str(razon_social).strip().upper(),
+        "nit": nit_limpio,
+        "correo": str(correo).strip().lower(),
+        "telefono": str(telefono).strip(),
+        "direccion_fiscal": str(direccion_fiscal).strip(),
+        "ciudad": str(ciudad).strip(),
+        "logo": str(logo).strip() if logo else None,
+        "estado": "ACTIVO"
+    }
+
+    nuevo_id = tenant_repos.crear_empresa_db(datos_tenant)
+    if not nuevo_id:
+        raise ValueError("No se pudo crear el registro del nuevo Tenant en la base de datos.")
+
+    # Registro en Bitácora de Auditoría
+    try:
+        bitacora_services.registrar_accion(
+            modulo="EMPRESAS",
+            accion="REGISTRAR_TENANT",
+            nivel="INFO",
+            resultado="EXITO",
+            payload_jwt=payload,
+            entidad="empresa",
+            id_entidad=str(nuevo_id),
+            descripcion=f"Nuevo Tenant registrado por SuperAdmin: {datos_tenant['nombre_empresa']} (NIT: {nit_limpio})",
+            datos_nuevos=datos_tenant,
+            request=request
+        )
+    except Exception as e:
+        print(f"Advertencia: No se pudo auditar registro de empresa en bitácora: {e}")
+
+    empresa_creada = tenant_repos.obtener_empresa_por_id_db(nuevo_id)
+    return {
+        "success": True,
+        "message": f"¡Tenant '{datos_tenant['nombre_empresa']}' registrado exitosamente en estado ACTIVO!",
+        "id_empresa": nuevo_id,
+        "data": empresa_creada
     }
 
 def actualizar_empresa(id_empresa: int, data: dict, payload: dict, request: Request = None):
     if id_empresa <= 0:
         raise ValueError("ID de empresa no válido.")
-        
-    nombre_empresa = data.get('nombre_empresa')
+
+    empresa_anterior = tenant_repos.obtener_empresa_por_id_db(id_empresa)
+    if not empresa_anterior:
+        raise ValueError("La empresa especificada no existe.")
+
+    nombre_comercial = data.get('nombre_empresa') or data.get('nombre_comercial')
+    razon_social = data.get('razon_social')
     nit = data.get('nit')
-    estado = data.get('estado') 
-    
-    if not nombre_empresa or len(nombre_empresa.strip()) == 0:
-        raise ValueError("El campo 'nombre_empresa' es obligatorio.")
-    if not nit or len(str(nit).strip()) == 0:
-        raise ValueError("El campo 'nit' es obligatorio.")
-    if not estado or len(estado.strip()) == 0:
-        raise ValueError("El campo 'estado' es obligatorio para actualizar.")
+    correo = data.get('correo')
+    telefono = data.get('telefono')
+    direccion_fiscal = data.get('direccion_fiscal') or data.get('direccion')
+    ciudad = data.get('ciudad')
+    logo = data.get('logo')
+    estado = data.get('estado') or empresa_anterior.get('estado', 'ACTIVO')
 
-    # Get previous state
-    empresa_db = None
-    try:
-        from app.classes.postgres import PostgreSQL
-        db = PostgreSQL()
-        db.create_connection()
-        r = db.execute_query(f"SELECT id_empresa, nombre_empresa, nit, estado FROM comercio.empresa WHERE id_empresa = %s", (id_empresa,), fetchone=True)
-        if r:
-            empresa_db = {"id_empresa": r[0], "nombre_empresa": r[1], "nit": r[2], "estado": r[3]}
-        db.close_connection()
-    except Exception:
-        pass
+    if not nombre_comercial or not str(nombre_comercial).strip():
+        raise ValueError("El Nombre Comercial es obligatorio.")
+    if not nit or not str(nit).strip():
+        raise ValueError("El NIT es obligatorio.")
 
-    # Guardamos el resultado de la base de datos
-    exito = tenant_repos.actualizar_empresa_db(id_empresa, nombre_empresa.upper(), nit, estado.upper())
+    nit_limpio = str(nit).strip()
+    if tenant_repos.existe_nit_db(nit_limpio, exclude_id_empresa=id_empresa):
+        raise ValueError(f"Ya existe otra empresa registrada con el NIT '{nit_limpio}'.")
 
-    # Si exito es False, significa que el ID no existía
+    if correo and not re.match(r'^[\w\.-]+@[\w\.-]+\.\w+$', str(correo).strip()):
+        raise ValueError("El formato del correo electrónico empresarial no es válido.")
+
+    datos_actualizados = {
+        "nombre_empresa": str(nombre_comercial).strip().upper(),
+        "razon_social": str(razon_social or nombre_comercial).strip().upper(),
+        "nit": nit_limpio,
+        "correo": str(correo).strip().lower() if correo else empresa_anterior.get('correo', ''),
+        "telefono": str(telefono).strip() if telefono else empresa_anterior.get('telefono', ''),
+        "direccion_fiscal": str(direccion_fiscal).strip() if direccion_fiscal else empresa_anterior.get('direccion_fiscal', ''),
+        "ciudad": str(ciudad).strip() if ciudad else empresa_anterior.get('ciudad', 'Santa Cruz'),
+        "logo": str(logo).strip() if logo else empresa_anterior.get('logo'),
+        "estado": str(estado).strip().upper()
+    }
+
+    exito = tenant_repos.actualizar_empresa_db(id_empresa, datos_actualizados)
     if not exito:
-        raise ValueError(f"No se pudo actualizar. La empresa con ID {id_empresa} no existe o ya fue eliminada.")
+        raise ValueError("No se pudo actualizar la información de la empresa.")
 
-    if exito:
+    try:
         bitacora_services.registrar_accion(
-            modulo="EMPRESAS", accion="EMPRESA_EDITADA", nivel="INFO", resultado="EXITO",
-            payload_jwt=payload, entidad="Empresa", id_entidad=str(id_empresa),
-            descripcion=f"Empresa editada: {nombre_empresa.upper()}",
-            datos_anteriores=empresa_db,
-            datos_nuevos={"nombre_empresa": nombre_empresa.upper(), "nit": nit, "estado": estado.upper()},
+            modulo="EMPRESAS",
+            accion="ACTUALIZAR_TENANT",
+            nivel="INFO",
+            resultado="EXITO",
+            payload_jwt=payload,
+            entidad="empresa",
+            id_entidad=str(id_empresa),
+            descripcion=f"Tenant actualizado: {datos_actualizados['nombre_empresa']} (ID: {id_empresa})",
+            datos_anteriores=empresa_anterior,
+            datos_nuevos=datos_actualizados,
             request=request
         )
+    except Exception as e:
+        print(f"Advertencia: No se pudo auditar en bitácora: {e}")
 
+    empresa_nueva = tenant_repos.obtener_empresa_por_id_db(id_empresa)
     return {
         "success": True,
-        "message": "Empresa actualizada exitosamente"
+        "message": "Empresa actualizada exitosamente",
+        "data": empresa_nueva
     }
 
 def borrar_empresa(id_empresa: int, payload: dict, request: Request = None):
     if id_empresa <= 0:
         raise ValueError("ID de empresa no válido.")
-        
+
+    empresa_anterior = tenant_repos.obtener_empresa_por_id_db(id_empresa)
+    if not empresa_anterior:
+        raise ValueError("La empresa especificada no existe.")
+
     exito = tenant_repos.eliminar_empresa_db(id_empresa)
-    
     if not exito:
-        raise ValueError(f"No se pudo eliminar. La empresa con ID {id_empresa} no existe.")
-        
-    bitacora_services.registrar_accion(
-        modulo="EMPRESAS", accion="EMPRESA_ELIMINADA", nivel="WARNING", resultado="EXITO",
-        payload_jwt=payload, entidad="Empresa", id_entidad=str(id_empresa),
-        descripcion=f"Empresa eliminada",
-        request=request
-    )
-    
+        raise ValueError("No se pudo eliminar la empresa seleccionada.")
+
+    try:
+        bitacora_services.registrar_accion(
+            modulo="EMPRESAS",
+            accion="ELIMINAR_TENANT",
+            nivel="WARNING",
+            resultado="EXITO",
+            payload_jwt=payload,
+            entidad="empresa",
+            id_entidad=str(id_empresa),
+            descripcion=f"Tenant eliminado permanentemente: {empresa_anterior.get('nombre_empresa')} (ID: {id_empresa})",
+            datos_anteriores=empresa_anterior,
+            request=request
+        )
+    except Exception as e:
+        print(f"Advertencia: No se pudo auditar en bitácora: {e}")
+
     return {
         "success": True,
-        "message": "Empresa eliminada permanentemente de la base de datos."
+        "message": "Empresa eliminada exitosamente"
     }

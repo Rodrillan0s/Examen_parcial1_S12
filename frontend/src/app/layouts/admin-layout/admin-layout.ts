@@ -11,6 +11,7 @@ import {
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router, RouterOutlet, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth';
+import { ThemeService } from '../../services/theme';
 import { NotificacionesService, Notificacion } from '../../services/notificaciones';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -22,6 +23,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 })
 export class AdminLayoutComponent implements OnInit {
 
+  private themeService          = inject(ThemeService);
   private authService           = inject(AuthService);
   private notificacionesService  = inject(NotificacionesService);
   private router                = inject(Router);
@@ -32,7 +34,7 @@ export class AdminLayoutComponent implements OnInit {
 
   // ---- Estado general ----
   usuarioActual: any      = null;
-  modoOscuro: boolean     = false;
+  modoOscuro: boolean     = true;
   sidebarAbierto: boolean   = false;
   sidebarColapsado: boolean = false;
 
@@ -64,11 +66,13 @@ export class AdminLayoutComponent implements OnInit {
 
     this.construirMenuPorAlcance();
 
-    // Restaurar tema guardado
-    if (localStorage.getItem('tema_sistema') === 'dark') {
-      this.modoOscuro = true;
-      document.documentElement.classList.add('dark');
-    }
+    // Sincronizar tema con el servicio global reactivo
+    this.themeService.modoOscuro$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((esOscuro) => {
+        this.modoOscuro = esOscuro;
+        this.cdr.detectChanges();
+      });
 
     this.verificarResolucion();
 
@@ -99,7 +103,9 @@ export class AdminLayoutComponent implements OnInit {
           icono: 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z',
           expandido: true,
           submenus: [
-            { nombre: 'Colecciones y Productos', ruta: '/admin/catalogo', permiso: 'productos.ver' }
+            { nombre: 'Categorías', ruta: '/admin/categorias', permiso: 'categorias.ver' },
+            { nombre: 'Tallas y Colores', ruta: '/admin/tallas-colores', permiso: 'tallas.ver' },
+            { nombre: 'Productos', ruta: '/admin/productos', permiso: 'productos.ver' }
           ]
         },
         {
@@ -107,7 +113,8 @@ export class AdminLayoutComponent implements OnInit {
           icono: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
           expandido: true,
           submenus: [
-            { nombre: 'Cadena de Tiendas', ruta: '/admin/empresas', permiso: 'sucursales.ver' }
+            { nombre: 'Cadena de Tiendas (Tenants)', ruta: '/admin/empresas', permiso: 'empresas.ver' },
+            { nombre: 'Sucursales y Ciudades', ruta: '/admin/sucursales', permiso: 'sucursales.ver' }
           ]
         },
         {
@@ -115,8 +122,7 @@ export class AdminLayoutComponent implements OnInit {
           icono: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z',
           expandido: true,
           submenus: [
-            { nombre: 'Usuarios de la plataforma', ruta: '/admin/usuarios', permiso: 'usuarios.ver' },
-            { nombre: 'Roles y Permisos', ruta: '/admin/roles', permiso: 'roles.ver' },
+            { nombre: 'Usuarios y Permisos', ruta: '/admin/usuarios', permiso: 'usuarios.ver' },
             { nombre: 'Bitácora del Sistema', ruta: '/admin/bitacora', permiso: 'bitacora.ver' },
             { nombre: 'Copias de Respaldo', ruta: '/admin/backup', permiso: 'admin.acceder' }
           ]
@@ -134,11 +140,13 @@ export class AdminLayoutComponent implements OnInit {
     } else if (scope === 'EMPRESA') {
       this.menuFiltrado = [
         {
-          titulo: 'OPERACIÓN',
+          titulo: 'CATÁLOGO',
           icono: 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z',
           expandido: true,
           submenus: [
-            { nombre: 'Colecciones y Productos', ruta: '/admin/catalogo', permiso: 'productos.ver' }
+            { nombre: 'Categorías', ruta: '/admin/categorias', permiso: 'categorias.ver' },
+            { nombre: 'Tallas y Colores', ruta: '/admin/tallas-colores', permiso: 'tallas.ver' },
+            { nombre: 'Productos', ruta: '/admin/productos', permiso: 'productos.ver' }
           ]
         },
         {
@@ -147,7 +155,6 @@ export class AdminLayoutComponent implements OnInit {
           expandido: true,
           submenus: [
             { nombre: `Equipo de ${empresaNombre}`, ruta: '/admin/usuarios', permiso: 'usuarios.ver' },
-            { nombre: 'Roles de Empresa', ruta: '/admin/roles', permiso: 'roles.ver' },
             { nombre: 'Sucursales', ruta: '/admin/sucursales', permiso: 'sucursales.ver' }
           ]
         },
@@ -164,11 +171,13 @@ export class AdminLayoutComponent implements OnInit {
     } else {
       this.menuFiltrado = [
         {
-          titulo: 'OPERACIÓN',
+          titulo: 'CATÁLOGO',
           icono: 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z',
           expandido: true,
           submenus: [
-            { nombre: 'Catálogo de Productos', ruta: '/admin/catalogo', permiso: 'productos.ver' }
+            { nombre: 'Categorías', ruta: '/admin/categorias', permiso: 'categorias.ver' },
+            { nombre: 'Tallas y Colores', ruta: '/admin/tallas-colores', permiso: 'tallas.ver' },
+            { nombre: 'Productos', ruta: '/admin/productos', permiso: 'productos.ver' }
           ]
         },
         {
@@ -254,16 +263,7 @@ export class AdminLayoutComponent implements OnInit {
   // ------------------------------------------------------------------
 
   alternarModoOscuro() {
-    if (!isPlatformBrowser(this.platformId)) return;
-
-    this.modoOscuro = !this.modoOscuro;
-    if (this.modoOscuro) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('tema_sistema', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('tema_sistema', 'light');
-    }
+    this.themeService.alternarTema();
   }
 
   // ------------------------------------------------------------------

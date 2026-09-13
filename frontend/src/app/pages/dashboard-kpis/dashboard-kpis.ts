@@ -1,58 +1,47 @@
 import { Component, OnInit, inject, ChangeDetectorRef, NgZone, PLATFORM_ID } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { Router } from '@angular/router';
-import { KpisService, DashboardMetricas } from '../../services/kpis';
+import { Router, RouterModule } from '@angular/router';
+import { KpisService, DashboardMetricas, RolDistribucion, DeptoSucursal, EventoActividad, SucursalDetalle } from '../../services/kpis';
 import { AuthService } from '../../services/auth';
 
 @Component({
   selector: 'app-dashboard-kpis',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterModule],
   templateUrl: './dashboard-kpis.html'
 })
 export class DashboardKpisComponent implements OnInit {
 
   private kpisService = inject(KpisService);
-  private authService = inject(AuthService);
+  public authService = inject(AuthService);
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
   private ngZone = inject(NgZone);
   private platformId = inject(PLATFORM_ID);
 
   usuarioActual: any = null;
-  modoOscuro: boolean = false;
   metricas: DashboardMetricas | null = null;
   cargando: boolean = false;
   mensajeError: string = '';
 
-  get scope(): 'PLATAFORMA' | 'EMPRESA' | 'SUCURSAL' {
-    return this.authService.getScopeLevel();
+  get alcance(): 'PLATAFORMA' | 'EMPRESA' | 'SUCURSAL' | 'OPERATIVO' {
+    return this.metricas?.alcance || (this.authService.getScopeLevel() as any) || 'PLATAFORMA';
   }
 
   get isGlobalAdmin(): boolean {
-    return this.authService.isGlobalAdmin();
+    return this.authService.getAuthorityLevel() <= 2;
   }
 
   get isStoreAdmin(): boolean {
-    return this.authService.isStoreAdmin();
+    return this.authService.getAuthorityLevel() === 3;
   }
 
   get isBranchManager(): boolean {
-    return this.authService.isBranchManager();
+    return this.authService.getAuthorityLevel() === 4;
   }
 
-  get tituloDashboard(): string {
-    const scope = this.scope;
-    if (scope === 'PLATAFORMA') return 'Analítica Operacional & KPIs Globales';
-    if (scope === 'EMPRESA') return `Analítica & Desempeño — ${this.authService.getUserCompanyName()}`;
-    return `Rendimiento Operativo — ${this.authService.getUserBranchName()}`;
-  }
-
-  get subtituloDashboard(): string {
-    const scope = this.scope;
-    if (scope === 'PLATAFORMA') return 'Métricas de desempeño en tiempo real, niveles de servicio SLA y distribución operativa multi-tienda.';
-    if (scope === 'EMPRESA') return 'Métricas de operación, ventas, pedidos y nivel de servicio de tu empresa.';
-    return 'Monitoreo de actividad, transacciones y servicio en tu sucursal.';
+  get isStaff(): boolean {
+    return this.authService.getAuthorityLevel() === 5;
   }
 
   ngOnInit(): void {
@@ -64,18 +53,22 @@ export class DashboardKpisComponent implements OnInit {
         return;
       }
 
+      // Si es cliente, redirigir inmediatamente a su perfil
+      if (this.authService.esCliente()) {
+        this.router.navigate(['/perfil']);
+        return;
+      }
+
       this.cargarMetricas();
     }
   }
 
   cargarMetricas(): void {
-    // Usamos setTimeout para escapar del ciclo actual y forzar la detección de cambios
     setTimeout(() => {
       this.ngZone.run(() => {
         this.cargando = true;
         this.mensajeError = '';
-        this.metricas = null;
-        this.cdr.detectChanges(); // Forzamos mostrar el loader
+        this.cdr.detectChanges();
       });
 
       this.kpisService.obtenerMetricasDashboard().subscribe({
@@ -84,14 +77,14 @@ export class DashboardKpisComponent implements OnInit {
             if (res.success) {
               this.metricas = res.data;
             } else {
-              this.mensajeError = res.message || 'No se pudieron cargar los KPIs.';
+              this.mensajeError = res.message || 'No se pudieron calcular las métricas.';
             }
             this.finalizarCarga();
           });
         },
         error: (err) => {
           this.ngZone.run(() => {
-            this.mensajeError = err.error?.detail || 'Error al conectar con el módulo de analítica.';
+            this.mensajeError = err.error?.detail || err.error?.message || 'Error al sincronizar con el motor de analítica.';
             this.finalizarCarga();
           });
         }
@@ -101,7 +94,7 @@ export class DashboardKpisComponent implements OnInit {
 
   private finalizarCarga() {
     this.cargando = false;
-    this.cdr.detectChanges(); // Forzamos quitar el loader y mostrar los datos
+    this.cdr.detectChanges();
   }
 
   refrescarDashboard(): void {
@@ -110,70 +103,37 @@ export class DashboardKpisComponent implements OnInit {
 
   cerrarSesion(): void {
     this.authService.cerrarSesion();
-    this.router.navigate(['/login']);
   }
 
-  // ==============================================================
-  // MATEMÁTICAS PROTEGIDAS CONTRA DATOS NULOS
-  // ==============================================================
+  // --- MATEMÁTICAS PROTEGIDAS PARA BARRAS DE PROGRESO ---
 
-  getPorcentajeCancelados(): number {
-    const total = this.metricas?.total_casos_historicos || 0;
-    const cancelados = this.metricas?.casos_cancelados || 0;
-    if (total === 0) return 0;
-    return Number(((cancelados / total) * 100).toFixed(2));
+  getMaxUsuariosRol(): number {
+    const list = this.metricas?.roles_distribucion || [];
+    if (!list.length) return 1;
+    return Math.max(...list.map(r => r.cantidad || 0));
   }
 
-  getTotalIncidentesPorTipo(): number {
-    if (!this.metricas?.incidentes_por_tipo?.length) return 0;
-    return this.metricas.incidentes_por_tipo.reduce((total, item) => total + (item?.cantidad || 0), 0);
+  getAnchoBarraRol(cantidad: number): number {
+    const max = this.getMaxUsuariosRol();
+    if (max === 0) return 0;
+    return Number(((cantidad / max) * 100).toFixed(1));
   }
 
-  getMaxIncidentes(): number {
-    if (!this.metricas?.incidentes_por_tipo?.length) return 1;
-    return Math.max(...this.metricas.incidentes_por_tipo.map(item => item?.cantidad || 0));
+  getMaxSucursalesDepto(): number {
+    const list = this.metricas?.sucursales_por_depto || [];
+    if (!list.length) return 1;
+    return Math.max(...list.map(d => d.cantidad || 0));
   }
 
-  getAnchoBarraIncidente(cantidad: number): number {
-    const maximo = this.getMaxIncidentes();
-    if (maximo === 0) return 0;
-    return Number(((cantidad / maximo) * 100).toFixed(2));
-  }
-
-  getMaxTiempoTaller(): number {
-    if (!this.metricas?.talleres_eficientes?.length) return 1;
-    return Math.max(...this.metricas.talleres_eficientes.map(item => item?.tiempo_promedio_min || 0));
-  }
-
-  getAnchoBarraTaller(tiempo: number): number {
-    const maximo = this.getMaxTiempoTaller();
-    if (maximo === 0) return 0;
-    return Number(((tiempo / maximo) * 100).toFixed(2));
+  getAnchoBarraDepto(cantidad: number): number {
+    const max = this.getMaxSucursalesDepto();
+    if (max === 0) return 0;
+    return Number(((cantidad / max) * 100).toFixed(1));
   }
 
   getSlaComoNumero(): number {
-    const sla = this.metricas?.nivel_cumplimiento_sla || '0%';
-    const numero = Number(sla.replace('%', ''));
-    return isNaN(numero) ? 0 : numero;
-  }
-
-  getTextoTiempo(minutos: number | undefined | null): string {
-    if (minutos === undefined || minutos === null || minutos <= 0) return '0 min';
-    if (minutos < 60) return `${minutos} min`;
-    const horas = Math.floor(minutos / 60);
-    const minRestantes = Math.round(minutos % 60);
-    return `${horas} h ${minRestantes} min`;
-  }
-
-  trackByTipo(index: number, item: any): string {
-    return item?.tipo || index.toString();
-  }
-
-  trackByTaller(index: number, item: any): string {
-    return item?.taller || index.toString();
-  }
-
-  trackByPunto(index: number): number {
-    return index;
+    const sla = this.metricas?.nivel_cumplimiento_sla || '99%';
+    const n = Number(sla.replace('%', ''));
+    return isNaN(n) ? 99 : n;
   }
 }

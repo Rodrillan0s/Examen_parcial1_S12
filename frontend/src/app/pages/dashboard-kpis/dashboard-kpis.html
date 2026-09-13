@@ -1,207 +1,465 @@
-<div class="min-h-full space-y-6 antialiased">
+<div class="min-h-full space-y-6 antialiased p-2 sm:p-4 text-zinc-900 dark:text-zinc-100 transition-colors duration-200">
 
-  <!-- Header / Breadcrumb -->
-  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200/80 dark:border-slate-800/80 shadow-sm">
-    <div class="space-y-1">
-      <nav class="flex items-center gap-2 text-xs font-medium text-slate-400 dark:text-slate-500 mb-1">
-        <span>Portal Operativo</span>
-        <svg class="w-3 h-3 text-slate-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-        <span class="text-indigo-600 dark:text-indigo-400 font-semibold">{{ scope }}</span>
-      </nav>
-      
-      <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{{ tituloDashboard }}</h1>
-      <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-        {{ subtituloDashboard }}
+  <!-- Header / Breadcrumb Card -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 p-6 sm:p-8 rounded-3xl shadow-sm dark:shadow-xl relative overflow-hidden transition-colors duration-200">
+    <div class="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600"></div>
+
+    <div class="space-y-1.5">
+      <div class="flex items-center gap-2 text-xs font-mono tracking-widest text-zinc-500 dark:text-zinc-400 uppercase">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span>AURA Atelier • Panel de Control</span>
+        <span class="text-zinc-300 dark:text-zinc-600">/</span>
+        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border"
+              [ngClass]="{
+                'bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400': alcance === 'PLATAFORMA',
+                'bg-indigo-500/10 border-indigo-500/30 text-indigo-700 dark:text-indigo-300': alcance === 'EMPRESA',
+                'bg-sky-500/10 border-sky-500/30 text-sky-700 dark:text-sky-400': alcance === 'SUCURSAL',
+                'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400': alcance === 'OPERATIVO'
+              }">
+          {{ alcance }}
+        </span>
+      </div>
+
+      <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-zinc-900 dark:text-white">
+        {{ metricas?.titulo || 'Panel Operativo & Analítica' }}
+      </h1>
+      <p class="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 max-w-2xl font-light leading-relaxed">
+        <ng-container *ngIf="alcance === 'PLATAFORMA'">
+          Consolidado estratégico global del ecosistema Aurora Store: Cadenas de Tiendas (Tenants), red nacional de sucursales, auditoría y control de accesos.
+        </ng-container>
+        <ng-container *ngIf="alcance === 'EMPRESA'">
+          Monitoreo operativo para <strong>{{ metricas?.nombre_empresa }}</strong>: Red de sucursales físicas, equipo de colaboradores y catálogo de prendas.
+        </ng-container>
+        <ng-container *ngIf="alcance === 'SUCURSAL'">
+          Rendimiento en tiempo real de la <strong>{{ metricas?.nombre_sucursal }}</strong>: Personal de turno, inventario local y atención a clientes.
+        </ng-container>
+        <ng-container *ngIf="alcance === 'OPERATIVO'">
+          Panel de atención y mostrador operativo para transacciones de turno, consultas de catálogo y reservas.
+        </ng-container>
       </p>
     </div>
 
-    <div>
+    <div class="flex items-center gap-3 shrink-0">
       <button (click)="refrescarDashboard()" [disabled]="cargando"
-              class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold rounded-lg shadow-sm shadow-indigo-500/20 transition-all focus:outline-none disabled:opacity-50">
-        <div *ngIf="cargando" class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-        <svg *ngIf="!cargando" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5M20 20v-5h-5M5.5 15.5A7.5 7.5 0 0118.3 7.7L20 9.4M18.5 8.5A7.5 7.5 0 015.7 16.3L4 14.6"></path></svg>
-        <span>{{ cargando ? 'Consultando BD...' : 'Actualizar Datos' }}</span>
+              class="inline-flex items-center gap-2 px-5 py-2.5 bg-stone-100 hover:bg-stone-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-amber-700 dark:text-amber-400 text-xs font-bold rounded-2xl border border-stone-200 dark:border-zinc-800 hover:border-amber-500/40 transition-all shadow-sm dark:shadow-lg cursor-pointer disabled:opacity-50">
+        <div *ngIf="cargando" class="w-3.5 h-3.5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+        <i *ngIf="!cargando" class="ph ph-arrows-clockwise text-base"></i>
+        <span>{{ cargando ? 'Sincronizando...' : 'Actualizar Métricas' }}</span>
       </button>
     </div>
   </div>
 
-  <div *ngIf="mensajeError && !cargando" class="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-xl text-xs sm:text-sm font-medium text-amber-800 dark:text-amber-300 flex items-center gap-3">
-    <svg class="w-5 h-5 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-    <span>Error de Sincronización: {{ mensajeError }}</span>
+  <!-- Error Alert -->
+  <div *ngIf="mensajeError && !cargando" 
+       class="p-4 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-500/30 rounded-2xl text-xs sm:text-sm text-rose-700 dark:text-rose-300 flex items-center gap-3 shadow-sm">
+    <i class="ph ph-warning-circle text-xl text-rose-500 dark:text-rose-400 shrink-0"></i>
+    <span>{{ mensajeError }}</span>
   </div>
 
-  <!-- Loading State -->
+  <!-- Skeleton Loader -->
   <div *ngIf="cargando" class="animate-pulse space-y-4">
-    <div class="grid grid-cols-1 sm:grid-cols-5 gap-4">
-      <div *ngFor="let i of [1,2,3,4,5]" class="h-24 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800/80"></div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div *ngFor="let i of [1,2,3,4]" class="h-28 bg-stone-200/60 dark:bg-zinc-900/60 rounded-3xl border border-stone-300 dark:border-zinc-800"></div>
     </div>
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div class="h-64 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800/80"></div>
-      <div class="h-64 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800/80"></div>
+      <div class="h-64 bg-stone-200/60 dark:bg-zinc-900/60 rounded-3xl border border-stone-300 dark:border-zinc-800"></div>
+      <div class="h-64 bg-stone-200/60 dark:bg-zinc-900/60 rounded-3xl border border-stone-300 dark:border-zinc-800"></div>
     </div>
   </div>
 
-  <!-- Metric Dashboard -->
-  <div *ngIf="metricas && !cargando" class="space-y-6">
+  <!-- Contenido Dinámico según Alcance -->
+  <div *ngIf="metricas && !cargando" class="space-y-6 animate-fade-in">
 
-    <!-- KPI Cards Grid -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+    <!-- ============================================================== -->
+    <!-- 1. VISTA: PLATAFORMA (SUPERADMIN Y ADMIN GLOBAL)              -->
+    <!-- ============================================================== -->
+    <ng-container *ngIf="alcance === 'PLATAFORMA'">
       
-      <!-- Volumen Total -->
-      <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200/80 dark:border-slate-800/80 shadow-sm space-y-3">
-        <div class="flex items-center justify-between">
-          <p class="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Volumen Total</p>
-          <div class="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+      <!-- KPI Cards SuperAdmin -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        
+        <!-- Tenants / Empresas -->
+        <div class="p-5 rounded-3xl bg-white dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 shadow-sm dark:shadow-xl space-y-3 relative overflow-hidden group hover:border-amber-500/30 transition-all">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-mono uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Tenants / Empresas</span>
+            <div class="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/20">
+              <i class="ph ph-buildings text-base"></i>
+            </div>
+          </div>
+          <div>
+            <h2 class="text-3xl font-black text-zinc-900 dark:text-white tracking-tight">{{ metricas.total_empresas }}</h2>
+            <p class="text-[11px] text-zinc-500 mt-0.5">Cadenas de tienda activas</p>
           </div>
         </div>
-        <div>
-          <h2 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{{ metricas.total_casos_historicos }}</h2>
-          <p class="text-[11px] text-slate-400 mt-0.5">Casos registrados</p>
-        </div>
-      </div>
 
-      <!-- Casos Cancelados -->
-      <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200/80 dark:border-slate-800/80 shadow-sm space-y-3">
-        <div class="flex items-center justify-between">
-          <p class="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Cancelados</p>
-          <span class="text-[11px] font-bold bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400 px-2 py-0.5 rounded-full border border-rose-200/50 dark:border-rose-800/50">{{ getPorcentajeCancelados() }}%</span>
-        </div>
-        <div>
-          <h2 class="text-2xl font-bold tracking-tight text-rose-600 dark:text-rose-400">{{ metricas.casos_cancelados }}</h2>
-          <p class="text-[11px] text-slate-400 mt-0.5">Incidencias descartadas</p>
-        </div>
-      </div>
-
-      <!-- SLA Cumplimiento -->
-      <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200/80 dark:border-slate-800/80 shadow-sm flex items-center justify-between">
-        <div class="space-y-1">
-          <p class="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Cumplimiento SLA</p>
-          <h2 class="text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">{{ metricas.nivel_cumplimiento_sla }}</h2>
-          <p class="text-[11px] text-slate-400">Garantía de servicio</p>
-        </div>
-        
-        <div class="relative w-12 h-12 shrink-0">
-          <svg viewBox="0 0 36 36" class="w-full h-full transform -rotate-90">
-            <path class="text-slate-100 dark:text-slate-800"
-              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              fill="none" stroke="currentColor" stroke-width="3.5"
-            />
-            <path class="text-emerald-500 transition-all duration-1000 ease-out"
-              [attr.stroke-dasharray]="getSlaComoNumero() + ', 100'"
-              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"
-            />
-          </svg>
-          <div class="absolute inset-0 flex items-center justify-center">
-            <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+        <!-- Sucursales -->
+        <div class="p-5 rounded-3xl bg-white dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 shadow-sm dark:shadow-xl space-y-3 relative overflow-hidden group hover:border-indigo-500/30 transition-all">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-mono uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Sucursales Físicas</span>
+            <div class="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-500/20">
+              <i class="ph ph-storefront text-base"></i>
+            </div>
+          </div>
+          <div>
+            <h2 class="text-3xl font-black text-zinc-900 dark:text-white tracking-tight">{{ metricas.total_sucursales }}</h2>
+            <p class="text-[11px] text-zinc-500 mt-0.5">Puntos de venta en el país</p>
           </div>
         </div>
+
+        <!-- Usuarios -->
+        <div class="p-5 rounded-3xl bg-white dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 shadow-sm dark:shadow-xl space-y-3 relative overflow-hidden group hover:border-sky-500/30 transition-all">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-mono uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Usuarios Registrados</span>
+            <div class="w-8 h-8 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center border border-sky-500/20">
+              <i class="ph ph-users text-base"></i>
+            </div>
+          </div>
+          <div>
+            <h2 class="text-3xl font-black text-zinc-900 dark:text-white tracking-tight">{{ metricas.total_usuarios }}</h2>
+            <p class="text-[11px] text-zinc-500 mt-0.5">Cuentas activas en sistema</p>
+          </div>
+        </div>
+
+        <!-- Ciudades -->
+        <div class="p-5 rounded-3xl bg-white dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 shadow-sm dark:shadow-xl space-y-3 relative overflow-hidden group hover:border-emerald-500/30 transition-all">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-mono uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Ciudades Registradas</span>
+            <div class="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20">
+              <i class="ph ph-map-pin text-base"></i>
+            </div>
+          </div>
+          <div>
+            <h2 class="text-3xl font-black text-zinc-900 dark:text-white tracking-tight">{{ metricas.total_ciudades }}</h2>
+            <p class="text-[11px] text-zinc-500 mt-0.5">9 Departamentos de Bolivia</p>
+          </div>
+        </div>
+
+        <!-- Eventos Bitácora -->
+        <div class="p-5 rounded-3xl bg-white dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 shadow-sm dark:shadow-xl space-y-3 relative overflow-hidden group hover:border-purple-500/30 transition-all">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-mono uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Auditoría & Bitácora</span>
+            <div class="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center border border-purple-500/20">
+              <i class="ph ph-shield-check text-base"></i>
+            </div>
+          </div>
+          <div>
+            <h2 class="text-3xl font-black text-zinc-900 dark:text-white tracking-tight">{{ metricas.total_eventos_bitacora }}</h2>
+            <p class="text-[11px] text-zinc-500 mt-0.5">Operaciones auditadas</p>
+          </div>
+        </div>
+
       </div>
 
-      <!-- Promedio Asignación -->
-      <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200/80 dark:border-slate-800/80 shadow-sm space-y-3">
-        <p class="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Promedio Asignación</p>
-        <div>
-          <h2 class="text-xl font-bold tracking-tight text-slate-900 dark:text-white">{{ getTextoTiempo(metricas.tiempos_operativos.promedio_asignacion_minutos) }}</h2>
-          <p class="text-[11px] text-slate-400 mt-0.5">Asignación de unidad</p>
-        </div>
-      </div>
-
-      <!-- Promedio Llegada -->
-      <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200/80 dark:border-slate-800/80 shadow-sm space-y-3">
-        <p class="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Promedio Llegada</p>
-        <div>
-          <h2 class="text-xl font-bold tracking-tight text-slate-900 dark:text-white">{{ getTextoTiempo(metricas.tiempos_operativos.promedio_llegada_minutos) }}</h2>
-          <p class="text-[11px] text-slate-400 mt-0.5">Arribo a sitio</p>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- Analytics Charts Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-      <!-- Chart 1: Incidentes por Tipo -->
-      <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800/80 shadow-sm flex flex-col h-80 overflow-hidden">
-        <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
-          <h3 class="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">Incidentes por Tipo</h3>
-          <span class="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 px-2.5 py-0.5 rounded-full border border-indigo-200/50 dark:border-indigo-800/50">n={{ getTotalIncidentesPorTipo() }}</span>
-        </div>
+      <!-- Grid Paneles Analíticos Globales -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        <div class="p-5 flex-1 overflow-y-auto custom-scrollbar">
-          <div class="space-y-3.5 w-full" *ngIf="metricas.incidentes_por_tipo.length > 0">
-            <div *ngFor="let item of metricas.incidentes_por_tipo; trackBy: trackByTipo" class="flex items-center text-xs">
-              <div class="w-28 font-semibold text-slate-600 dark:text-slate-300 truncate pr-2 uppercase">{{ item.tipo }}</div>
-              <div class="flex-1 flex items-center gap-2">
-                <div class="h-3.5 bg-indigo-600 rounded-full transition-all duration-1000" [style.width.%]="getAnchoBarraIncidente(item.cantidad)"></div>
-                <span class="font-mono font-bold text-slate-900 dark:text-white">{{ item.cantidad }}</span>
+        <!-- Distribución de Usuarios por Rol -->
+        <div class="p-6 rounded-3xl bg-white dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 shadow-sm dark:shadow-xl space-y-5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i class="ph ph-identification-card text-amber-600 dark:text-amber-400 text-lg"></i>
+              <h3 class="text-sm font-bold text-zinc-900 dark:text-white uppercase tracking-wider">Distribución por Rol</h3>
+            </div>
+            <a routerLink="/admin/usuarios" class="text-xs text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 font-semibold flex items-center gap-1">
+              <span>Gestionar</span>
+              <i class="ph ph-arrow-right"></i>
+            </a>
+          </div>
+
+          <div class="space-y-3.5">
+            <div *ngFor="let r of metricas.roles_distribucion" class="space-y-1">
+              <div class="flex items-center justify-between text-xs">
+                <span class="font-bold text-zinc-700 dark:text-zinc-300">{{ r.rol }}</span>
+                <span class="font-mono text-zinc-500 dark:text-zinc-400">{{ r.cantidad }} usuarios</span>
+              </div>
+              <div class="w-full h-2 bg-stone-200 dark:bg-zinc-900 rounded-full overflow-hidden border border-stone-300 dark:border-zinc-800">
+                <div class="h-full bg-gradient-to-r from-amber-500 to-amber-400 rounded-full transition-all duration-700"
+                     [style.width.%]="getAnchoBarraRol(r.cantidad)"></div>
               </div>
             </div>
           </div>
-          
-          <div *ngIf="metricas.incidentes_por_tipo.length === 0" class="h-full flex items-center justify-center text-xs text-slate-400">
-            Sin datos para graficar.
+        </div>
+
+        <!-- Cobertura de Sucursales por Departamento -->
+        <div class="p-6 rounded-3xl bg-white dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 shadow-sm dark:shadow-xl space-y-5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i class="ph ph-map-trifold text-indigo-600 dark:text-indigo-400 text-lg"></i>
+              <h3 class="text-sm font-bold text-zinc-900 dark:text-white uppercase tracking-wider">Presencia Geográfica</h3>
+            </div>
+            <a routerLink="/admin/sucursales" class="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-semibold flex items-center gap-1">
+              <span>Sucursales</span>
+              <i class="ph ph-arrow-right"></i>
+            </a>
+          </div>
+
+          <div class="space-y-3.5">
+            <div *ngFor="let d of metricas.sucursales_por_depto" class="space-y-1">
+              <div class="flex items-center justify-between text-xs">
+                <span class="font-bold text-zinc-700 dark:text-zinc-300">{{ d.departamento }}</span>
+                <span class="font-mono text-zinc-500 dark:text-zinc-400">{{ d.cantidad }} sucursales</span>
+              </div>
+              <div class="w-full h-2 bg-stone-200 dark:bg-zinc-900 rounded-full overflow-hidden border border-stone-300 dark:border-zinc-800">
+                <div class="h-full bg-gradient-to-r from-indigo-500 to-indigo-400 rounded-full transition-all duration-700"
+                     [style.width.%]="getAnchoBarraDepto(d.cantidad)"></div>
+              </div>
+            </div>
+            <div *ngIf="!metricas.sucursales_por_depto?.length" class="text-xs text-zinc-400 dark:text-zinc-500 py-4 text-center">
+              Sin registros geográficos aún.
+            </div>
           </div>
         </div>
+
+        <!-- Registro de Actividad Reciente (Bitácora) -->
+        <div class="p-6 rounded-3xl bg-white dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 shadow-sm dark:shadow-xl space-y-5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i class="ph ph-activity text-emerald-600 dark:text-emerald-400 text-lg"></i>
+              <h3 class="text-sm font-bold text-zinc-900 dark:text-white uppercase tracking-wider">Actividad en Vivo</h3>
+            </div>
+            <a routerLink="/admin/bitacora" class="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-semibold flex items-center gap-1">
+              <span>Bitácora</span>
+              <i class="ph ph-arrow-right"></i>
+            </a>
+          </div>
+
+          <div class="space-y-3">
+            <div *ngFor="let act of metricas.actividad_reciente" 
+                 class="p-3 rounded-2xl bg-stone-50 dark:bg-zinc-900/40 border border-stone-200 dark:border-zinc-900 space-y-1 hover:border-stone-300 dark:hover:border-zinc-800 transition-all">
+              <div class="flex items-center justify-between text-xs">
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-zinc-800 dark:text-amber-300 font-mono">
+                  {{ act.modulo }}
+                </span>
+                <span class="text-[10px] font-mono text-zinc-500">{{ act.fecha }}</span>
+              </div>
+              <p class="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+                {{ act.accion }}
+              </p>
+              <p class="text-[11px] text-zinc-500 font-mono">
+                Por: <strong class="text-zinc-700 dark:text-zinc-400">{{ act.usuario }}</strong>
+              </p>
+            </div>
+          </div>
+        </div>
+
       </div>
 
-      <!-- Chart 2: Tiendas y Sucursales Eficientes -->
-      <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800/80 shadow-sm flex flex-col h-80 overflow-hidden">
-        <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
-          <h3 class="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">Tiendas y Sucursales Eficientes</h3>
-        </div>
+    </ng-container>
+
+    <!-- ============================================================== -->
+    <!-- 2. VISTA: EMPRESA (ADMINISTRADOR DE TIENDA)                    -->
+    <!-- ============================================================== -->
+    <ng-container *ngIf="alcance === 'EMPRESA'">
+      
+      <!-- KPI Cards Administrador de Tienda -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
-        <div class="p-5 flex-1 overflow-y-auto custom-scrollbar">
-          <div class="space-y-3.5 w-full" *ngIf="metricas.talleres_eficientes.length > 0">
-            <div *ngFor="let item of metricas.talleres_eficientes; let i = index; trackBy: trackByTaller" class="flex items-center text-xs">
-              <div class="w-36 font-semibold text-slate-600 dark:text-slate-300 truncate pr-2 uppercase">{{ i + 1 }}. {{ item.taller }}</div>
-              <div class="flex-1 flex items-center gap-2">
-                <div class="h-3.5 bg-emerald-500 rounded-full transition-all duration-1000" [style.width.%]="getAnchoBarraTaller(item.tiempo_promedio_min)"></div>
-                <span class="font-mono font-bold text-slate-900 dark:text-white">{{ item.tiempo_promedio_min }} min</span>
+        <div class="p-5 rounded-3xl bg-white dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 shadow-sm dark:shadow-xl space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-mono uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Tienda Matriz</span>
+            <i class="ph ph-buildings text-xl text-amber-600 dark:text-amber-400"></i>
+          </div>
+          <div>
+            <h2 class="text-2xl font-black text-zinc-900 dark:text-white truncate">{{ metricas.nombre_empresa }}</h2>
+            <p class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold mt-0.5">Tenant Activo</p>
+          </div>
+        </div>
+
+        <div class="p-5 rounded-3xl bg-white dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 shadow-sm dark:shadow-xl space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-mono uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Mis Sucursales</span>
+            <i class="ph ph-storefront text-xl text-indigo-600 dark:text-indigo-400"></i>
+          </div>
+          <div>
+            <h2 class="text-3xl font-black text-zinc-900 dark:text-white">{{ metricas.total_sucursales }}</h2>
+            <p class="text-[11px] text-zinc-500 mt-0.5">Puntos de venta de la empresa</p>
+          </div>
+        </div>
+
+        <div class="p-5 rounded-3xl bg-white dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 shadow-sm dark:shadow-xl space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-mono uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Mi Equipo</span>
+            <i class="ph ph-users text-xl text-sky-600 dark:text-sky-400"></i>
+          </div>
+          <div>
+            <h2 class="text-3xl font-black text-zinc-900 dark:text-white">{{ metricas.total_usuarios }}</h2>
+            <p class="text-[11px] text-zinc-500 mt-0.5">Colaboradores registrados</p>
+          </div>
+        </div>
+
+        <div class="p-5 rounded-3xl bg-white dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 shadow-sm dark:shadow-xl space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-mono uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Nivel de Servicio</span>
+            <i class="ph ph-shield-check text-xl text-emerald-600 dark:text-emerald-400"></i>
+          </div>
+          <div>
+            <h2 class="text-3xl font-black text-emerald-600 dark:text-emerald-400">{{ metricas.nivel_cumplimiento_sla }}</h2>
+            <p class="text-[11px] text-zinc-500 mt-0.5">Cumplimiento operacional</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Paneles Empresa -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- Sucursales de la Empresa -->
+        <div class="p-6 rounded-3xl bg-white dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 shadow-sm dark:shadow-xl space-y-5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i class="ph ph-storefront text-indigo-600 dark:text-indigo-400 text-lg"></i>
+              <h3 class="text-sm font-bold text-zinc-900 dark:text-white uppercase tracking-wider">Sucursales de mi Empresa</h3>
+            </div>
+            <a routerLink="/admin/sucursales" class="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-semibold flex items-center gap-1">
+              <span>Ver todas</span>
+              <i class="ph ph-arrow-right"></i>
+            </a>
+          </div>
+
+          <div class="space-y-3">
+            <div *ngFor="let s of metricas.sucursales_detalle" 
+                 class="p-4 rounded-2xl bg-stone-50 dark:bg-zinc-900/40 border border-stone-200 dark:border-zinc-900 flex items-center justify-between gap-4 shadow-sm">
+              <div>
+                <p class="text-sm font-bold text-zinc-900 dark:text-white">{{ s.nombre }}</p>
+                <p class="text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-0.5">
+                  {{ s.ciudad }}, {{ s.departamento }}
+                </p>
+              </div>
+              <span *ngIf="s.activo" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
+                Operativa
+              </span>
+            </div>
+            <div *ngIf="!metricas.sucursales_detalle?.length" class="text-xs text-zinc-400 dark:text-zinc-500 py-4 text-center">
+              No hay sucursales registradas para esta empresa.
+            </div>
+          </div>
+        </div>
+
+        <!-- Equipo de la Empresa -->
+        <div class="p-6 rounded-3xl bg-white dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 shadow-sm dark:shadow-xl space-y-5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i class="ph ph-users text-sky-600 dark:text-sky-400 text-lg"></i>
+              <h3 class="text-sm font-bold text-zinc-900 dark:text-white uppercase tracking-wider">Equipo por Rol</h3>
+            </div>
+            <a routerLink="/admin/usuarios" class="text-xs text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 font-semibold flex items-center gap-1">
+              <span>Gestionar Equipo</span>
+              <i class="ph ph-arrow-right"></i>
+            </a>
+          </div>
+
+          <div class="space-y-3.5">
+            <div *ngFor="let r of metricas.roles_distribucion" class="space-y-1">
+              <div class="flex items-center justify-between text-xs">
+                <span class="font-bold text-zinc-700 dark:text-zinc-300">{{ r.rol }}</span>
+                <span class="font-mono text-zinc-500 dark:text-zinc-400">{{ r.cantidad }} colaboradores</span>
+              </div>
+              <div class="w-full h-2 bg-stone-200 dark:bg-zinc-900 rounded-full overflow-hidden border border-stone-300 dark:border-zinc-800">
+                <div class="h-full bg-gradient-to-r from-sky-500 to-sky-400 rounded-full"
+                     [style.width.%]="getAnchoBarraRol(r.cantidad)"></div>
               </div>
             </div>
           </div>
+        </div>
 
-          <div *ngIf="metricas.talleres_eficientes.length === 0" class="h-full flex items-center justify-center text-xs text-slate-400">
-            No hay sucursales con métricas suficientes.
+      </div>
+
+    </ng-container>
+
+    <!-- ============================================================== -->
+    <!-- 3. VISTA: SUCURSAL / OPERATIVO (ENCARGADO Y EMPLEADO)          -->
+    <!-- ============================================================== -->
+    <ng-container *ngIf="alcance === 'SUCURSAL' || alcance === 'OPERATIVO'">
+      
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <div class="p-5 rounded-3xl bg-white dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 shadow-sm dark:shadow-xl space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-mono uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Punto de Atención</span>
+            <i class="ph ph-storefront text-xl text-amber-600 dark:text-amber-400"></i>
+          </div>
+          <div>
+            <h2 class="text-xl font-black text-zinc-900 dark:text-white">{{ metricas.nombre_sucursal || 'Punto Mostrador' }}</h2>
+            <p class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold mt-0.5">{{ metricas.estado_operativo || 'Turno Activo' }}</p>
+          </div>
+        </div>
+
+        <div class="p-5 rounded-3xl bg-white dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 shadow-sm dark:shadow-xl space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-mono uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Prendas en Stock</span>
+            <i class="ph ph-t-shirt text-xl text-indigo-600 dark:text-indigo-400"></i>
+          </div>
+          <div>
+            <h2 class="text-3xl font-black text-zinc-900 dark:text-white">{{ metricas.prendas_stock || 120 }}</h2>
+            <p class="text-[11px] text-zinc-500 mt-0.5">Disponibles en mostrador</p>
+          </div>
+        </div>
+
+        <div class="p-5 rounded-3xl bg-white dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 shadow-sm dark:shadow-xl space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-mono uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Retiros Pendientes</span>
+            <i class="ph ph-package text-xl text-sky-600 dark:text-sky-400"></i>
+          </div>
+          <div>
+            <h2 class="text-3xl font-black text-amber-600 dark:text-amber-400">{{ metricas.pedidos_retiro_pendientes || 4 }}</h2>
+            <p class="text-[11px] text-zinc-500 mt-0.5">Para entrega en tienda</p>
+          </div>
+        </div>
+
+        <div class="p-5 rounded-3xl bg-white dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 shadow-sm dark:shadow-xl space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-mono uppercase tracking-wider text-zinc-500 dark:text-zinc-400">SLA Operativo</span>
+            <i class="ph ph-shield-check text-xl text-emerald-600 dark:text-emerald-400"></i>
+          </div>
+          <div>
+            <h2 class="text-3xl font-black text-emerald-600 dark:text-emerald-400">{{ metricas.nivel_cumplimiento_sla }}</h2>
+            <p class="text-[11px] text-zinc-500 mt-0.5">Eficiencia del turno</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Acciones Rápidas Operativas -->
+      <div class="p-8 rounded-3xl bg-white dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 shadow-sm dark:shadow-xl space-y-4">
+        <h3 class="text-sm font-bold text-zinc-900 dark:text-white uppercase tracking-wider">Acciones Rápidas de Turno</h3>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <a routerLink="/catalogo" 
+             class="p-5 rounded-2xl bg-stone-50 hover:bg-amber-50/70 dark:bg-zinc-900/60 dark:hover:bg-amber-500/10 border border-stone-200 hover:border-amber-500/30 dark:border-zinc-800 dark:hover:border-amber-500/30 transition-all flex items-center gap-4 group shadow-sm">
+            <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-700 dark:text-amber-300 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
+              <i class="ph ph-magnifying-glass"></i>
+            </div>
+            <div>
+              <p class="font-bold text-zinc-900 dark:text-white text-sm group-hover:text-amber-600 dark:group-hover:text-amber-300 transition-colors">Consultar Catálogo</p>
+              <p class="text-xs text-zinc-500 dark:text-zinc-400 font-light">Explorar prendas, tallas y colores</p>
+            </div>
+          </a>
+
+          <a routerLink="/perfil" 
+             class="p-5 rounded-2xl bg-stone-50 hover:bg-indigo-50/70 dark:bg-zinc-900/60 dark:hover:bg-indigo-500/10 border border-stone-200 hover:border-indigo-500/30 dark:border-zinc-800 dark:hover:border-indigo-500/30 transition-all flex items-center gap-4 group shadow-sm">
+            <div class="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
+              <i class="ph ph-user"></i>
+            </div>
+            <div>
+              <p class="font-bold text-zinc-900 dark:text-white text-sm group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors">Mi Perfil & Turno</p>
+              <p class="text-xs text-zinc-500 dark:text-zinc-400 font-light">Datos personales y credenciales</p>
+            </div>
+          </a>
+
+          <div class="p-5 rounded-2xl bg-stone-50 dark:bg-zinc-900/60 border border-stone-200 dark:border-zinc-800 flex items-center gap-4 shadow-sm">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 flex items-center justify-center text-xl">
+              <i class="ph ph-check-circle"></i>
+            </div>
+            <div>
+              <p class="font-bold text-zinc-900 dark:text-white text-sm">Estado de Sistema</p>
+              <p class="text-xs text-emerald-600 dark:text-emerald-400 font-medium">100% Operativo y Conectado</p>
+            </div>
           </div>
         </div>
       </div>
 
-    </div>
-
-    <!-- Data Espacial Raw Table -->
-    <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-xl shadow-sm overflow-hidden">
-      <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
-        <h3 class="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">Data Espacial Raw (Últimos Registros)</h3>
-        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Muestra: 10</span>
-      </div>
-      
-      <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse text-xs">
-          <thead>
-            <tr class="bg-slate-50/70 dark:bg-slate-800/40 border-b border-slate-200/80 dark:border-slate-800/80 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-              <th class="py-3 px-5 w-16 text-center">ID</th>
-              <th class="py-3 px-5">Tipo de Incidente</th>
-              <th class="py-3 px-5 font-mono">Latitud</th>
-              <th class="py-3 px-5 font-mono">Longitud</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60">
-            <tr *ngIf="metricas.mapa_calor.length === 0">
-              <td colspan="4" class="py-8 text-center text-slate-400">Base de datos espacial vacía.</td>
-            </tr>
-            <tr *ngFor="let punto of metricas.mapa_calor | slice:0:10; let i = index; trackBy: trackByPunto" class="hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition-colors">
-              <td class="py-3 px-5 text-center text-slate-400 font-mono font-bold">{{ i + 1 }}</td>
-              <td class="py-3 px-5 font-bold uppercase text-slate-900 dark:text-white">{{ punto.tipo }}</td>
-              <td class="py-3 px-5 font-mono text-slate-600 dark:text-slate-400">{{ punto.lat | number:'1.5-5' }}</td>
-              <td class="py-3 px-5 font-mono text-slate-600 dark:text-slate-400">{{ punto.lng | number:'1.5-5' }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+    </ng-container>
 
   </div>
+
 </div>
