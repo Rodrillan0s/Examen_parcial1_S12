@@ -130,10 +130,26 @@ export class ListaUsuariosComponent implements OnInit {
       const currentUser = this.authService.obtenerUsuario();
       if (!this.isGlobalAdmin && currentUser?.id_empresa) {
         this.filtroEmpresa = String(currentUser.id_empresa);
+      } else if (this.isGlobalAdmin) {
+        const eff = this.authService.getEffectiveCompanyId();
+        this.filtroEmpresa = eff ? String(eff) : 'TODOS';
       }
       this.cargarRolesDelegables();
       this.cargarEmpresas();
       this.cargarUsuarios();
+
+      this.authService.companyChanged$
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe(empresa => {
+          if (this.isGlobalAdmin) {
+            const nueva = empresa ? String(empresa.id_empresa) : 'TODOS';
+            if (this.filtroEmpresa !== nueva) {
+              this.filtroEmpresa = nueva;
+              this.aplicarFiltros();
+              this.cdr.detectChanges();
+            }
+          }
+        });
     } else {
       this.cargando = false;
       this.mensajeError = "No se pudo iniciar sesión. Por favor recarga la página.";
@@ -237,6 +253,20 @@ export class ListaUsuariosComponent implements OnInit {
   }
 
   // --- FILTRADO Y MÉTRICAS ---
+
+  onFiltroEmpresaChange() {
+    if (this.isGlobalAdmin) {
+      if (this.filtroEmpresa !== 'TODOS' && this.filtroEmpresa !== '') {
+        const emp = this.empresas.find(e => e.id_empresa === Number(this.filtroEmpresa));
+        if (emp) {
+          this.authService.setSelectedCompany({ id_empresa: emp.id_empresa, nombre_empresa: emp.nombre_empresa });
+        }
+      } else {
+        this.authService.setSelectedCompany(null);
+      }
+    }
+    this.aplicarFiltros();
+  }
 
   aplicarFiltros() {
     let resultado = [...this.usuarios];

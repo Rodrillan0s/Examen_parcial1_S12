@@ -28,9 +28,9 @@ def obtener_nivel_actor(actor_payload: dict) -> int:
     id_rol = actor_payload.get('id_rol')
     id_empresa = actor_payload.get('id_empresa')
 
-    if (id_rol == 1 or 'ADMINISTRADOR' in roles) and (id_empresa is None or id_empresa == 0):
+    if (id_rol == 1 or 'ADMINISTRADOR' in roles or 'SUPERADMIN' in roles) and (id_empresa is None or id_empresa == 0):
         return 1  # SUPERADMIN
-    if id_rol == 1 or 'ADMINISTRADOR' in roles:
+    if id_rol == 1 or 'ADMINISTRADOR' in roles or 'SUPERADMIN' in roles:
         return 2  # ADMINISTRADOR
     if id_rol == 3 or 'ADMINISTRADOR_TIENDA' in roles:
         return 3  # ADMINISTRADOR_TIENDA

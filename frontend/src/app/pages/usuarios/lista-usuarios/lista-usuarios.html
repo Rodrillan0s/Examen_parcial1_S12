@@ -97,7 +97,7 @@
       <!-- Empresa Filter (SuperAdmin) -->
       <div *ngIf="isGlobalAdmin && empresas.length > 0" class="flex items-center gap-2">
         <span class="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">Tenant:</span>
-        <select [(ngModel)]="filtroEmpresa" (change)="aplicarFiltros()"
+        <select [(ngModel)]="filtroEmpresa" (change)="onFiltroEmpresaChange()"
                 class="bg-stone-50 dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-200 text-xs font-bold rounded-2xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all cursor-pointer">
           <option value="TODOS">Todos los Tenants</option>
           <option *ngFor="let emp of empresas" [value]="emp.id_empresa">{{ emp.nombre_empresa }}</option>

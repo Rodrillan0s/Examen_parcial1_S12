@@ -1,4 +1,4 @@
-<div class="min-h-screen py-8 sm:py-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 animate-fade-in transition-colors">
+<div class="min-h-screen py-8 sm:py-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 transition-colors">
   
   <!-- ========================================================================= -->
   <!-- HEADER & CONTROLES GLOBALES (TENANT + THEME TOGGLE)                       -->
@@ -197,13 +197,14 @@
     </button>
   </div>
 
-  <!-- ========================================================================= -->
-  <!-- COMPONENTE DESACOPLADO DE DETALLE DE PRENDA (MODAL)                       -->
-  <!-- ========================================================================= -->
-  <app-product-detail-modal 
-    *ngIf="selectedProductForModal" 
-    [producto]="selectedProductForModal" 
-    (close)="cerrarModalDetalle()">
-  </app-product-detail-modal>
-
 </div>
+
+<!-- ========================================================================= -->
+<!-- COMPONENTE DESACOPLADO DE DETALLE DE PRENDA (MODAL)                       -->
+<!-- ========================================================================= -->
+<app-product-detail-modal 
+  *ngIf="selectedProductForModal" 
+  [producto]="selectedProductForModal" 
+  (close)="cerrarModalDetalle()">
+</app-product-detail-modal>
+

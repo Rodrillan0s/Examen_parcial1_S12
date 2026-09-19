@@ -83,11 +83,15 @@ export class ListaSucursalesComponent implements OnInit {
   }
   
   get isGlobalAdmin(): boolean {
-    const u = this.authService.obtenerUsuario();
-    if (!u) return false;
-    const rol = (u.nombre_rol || '').toUpperCase();
-    const roles = (u.roles || []).map(r => r.toUpperCase());
-    return u.id_rol === 1 || rol === 'ADMINISTRADOR' || roles.includes('ADMINISTRADOR') || this.authService.getScopeLevel() === 'PLATAFORMA';
+    return this.authService.isGlobalAdmin();
+  }
+
+  get puedeCrear(): boolean {
+    return this.authService.hasPermission('sucursales.crear');
+  }
+
+  get puedeEditar(): boolean {
+    return this.authService.hasPermission('sucursales.editar');
   }
 
   async ngOnInit() {
@@ -105,6 +109,14 @@ export class ListaSucursalesComponent implements OnInit {
       }
       this.cargarCiudades();
       this.cargarSucursales();
+
+      this.authService.companyChanged$
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe(() => {
+          if (this.isGlobalAdmin) {
+            this.cargarSucursales();
+          }
+        });
     } else {
       this.cargando = false;
       this.mensajeError = 'No se pudo iniciar sesión. Por favor recarga la página.';
@@ -156,7 +168,9 @@ export class ListaSucursalesComponent implements OnInit {
     this.cargando = true;
     this.mensajeError = '';
 
-    const idEmpresaParam = (!this.isGlobalAdmin && this.idEmpresaSesion > 0) ? this.idEmpresaSesion : undefined;
+    const idEmpresaParam = (!this.isGlobalAdmin && this.idEmpresaSesion > 0)
+      ? this.idEmpresaSesion
+      : (this.authService.getEffectiveCompanyId() || undefined);
 
     this.sucursalService.listarSucursales(idEmpresaParam)
       .pipe(takeUntilDestroyed(this.destroyRef))

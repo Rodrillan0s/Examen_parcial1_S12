@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Diagramas de Navegación Web - Sistema Aura (SI2)</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --card-border: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-hover: #0284c7;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      padding: 24px;
+      line-height: 1.5;
+    }
+    header {
+      max-width: 1200px;
+      margin: 0 auto 30px auto;
+      text-align: center;
+    }
+    h1 {
+      font-size: 2rem;
+      color: #ffffff;
+      margin-bottom: 8px;
+    }
+    p.subtitle {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      margin-bottom: 25px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+      gap: 28px;
+      max-width: 1300px;
+      margin: 0 auto;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+      border-color: var(--accent);
+    }
+    .card-header {
+      padding: 14px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+    }
+    .badge {
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-weight: 600;
+      text-transform: uppercase;
+      background: rgba(56, 189, 248, 0.2);
+      color: #38bdf8;
+      border: 1px solid #38bdf8;
+    }
+    .card-meta {
+      padding: 10px 18px;
+      font-size: 0.85rem;
+      color: #cbd5e1;
+      background: rgba(15, 23, 42, 0.4);
+      border-bottom: 1px solid var(--card-border);
+    }
+    .card-meta strong {
+      color: #38bdf8;
+    }
+    .card-body {
+      padding: 14px;
+      background: #ffffff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+    }
+    .card-body img {
+      max-width: 100%;
+      height: 280px;
+      object-fit: contain;
+    }
+    .card-footer {
+      padding: 12px 18px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      border-top: 1px solid var(--card-border);
+      background: #162032;
+    }
+    .btn {
+      flex: 1;
+      text-align: center;
+      text-decoration: none;
+      font-size: 0.85rem;
+      padding: 7px 14px;
+      border-radius: 6px;
+      transition: background 0.2s;
+    }
+    .btn-svg {
+      background: transparent;
+      border: 1px solid #475569;
+      color: var(--text-main);
+    }
+    .btn-svg:hover {
+      background: #334155;
+    }
+    .btn-png {
+      background: #0284c7;
+      color: #ffffff;
+      font-weight: 500;
+    }
+    .btn-png:hover {
+      background: #0369a1;
+    }
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.88);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .modal.active { display: flex; }
+    .modal-content {
+      background: #ffffff;
+      padding: 15px;
+      border-radius: 10px;
+      max-width: 95vw;
+      max-height: 95vh;
+      overflow: auto;
+      position: relative;
+    }
+    .modal-content img {
+      display: block;
+      max-width: 100%;
+      height: auto;
+    }
+    .modal-close {
+      position: absolute;
+      top: 10px; right: 15px;
+      font-size: 1.8rem;
+      color: #333;
+      cursor: pointer;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Diagramas de Navegación Web (2.1.3.4)</h1>
+    <p class="subtitle">Estructura Modular y Cohesiva del Sistema E-Commerce Multi-Tenant "Aura" (SI2 - UAGRM)</p>
+  </header>
+
+  <div class="grid">
+    <!-- Card DN00 -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">DN-00: Mapa General de Navegación Maestro</span>
+        <span class="badge">Hub Global</span>
+      </div>
+      <div class="card-meta">
+        <strong>Ámbito:</strong> Distribución del Enrutador Central hacia los 3 Subsistemas
+      </div>
+      <div class="card-body" onclick="openModal('DN00_Mapa_General_Navegacion_Sistema_Aura.png')">
+        <img src="DN00_Mapa_General_Navegacion_Sistema_Aura.png" alt="DN00 Mapa General" loading="lazy">
+      </div>
+      <div class="card-footer">
+        <a class="btn btn-svg" href="DN00_Mapa_General_Navegacion_Sistema_Aura.svg" target="_blank">Ver SVG</a>
+        <a class="btn btn-png" href="DN00_Mapa_General_Navegacion_Sistema_Aura.png" target="_blank">Descargar PNG</a>
+      </div>
+    </div>
+
+    <!-- Card DN01 -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">DN-01: Tienda E-Commerce, Catálogo y Checkout</span>
+        <span class="badge">Flujo Cliente</span>
+      </div>
+      <div class="card-meta">
+        <strong>Ámbito:</strong> Catálogo, Ficha Prenda, Carrito, Checkout, Pagos y Mis Pedidos
+      </div>
+      <div class="card-body" onclick="openModal('DN01_Navegacion_Cliente_Ecommerce_Checkout.png')">
+        <img src="DN01_Navegacion_Cliente_Ecommerce_Checkout.png" alt="DN01 Cliente" loading="lazy">
+      </div>
+      <div class="card-footer">
+        <a class="btn btn-svg" href="DN01_Navegacion_Cliente_Ecommerce_Checkout.svg" target="_blank">Ver SVG</a>
+        <a class="btn btn-png" href="DN01_Navegacion_Cliente_Ecommerce_Checkout.png" target="_blank">Descargar PNG</a>
+      </div>
+    </div>
+
+    <!-- Card DN02 -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">DN-02: Operaciones de Sucursal, POS y Facturación</span>
+        <span class="badge">Flujo Mostrador</span>
+      </div>
+      <div class="card-meta">
+        <strong>Ámbito:</strong> Terminal POS, Pago en Caja, Emisión Comprobante e Inventario
+      </div>
+      <div class="card-body" onclick="openModal('DN02_Navegacion_Operativa_Sucursal_POS_Caja.png')">
+        <img src="DN02_Navegacion_Operativa_Sucursal_POS_Caja.png" alt="DN02 Sucursal" loading="lazy">
+      </div>
+      <div class="card-footer">
+        <a class="btn btn-svg" href="DN02_Navegacion_Operativa_Sucursal_POS_Caja.svg" target="_blank">Ver SVG</a>
+        <a class="btn btn-png" href="DN02_Navegacion_Operativa_Sucursal_POS_Caja.png" target="_blank">Descargar PNG</a>
+      </div>
+    </div>
+
+    <!-- Card DN03 -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">DN-03: Panel Administrativo, Catálogo y Auditoría</span>
+        <span class="badge">Flujo Admin</span>
+      </div>
+      <div class="card-meta">
+        <strong>Ámbito:</strong> KPIs, Productos, Colecciones, Proveedores, Roles y Bitácora
+      </div>
+      <div class="card-body" onclick="openModal('DN03_Navegacion_Administracion_Catalogo_Auditoria.png')">
+        <img src="DN03_Navegacion_Administracion_Catalogo_Auditoria.png" alt="DN03 Administracion" loading="lazy">
+      </div>
+      <div class="card-footer">
+        <a class="btn btn-svg" href="DN03_Navegacion_Administracion_Catalogo_Auditoria.svg" target="_blank">Ver SVG</a>
+        <a class="btn btn-png" href="DN03_Navegacion_Administracion_Catalogo_Auditoria.png" target="_blank">Descargar PNG</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="modal" onclick="closeModal()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <span class="modal-close" onclick="closeModal()">&times;</span>
+      <img id="modal-img" src="" alt="Vista previa ampliada">
+    </div>
+  </div>
+
+  <script>
+    function openModal(imgSrc) {
+      document.getElementById('modal-img').src = imgSrc;
+      document.getElementById('modal').classList.add('active');
+    }
+    function closeModal() {
+      document.getElementById('modal').classList.remove('active');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1420 752" width="1420" height="752">
+  <defs>
+    <marker id="arrow_call" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M 0 1.5 L 7 4.5 L 0 7.5 Z" fill="#000000"/>
+    </marker>
+    <marker id="arrow_ret" markerWidth="9" markerHeight="9" refX="2" refY="4.5" orient="auto">
+      <path d="M 7 1.5 L 2 4.5 L 7 7.5" fill="none" stroke="#000000" stroke-width="1.3"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1420" height="752" fill="#ffffff"/>
+  <!-- Marco Exterior UML 2.5 -->
+  <rect x="15" y="15" width="1390" height="722" fill="none" stroke="#000000" stroke-width="1.3"/>
+  <path d="M 15 15 L 321.59999999999997 15 L 321.59999999999997 35 L 313.59999999999997 43 L 15 43 Z" fill="#ffffff" stroke="#000000" stroke-width="1.3"/>
+  <text x="25" y="33" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="bold" fill="#000000">sd CU_W28 - Procesar pago en caja</text>
+
+  <!-- Marcas de Tiempo Verticales -->
+  <g id="time_grid">
+    <line x1="260" y1="60" x2="260" y2="682" stroke="#dedede" stroke-width="1" stroke-dasharray="3,3"/>
+    <text x="260" y="702" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="bold" fill="#333333" text-anchor="middle">t0</text>
+    <line x1="380" y1="60" x2="380" y2="682" stroke="#dedede" stroke-width="1" stroke-dasharray="3,3"/>
+    <text x="380" y="702" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="bold" fill="#333333" text-anchor="middle">t1</text>
+    <line x1="510" y1="60" x2="510" y2="682" stroke="#dedede" stroke-width="1" stroke-dasharray="3,3"/>
+    <text x="510" y="702" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="bold" fill="#333333" text-anchor="middle">t2</text>
+    <line x1="650" y1="60" x2="650" y2="682" stroke="#dedede" stroke-width="1" stroke-dasharray="3,3"/>
+    <text x="650" y="702" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="bold" fill="#333333" text-anchor="middle">t3</text>
+    <line x1="800" y1="60" x2="800" y2="682" stroke="#dedede" stroke-width="1" stroke-dasharray="3,3"/>
+    <text x="800" y="702" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="bold" fill="#333333" text-anchor="middle">t4</text>
+    <line x1="940" y1="60" x2="940" y2="682" stroke="#dedede" stroke-width="1" stroke-dasharray="3,3"/>
+    <text x="940" y="702" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="bold" fill="#333333" text-anchor="middle">t5</text>
+    <line x1="1080" y1="60" x2="1080" y2="682" stroke="#dedede" stroke-width="1" stroke-dasharray="3,3"/>
+    <text x="1080" y="702" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="bold" fill="#333333" text-anchor="middle">t6</text>
+    <line x1="1220" y1="60" x2="1220" y2="682" stroke="#dedede" stroke-width="1" stroke-dasharray="3,3"/>
+    <text x="1220" y="702" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="bold" fill="#333333" text-anchor="middle">t7</text>
+    <line x1="1340" y1="60" x2="1340" y2="682" stroke="#dedede" stroke-width="1" stroke-dasharray="3,3"/>
+    <text x="1340" y="702" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="bold" fill="#333333" text-anchor="middle">t8</text>
+  </g>
+
+  <line x1="240" y1="686" x2="1365" y2="686" stroke="#000000" stroke-width="1.3" marker-end="url(#arrow_call)"/>
+  <text x="1372" y="690" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="bold" fill="#000000">Tiempo (t)</text>
+
+  <!-- Línea de vida: CAJERO -->
+  <rect x="25" y="70" width="1370" height="112" fill="none" stroke="#cccccc" stroke-width="0.8"/>
+  <rect x="25" y="70" width="215" height="112" fill="#f8f9fa" stroke="#cccccc" stroke-width="0.8"/>
+  <text x="35" y="88" font-family="Arial, Helvetica, sans-serif" font-size="11.5" font-weight="bold" fill="#000000">CAJERO</text>
+    <text x="230" y="108" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#444444" text-anchor="end">RecibiendoDinero</text>
+    <line x1="240" y1="104" x2="1390" y2="104" stroke="#f0f0f0" stroke-width="0.8"/>
+    <text x="230" y="132" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#444444" text-anchor="end">IngresandoMontoRecibido</text>
+    <line x1="240" y1="128" x2="1390" y2="128" stroke="#f0f0f0" stroke-width="0.8"/>
+    <text x="230" y="156" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#444444" text-anchor="end">EntregandoCambio</text>
+    <line x1="240" y1="152" x2="1390" y2="152" stroke="#f0f0f0" stroke-width="0.8"/>
+    <text x="230" y="180" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#444444" text-anchor="end">CobroCajaFinalizado</text>
+    <line x1="240" y1="176" x2="1390" y2="176" stroke="#f0f0f0" stroke-width="0.8"/>
+    <path d="M 260 104 L 380 104 L 380 128 L 510 128 L 510 152 L 1220 152 L 1220 176 L 1340 176" fill="none" stroke="#004499" stroke-width="2.3" stroke-linejoin="round"/>
+
+  <!-- Línea de vida: IU_CajaCobro -->
+  <rect x="25" y="200" width="1370" height="112" fill="none" stroke="#cccccc" stroke-width="0.8"/>
+  <rect x="25" y="200" width="215" height="112" fill="#f8f9fa" stroke="#cccccc" stroke-width="0.8"/>
+  <text x="35" y="218" font-family="Arial, Helvetica, sans-serif" font-size="11.5" font-weight="bold" fill="#000000">IU_CajaCobro</text>
+    <text x="230" y="238" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#444444" text-anchor="end">ModalCobro</text>
+    <line x1="240" y1="234" x2="1390" y2="234" stroke="#f0f0f0" stroke-width="0.8"/>
+    <text x="230" y="262" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#444444" text-anchor="end">CalculandoCambioEfectivo</text>
+    <line x1="240" y1="258" x2="1390" y2="258" stroke="#f0f0f0" stroke-width="0.8"/>
+    <text x="230" y="286" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#444444" text-anchor="end">AbriendoGavetaDinero</text>
+    <line x1="240" y1="282" x2="1390" y2="282" stroke="#f0f0f0" stroke-width="0.8"/>
+    <text x="230" y="310" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#444444" text-anchor="end">ResumenCobroVisible</text>
+    <line x1="240" y1="306" x2="1390" y2="306" stroke="#f0f0f0" stroke-width="0.8"/>
+    <path d="M 260 234 L 510 234 L 510 258 L 1080 258 L 1080 282 L 1220 282 L 1220 306 L 1340 306" fill="none" stroke="#004499" stroke-width="2.3" stroke-linejoin="round"/>
+
+  <!-- Línea de vida: caja_routes -->
+  <rect x="25" y="330" width="1370" height="88" fill="none" stroke="#cccccc" stroke-width="0.8"/>
+  <rect x="25" y="330" width="215" height="88" fill="#f8f9fa" stroke="#cccccc" stroke-width="0.8"/>
+  <text x="35" y="348" font-family="Arial, Helvetica, sans-serif" font-size="11.5" font-weight="bold" fill="#000000">caja_routes</text>
+    <text x="230" y="368" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#444444" text-anchor="end">EnEspera</text>
+    <line x1="240" y1="364" x2="1390" y2="364" stroke="#f0f0f0" stroke-width="0.8"/>
+    <text x="230" y="392" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#444444" text-anchor="end">ValidandoCuadraturaCaja</text>
+    <line x1="240" y1="388" x2="1390" y2="388" stroke="#f0f0f0" stroke-width="0.8"/>
+    <text x="230" y="416" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#444444" text-anchor="end">RespondiendoExitoCobro</text>
+    <line x1="240" y1="412" x2="1390" y2="412" stroke="#f0f0f0" stroke-width="0.8"/>
+    <path d="M 260 364 L 510 364 L 510 388 L 650 388 L 650 364 L 940 364 L 940 412 L 1080 412 L 1080 364 L 1340 364" fill="none" stroke="#004499" stroke-width="2.3" stroke-linejoin="round"/>
+
+  <!-- Línea de vida: caja_services -->
+  <rect x="25" y="436" width="1370" height="112" fill="none" stroke="#cccccc" stroke-width="0.8"/>
+  <rect x="25" y="436" width="215" height="112" fill="#f8f9fa" stroke="#cccccc" stroke-width="0.8"/>
+  <text x="35" y="454" font-family="Arial, Helvetica, sans-serif" font-size="11.5" font-weight="bold" fill="#000000">caja_services</text>
+    <text x="230" y="474" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#444444" text-anchor="end">Ocioso</text>
+    <line x1="240" y1="470" x2="1390" y2="470" stroke="#f0f0f0" stroke-width="0.8"/>
+    <text x="230" y="498" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#444444" text-anchor="end">CalculandoArqueoSesion</text>
+    <line x1="240" y1="494" x2="1390" y2="494" stroke="#f0f0f0" stroke-width="0.8"/>
+    <text x="230" y="522" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#444444" text-anchor="end">RegistrandoBitacoraCaja</text>
+    <line x1="240" y1="518" x2="1390" y2="518" stroke="#f0f0f0" stroke-width="0.8"/>
+    <text x="230" y="546" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#444444" text-anchor="end">CobroAsentado</text>
+    <line x1="240" y1="542" x2="1390" y2="542" stroke="#f0f0f0" stroke-width="0.8"/>
+    <path d="M 260 470 L 650 470 L 650 494 L 800 494 L 800 518 L 940 518 L 940 470 L 1340 470" fill="none" stroke="#004499" stroke-width="2.3" stroke-linejoin="round"/>
+
+  <!-- Línea de vida: caja_pago_repos -->
+  <rect x="25" y="566" width="1370" height="88" fill="none" stroke="#cccccc" stroke-width="0.8"/>
+  <rect x="25" y="566" width="215" height="88" fill="#f8f9fa" stroke="#cccccc" stroke-width="0.8"/>
+  <text x="35" y="584" font-family="Arial, Helvetica, sans-serif" font-size="11.5" font-weight="bold" fill="#000000">caja_pago_repos</text>
+    <text x="230" y="604" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#444444" text-anchor="end">EnEspera</text>
+    <line x1="240" y1="600" x2="1390" y2="600" stroke="#f0f0f0" stroke-width="0.8"/>
+    <text x="230" y="628" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#444444" text-anchor="end">VerificandoTotalVenta</text>
+    <line x1="240" y1="624" x2="1390" y2="624" stroke="#f0f0f0" stroke-width="0.8"/>
+    <text x="230" y="652" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#444444" text-anchor="end">InsertandoMovimientoCajaDB</text>
+    <line x1="240" y1="648" x2="1390" y2="648" stroke="#f0f0f0" stroke-width="0.8"/>
+    <path d="M 260 600 L 650 600 L 650 624 L 800 624 L 800 648 L 940 648 L 940 600 L 1340 600" fill="none" stroke="#004499" stroke-width="2.3" stroke-linejoin="round"/>
+
+  <!-- Mensajes Inter-Línea de Vida (Estímulos de Transición) -->
+  <g id="messages">
+    <line x1="380" y1="128" x2="380" y2="258" stroke="#000000" stroke-width="1.3"  marker-end="url(#arrow_call)"/>
+    <rect x="386" y="185.0" width="336.40000000000003" height="16" fill="#ffffff" stroke="#cccccc" stroke-width="0.6" rx="3" opacity="0.95"/>
+    <text x="390" y="197.0" font-family="Arial, Helvetica, sans-serif" font-size="9" font-weight="bold" fill="#000000">1: RegistrarCobro(id_venta, monto_recibido, metodo)</text>
+    <line x1="510" y1="258" x2="510" y2="388" stroke="#000000" stroke-width="1.3"  marker-end="url(#arrow_call)"/>
+    <rect x="516" y="315.0" width="157.20000000000002" height="16" fill="#ffffff" stroke="#cccccc" stroke-width="0.6" rx="3" opacity="0.95"/>
+    <text x="520" y="327.0" font-family="Arial, Helvetica, sans-serif" font-size="9" font-weight="bold" fill="#000000">2: POST /api/caja/pagos</text>
+    <line x1="650" y1="388" x2="650" y2="494" stroke="#000000" stroke-width="1.3"  marker-end="url(#arrow_call)"/>
+    <rect x="656" y="433.0" width="278.8" height="16" fill="#ffffff" stroke="#cccccc" stroke-width="0.6" rx="3" opacity="0.95"/>
+    <text x="660" y="445.0" font-family="Arial, Helvetica, sans-serif" font-size="9" font-weight="bold" fill="#000000">3: registrar_pago_caja(id_sesion, payload)</text>
+    <line x1="800" y1="494" x2="800" y2="624" stroke="#000000" stroke-width="1.3"  marker-end="url(#arrow_call)"/>
+    <rect x="806" y="551.0" width="330.0" height="16" fill="#ffffff" stroke="#cccccc" stroke-width="0.6" rx="3" opacity="0.95"/>
+    <text x="810" y="563.0" font-family="Arial, Helvetica, sans-serif" font-size="9" font-weight="bold" fill="#000000">4: calcular_cambio_efectivo(total, monto_recibido)</text>
+    <line x1="940" y1="648" x2="940" y2="518" stroke="#000000" stroke-width="1.3" stroke-dasharray="3,3" marker-end="url(#arrow_ret)"/>
+    <rect x="946" y="575.0" width="202.0" height="16" fill="#ffffff" stroke="#cccccc" stroke-width="0.6" rx="3" opacity="0.95"/>
+    <text x="950" y="587.0" font-family="Arial, Helvetica, sans-serif" font-size="9" font-weight="bold" fill="#000000">5: return cambio, id_pago_caja</text>
+    <line x1="990" y1="518" x2="990" y2="412" stroke="#000000" stroke-width="1.3" stroke-dasharray="3,3" marker-end="url(#arrow_ret)"/>
+    <rect x="996" y="457.0" width="176.4" height="16" fill="#ffffff" stroke="#cccccc" stroke-width="0.6" rx="3" opacity="0.95"/>
+    <text x="1000" y="469.0" font-family="Arial, Helvetica, sans-serif" font-size="9" font-weight="bold" fill="#000000">6: return cobro_confirmado</text>
+    <line x1="1080" y1="412" x2="1080" y2="282" stroke="#000000" stroke-width="1.3" stroke-dasharray="3,3" marker-end="url(#arrow_ret)"/>
+    <rect x="1086" y="339.0" width="234.0" height="16" fill="#ffffff" stroke="#cccccc" stroke-width="0.6" rx="3" opacity="0.95"/>
+    <text x="1090" y="351.0" font-family="Arial, Helvetica, sans-serif" font-size="9" font-weight="bold" fill="#000000">7: AbrirCajonYMostrarCambio(cambio)</text>
+    <line x1="1220" y1="282" x2="1220" y2="176" stroke="#000000" stroke-width="1.3" stroke-dasharray="3,3" marker-end="url(#arrow_ret)"/>
+    <rect x="1031.2" y="221.0" width="182.8" height="16" fill="#ffffff" stroke="#cccccc" stroke-width="0.6" rx="3" opacity="0.95"/>
+    <text x="1035.2" y="233.0" font-family="Arial, Helvetica, sans-serif" font-size="9" font-weight="bold" fill="#000000">8: EntregarCambioACliente()</text>
+  </g>
+
+  <!-- Leyenda -->
+  <g id="legend">
+    <rect x="25" y="687" width="215" height="38" fill="#fafafa" stroke="#dddddd" stroke-width="0.8"/>
+    <line x1="32" y1="699" x2="58" y2="699" stroke="#004499" stroke-width="2.2"/>
+    <text x="66" y="702" font-family="Arial, Helvetica, sans-serif" font-size="9" fill="#333333">Forma de onda de estado</text>
+    <line x1="32" y1="713" x2="58" y2="713" stroke="#000000" stroke-width="1.3" marker-end="url(#arrow_call)"/>
+    <text x="66" y="716" font-family="Arial, Helvetica, sans-serif" font-size="9" fill="#333333">Estímulo / Mensaje</text>
+  </g>
+
+</svg>

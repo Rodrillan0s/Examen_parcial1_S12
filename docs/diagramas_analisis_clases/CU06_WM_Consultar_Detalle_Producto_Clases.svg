@@ -1,0 +1,158 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1880 850" width="1880" height="850" style="background-color: #ffffff; font-family: 'Segoe UI', Arial, Helvetica, sans-serif;">
+  <!-- Encabezado del Diagrama -->
+  <text x="35" y="34" font-size="16" font-weight="bold" fill="#0f172a">CU06 W/M: Consultar detalle de producto — Diagrama de Análisis de Clases</text>
+  <text x="35" y="54" font-size="12" font-weight="500" fill="#475569">Unificación Web (CU/W06) y Móvil (CU/M06) | Form (Boundary) -&gt; Controller -&gt; Service -&gt; Repository -&gt; Entities (BD en MAYÚSCULAS)</text>
+  <text x="35" y="72" font-size="11.5" font-weight="600" fill="#2563eb">Actor(es): Cliente (Web y Móvil), Administrador, Administrador de tienda, Encargado de sucursal, Cajero</text>
+  <line x1="35" y1="82" x2="1845" y2="82" stroke="#cbd5e1" stroke-width="1.2"/>
+
+  <!-- Leyenda de Roles Arquitectónicos -->
+  <g transform="translate(1390, 24)">
+    <rect x="0" y="0" width="455" height="48" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="12" y="19" font-size="11" font-weight="bold" fill="#334155">Capas del Análisis de Clases:</text>
+    <text x="12" y="36" font-size="10.5" fill="#64748b">Boundary (Form) -&gt; Controller -&gt; Service -&gt; Repository -&gt; Entities (BD)</text>
+  </g>
+  <!-- Clase: Form / Detalle_Producto -->
+  <g id="class_form">
+    <rect x="35" y="290" width="235" height="232" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="35" y1="338" x2="270" y2="338" stroke="#111827" stroke-width="1.4"/>
+    <line x1="35" y1="430.0" x2="270" y2="430.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="152.5" y="307" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#475569">Form</text>
+    <text x="152.5" y="324" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#111827">Detalle_Producto</text>
+    <text x="45" y="354" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ id_producto_sel</text>
+    <text x="45" y="370" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ id_variante_sel</text>
+    <text x="45" y="386" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ talla_seleccionada</text>
+    <text x="45" y="402" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ color_seleccionado</text>
+    <text x="45" y="418" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ cantidad_deseada</text>
+    <text x="45" y="446.0" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ cargar_detalle_producto()</text>
+    <text x="45" y="462.0" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ seleccionar_talla()</text>
+    <text x="45" y="478.0" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ seleccionar_color()</text>
+    <text x="45" y="494.0" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ ver_galeria_imagenes()</text>
+    <text x="45" y="510.0" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ consultar_guia_tallas()</text>
+  </g>
+  <!-- Clase: Producto_Detalle_Controller -->
+  <g id="class_ctrl">
+    <rect x="310" y="340" width="235" height="116" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="310" y1="374" x2="545" y2="374" stroke="#111827" stroke-width="1.4"/>
+    <line x1="310" y1="396" x2="545" y2="396" stroke="#111827" stroke-width="1.4"/>
+    <text x="427.5" y="362" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#111827">Producto_Detalle_Controller</text>
+    <text x="320" y="412" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ get_producto_por_id(id)</text>
+    <text x="320" y="428" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ get_imagenes_producto(id)</text>
+    <text x="320" y="444" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ get_variantes_disponibles(id)</text>
+  </g>
+  <!-- Clase: Producto_Detalle_Service -->
+  <g id="class_srv">
+    <rect x="585" y="330" width="255" height="116" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="585" y1="364" x2="840" y2="364" stroke="#111827" stroke-width="1.4"/>
+    <line x1="585" y1="386" x2="840" y2="386" stroke="#111827" stroke-width="1.4"/>
+    <text x="712.5" y="352" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#111827">Producto_Detalle_Service</text>
+    <text x="595" y="402" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ obtener_ficha_tecnica(id)</text>
+    <text x="595" y="418" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ consolidar_tallas_colores(id)</text>
+    <text x="595" y="434" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ verificar_stock_variante(id_var)</text>
+  </g>
+  <!-- Clase: Producto_Detalle_Repository -->
+  <g id="class_repo">
+    <rect x="880" y="330" width="255" height="116" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="880" y1="364" x2="1135" y2="364" stroke="#111827" stroke-width="1.4"/>
+    <line x1="880" y1="386" x2="1135" y2="386" stroke="#111827" stroke-width="1.4"/>
+    <text x="1007.5" y="352" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#111827">Producto_Detalle_Repository</text>
+    <text x="890" y="402" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ find_by_id(id)</text>
+    <text x="890" y="418" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ find_imagenes_by_producto(id)</text>
+    <text x="890" y="434" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ find_variantes_by_producto(id)</text>
+  </g>
+  <!-- Clase: T_PRODUCTO -->
+  <g id="class_producto">
+    <rect x="1175" y="290" width="195" height="212" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="1175" y1="324" x2="1370" y2="324" stroke="#111827" stroke-width="1.4"/>
+    <line x1="1175" y1="480.0" x2="1370" y2="480.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="1272.5" y="312" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#111827">T_PRODUCTO</text>
+    <text x="1185" y="340" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ ID_PRODUCTO</text>
+    <text x="1185" y="356" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ ID_CATEGORIA</text>
+    <text x="1185" y="372" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ ID_EMPRESA</text>
+    <text x="1185" y="388" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ NOMBRE</text>
+    <text x="1185" y="404" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ DESCRIPCION</text>
+    <text x="1185" y="420" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ GENERO</text>
+    <text x="1185" y="436" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ PRECIO_BASE</text>
+    <text x="1185" y="452" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ IMAGEN_URL</text>
+    <text x="1185" y="468" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ ESTADO</text>
+  </g>
+  <!-- Clase: T_IMAGEN_PRODUCTO -->
+  <g id="class_imagen">
+    <rect x="1175" y="80" width="195" height="148" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="1175" y1="114" x2="1370" y2="114" stroke="#111827" stroke-width="1.4"/>
+    <line x1="1175" y1="206.0" x2="1370" y2="206.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="1272.5" y="102" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#111827">T_IMAGEN_PRODUCTO</text>
+    <text x="1185" y="130" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ ID_IMAGEN</text>
+    <text x="1185" y="146" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ ID_PRODUCTO</text>
+    <text x="1185" y="162" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ URL_IMAGEN</text>
+    <text x="1185" y="178" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ ORDEN</text>
+    <text x="1185" y="194" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ ES_PORTADA</text>
+  </g>
+  <!-- Clase: T_CATEGORIA -->
+  <g id="class_categoria">
+    <rect x="1175" y="570" width="195" height="132" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="1175" y1="604" x2="1370" y2="604" stroke="#111827" stroke-width="1.4"/>
+    <line x1="1175" y1="680.0" x2="1370" y2="680.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="1272.5" y="592" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#111827">T_CATEGORIA</text>
+    <text x="1185" y="620" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ ID_CATEGORIA</text>
+    <text x="1185" y="636" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ NOMBRE</text>
+    <text x="1185" y="652" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ DESCRIPCION</text>
+    <text x="1185" y="668" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ ESTADO</text>
+  </g>
+  <!-- Clase: T_PRODUCTO_VARIANTE -->
+  <g id="class_variante">
+    <rect x="1420" y="305" width="210" height="180" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="1420" y1="339" x2="1630" y2="339" stroke="#111827" stroke-width="1.4"/>
+    <line x1="1420" y1="463.0" x2="1630" y2="463.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="1525.0" y="327" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#111827">T_PRODUCTO_VARIANTE</text>
+    <text x="1430" y="355" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ ID_VARIANTE</text>
+    <text x="1430" y="371" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ ID_PRODUCTO</text>
+    <text x="1430" y="387" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ ID_TALLA</text>
+    <text x="1430" y="403" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ ID_COLOR</text>
+    <text x="1430" y="419" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ PRECIO_ADICIONAL</text>
+    <text x="1430" y="435" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ SKU_VARIANTE</text>
+    <text x="1430" y="451" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ ESTADO</text>
+  </g>
+  <!-- Clase: T_TALLA -->
+  <g id="class_talla">
+    <rect x="1680" y="190" width="160" height="116" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="1680" y1="224" x2="1840" y2="224" stroke="#111827" stroke-width="1.4"/>
+    <line x1="1680" y1="284.0" x2="1840" y2="284.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="1760.0" y="212" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#111827">T_TALLA</text>
+    <text x="1690" y="240" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ ID_TALLA</text>
+    <text x="1690" y="256" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ NOMBRE</text>
+    <text x="1690" y="272" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ ESTADO</text>
+  </g>
+  <!-- Clase: T_COLOR -->
+  <g id="class_color">
+    <rect x="1680" y="420" width="160" height="116" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="1680" y1="454" x2="1840" y2="454" stroke="#111827" stroke-width="1.4"/>
+    <line x1="1680" y1="514.0" x2="1840" y2="514.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="1760.0" y="442" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#111827">T_COLOR</text>
+    <text x="1690" y="470" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ ID_COLOR</text>
+    <text x="1690" y="486" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ NOMBRE</text>
+    <text x="1690" y="502" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ CODIGO_HEX</text>
+  </g>
+
+  <!-- Asociaciones y Multiplicidades -->
+  <g id="associations">
+    <polyline points="270,410 310,410" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <polyline points="545,410 585,410" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <polyline points="840,410 880,410" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <polyline points="1135,410 1175,410" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <polyline points="1272,290 1272,220" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <text x="1280" y="275" font-size="11" font-weight="bold" fill="#111827">1</text>
+    <text x="1280" y="235" font-size="11" font-weight="bold" fill="#111827">0..*</text>
+    <polyline points="1272,500 1272,570" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <text x="1280" y="520" font-size="11" font-weight="bold" fill="#111827">0..*</text>
+    <text x="1280" y="555" font-size="11" font-weight="bold" fill="#111827">1</text>
+    <polyline points="1370,400 1420,400" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <text x="1376" y="390" font-size="11" font-weight="bold" fill="#111827">1</text>
+    <text x="1395" y="390" font-size="11" font-weight="bold" fill="#111827">1..*</text>
+    <polyline points="1630,360 1655,360 1655,250 1680,250" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <text x="1632" y="350" font-size="11" font-weight="bold" fill="#111827">0..*</text>
+    <text x="1660" y="240" font-size="11" font-weight="bold" fill="#111827">1</text>
+    <polyline points="1630,420 1655,420 1655,480 1680,480" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <text x="1632" y="410" font-size="11" font-weight="bold" fill="#111827">0..*</text>
+    <text x="1660" y="470" font-size="11" font-weight="bold" fill="#111827">1</text>
+  </g>
+</svg>

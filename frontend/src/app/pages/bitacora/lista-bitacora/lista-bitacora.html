@@ -8,9 +8,21 @@
   <!-- ======================================================== -->
   <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-800/80 pb-6">
     <div class="space-y-1.5">
-      <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-300 font-mono tracking-wider">
-        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-        <span>AURA Sentinel • Sistema de Auditoría & Trazabilidad</span>
+      <div class="flex items-center gap-2 flex-wrap">
+        <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-300 font-mono tracking-wider">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>AURA Sentinel • Sistema de Auditoría & Trazabilidad</span>
+        </div>
+
+        <!-- Badge de Empresa Activa o Visión Global -->
+        <span *ngIf="empresaActivaNombre" 
+              class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+          <span>🏪 {{ empresaActivaNombre }}</span>
+        </span>
+        <span *ngIf="!empresaActivaNombre && esSuperAdmin" 
+              class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-zinc-800 text-zinc-300 border border-zinc-700">
+          <span>🌐 Visión Global (Toda la Plataforma)</span>
+        </span>
       </div>
       <h1 class="text-2xl sm:text-3xl font-editorial font-bold text-white tracking-tight flex items-center gap-2.5">
         <i class="ph ph-clock-counter-clockwise text-amber-400"></i>
@@ -123,6 +135,18 @@
         <label class="block text-[11px] uppercase tracking-wider font-semibold text-zinc-400 mb-1.5">Fecha Hasta</label>
         <input type="date" [(ngModel)]="filtros.fecha_hasta" name="fecha_hasta"
                class="w-full bg-zinc-950/80 border border-zinc-800 focus:border-amber-400/80 rounded-2xl px-3 py-2.5 text-xs text-white focus:outline-none transition-all font-mono" />
+      </div>
+
+      <!-- Empresa / Tienda (para Administrador Global) -->
+      <div *ngIf="esSuperAdmin">
+        <label class="block text-[11px] uppercase tracking-wider font-semibold text-zinc-400 mb-1.5">Empresa / Tienda</label>
+        <select [(ngModel)]="filtros.id_empresa" name="id_empresa" (change)="aplicarFiltros()"
+                class="w-full bg-zinc-950/80 border border-zinc-800 focus:border-amber-400/80 rounded-2xl px-3 py-2.5 text-xs text-white focus:outline-none transition-all">
+          <option value="">Todas las Empresas (Global)</option>
+          <option *ngFor="let emp of empresasDisponibles" [value]="emp.id_empresa">
+            {{ emp.nombre_empresa }}
+          </option>
+        </select>
       </div>
 
       <!-- Botones de Acción -->

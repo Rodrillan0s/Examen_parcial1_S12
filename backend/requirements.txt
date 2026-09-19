@@ -14,3 +14,4 @@ pydantic[email]
 websockets
 groq
 cloudinary>=1.46.2
+openpyxl>=3.1.5

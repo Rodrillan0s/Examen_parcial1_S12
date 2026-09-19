@@ -21,7 +21,7 @@
 
     <!-- Primary Action Button -->
     <div class="relative z-10 shrink-0 flex items-center gap-3">
-      <button *ngIf="tabActiva === 'SUCURSALES'" (click)="abrirModalNuevaSucursal()" 
+      <button *ngIf="tabActiva === 'SUCURSALES' && puedeCrear" (click)="abrirModalNuevaSucursal()" 
               class="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-[0.98] text-zinc-950 text-xs font-black rounded-2xl shadow-lg shadow-amber-500/20 transition-all ring-1 ring-amber-400/40 focus:outline-none cursor-pointer">
         <i class="ph ph-plus-circle text-base"></i>
         <span>Registrar Sucursal</span>
@@ -247,13 +247,18 @@
                 </span>
               </td>
 
-              <!-- Acciones -->
+              <!-- Acciones Condicionadas -->
               <td class="py-4 px-6 text-right">
                 <div class="flex items-center justify-end gap-1.5">
-                  <button (click)="abrirModalEditarSucursal(s)" title="Editar Sucursal" class="p-2 text-zinc-400 hover:text-amber-300 hover:bg-zinc-900 border border-transparent hover:border-zinc-800 rounded-xl transition-all cursor-pointer">
+                  <!-- Editar (si tiene permiso) -->
+                  <button *ngIf="puedeEditar" (click)="abrirModalEditarSucursal(s)" title="Editar Sucursal" class="p-2 text-zinc-400 hover:text-amber-300 hover:bg-zinc-900 border border-transparent hover:border-zinc-800 rounded-xl transition-all cursor-pointer">
                     <i class="ph ph-pencil-simple text-base"></i>
                   </button>
-                  <button (click)="cambiarEstadoSucursal(s)" [title]="s.activo ? 'Desactivar Sucursal' : 'Activar Sucursal'" 
+                  <!-- Ver Detalle (si es solo lectura) -->
+                  <button *ngIf="!puedeEditar" (click)="abrirModalEditarSucursal(s)" title="Ver Detalle de Sucursal" class="p-2 text-zinc-400 hover:text-indigo-300 hover:bg-zinc-900 border border-transparent hover:border-zinc-800 rounded-xl transition-all cursor-pointer">
+                    <i class="ph ph-eye text-base"></i>
+                  </button>
+                  <button *ngIf="puedeEditar" (click)="cambiarEstadoSucursal(s)" [title]="s.activo ? 'Desactivar Sucursal' : 'Activar Sucursal'" 
                           class="p-2 text-zinc-400 hover:bg-zinc-900 border border-transparent hover:border-zinc-800 rounded-xl transition-all cursor-pointer"
                           [ngClass]="s.activo ? 'hover:text-rose-400' : 'hover:text-emerald-400'">
                     <i class="ph" [ngClass]="s.activo ? 'ph-prohibit' : 'ph-check-circle'" text-base></i>

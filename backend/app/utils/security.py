@@ -1,3 +1,4 @@
+from typing import Optional
 import re
 import random
 import jwt
@@ -8,6 +9,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from werkzeug.security import generate_password_hash, check_password_hash
 
 bearer_scheme = HTTPBearer()
+optional_bearer_scheme = HTTPBearer(auto_error=False)
 
 # Valida que la contraseña tenga al menos 8 caracteres y 1 carácter especial.
 def validar_password(password: str) -> bool:
@@ -94,6 +96,26 @@ def verificar_token(credentials: HTTPAuthorizationCredentials = Depends(bearer_s
         es_glob = (id_rol == 1 or 'ADMINISTRADOR' in roles_upper or 'SUPERADMIN' in roles_upper) and (id_emp is None or id_emp == 0)
         payload['alcance'] = 'PLATAFORMA' if es_glob else 'EMPRESA'
         
+    return payload
+
+# Extrae y valida el token Bearer opcionalmente (permite visitantes no autenticados)
+def verificar_token_opcional(credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_bearer_scheme)):
+    if not credentials:
+        return None
+    resultado = decode_access_token(credentials.credentials)
+    if not resultado.get('success'):
+        return None
+    payload = resultado.get('payload')
+    if not payload:
+        return None
+    if 'id_usuario' not in payload and 'nro_usuario' in payload:
+        payload['id_usuario'] = payload['nro_usuario']
+    if 'alcance' not in payload:
+        roles_upper = [str(r).upper() for r in payload.get('roles', [])]
+        id_rol = payload.get('id_rol')
+        id_emp = payload.get('id_empresa')
+        es_glob = (id_rol == 1 or 'ADMINISTRADOR' in roles_upper or 'SUPERADMIN' in roles_upper) and (id_emp is None or id_emp == 0)
+        payload['alcance'] = 'PLATAFORMA' if es_glob else 'EMPRESA'
     return payload
 
 # Dependencia reutilizable FastAPI para autorizar según el permiso requerido (<recurso>.<accion>)

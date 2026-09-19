@@ -130,3 +130,153 @@ def reenviar_correo_venta(
         raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+class EmitirComprobanteDTO(BaseModel):
+    razon_social: str
+    nit_ci: str
+    correo_facturacion: Optional[str] = None
+    tipo_documento: Optional[str] = "FACTURA"
+    enviar_correo: bool = False
+
+@router.get('/venta/{id_venta}/datos', summary="W29: Consultar datos completos para emisión de comprobante")
+def obtener_datos_comprobante_venta(
+    id_venta: int,
+    token_data: dict = Depends(verificar_token)
+):
+    try:
+        datos = comprobante_service.obtener_datos_venta_comprobante(id_venta)
+        if not datos:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Venta no encontrada.")
+
+        if datos["estado"] not in ('PAGADO', 'COMPLETADA'):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"La venta con ID {id_venta} no ha sido pagada (estado actual: {datos['estado']}). Debe procesarse el cobro en caja (W28) antes de emitir el comprobante."
+            )
+
+        if "pago" not in datos and datos.get("metodo_pago"):
+            datos["pago"] = {
+                "id_pago": datos.get("id_pago"),
+                "metodo": datos.get("metodo_pago"),
+                "monto": datos.get("total"),
+                "fecha": datos.get("fecha_venta"),
+                "estado": "APROBADO"
+            }
+
+        return {
+            "success": True,
+            "datos": datos,
+            "venta": datos,
+            "data": datos,
+            "pdf_url": f"/api/comprobantes/venta/{id_venta}/pdf"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+@router.post('/venta/{id_venta}/emitir', summary="W29: Emitir comprobante o factura de venta presencial")
+def emitir_comprobante_venta(
+    id_venta: int,
+    body: EmitirComprobanteDTO,
+    token_data: dict = Depends(verificar_token)
+):
+    try:
+        from app.classes.postgres import PostgreSQL
+        from app.config import Config
+
+        # 1. Validar que la venta exista y esté PAGADA
+        datos = comprobante_service.obtener_datos_venta_comprobante(id_venta)
+        if not datos:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Venta no encontrada.")
+
+        if datos["estado"] not in ('PAGADO', 'COMPLETADA'):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"No se puede emitir comprobante para una venta no pagada (estado actual: {datos['estado']})."
+            )
+
+        # 2. Validar que tenga pago asociado
+        if not datos.get("codigo_transaccion") or datos.get("codigo_transaccion") == "TXN-MANUAL":
+            # Verificar si existe en t_pago
+            db = PostgreSQL()
+            db.create_connection()
+            try:
+                schema = Config.SCHEMA or 'comercio'
+                pago_row = db.execute_query(
+                    f"SELECT id_pago FROM {schema}.t_pago WHERE id_venta = %s AND estado = 'APROBADO';",
+                    (id_venta,), fetchone=True
+                )
+                if not pago_row:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="No se encontró un pago aprobado asociado a esta venta."
+                    )
+            finally:
+                db.close_connection()
+
+        # 3. Validar obligatoriedad de datos
+        razon_social = (body.razon_social or "").strip()
+        nit_ci = (body.nit_ci or "").strip()
+        correo_fac = (body.correo_facturacion or "").strip() or None
+        tipo_doc = (body.tipo_documento or "FACTURA").strip().upper()
+
+        if not razon_social:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El nombre o razón social es obligatorio para emitir el comprobante.")
+        if not nit_ci:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El número de NIT o Carnet de Identidad (CI) es obligatorio.")
+
+        # 4. Actualizar snapshot en t_venta
+        db = PostgreSQL()
+        db.create_connection()
+        try:
+            schema = Config.SCHEMA or 'comercio'
+            q_up = f"""
+                UPDATE {schema}.t_venta
+                SET 
+                    razon_social = %s,
+                    nit_ci = %s,
+                    correo_facturacion = %s,
+                    tipo_documento = %s
+                WHERE id_venta = %s;
+            """
+            db.execute_query(q_up, (razon_social, nit_ci, correo_fac, tipo_doc, id_venta), commit=True)
+        finally:
+            db.close_connection()
+
+        # 5. Envío opcional por correo
+        correo_enviado = False
+        if body.enviar_correo and correo_fac and '@' in correo_fac:
+            try:
+                pdf_bytes = comprobante_service.generar_pdf_venta(id_venta)
+                filename = f"{tipo_doc}_{datos['numero_venta']}.pdf"
+                correo_enviado = bool(enviar_correo_comprobante(
+                    destinatario_email=correo_fac,
+                    destinatario_nombre=razon_social,
+                    tipo_documento=tipo_doc,
+                    numero_documento=datos["numero_venta"],
+                    total_bs=datos["total"],
+                    pdf_bytes=pdf_bytes,
+                    nombre_archivo=filename
+                ))
+            except Exception as e:
+                logger.warn(f"[EMITIR CORREO WARNING] No se pudo enviar email: {e}")
+
+        # Recargar datos actualizados
+        datos_actualizados = comprobante_service.obtener_datos_venta_comprobante(id_venta)
+
+        return {
+            "success": True,
+            "message": f"{tipo_doc} emitida exitosamente para {razon_social}.",
+            "correo_enviado": correo_enviado,
+            "pdf_url": f"/api/comprobantes/venta/{id_venta}/pdf",
+            "datos": datos_actualizados,
+            "venta": datos_actualizados,
+            "data": datos_actualizados
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[EMITIR COMPROBANTE ERROR] {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+

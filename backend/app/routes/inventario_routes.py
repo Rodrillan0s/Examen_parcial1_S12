@@ -14,6 +14,7 @@ def listar_inventario(
     id_variante: Optional[int] = Query(None, description="Filtrar por ID de variante"),
     id_talla: Optional[int] = Query(None, description="Filtrar por ID de talla"),
     id_color: Optional[int] = Query(None, description="Filtrar por ID de color"),
+    id_empresa: Optional[int] = Query(None, description="Filtrar por Tenant (solo SuperAdmin o global)"),
     estado: Optional[str] = Query(None, description="Filtrar por estado activo/inactivo"),
     filtro_stock: Optional[str] = Query(None, description="Filtro rápido: bajo_stock, sin_stock, disponible"),
     busqueda: Optional[str] = Query(None, description="Búsqueda por producto, SKU, código de barras"),
@@ -26,9 +27,9 @@ def listar_inventario(
     Aplica aislamiento multi-tenant: los usuarios de empresa solo pueden ver el stock de su empresa.
     """
     try:
-        # Multi-tenant: id_empresa proviene estrictamente del JWT
+        # Multi-tenant: usuarios de tienda usan estrictamente el id_empresa del JWT. SuperAdmin puede filtrar o ver global.
         alcance = payload.get("alcance")
-        id_empresa = payload.get("id_empresa") if alcance != "PLATAFORMA" else None
+        id_empresa_efectivo = payload.get("id_empresa") if alcance != "PLATAFORMA" else id_empresa
 
         filtros = {
             "id_sucursal": id_sucursal,
@@ -43,7 +44,7 @@ def listar_inventario(
             "limite": limite
         }
 
-        resultado = inventario_repos.listar_inventario(id_empresa, filtros)
+        resultado = inventario_repos.listar_inventario(id_empresa_efectivo, filtros)
         return resultado
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al consultar inventario: {str(e)}")
@@ -53,6 +54,7 @@ def listar_movimientos(
     id_inventario: Optional[int] = Query(None, description="Filtrar por ID de inventario"),
     id_sucursal: Optional[int] = Query(None, description="Filtrar por ID de sucursal"),
     id_variante: Optional[int] = Query(None, description="Filtrar por ID de variante"),
+    id_empresa: Optional[int] = Query(None, description="Filtrar por Tenant (solo SuperAdmin o global)"),
     tipo_movimiento: Optional[str] = Query(None, description="ENTRADA, SALIDA, AJUSTE, RESERVA"),
     busqueda: Optional[str] = Query(None, description="Búsqueda libre"),
     pagina: int = Query(1, ge=1, description="Número de página"),
@@ -64,7 +66,7 @@ def listar_movimientos(
     """
     try:
         alcance = payload.get("alcance")
-        id_empresa = payload.get("id_empresa") if alcance != "PLATAFORMA" else None
+        id_empresa_efectivo = payload.get("id_empresa") if alcance != "PLATAFORMA" else id_empresa
 
         filtros = {
             "id_inventario": id_inventario,
@@ -76,7 +78,7 @@ def listar_movimientos(
             "limite": limite
         }
 
-        resultado = inventario_repos.listar_movimientos_inventario(id_empresa, filtros)
+        resultado = inventario_repos.listar_movimientos_inventario(id_empresa_efectivo, filtros)
         return resultado
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al consultar historial de movimientos: {str(e)}")

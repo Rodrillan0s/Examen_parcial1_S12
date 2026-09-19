@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2420 510" width="2420" height="510" style="background-color: #ffffff; font-family: 'Segoe UI', Arial, sans-serif;">
+  <defs>
+    <!-- Flecha continua negra a la derecha -->
+    <marker id="arrow-solid-right" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto">
+      <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#111827"/>
+    </marker>
+    <!-- Flecha abierta punteada a la izquierda -->
+    <marker id="arrow-open-left" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto">
+      <path d="M 2 1.5 L 8 5 L 2 8.5" fill="none" stroke="#111827" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <!-- Lineas guía -->
+  <line x1="120" y1="20" x2="120" y2="490" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,4"/>
+  <line x1="400" y1="20" x2="400" y2="490" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,4"/>
+  <line x1="2140" y1="20" x2="2140" y2="490" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,4"/>
+  <line x1="20" y1="301" x2="2400" y2="301" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,4"/>
+  <!-- 1. Actor to Boundary -->
+  <line x1="138" y1="255" x2="400" y2="255" stroke="#111827" stroke-width="1.6" marker-end="url(#arrow-solid-right)"/>
+  <text x="269.0" y="233" text-anchor="middle" font-size="11.5" font-weight="500">1.1: Tocar producto en la pantalla táctil</text>
+  <text x="269.0" y="247" text-anchor="middle" font-size="11.5" font-weight="500">para ver fotos y seleccionar talla()</text>
+  
+  <line x1="390" y1="291" x2="148" y2="291" stroke="#111827" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrow-open-left)"/>
+  <text x="269.0" y="281" text-anchor="middle" font-size="11" font-weight="500">1.12: interactuar con detalle de prenda en la app()</text>
+  <!-- 2. Boundary to Route -->
+  <line x1="506" y1="255" x2="794" y2="255" stroke="#111827" stroke-width="1.6" marker-end="url(#arrow-solid-right)"/>
+  <text x="650.0" y="233" text-anchor="middle" font-size="11.5" font-weight="500">1.2: GET /api/catalogo/producto/{slug}</text>
+  <text x="650.0" y="247" text-anchor="middle" font-size="11.5" font-weight="500">solicitando carrusel de imágenes()</text>
+  
+  <line x1="784" y1="291" x2="516" y2="291" stroke="#111827" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrow-open-left)"/>
+  <text x="650.0" y="281" text-anchor="middle" font-size="11" font-weight="500">1.11: renderizar carrusel gestual y botón de compra()</text>
+  <!-- 3. Route to Service -->
+  <line x1="886" y1="255" x2="1174" y2="255" stroke="#111827" stroke-width="1.6" marker-end="url(#arrow-solid-right)"/>
+  <text x="1030.0" y="233" text-anchor="middle" font-size="11.5" font-weight="500">1.3: obtener_detalle_producto()</text>
+  <text x="1030.0" y="247" text-anchor="middle" font-size="11.5" font-weight="500">con variantes de tallas y colores disponibles</text>
+  
+  <line x1="1164" y1="291" x2="896" y2="291" stroke="#111827" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrow-open-left)"/>
+  <text x="1030.0" y="281" text-anchor="middle" font-size="11" font-weight="500">1.10: responder HTTP 200 con galería y variantes()</text>
+  <!-- 4. Service to Repo -->
+  <line x1="1266" y1="255" x2="1554" y2="255" stroke="#111827" stroke-width="1.6" marker-end="url(#arrow-solid-right)"/>
+  <text x="1410.0" y="233" text-anchor="middle" font-size="11.5" font-weight="500">1.4: consultar información técnica, material</text>
+  <text x="1410.0" y="247" text-anchor="middle" font-size="11.5" font-weight="500">y galería de fotos HD()</text>
+  
+  <line x1="1544" y1="291" x2="1276" y2="291" stroke="#111827" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrow-open-left)"/>
+  <text x="1410.0" y="281" text-anchor="middle" font-size="11" font-weight="500">1.9: formatear respuesta para carrusel móvil()</text>
+  <!-- Conexiones a 2 Entidades -->
+  <!-- Entidad 1 -->
+  <line x1="1632" y1="230" x2="2094" y2="185" stroke="#111827" stroke-width="1.6" marker-end="url(#arrow-solid-right)"/>
+  <text x="1878.0" y="193.5" text-anchor="middle" font-size="11" font-weight="500">1.5: SELECT información de prenda y composición</text>
+  <line x1="2079" y1="206" x2="1638" y2="249" stroke="#111827" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrow-open-left)"/>
+  <text x="1873.5" y="245.5" text-anchor="middle" font-size="10.5" font-weight="500">1.6: retornar datos de prenda</text>
+
+  <!-- Entidad 2 -->
+  <line x1="1632" y1="280" x2="2094" y2="325" stroke="#111827" stroke-width="1.6" marker-end="url(#arrow-solid-right)"/>
+  <text x="1878.0" y="290.5" text-anchor="middle" font-size="11" font-weight="500">1.7: SELECT fotos de alta resolución en Cloudinary</text>
+  <line x1="2079" y1="355" x2="1638" y2="300" stroke="#111827" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrow-open-left)"/>
+  <text x="1873.5" y="343.5" text-anchor="middle" font-size="10.5" font-weight="500">1.8: retornar URLs de imágenes HD</text>
+
+  <!-- G Entidad 1 -->
+  <g>
+    <circle cx="2140" cy="170" r="46" fill="#ffffff" stroke="#111827" stroke-width="1.8"/>
+    <line x1="2108" y1="219" x2="2172" y2="219" stroke="#111827" stroke-width="2.2"/>
+    <text x="2140" y="175" text-anchor="middle" font-size="12" font-weight="bold">t_producto</text>
+  </g>
+
+  <!-- G Entidad 2 -->
+  <g>
+    <circle cx="2140" cy="340" r="46" fill="#ffffff" stroke="#111827" stroke-width="1.8"/>
+    <line x1="2108" y1="389" x2="2172" y2="389" stroke="#111827" stroke-width="2.2"/>
+    <text x="2140" y="336" text-anchor="middle" font-size="10.5" font-weight="bold">t_foto_</text><text x="2140" y="351" text-anchor="middle" font-size="10.5" font-weight="bold">producto</text>
+  </g>
+  <!-- 1. Actor -->
+  <g id="actor">
+    <circle cx="120" cy="219" r="13" fill="#ffffff" stroke="#111827" stroke-width="1.8"/>
+    <line x1="120" y1="232" x2="120" y2="269" stroke="#111827" stroke-width="1.8"/>
+    <line x1="102" y1="243" x2="138" y2="243" stroke="#111827" stroke-width="1.8"/>
+    <line x1="120" y1="269" x2="106" y2="297" stroke="#111827" stroke-width="1.8"/>
+    <line x1="120" y1="269" x2="134" y2="297" stroke="#111827" stroke-width="1.8"/>
+    <text x="120" y="317" text-anchor="middle" font-size="11.5" font-weight="bold">CLIENTE</text>
+  </g>
+  <!-- 2. Boundary -->
+  <g id="boundary">
+    <line x1="400" y1="221" x2="400" y2="289" stroke="#111827" stroke-width="2.2"/>
+    <line x1="400" y1="255" x2="414" y2="255" stroke="#111827" stroke-width="2.0"/>
+    <circle cx="460" cy="255" r="46" fill="#ffffff" stroke="#111827" stroke-width="1.8"/>
+    <text x="460" y="251" text-anchor="middle" font-size="11" font-weight="600">IU_</text><text x="460" y="265" text-anchor="middle" font-size="11" font-weight="600">MovilDetalle</text>
+  </g>
+  <!-- Controller: catalogo_routes -->
+  <g>
+    <circle cx="840" cy="255" r="46" fill="#ffffff" stroke="#111827" stroke-width="1.8"/>
+    <!-- Flecha circular del estándar UML Robustness adherida a la circunferencia -->
+    <path d="M 858 213 A 50 50 0 0 0 834 208" fill="none" stroke="#111827" stroke-width="1.8"/>
+    <path d="M 846 199 L 834 208 L 844 217" fill="none" stroke="#111827" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="840" y="251" text-anchor="middle" font-size="11" font-weight="600">catalogo_</text><text x="840" y="265" text-anchor="middle" font-size="11" font-weight="600">routes</text>
+  </g>
+  <!-- Controller: catalogo_services -->
+  <g>
+    <circle cx="1220" cy="255" r="46" fill="#ffffff" stroke="#111827" stroke-width="1.8"/>
+    <!-- Flecha circular del estándar UML Robustness adherida a la circunferencia -->
+    <path d="M 1238 213 A 50 50 0 0 0 1214 208" fill="none" stroke="#111827" stroke-width="1.8"/>
+    <path d="M 1226 199 L 1214 208 L 1224 217" fill="none" stroke="#111827" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="1220" y="251" text-anchor="middle" font-size="11" font-weight="600">catalogo_</text><text x="1220" y="265" text-anchor="middle" font-size="11" font-weight="600">services</text>
+  </g>
+  <!-- Controller: catalogo_repos -->
+  <g>
+    <circle cx="1600" cy="255" r="46" fill="#ffffff" stroke="#111827" stroke-width="1.8"/>
+    <!-- Flecha circular del estándar UML Robustness adherida a la circunferencia -->
+    <path d="M 1618 213 A 50 50 0 0 0 1594 208" fill="none" stroke="#111827" stroke-width="1.8"/>
+    <path d="M 1606 199 L 1594 208 L 1604 217" fill="none" stroke="#111827" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="1600" y="251" text-anchor="middle" font-size="11" font-weight="600">catalogo_</text><text x="1600" y="265" text-anchor="middle" font-size="11" font-weight="600">repos</text>
+  </g>
+  <text x="30" y="35" font-size="14" font-weight="bold" fill="#475569">CU/M06: Consultar detalle de producto (App Móvil)</text>
+</svg>

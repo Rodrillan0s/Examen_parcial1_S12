@@ -1,7 +1,10 @@
-import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, inject, DestroyRef } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BitacoraService, BitacoraEvent } from '../../../services/bitacora';
+import { AuthService } from '../../../services/auth';
+import { EmpresaService, Empresa } from '../../../services/empresa';
 
 @Component({
   selector: 'app-lista-bitacora',
@@ -13,12 +16,31 @@ import { BitacoraService, BitacoraEvent } from '../../../services/bitacora';
 })
 export class ListaBitacoraComponent implements OnInit {
   private bitacoraService = inject(BitacoraService);
+  public authService = inject(AuthService);
+  private empresaService = inject(EmpresaService);
   private cdr = inject(ChangeDetectorRef);
+  private destroyRef = inject(DestroyRef);
 
   eventos: BitacoraEvent[] = [];
   cargando: boolean = false;
   cargandoMas: boolean = false;
   
+  // Contexto Multi-Tenant & Alcance
+  empresasDisponibles: Empresa[] = [];
+  cargandoEmpresas: boolean = false;
+
+  get esSuperAdmin(): boolean {
+    return this.authService.getScopeLevel() === 'PLATAFORMA';
+  }
+
+  get empresaActivaId(): number | null {
+    return this.authService.getEffectiveCompanyId();
+  }
+
+  get empresaActivaNombre(): string {
+    return this.authService.getEffectiveCompanyName();
+  }
+
   // Paginación rápida (por defecto 10 registros para máxima velocidad de respuesta)
   page: number = 1;
   limit: number = 10;
@@ -27,14 +49,24 @@ export class ListaBitacoraComponent implements OnInit {
   Math = Math;
 
   // Filtros
-  filtros = {
+  filtros: {
+    modulo: string;
+    accion: string;
+    nivel: string;
+    resultado: string;
+    fecha_desde: string;
+    fecha_hasta: string;
+    search: string;
+    id_empresa: string;
+  } = {
     modulo: '',
     accion: '',
     nivel: '',
     resultado: '',
     fecha_desde: '',
     fecha_hasta: '',
-    search: ''
+    search: '',
+    id_empresa: ''
   };
 
   // Modal Detalles
@@ -43,7 +75,56 @@ export class ListaBitacoraComponent implements OnInit {
   copiadoExitoso: boolean = false;
 
   ngOnInit(): void {
+    if (this.esSuperAdmin) {
+      this.cargarEmpresas();
+      const eff = this.authService.getEffectiveCompanyId();
+      this.filtros.id_empresa = eff ? String(eff) : '';
+    } else {
+      const eff = this.authService.getEffectiveCompanyId();
+      this.filtros.id_empresa = eff ? String(eff) : '';
+    }
+
     this.cargarEventos();
+
+    this.authService.companyChanged$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(emp => {
+        if (this.esSuperAdmin) {
+          const nueva = emp ? String(emp.id_empresa) : '';
+          if (this.filtros.id_empresa !== nueva) {
+            this.filtros.id_empresa = nueva;
+            this.page = 1;
+            this.cargarEventos(false);
+            this.cdr.detectChanges();
+          }
+        }
+      });
+  }
+
+  cargarEmpresas(): void {
+    this.cargandoEmpresas = true;
+    this.empresaService.listarEmpresas()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res: any) => {
+          this.cargandoEmpresas = false;
+          this.empresasDisponibles = (res?.data || []).filter((e: Empresa) => e.estado === 'ACTIVO');
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          this.cargandoEmpresas = false;
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  seleccionarEmpresaDirecta(emp: Empresa): void {
+    if (emp && emp.id_empresa) {
+      this.authService.setSelectedCompany({
+        id_empresa: emp.id_empresa,
+        nombre_empresa: emp.nombre_empresa
+      });
+    }
   }
 
   cargarEventos(acumular: boolean = false): void {
@@ -91,7 +172,8 @@ export class ListaBitacoraComponent implements OnInit {
       resultado: '',
       fecha_desde: '',
       fecha_hasta: '',
-      search: ''
+      search: '',
+      id_empresa: this.esSuperAdmin ? (this.empresaActivaId ? String(this.empresaActivaId) : '') : (this.authService.getEffectiveCompanyId() ? String(this.authService.getEffectiveCompanyId()) : '')
     };
     this.page = 1;
     this.cargarEventos(false);
@@ -209,6 +291,12 @@ export class ListaBitacoraComponent implements OnInit {
       case 'EMPRESAS': return 'ph ph-buildings';
       default: return 'ph ph-terminal-window';
     }
+  }
+
+  getNombreEmpresa(idEmpresa?: number): string {
+    if (!idEmpresa) return 'Global / Plataforma';
+    const emp = this.empresasDisponibles.find(e => e.id_empresa === idEmpresa);
+    return emp ? emp.nombre_empresa : `Empresa #${idEmpresa}`;
   }
 
   formatearJSON(obj: any): string {

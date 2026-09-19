@@ -87,6 +87,7 @@ export interface FiltrosInventario {
   id_variante?: number | string | null;
   id_talla?: number | string | null;
   id_color?: number | string | null;
+  id_empresa?: number | string | null;
   estado?: string | boolean | null;
   filtro_stock?: 'bajo_stock' | 'sin_stock' | 'disponible' | '' | null;
   busqueda?: string | null;
@@ -98,6 +99,7 @@ export interface FiltrosMovimientos {
   id_inventario?: number | null;
   id_sucursal?: number | null;
   id_variante?: number | null;
+  id_empresa?: number | string | null;
   tipo_movimiento?: string | null;
   busqueda?: string | null;
   pagina?: number;
@@ -119,6 +121,7 @@ export class InventarioService {
     if (filtros.id_variante) params = params.set('id_variante', filtros.id_variante.toString());
     if (filtros.id_talla) params = params.set('id_talla', filtros.id_talla.toString());
     if (filtros.id_color) params = params.set('id_color', filtros.id_color.toString());
+    if (filtros.id_empresa) params = params.set('id_empresa', filtros.id_empresa.toString());
     if (filtros.estado !== undefined && filtros.estado !== null && filtros.estado !== '') {
       params = params.set('estado', filtros.estado.toString());
     }
@@ -144,6 +147,7 @@ export class InventarioService {
     if (filtros.id_inventario) params = params.set('id_inventario', filtros.id_inventario.toString());
     if (filtros.id_sucursal) params = params.set('id_sucursal', filtros.id_sucursal.toString());
     if (filtros.id_variante) params = params.set('id_variante', filtros.id_variante.toString());
+    if (filtros.id_empresa) params = params.set('id_empresa', filtros.id_empresa.toString());
     if (filtros.tipo_movimiento) params = params.set('tipo_movimiento', filtros.tipo_movimiento);
     if (filtros.busqueda && filtros.busqueda.trim()) params = params.set('busqueda', filtros.busqueda.trim());
     if (filtros.pagina) params = params.set('pagina', filtros.pagina.toString());

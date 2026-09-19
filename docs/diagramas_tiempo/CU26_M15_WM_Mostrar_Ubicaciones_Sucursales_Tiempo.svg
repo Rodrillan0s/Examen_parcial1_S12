@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1420 728" width="1420" height="728">
+  <defs>
+    <marker id="arrow_call" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M 0 1.5 L 7 4.5 L 0 7.5 Z" fill="#000000"/>
+    </marker>
+    <marker id="arrow_ret" markerWidth="9" markerHeight="9" refX="2" refY="4.5" orient="auto">
+      <path d="M 7 1.5 L 2 4.5 L 7 7.5" fill="none" stroke="#000000" stroke-width="1.3"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1420" height="728" fill="#ffffff"/>
+  <!-- Marco Exterior UML 2.5 -->
+  <rect x="15" y="15" width="1390" height="698" fill="none" stroke="#000000" stroke-width="1.3"/>
+  <path d="M 15 15 L 469.2 15 L 469.2 35 L 461.2 43 L 15 43 Z" fill="#ffffff" stroke="#000000" stroke-width="1.3"/>
+  <text x="25" y="33" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="bold" fill="#000000">sd CU26/M15 W/M - Mostrar ubicaciones de sucursales</text>
+
+  <!-- Marcas de Tiempo Verticales -->
+  <g id="time_grid">
+    <line x1="260" y1="60" x2="260" y2="658" stroke="#dedede" stroke-width="1" stroke-dasharray="3,3"/>
+    <text x="260" y="678" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="bold" fill="#333333" text-anchor="middle">t0</text>
+    <line x1="380" y1="60" x2="380" y2="658" stroke="#dedede" stroke-width="1" stroke-dasharray="3,3"/>
+    <text x="380" y="678" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="bold" fill="#333333" text-anchor="middle">t1</text>
+    <line x1="510" y1="60" x2="510" y2="658" stroke="#dedede" stroke-width="1" stroke-dasharray="3,3"/>
+    <text x="510" y="678" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="bold" fill="#333333" text-anchor="middle">t2</text>
+    <line x1="650" y1="60" x2="650" y2="658" stroke="#dedede" stroke-width="1" stroke-dasharray="3,3"/>
+    <text x="650" y="678" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="bold" fill="#333333" text-anchor="middle">t3</text>
+    <line x1="800" y1="60" x2="800" y2="658" stroke="#dedede" stroke-width="1" stroke-dasharray="3,3"/>
+    <text x="800" y="678" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="bold" fill="#333333" text-anchor="middle">t4</text>
+    <line x1="940" y1="60" x2="940" y2="658" stroke="#dedede" stroke-width="1" stroke-dasharray="3,3"/>
+    <text x="940" y="678" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="bold" fill="#333333" text-anchor="middle">t5</text>
+    <line x1="1080" y1="60" x2="1080" y2="658" stroke="#dedede" stroke-width="1" stroke-dasharray="3,3"/>
+    <text x="1080" y="678" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="bold" fill="#333333" text-anchor="middle">t6</text>
+    <line x1="1220" y1="60" x2="1220" y2="658" stroke="#dedede" stroke-width="1" stroke-dasharray="3,3"/>
+    <text x="1220" y="678" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="bold" fill="#333333" text-anchor="middle">t7</text>
+    <line x1="1340" y1="60" x2="1340" y2="658" stroke="#dedede" stroke-width="1" stroke-dasharray="3,3"/>
+    <text x="1340" y="678" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="bold" fill="#333333" text-anchor="middle">t8</text>
+  </g>
+
+  <line x1="240" y1="662" x2="1365" y2="662" stroke="#000000" stroke-width="1.3" marker-end="url(#arrow_call)"/>
+  <text x="1372" y="666" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="bold" fill="#000000">Tiempo (t)</text>
+
+  <!-- Línea de vida: CLIENTE -->
+  <rect x="25" y="70" width="1370" height="112" fill="none" stroke="#cccccc" stroke-width="0.8"/>
+  <rect x="25" y="70" width="215" height="112" fill="#f8f9fa" stroke="#cccccc" stroke-width="0.8"/>
+  <text x="35" y="88" font-family="Arial, Helvetica, sans-serif" font-size="11.5" font-weight="bold" fill="#000000">CLIENTE</text>
+    <text x="230" y="108" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#444444" text-anchor="end">Navegando</text>
+    <line x1="240" y1="104" x2="1390" y2="104" stroke="#f0f0f0" stroke-width="0.8"/>
+    <text x="230" y="132" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#444444" text-anchor="end">AbriendoMapaTiendas</text>
+    <line x1="240" y1="128" x2="1390" y2="128" stroke="#f0f0f0" stroke-width="0.8"/>
+    <text x="230" y="156" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#444444" text-anchor="end">EsperandoMarcadores</text>
+    <line x1="240" y1="152" x2="1390" y2="152" stroke="#f0f0f0" stroke-width="0.8"/>
+    <text x="230" y="180" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#444444" text-anchor="end">ExplorandoSucursales</text>
+    <line x1="240" y1="176" x2="1390" y2="176" stroke="#f0f0f0" stroke-width="0.8"/>
+    <path d="M 260 104 L 380 104 L 380 128 L 510 128 L 510 152 L 1220 152 L 1220 176 L 1340 176" fill="none" stroke="#004499" stroke-width="2.3" stroke-linejoin="round"/>
+
+  <!-- Línea de vida: IU_MapaTiendas -->
+  <rect x="25" y="200" width="1370" height="112" fill="none" stroke="#cccccc" stroke-width="0.8"/>
+  <rect x="25" y="200" width="215" height="112" fill="#f8f9fa" stroke="#cccccc" stroke-width="0.8"/>
+  <text x="35" y="218" font-family="Arial, Helvetica, sans-serif" font-size="11.5" font-weight="bold" fill="#000000">IU_MapaTiendas</text>
+    <text x="230" y="238" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#444444" text-anchor="end">MapaInactivo</text>
+    <line x1="240" y1="234" x2="1390" y2="234" stroke="#f0f0f0" stroke-width="0.8"/>
+    <text x="230" y="262" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#444444" text-anchor="end">CargandoGeolocalizacion</text>
+    <line x1="240" y1="258" x2="1390" y2="258" stroke="#f0f0f0" stroke-width="0.8"/>
+    <text x="230" y="286" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#444444" text-anchor="end">DibujandoPinsYMural</text>
+    <line x1="240" y1="282" x2="1390" y2="282" stroke="#f0f0f0" stroke-width="0.8"/>
+    <text x="230" y="310" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#444444" text-anchor="end">MapaInteractivoListo</text>
+    <line x1="240" y1="306" x2="1390" y2="306" stroke="#f0f0f0" stroke-width="0.8"/>
+    <path d="M 260 234 L 510 234 L 510 258 L 1080 258 L 1080 282 L 1220 282 L 1220 306 L 1340 306" fill="none" stroke="#004499" stroke-width="2.3" stroke-linejoin="round"/>
+
+  <!-- Línea de vida: sucursales_routes -->
+  <rect x="25" y="330" width="1370" height="88" fill="none" stroke="#cccccc" stroke-width="0.8"/>
+  <rect x="25" y="330" width="215" height="88" fill="#f8f9fa" stroke="#cccccc" stroke-width="0.8"/>
+  <text x="35" y="348" font-family="Arial, Helvetica, sans-serif" font-size="11.5" font-weight="bold" fill="#000000">sucursales_routes</text>
+    <text x="230" y="368" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#444444" text-anchor="end">EnEspera</text>
+    <line x1="240" y1="364" x2="1390" y2="364" stroke="#f0f0f0" stroke-width="0.8"/>
+    <text x="230" y="392" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#444444" text-anchor="end">VerificandoTenantPublico</text>
+    <line x1="240" y1="388" x2="1390" y2="388" stroke="#f0f0f0" stroke-width="0.8"/>
+    <text x="230" y="416" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#444444" text-anchor="end">EntregandoGeodatosJSON</text>
+    <line x1="240" y1="412" x2="1390" y2="412" stroke="#f0f0f0" stroke-width="0.8"/>
+    <path d="M 260 364 L 510 364 L 510 388 L 650 388 L 650 364 L 940 364 L 940 412 L 1080 412 L 1080 364 L 1340 364" fill="none" stroke="#004499" stroke-width="2.3" stroke-linejoin="round"/>
+
+  <!-- Línea de vida: sucursales_services -->
+  <rect x="25" y="436" width="1370" height="88" fill="none" stroke="#cccccc" stroke-width="0.8"/>
+  <rect x="25" y="436" width="215" height="88" fill="#f8f9fa" stroke="#cccccc" stroke-width="0.8"/>
+  <text x="35" y="454" font-family="Arial, Helvetica, sans-serif" font-size="11.5" font-weight="bold" fill="#000000">sucursales_services</text>
+    <text x="230" y="474" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#444444" text-anchor="end">Ocioso</text>
+    <line x1="240" y1="470" x2="1390" y2="470" stroke="#f0f0f0" stroke-width="0.8"/>
+    <text x="230" y="498" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#444444" text-anchor="end">FiltrandoSucursalesActivas</text>
+    <line x1="240" y1="494" x2="1390" y2="494" stroke="#f0f0f0" stroke-width="0.8"/>
+    <text x="230" y="522" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#444444" text-anchor="end">ConstruyendoGeoJSON</text>
+    <line x1="240" y1="518" x2="1390" y2="518" stroke="#f0f0f0" stroke-width="0.8"/>
+    <path d="M 260 470 L 650 470 L 650 494 L 800 494 L 800 518 L 940 518 L 940 470 L 1340 470" fill="none" stroke="#004499" stroke-width="2.3" stroke-linejoin="round"/>
+
+  <!-- Línea de vida: sucursales_repos -->
+  <rect x="25" y="542" width="1370" height="88" fill="none" stroke="#cccccc" stroke-width="0.8"/>
+  <rect x="25" y="542" width="215" height="88" fill="#f8f9fa" stroke="#cccccc" stroke-width="0.8"/>
+  <text x="35" y="560" font-family="Arial, Helvetica, sans-serif" font-size="11.5" font-weight="bold" fill="#000000">sucursales_repos</text>
+    <text x="230" y="580" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#444444" text-anchor="end">EnEspera</text>
+    <line x1="240" y1="576" x2="1390" y2="576" stroke="#f0f0f0" stroke-width="0.8"/>
+    <text x="230" y="604" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#444444" text-anchor="end">ConsultandoSucursalesYCiudades</text>
+    <line x1="240" y1="600" x2="1390" y2="600" stroke="#f0f0f0" stroke-width="0.8"/>
+    <text x="230" y="628" font-family="Arial, Helvetica, sans-serif" font-size="9.5" fill="#444444" text-anchor="end">DatasetCoordenadasRecuperado</text>
+    <line x1="240" y1="624" x2="1390" y2="624" stroke="#f0f0f0" stroke-width="0.8"/>
+    <path d="M 260 576 L 800 576 L 800 600 L 940 600 L 940 624 L 1080 624 L 1080 576 L 1340 576" fill="none" stroke="#004499" stroke-width="2.3" stroke-linejoin="round"/>
+
+  <!-- Mensajes Inter-Línea de Vida (Estímulos de Transición) -->
+  <g id="messages">
+    <line x1="380" y1="128" x2="380" y2="258" stroke="#000000" stroke-width="1.3"  marker-end="url(#arrow_call)"/>
+    <rect x="386" y="185.0" width="144.4" height="16" fill="#ffffff" stroke="#cccccc" stroke-width="0.6" rx="3" opacity="0.95"/>
+    <text x="390" y="197.0" font-family="Arial, Helvetica, sans-serif" font-size="9" font-weight="bold" fill="#000000">1: AbrirMapaTiendas()</text>
+    <line x1="510" y1="258" x2="510" y2="388" stroke="#000000" stroke-width="1.3"  marker-end="url(#arrow_call)"/>
+    <rect x="516" y="315.0" width="208.4" height="16" fill="#ffffff" stroke="#cccccc" stroke-width="0.6" rx="3" opacity="0.95"/>
+    <text x="520" y="327.0" font-family="Arial, Helvetica, sans-serif" font-size="9" font-weight="bold" fill="#000000">2: GET /api/sucursales/publicas</text>
+    <line x1="650" y1="388" x2="650" y2="494" stroke="#000000" stroke-width="1.3"  marker-end="url(#arrow_call)"/>
+    <rect x="656" y="433.0" width="266.0" height="16" fill="#ffffff" stroke="#cccccc" stroke-width="0.6" rx="3" opacity="0.95"/>
+    <text x="660" y="445.0" font-family="Arial, Helvetica, sans-serif" font-size="9" font-weight="bold" fill="#000000">3: listar_sucursales_activas(id_empresa)</text>
+    <line x1="800" y1="494" x2="800" y2="600" stroke="#000000" stroke-width="1.3"  marker-end="url(#arrow_call)"/>
+    <rect x="806" y="539.0" width="323.6" height="16" fill="#ffffff" stroke="#cccccc" stroke-width="0.6" rx="3" opacity="0.95"/>
+    <text x="810" y="551.0" font-family="Arial, Helvetica, sans-serif" font-size="9" font-weight="bold" fill="#000000">4: obtener_sucursales_con_coordenadas(id_empresa)</text>
+    <line x1="940" y1="624" x2="940" y2="518" stroke="#000000" stroke-width="1.3" stroke-dasharray="3,3" marker-end="url(#arrow_ret)"/>
+    <rect x="946" y="563.0" width="170.0" height="16" fill="#ffffff" stroke="#cccccc" stroke-width="0.6" rx="3" opacity="0.95"/>
+    <text x="950" y="575.0" font-family="Arial, Helvetica, sans-serif" font-size="9" font-weight="bold" fill="#000000">5: return sucursales_list</text>
+    <line x1="990" y1="518" x2="990" y2="412" stroke="#000000" stroke-width="1.3" stroke-dasharray="3,3" marker-end="url(#arrow_ret)"/>
+    <rect x="996" y="457.0" width="163.60000000000002" height="16" fill="#ffffff" stroke="#cccccc" stroke-width="0.6" rx="3" opacity="0.95"/>
+    <text x="1000" y="469.0" font-family="Arial, Helvetica, sans-serif" font-size="9" font-weight="bold" fill="#000000">6: return geo_sucursales</text>
+    <line x1="1080" y1="412" x2="1080" y2="282" stroke="#000000" stroke-width="1.3" stroke-dasharray="3,3" marker-end="url(#arrow_ret)"/>
+    <rect x="1086" y="339.0" width="234.0" height="16" fill="#ffffff" stroke="#cccccc" stroke-width="0.6" rx="3" opacity="0.95"/>
+    <text x="1090" y="351.0" font-family="Arial, Helvetica, sans-serif" font-size="9" font-weight="bold" fill="#000000">7: RenderizarMarcadores(sucursales)</text>
+    <line x1="1220" y1="282" x2="1220" y2="176" stroke="#000000" stroke-width="1.3" stroke-dasharray="3,3" marker-end="url(#arrow_ret)"/>
+    <rect x="1037.6" y="221.0" width="176.4" height="16" fill="#ffffff" stroke="#cccccc" stroke-width="0.6" rx="3" opacity="0.95"/>
+    <text x="1041.6" y="233.0" font-family="Arial, Helvetica, sans-serif" font-size="9" font-weight="bold" fill="#000000">8: MostrarMapaConTiendas()</text>
+  </g>
+
+  <!-- Leyenda -->
+  <g id="legend">
+    <rect x="25" y="663" width="215" height="38" fill="#fafafa" stroke="#dddddd" stroke-width="0.8"/>
+    <line x1="32" y1="675" x2="58" y2="675" stroke="#004499" stroke-width="2.2"/>
+    <text x="66" y="678" font-family="Arial, Helvetica, sans-serif" font-size="9" fill="#333333">Forma de onda de estado</text>
+    <line x1="32" y1="689" x2="58" y2="689" stroke="#000000" stroke-width="1.3" marker-end="url(#arrow_call)"/>
+    <text x="66" y="692" font-family="Arial, Helvetica, sans-serif" font-size="9" fill="#333333">Estímulo / Mensaje</text>
+  </g>
+
+</svg>

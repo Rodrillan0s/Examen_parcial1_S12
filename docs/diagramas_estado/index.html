@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Diagramas de Máquina de Estados UML 2.5 - Sistema Aura (SI2)</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --card-border: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-hover: #0284c7;
+      --badge-wm: #0284c7;
+      --badge-web: #7c3aed;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      padding: 24px;
+      line-height: 1.5;
+    }
+    header {
+      max-width: 1300px;
+      margin: 0 auto 30px auto;
+      text-align: center;
+    }
+    h1 {
+      font-size: 2rem;
+      color: #ffffff;
+      margin-bottom: 8px;
+    }
+    p.subtitle {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      margin-bottom: 20px;
+    }
+    .filters {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 25px;
+    }
+    .filters button {
+      background: var(--card-bg);
+      color: var(--text-main);
+      border: 1px solid var(--card-border);
+      padding: 8px 18px;
+      border-radius: 9999px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+    }
+    .filters button:hover, .filters button.active {
+      background: var(--accent);
+      color: #0f172a;
+      border-color: var(--accent);
+      font-weight: 600;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+      gap: 24px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+      border-color: var(--accent);
+    }
+    .card-header {
+      padding: 14px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .card-title {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    .badge {
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .badge-wm { background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid #38bdf8; }
+    .badge-web { background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid #a855f7; }
+    .card-meta {
+      padding: 8px 18px;
+      font-size: 0.82rem;
+      color: #cbd5e1;
+      background: rgba(15, 23, 42, 0.4);
+      border-bottom: 1px solid var(--card-border);
+    }
+    .card-meta strong {
+      color: #38bdf8;
+    }
+    .card-body {
+      padding: 12px;
+      background: #ffffff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+    }
+    .card-body img {
+      max-width: 100%;
+      height: 240px;
+      object-fit: contain;
+    }
+    .card-footer {
+      padding: 12px 18px;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      border-top: 1px solid var(--card-border);
+      background: #162032;
+    }
+    .btn {
+      flex: 1;
+      text-align: center;
+      text-decoration: none;
+      font-size: 0.85rem;
+      padding: 6px 12px;
+      border-radius: 6px;
+      transition: background 0.2s;
+    }
+    .btn-svg {
+      background: transparent;
+      border: 1px solid #475569;
+      color: var(--text-main);
+    }
+    .btn-svg:hover {
+      background: #334155;
+    }
+    .btn-png {
+      background: #0284c7;
+      color: #ffffff;
+      font-weight: 500;
+    }
+    .btn-png:hover {
+      background: #0369a1;
+    }
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.85);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .modal.active { display: flex; }
+    .modal-content {
+      background: #ffffff;
+      padding: 15px;
+      border-radius: 10px;
+      max-width: 95vw;
+      max-height: 95vh;
+      overflow: auto;
+      position: relative;
+    }
+    .modal-content img {
+      display: block;
+      max-width: 100%;
+      height: auto;
+    }
+    .modal-close {
+      position: absolute;
+      top: 10px; right: 15px;
+      font-size: 1.8rem;
+      color: #333;
+      cursor: pointer;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Diagramas de Máquina de Estados UML 2.5</h1>
+    <p class="subtitle">17 Diagramas Maestros para los 25 Casos de Uso del Sistema E-Commerce Multi-Tenant "Aura" (SI2 - UAGRM)</p>
+    <div class="filters">
+      <button class="active" onclick="filterCards('all')">Todos (17)</button>
+      <button onclick="filterCards('wm')">Web / Móvil Unificados (8)</button>
+      <button onclick="filterCards('web')">Solo Web / Gestión (9)</button>
+    </div>
+  </header>
+
+  <div class="grid" id="grid">
+    <!-- Generado dinámicamente o estructurado -->
+  </div>
+
+  <div class="modal" id="modal" onclick="closeModal()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <span class="modal-close" onclick="closeModal()">&times;</span>
+      <img id="modal-img" src="" alt="Vista previa ampliada">
+    </div>
+  </div>
+
+  <script>
+    const data = [
+      { id: "CU05_WM", title: "CU05 W/M: Buscar y filtrar productos", type: "wm", desc: "Bifurcación 2 Caminos: Con Resultados vs Sin Coincidencias (Sin Bitácora)", file: "CU05_WM_Buscar_Filtrar_Productos_Estado" },
+      { id: "CU06_WM", title: "CU06 W/M: Consultar detalle de producto", type: "wm", desc: "Pipeline Lineal + Bucle Interactivo de Talla/Color (Sin Bitácora)", file: "CU06_WM_Consultar_Detalle_Producto_Estado" },
+      { id: "CU07_WM", title: "CU07 W/M: Consultar disponibilidad por sucursal", type: "wm", desc: "Bifurcación 3 Caminos: Tienda Local / Otras Tiendas / Agotado en Red", file: "CU07_WM_Consultar_Disponibilidad_Sucursal_Estado" },
+      { id: "CU08_WM", title: "CU08 W/M: Gestionar carrito de compras", type: "wm", desc: "Bucle de Cantidad (+/-) + Ramas de Eliminación vs Checkout", file: "CU08_WM_Gestionar_Carrito_Compras_Estado" },
+      { id: "CU09_WM", title: "CU09 W/M: Realizar compra", type: "wm", desc: "Pipeline Transaccional: Entrega, Pago, Bloqueo Kardex y Bitácora", file: "CU09_WM_Realizar_Compra_Estado" },
+      { id: "CU10_WM", title: "CU10 W/M: Gestionar reservas", type: "wm", desc: "Bifurcación de Stock + Retención Activa 48 Horas + Bitácora", file: "CU10_WM_Gestionar_Reservas_Estado" },
+      { id: "CU11_WM", title: "CU11 W/M: Consultar pedidos e historial", type: "wm", desc: "Bucle de Filtro por Estado + Consulta de Despacho (Sin Bitácora)", file: "CU11_WM_Consultar_Pedidos_Historial_Estado" },
+      { id: "CU26_M15_WM", title: "CU26/M15 W/M: Mostrar ubicaciones sucursales", type: "wm", desc: "Bucle de Selección de Pines + Geocodificación GPS (Sin Bitácora)", file: "CU26_M15_WM_Mostrar_Ubicaciones_Sucursales_Estado" },
+      { id: "CU_W20", title: "CU_W20: Gestionar temporadas y colecciones", type: "web", desc: "Bucle de Validación de Fechas + Publicación en Catálogo + Bitácora", file: "CU_W20_Gestionar_Temporadas_Colecciones_Estado" },
+      { id: "CU_W21", title: "CU_W21: Gestionar proveedores", type: "web", desc: "Bucle de Validación de NIT Único + Alta de Proveedor + Bitácora", file: "CU_W21_Gestionar_Proveedores_Estado" },
+      { id: "CU_W22", title: "CU_W22: Gestionar inventario", type: "web", desc: "Bifurcación 3 Vías (Compra / Baja / Traspaso) + Saldo Kardex + Bitácora", file: "CU_W22_Gestionar_Inventario_Estado" },
+      { id: "CU_W23", title: "CU_W23: Gestionar disponibilidad prendas", type: "web", desc: "Bucle Toggle por Sucursal + Verificación Política + Bitácora", file: "CU_W23_Gestionar_Disponibilidad_Prendas_Estado" },
+      { id: "CU_W24", title: "CU_W24: Registrar venta presencial POS", type: "web", desc: "Bucle Escaneo Código Barras + Descuento Inmediato + Ticket POS", file: "CU_W24_Registrar_Venta_Presencial_Estado" },
+      { id: "CU_W25", title: "CU_W25: Atender reservas en sucursal", type: "web", desc: "Validación 3 Caminos (Vencida > 48h / Atendida / Entrega Concluida)", file: "CU_W25_Atender_Reservas_Estado" },
+      { id: "CU_W27", title: "CU_W27: Procesar pago electrónico", type: "web", desc: "Pasarela 3 Vías: Aprobado / Declinado / Desafío 3DS + Token Bitácora", file: "CU_W27_Procesar_Pago_Electronico_Estado" },
+      { id: "CU_W28", title: "CU_W28: Procesar pago en caja", type: "web", desc: "Cálculo de Cambio + Reintento por Efectivo Insuficiente + Arqueo", file: "CU_W28_Procesar_Pago_Caja_Estado" },
+      { id: "CU_W29", title: "CU_W29: Emitir comprobante de venta", type: "web", desc: "Bifurcación: Factura Oficial NIT/CUF vs Recibo Simple + Impresión", file: "CU_W29_Emitir_Comprobante_Venta_Estado" }
+    ];
+
+    const grid = document.getElementById('grid');
+
+    function renderCards(filter) {
+      grid.innerHTML = '';
+      data.forEach(item => {
+        if (filter !== 'all' && item.type !== filter) return;
+
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <div class="card-header">
+            <span class="card-title">${item.title}</span>
+            <span class="badge ${item.type === 'wm' ? 'badge-wm' : 'badge-web'}">${item.type === 'wm' ? 'Web / Móvil' : 'Solo Web'}</span>
+          </div>
+          <div class="card-meta">
+            <strong>Topología:</strong> ${item.desc}
+          </div>
+          <div class="card-body" onclick="openModal('${item.file}.png')">
+            <img src="${item.file}.png" alt="${item.title}" loading="lazy">
+          </div>
+          <div class="card-footer">
+            <a class="btn btn-svg" href="${item.file}.svg" target="_blank">Ver SVG</a>
+            <a class="btn btn-png" href="${item.file}.png" target="_blank">Descargar PNG</a>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function filterCards(type) {
+      document.querySelectorAll('.filters button').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+      renderCards(type);
+    }
+
+    function openModal(imgSrc) {
+      document.getElementById('modal-img').src = imgSrc;
+      document.getElementById('modal').classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('modal').classList.remove('active');
+    }
+
+    renderCards('all');
+  </script>
+</body>
+</html>

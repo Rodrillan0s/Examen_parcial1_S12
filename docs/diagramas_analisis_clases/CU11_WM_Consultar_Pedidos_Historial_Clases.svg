@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1880 850" width="1880" height="850" style="background-color: #ffffff; font-family: 'Segoe UI', Arial, Helvetica, sans-serif;">
+  <!-- Encabezado del Diagrama -->
+  <text x="35" y="34" font-size="16" font-weight="bold" fill="#0f172a">CU11 W/M: Consultar pedidos e historial de compras — Diagrama de Análisis de Clases</text>
+  <text x="35" y="54" font-size="12" font-weight="500" fill="#475569">Unificación Web (CU/W11) y Móvil (CU/M11) | Form (Boundary) -&gt; Controller -&gt; Service -&gt; Repository -&gt; Entities (BD en MAYÚSCULAS)</text>
+  <text x="35" y="72" font-size="11.5" font-weight="600" fill="#2563eb">Actor(es): Cliente (Web y Móvil)</text>
+  <line x1="35" y1="82" x2="1845" y2="82" stroke="#cbd5e1" stroke-width="1.2"/>
+
+  <!-- Leyenda de Roles Arquitectónicos -->
+  <g transform="translate(1390, 24)">
+    <rect x="0" y="0" width="455" height="48" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="12" y="19" font-size="11" font-weight="bold" fill="#334155">Capas del Análisis de Clases:</text>
+    <text x="12" y="36" font-size="10.5" fill="#64748b">Boundary (Form) -&gt; Controller -&gt; Service -&gt; Repository -&gt; Entities (BD)</text>
+  </g>
+  <!-- Clase: Form / Historial_Pedidos -->
+  <g id="class_form">
+    <rect x="35" y="280" width="235" height="184" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="35" y1="328" x2="270" y2="328" stroke="#111827" stroke-width="1.4"/>
+    <line x1="35" y1="388.0" x2="270" y2="388.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="152.5" y="297" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#475569">Form</text>
+    <text x="152.5" y="314" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#111827">Historial_Pedidos</text>
+    <text x="45" y="344" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ filtro_estado_pedido</text>
+    <text x="45" y="360" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ rango_fechas</text>
+    <text x="45" y="376" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ id_pedido_sel</text>
+    <text x="45" y="404.0" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ listar_pedidos_cliente()</text>
+    <text x="45" y="420.0" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ filtrar_por_fecha()</text>
+    <text x="45" y="436.0" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ ver_tracking_envio()</text>
+    <text x="45" y="452.0" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ descargar_comprobante_digital()</text>
+  </g>
+  <!-- Clase: Historial_Pedidos_Controller -->
+  <g id="class_ctrl">
+    <rect x="310" y="340" width="235" height="116" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="310" y1="374" x2="545" y2="374" stroke="#111827" stroke-width="1.4"/>
+    <line x1="310" y1="396" x2="545" y2="396" stroke="#111827" stroke-width="1.4"/>
+    <text x="427.5" y="362" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#111827">Historial_Pedidos_Controller</text>
+    <text x="320" y="412" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ get_pedidos_usuario(id_usr)</text>
+    <text x="320" y="428" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ get_detalle_orden(id_ped)</text>
+    <text x="320" y="444" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ get_tracking_pedido(id_ped)</text>
+  </g>
+  <!-- Clase: Historial_Pedidos_Service -->
+  <g id="class_srv">
+    <rect x="585" y="330" width="255" height="116" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="585" y1="364" x2="840" y2="364" stroke="#111827" stroke-width="1.4"/>
+    <line x1="585" y1="386" x2="840" y2="386" stroke="#111827" stroke-width="1.4"/>
+    <text x="712.5" y="352" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#111827">Historial_Pedidos_Service</text>
+    <text x="595" y="402" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ obtener_historial_compras(cli)</text>
+    <text x="595" y="418" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ armar_timeline_tracking(ped)</text>
+    <text x="595" y="434" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ emitir_recibo_resumen(ped)</text>
+  </g>
+  <!-- Clase: Historial_Pedidos_Repository -->
+  <g id="class_repo">
+    <rect x="880" y="330" width="255" height="116" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="880" y1="364" x2="1135" y2="364" stroke="#111827" stroke-width="1.4"/>
+    <line x1="880" y1="386" x2="1135" y2="386" stroke="#111827" stroke-width="1.4"/>
+    <text x="1007.5" y="352" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#111827">Historial_Pedidos_Repository</text>
+    <text x="890" y="402" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ find_pedidos_by_cliente(cli)</text>
+    <text x="890" y="418" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ find_detalles_con_prendas(ped)</text>
+    <text x="890" y="434" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ find_pagos_by_pedido(ped)</text>
+  </g>
+  <!-- Clase: T_PEDIDO -->
+  <g id="class_pedido">
+    <rect x="1175" y="290" width="195" height="164" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="1175" y1="324" x2="1370" y2="324" stroke="#111827" stroke-width="1.4"/>
+    <line x1="1175" y1="432.0" x2="1370" y2="432.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="1272.5" y="312" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#111827">T_PEDIDO</text>
+    <text x="1185" y="340" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ ID_PEDIDO</text>
+    <text x="1185" y="356" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ ID_CLIENTE</text>
+    <text x="1185" y="372" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ NUMERO_PEDIDO</text>
+    <text x="1185" y="388" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ TOTAL</text>
+    <text x="1185" y="404" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ ESTADO_PEDIDO</text>
+    <text x="1185" y="420" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ FECHA_REGISTRO</text>
+  </g>
+  <!-- Clase: T_DETALLE_PEDIDO -->
+  <g id="class_det_pedido">
+    <rect x="1420" y="290" width="210" height="164" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="1420" y1="324" x2="1630" y2="324" stroke="#111827" stroke-width="1.4"/>
+    <line x1="1420" y1="432.0" x2="1630" y2="432.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="1525.0" y="312" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#111827">T_DETALLE_PEDIDO</text>
+    <text x="1430" y="340" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ ID_DETALLE_PEDIDO</text>
+    <text x="1430" y="356" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ ID_PEDIDO</text>
+    <text x="1430" y="372" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ ID_VARIANTE</text>
+    <text x="1430" y="388" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ CANTIDAD</text>
+    <text x="1430" y="404" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ PRECIO_UNITARIO</text>
+    <text x="1430" y="420" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ SUBTOTAL</text>
+  </g>
+  <!-- Clase: T_PRODUCTO -->
+  <g id="class_producto">
+    <rect x="1675" y="290" width="170" height="116" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="1675" y1="324" x2="1845" y2="324" stroke="#111827" stroke-width="1.4"/>
+    <line x1="1675" y1="384.0" x2="1845" y2="384.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="1760.0" y="312" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#111827">T_PRODUCTO</text>
+    <text x="1685" y="340" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ ID_PRODUCTO</text>
+    <text x="1685" y="356" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ NOMBRE</text>
+    <text x="1685" y="372" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ IMAGEN_URL</text>
+  </g>
+  <!-- Clase: T_PAGO -->
+  <g id="class_pago">
+    <rect x="1175" y="570" width="195" height="148" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="1175" y1="604" x2="1370" y2="604" stroke="#111827" stroke-width="1.4"/>
+    <line x1="1175" y1="696.0" x2="1370" y2="696.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="1272.5" y="592" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#111827">T_PAGO</text>
+    <text x="1185" y="620" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ ID_PAGO</text>
+    <text x="1185" y="636" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ ID_PEDIDO</text>
+    <text x="1185" y="652" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ METODO_PAGO</text>
+    <text x="1185" y="668" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ MONTO</text>
+    <text x="1185" y="684" font-size="11" fill="#111827" font-family="monospace, sans-serif">+ ESTADO</text>
+  </g>
+
+  <!-- Asociaciones y Multiplicidades -->
+  <g id="associations">
+    <polyline points="270,410 310,410" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <polyline points="545,410 585,410" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <polyline points="840,410 880,410" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <polyline points="1135,410 1175,410" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <polyline points="1370,390 1420,390" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <text x="1378" y="380" font-size="11" font-weight="bold" fill="#111827">1</text>
+    <text x="1400" y="380" font-size="11" font-weight="bold" fill="#111827">1..*</text>
+    <polyline points="1630,390 1675,390" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <text x="1638" y="380" font-size="11" font-weight="bold" fill="#111827">0..*</text>
+    <text x="1658" y="380" font-size="11" font-weight="bold" fill="#111827">1</text>
+    <polyline points="1272,450 1272,570" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <text x="1282" y="475" font-size="11" font-weight="bold" fill="#111827">1</text>
+    <text x="1282" y="555" font-size="11" font-weight="bold" fill="#111827">1</text>
+  </g>
+</svg>

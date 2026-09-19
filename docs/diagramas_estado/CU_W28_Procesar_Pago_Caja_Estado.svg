@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 720" width="760" height="720">
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 1 L 7 4 L 0 7 Z" fill="#222222"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="760" height="720" fill="#ffffff"/>
+  <text x="380.0" y="46" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="normal" fill="#000000" text-anchor="middle">CU_W28: Procesar pago en caja</text>
+
+  <!-- Estado Inicial -->
+  <circle cx="380" cy="95" r="11" fill="#222222"/>
+
+  <line x1="380" y1="106" x2="380" y2="155" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="390" y="134.5" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">ingresar_efectivo_recibido(monto)</text>
+  <!-- Estado: CalculandoCambioEfectivo -->
+  <g id="s1">
+    <rect x="267.5" y="155" width="225" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="380" y="178.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">CalculandoCambioEfectivo</text>
+  </g>
+  <!-- Estado: MontoInsuficiente -->
+  <g id="s2_err">
+    <rect x="102.5" y="275" width="175" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="190" y="298.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">MontoInsuficiente</text>
+  </g>
+  <!-- Estado: GavetaDineroAbierta -->
+  <g id="s2_ok">
+    <rect x="432.5" y="275" width="195" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="530" y="298.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">GavetaDineroAbierta</text>
+  </g>
+  <line x1="340" y1="193" x2="220" y2="275" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="120" y="230" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222" text-anchor="start">[Monto menor al total]</text>
+  <line x1="420" y1="193" x2="500" y2="275" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="440" y="230" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222" text-anchor="start">[Monto suficiente]</text>
+  <path d="M 190 275 Q 110 200 270 174" fill="none" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="60" y="220" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">solicitar_monto_restante()</text>
+  <line x1="530" y1="313" x2="530" y2="385" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="540" y="353.0" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">asentar_pago_en_caja()</text>
+  <!-- Estado: MovimientoCajaRegistrado -->
+  <g id="s3">
+    <rect x="422.5" y="385" width="215" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="530" y="408.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">MovimientoCajaRegistrado</text>
+  </g>
+  <line x1="530" y1="423" x2="530" y2="500" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="540" y="465.5" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">registrar_bitacora("COBRO_CAJA")</text>
+  <!-- Estado: BitacoraCajaAsentada -->
+  <g id="s4">
+    <rect x="427.5" y="500" width="205" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="530" y="523.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">BitacoraCajaAsentada</text>
+  </g>
+  <line x1="530" y1="538" x2="530" y2="605" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="540" y="575.5" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">entregar_cambio_al_cliente()</text>
+  <!-- Estado Final -->
+  <circle cx="380" cy="650" r="14" fill="none" stroke="#222222" stroke-width="1.4"/>
+  <circle cx="380" cy="650" r="8.5" fill="#222222"/>
+
+  <line x1="510" y1="620" x2="398" y2="642" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+</svg>

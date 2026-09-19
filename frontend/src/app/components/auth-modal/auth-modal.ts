@@ -248,12 +248,12 @@ export class AuthModalComponent {
 
     const code = (this.resetData.codigo_recuperacion || '').trim();
     if (!code) {
-      this.errorMessage = 'Ingresa el código de recuperación de 6 dígitos enviado por Brevo.';
+      this.errorMessage = 'Ingresa el código de recuperación';
       return;
     }
 
     if (code.length !== 6) {
-      this.errorMessage = 'El código debe contener exactamente 6 dígitos.';
+      this.errorMessage = 'El código debe contener 6 dígitos';
       return;
     }
 
@@ -264,7 +264,7 @@ export class AuthModalComponent {
       next: (res) => {
         this.isLoading = false;
         if (res.success) {
-          this.successMessage = 'Código verificado exitosamente. Ahora crea tu nueva contraseña.';
+          this.successMessage = 'Código verificado. Ahora crea tu nueva contraseña.';
           this.forgotStep = 'new_password';
         }
         this.cdr.detectChanges();
@@ -289,7 +289,7 @@ export class AuthModalComponent {
     }
 
     if (!this.isNewPasswordValid) {
-      this.errorMessage = 'La contraseña debe cumplir con los requisitos mínimos (8 caracteres y 1 símbolo).';
+      this.errorMessage = 'La contraseña debe cumplir con los requisitos mínimos.';
       return;
     }
 

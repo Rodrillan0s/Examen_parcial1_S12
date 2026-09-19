@@ -227,8 +227,8 @@ def solicitar_recuperacion_clave(data: dict) -> dict:
         
     usuario_db = auth_repos.obtener_credenciales_cliente(login_input)
     if not usuario_db:
-        raise ValueError("No se encontró ningún usuario registrado con ese correo o usuario.")
-        
+        raise ValueError("Si el correo está asociado a una cuenta, se le enviará un correo electrónico con el código de seguridad para verificar su identidad.")
+
     correo_destino = usuario_db.get('correo') or login_input
     nombre_destino = usuario_db.get('nombre') or 'Cliente'
     codigo = security.generar_codigo_seguridad()
@@ -249,7 +249,7 @@ def solicitar_recuperacion_clave(data: dict) -> dict:
     
     return {
         "success": True,
-        "message": f"Código de recuperación enviado correctamente a tu correo ({correo_destino}) vía Brevo."
+        "message": f"Código de recuperación enviado correctamente a tu correo ({correo_destino})"
     }
 
 

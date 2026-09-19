@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 740 700" width="740" height="700">
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 1 L 7 4 L 0 7 Z" fill="#222222"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="740" height="700" fill="#ffffff"/>
+  <text x="370.0" y="46" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="normal" fill="#000000" text-anchor="middle">CU26/M15 W/M: Mostrar ubicaciones de sucursales</text>
+
+  <!-- Estado Inicial -->
+  <circle cx="370" cy="95" r="11" fill="#222222"/>
+
+  <line x1="370" y1="106" x2="370" y2="155" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="380" y="134.5" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">abrir_mapa_tiendas()</text>
+  <!-- Estado: GeolocalizandoUsuario -->
+  <g id="s1">
+    <rect x="272.5" y="155" width="195" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="370" y="178.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">GeolocalizandoUsuario</text>
+  </g>
+  <line x1="370" y1="193" x2="370" y2="260" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="380" y="230.5" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">cargar_sucursales_cercanas()</text>
+  <!-- Estado: PinesRenderizadosEnMapa -->
+  <g id="s2">
+    <rect x="262.5" y="260" width="215" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="370" y="283.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">PinesRenderizadosEnMapa</text>
+  </g>
+  <path d="M 477.5 271.4 C 522.5 251.39999999999998 522.5 308.5 477.5 288.5" fill="none" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="528.5" y="282.0" font-family="Arial, Helvetica, sans-serif" font-size="10" fill="#222222">click_marcador_tienda()</text>
+  <line x1="370" y1="298" x2="370" y2="385" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="380" y="345.5" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">seleccionar_tienda_destino()</text>
+  <!-- Estado: InfoSucursalYHorariosVisible -->
+  <g id="s3">
+    <rect x="252.5" y="385" width="235" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="370" y="408.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">InfoSucursalYHorariosVisible</text>
+  </g>
+  <line x1="370" y1="423" x2="370" y2="510" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="380" y="470.5" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">trazar_ruta_gps()</text>
+  <!-- Estado: RutaNavegacionActiva -->
+  <g id="s4">
+    <rect x="272.5" y="510" width="195" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="370" y="533.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">RutaNavegacionActiva</text>
+  </g>
+  <line x1="370" y1="548" x2="370" y2="615" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="380" y="585.5" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">finalizar_consulta()</text>
+  <!-- Estado Final -->
+  <circle cx="370" cy="630" r="14" fill="none" stroke="#222222" stroke-width="1.4"/>
+  <circle cx="370" cy="630" r="8.5" fill="#222222"/>
+
+</svg>

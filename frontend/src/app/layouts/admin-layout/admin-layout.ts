@@ -13,6 +13,7 @@ import { Router, RouterOutlet, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth';
 import { ThemeService } from '../../services/theme';
 import { NotificacionesService, Notificacion } from '../../services/notificaciones';
+import { KpisService, TenantDashboardItem } from '../../services/kpis';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
@@ -24,8 +25,9 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 export class AdminLayoutComponent implements OnInit {
 
   private themeService          = inject(ThemeService);
-  private authService           = inject(AuthService);
+  public authService            = inject(AuthService);
   private notificacionesService  = inject(NotificacionesService);
+  private kpisService           = inject(KpisService);
   private router                = inject(Router);
   private platformId            = inject(PLATFORM_ID);
   private cdr                   = inject(ChangeDetectorRef);
@@ -43,11 +45,40 @@ export class AdminLayoutComponent implements OnInit {
   listaNotificaciones: Notificacion[] = [];
   cantidadNoLeidas: number = 0;
 
-  // ---- Definición del menú por Alcance ----
+  // ---- Estado Multi-Tenant y Sucursales ----
+  tenants: TenantDashboardItem[] = [];
+  tiendaActiva: TenantDashboardItem | null = null;
+  mostrarTenantDropdown: boolean = false;
+  mostrarSucursalDropdown: boolean = false;
+  cargandoTenants: boolean = false;
+
+  sucursalActiva: { id: number; nombre: string; ciudad?: string } | null = null;
+
+  // ---- Definición dinámica del menú por Permisos y Alcance ----
   menuFiltrado: any[] = [];
 
   get scopeContext() {
     return this.authService.getUserScopeContext();
+  }
+
+  get sucursalesDisponibles(): Array<{ id: number; nombre: string; ciudad?: string }> {
+    const scope = this.authService.getScopeLevel();
+    if (scope === 'PLATAFORMA') {
+      if (this.tiendaActiva && this.tiendaActiva.sucursales && this.tiendaActiva.sucursales.length > 0) {
+        return this.tiendaActiva.sucursales;
+      }
+      return this.authService.branchList;
+    } else if (scope === 'EMPRESA') {
+      // Buscar la empresa del usuario
+      const miEmpresa = this.tenants.find(t => t.id_empresa === this.usuarioActual?.id_empresa);
+      if (miEmpresa && miEmpresa.sucursales && miEmpresa.sucursales.length > 0) {
+        return miEmpresa.sucursales;
+      }
+      return this.authService.branchList;
+    } else {
+      // SUCURSAL: solo la asignada
+      return [this.authService.activeBranch()];
+    }
   }
 
   // ------------------------------------------------------------------
@@ -64,7 +95,8 @@ export class AdminLayoutComponent implements OnInit {
       return;
     }
 
-    this.construirMenuPorAlcance();
+    this.sucursalActiva = this.authService.activeBranch();
+    this.construirMenuPorPermisosYAlcance();
 
     // Sincronizar tema con el servicio global reactivo
     this.themeService.modoOscuro$
@@ -89,139 +121,224 @@ export class AdminLayoutComponent implements OnInit {
           this.cdr.detectChanges();
         });
       });
+
+    // Suscribirse al tenant activo global
+    this.kpisService.tiendaSeleccionada$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((t) => {
+        this.tiendaActiva = t;
+        this.cdr.detectChanges();
+      });
+
+    this.cargarTenantsGlobales();
   }
 
-  construirMenuPorAlcance() {
+  cargarTenantsGlobales() {
+    this.cargandoTenants = true;
+    this.kpisService.obtenerTenants().subscribe({
+      next: (res) => {
+        this.cargandoTenants = false;
+        if (res.success && res.data) {
+          this.tenants = res.data;
+          const scope = this.authService.getScopeLevel();
+
+          if (scope === 'PLATAFORMA') {
+            const actual = this.authService.selectedCompany() || this.kpisService.obtenerTiendaActual();
+            if (actual && this.tenants.length > 0) {
+              const match = this.tenants.find(t => t.id_empresa === actual.id_empresa);
+              if (match) {
+                this.tiendaActiva = match;
+                this.authService.setSelectedCompany({
+                  id_empresa: match.id_empresa,
+                  nombre_empresa: match.nombre_empresa,
+                  sucursales: match.sucursales
+                });
+                this.kpisService.establecerTiendaSeleccionada(match);
+              }
+            }
+          } else {
+            // EMPRESA o SUCURSAL: fijar su empresa
+            const idEmp = this.usuarioActual?.id_empresa;
+            if (idEmp) {
+              const miTienda = this.tenants.find(t => t.id_empresa === idEmp);
+              if (miTienda) {
+                this.tiendaActiva = miTienda;
+                this.kpisService.establecerTiendaSeleccionada(miTienda);
+              }
+            }
+          }
+        }
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.cargandoTenants = false;
+        console.error('Error cargando tenants:', err);
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  toggleTenantDropdown() {
+    if (!this.scopeContext.canSelectCompany) return;
+    this.mostrarTenantDropdown = !this.mostrarTenantDropdown;
+    if (this.mostrarTenantDropdown) {
+      this.mostrarNotificaciones = false;
+      this.mostrarSucursalDropdown = false;
+    }
+  }
+
+  seleccionarTiendaGlobal(tienda: TenantDashboardItem | null) {
+    if (!this.scopeContext.canSelectCompany) return;
+    this.authService.setSelectedCompany(tienda ? {
+      id_empresa: tienda.id_empresa,
+      nombre_empresa: tienda.nombre_empresa,
+      sucursales: tienda.sucursales
+    } : null);
+    this.kpisService.establecerTiendaSeleccionada(tienda);
+    this.tiendaActiva = tienda;
+    this.mostrarTenantDropdown = false;
+    this.sucursalActiva = null;
+    this.cdr.detectChanges();
+  }
+
+  toggleSucursalDropdown() {
+    if (!this.scopeContext.canSelectBranch) return;
+    this.mostrarSucursalDropdown = !this.mostrarSucursalDropdown;
+    if (this.mostrarSucursalDropdown) {
+      this.mostrarNotificaciones = false;
+      this.mostrarTenantDropdown = false;
+    }
+  }
+
+  seleccionarSucursal(suc: { id: number; nombre: string; ciudad?: string } | null) {
+    if (!this.scopeContext.canSelectBranch) return;
+    this.sucursalActiva = suc;
+    if (suc) {
+      this.authService.setBranch({
+        id: suc.id,
+        nombre: suc.nombre,
+        ciudad: suc.ciudad || ''
+      });
+    }
+    this.mostrarSucursalDropdown = false;
+    this.cdr.detectChanges();
+  }
+
+  // ------------------------------------------------------------------
+  // DEFINICIÓN DECLARATIVA Y FILTRADO DINÁMICO DEL MENÚ (RBAC & ALCANCE)
+  // ------------------------------------------------------------------
+
+  construirMenuPorPermisosYAlcance() {
     const scope = this.authService.getScopeLevel();
     const empresaNombre = this.authService.getUserCompanyName();
     const sucursalNombre = this.authService.getUserBranchName();
 
-    if (scope === 'PLATAFORMA') {
-      this.menuFiltrado = [
-        {
-          titulo: 'CATÁLOGO',
-          icono: 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z',
-          expandido: true,
-          submenus: [
-            { nombre: 'Categorías', ruta: '/admin/categorias', permiso: 'categorias.ver' },
-            { nombre: 'Tallas y Colores', ruta: '/admin/tallas-colores', permiso: 'tallas.ver' },
-            { nombre: 'Productos', ruta: '/admin/productos', permiso: 'productos.ver' }
-          ]
-        },
-        {
-          titulo: 'INVENTARIO',
-          icono: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4',
-          expandido: true,
-          submenus: [
-            { nombre: 'Gestión de Inventario', ruta: '/admin/inventario', permiso: 'inventario.ver' }
-          ]
-        },
-        {
-          titulo: 'EMPRESAS',
-          icono: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
-          expandido: true,
-          submenus: [
-            { nombre: 'Cadena de Tiendas (Tenants)', ruta: '/admin/empresas', permiso: 'empresas.ver' },
-            { nombre: 'Sucursales y Ciudades', ruta: '/admin/sucursales', permiso: 'sucursales.ver' }
-          ]
-        },
-        {
-          titulo: 'SEGURIDAD',
-          icono: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z',
-          expandido: true,
-          submenus: [
-            { nombre: 'Usuarios y Permisos', ruta: '/admin/usuarios', permiso: 'usuarios.ver' },
-            { nombre: 'Bitácora del Sistema', ruta: '/admin/bitacora', permiso: 'bitacora.ver' },
-            { nombre: 'Copias de Respaldo', ruta: '/admin/backup', permiso: 'admin.acceder' }
-          ]
-        },
-        {
-          titulo: 'ANALÍTICA',
-          icono: 'M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z',
-          expandido: true,
-          submenus: [
-            { nombre: 'Dashboard de KPIs Globales', ruta: '/admin/kpis', permiso: 'reportes.ver' },
-            { nombre: 'Inteligencia de Ventas (BI)', ruta: '/admin/bi_dashboard', permiso: 'reportes.ver' }
-          ]
-        }
-      ];
-    } else if (scope === 'EMPRESA') {
-      this.menuFiltrado = [
-        {
-          titulo: 'CATÁLOGO',
-          icono: 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z',
-          expandido: true,
-          submenus: [
-            { nombre: 'Categorías', ruta: '/admin/categorias', permiso: 'categorias.ver' },
-            { nombre: 'Tallas y Colores', ruta: '/admin/tallas-colores', permiso: 'tallas.ver' },
-            { nombre: 'Productos', ruta: '/admin/productos', permiso: 'productos.ver' }
-          ]
-        },
-        {
-          titulo: 'INVENTARIO',
-          icono: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4',
-          expandido: true,
-          submenus: [
-            { nombre: 'Gestión de Inventario', ruta: '/admin/inventario', permiso: 'inventario.ver' }
-          ]
-        },
-        {
-          titulo: 'EQUIPO',
-          icono: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z',
-          expandido: true,
-          submenus: [
-            { nombre: `Equipo de ${empresaNombre}`, ruta: '/admin/usuarios', permiso: 'usuarios.ver' },
-            { nombre: 'Sucursales', ruta: '/admin/sucursales', permiso: 'sucursales.ver' }
-          ]
-        },
-        {
-          titulo: 'ANALÍTICA',
-          icono: 'M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z',
-          expandido: true,
-          submenus: [
-            { nombre: 'Dashboard de KPIs Empresa', ruta: '/admin/kpis', permiso: 'reportes.ver' },
-            { nombre: 'Inteligencia de Ventas', ruta: '/admin/bi_dashboard', permiso: 'reportes.ver' }
-          ]
-        }
-      ];
-    } else {
-      this.menuFiltrado = [
-        {
-          titulo: 'CATÁLOGO',
-          icono: 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z',
-          expandido: true,
-          submenus: [
-            { nombre: 'Categorías', ruta: '/admin/categorias', permiso: 'categorias.ver' },
-            { nombre: 'Tallas y Colores', ruta: '/admin/tallas-colores', permiso: 'tallas.ver' },
-            { nombre: 'Productos', ruta: '/admin/productos', permiso: 'productos.ver' }
-          ]
-        },
-        {
-          titulo: 'INVENTARIO',
-          icono: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4',
-          expandido: true,
-          submenus: [
-            { nombre: 'Gestión de Inventario', ruta: '/admin/inventario', permiso: 'inventario.ver' }
-          ]
-        },
-        {
-          titulo: 'EQUIPO',
-          icono: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z',
-          expandido: true,
-          submenus: [
-            { nombre: `Equipo de ${sucursalNombre}`, ruta: '/admin/usuarios', permiso: 'usuarios.ver' }
-          ]
-        },
-        {
-          titulo: 'ANALÍTICA',
-          icono: 'M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z',
-          expandido: true,
-          submenus: [
-            { nombre: 'Métricas de Sucursal', ruta: '/admin/kpis', permiso: 'reportes.ver' }
-          ]
-        }
-      ];
-    }
+    // Catálogo maestro de opciones del sistema Aurora Store
+    const menuMaster = [
+      {
+        titulo: 'CATÁLOGO',
+        icono: 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z',
+        expandido: true,
+        submenus: [
+          { nombre: 'Categorías', ruta: '/admin/categorias', permiso: 'categorias.ver' },
+          { nombre: 'Tallas y Colores', ruta: '/admin/tallas-colores', permiso: 'tallas.ver' },
+          { nombre: 'Productos', ruta: '/admin/productos', permiso: 'productos.ver' }
+        ]
+      },
+      {
+        titulo: 'INVENTARIO',
+        icono: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4',
+        expandido: true,
+        submenus: [
+          { nombre: 'Gestión de Inventario', ruta: '/admin/inventario', permiso: 'inventario.ver' }
+        ]
+      },
+      {
+        titulo: 'VENTAS & POS',
+        icono: 'M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z',
+        expandido: true,
+        submenus: [
+          { nombre: 'Punto de Venta / Caja', ruta: '/admin/caja', permiso: 'ventas.crear' }
+        ]
+      },
+      {
+        titulo: scope === 'PLATAFORMA' ? 'EMPRESAS' : 'SUCURSALES',
+        icono: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
+        expandido: true,
+        submenus: [
+          { 
+            nombre: 'Cadena de Tiendas (Tenants)', 
+            ruta: '/admin/empresas', 
+            permiso: 'empresas.ver', 
+            alcances: ['PLATAFORMA'] 
+          },
+          { 
+            nombre: scope === 'PLATAFORMA' ? 'Sucursales y Ciudades' : 'Sucursales de la Empresa', 
+            ruta: '/admin/sucursales', 
+            permiso: 'sucursales.ver' 
+          }
+        ]
+      },
+      {
+        titulo: scope === 'PLATAFORMA' ? 'SEGURIDAD' : 'EQUIPO',
+        icono: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z',
+        expandido: true,
+        submenus: [
+          { 
+            nombre: scope === 'PLATAFORMA' ? 'Usuarios y Permisos' : `Equipo de ${empresaNombre}`, 
+            ruta: '/admin/usuarios', 
+            permiso: 'usuarios.ver' 
+          },
+          { 
+            nombre: 'Bitácora del Sistema', 
+            ruta: '/admin/bitacora', 
+            permiso: 'bitacora.ver' 
+          },
+          { 
+            nombre: 'Copias de Respaldo', 
+            ruta: '/admin/backup', 
+            permiso: 'admin.acceder', 
+            alcances: ['PLATAFORMA'] 
+          }
+        ]
+      },
+      {
+        titulo: 'ANALÍTICA',
+        icono: 'M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z',
+        expandido: true,
+        submenus: [
+          { 
+            nombre: scope === 'PLATAFORMA' ? 'Dashboard de KPIs Globales' : (scope === 'EMPRESA' ? 'Dashboard KPIs Empresa' : 'Métricas de Sucursal'), 
+            ruta: '/admin/kpis', 
+            permiso: 'reportes.ver' 
+          },
+          { nombre: 'Generador de Reportes', ruta: '/admin/reportes', permiso: 'reportes.ver' },
+          { nombre: 'Inteligencia de Ventas (BI)', ruta: '/admin/bi_dashboard', permiso: 'reportes.ver' }
+        ]
+      }
+    ];
+
+    // Filtrar opciones según permisos y alcances del usuario actual
+    this.menuFiltrado = menuMaster
+      .map(modulo => {
+        const submenusAutorizados = modulo.submenus.filter(sub => {
+          // Filtro por alcance permitido si se especificó
+          if (sub.alcances && !sub.alcances.includes(scope as any)) {
+            return false;
+          }
+          // Filtro por permiso granular
+          if (sub.permiso && !this.authService.hasPermission(sub.permiso)) {
+            return false;
+          }
+          return true;
+        });
+
+        return {
+          ...modulo,
+          submenus: submenusAutorizados
+        };
+      })
+      .filter(modulo => modulo.submenus.length > 0);
   }
 
   // ------------------------------------------------------------------
@@ -244,6 +361,12 @@ export class AdminLayoutComponent implements OnInit {
     const target = event.target as HTMLElement;
     if (this.mostrarNotificaciones && !target.closest('[data-notif-panel]')) {
       this.mostrarNotificaciones = false;
+    }
+    if (this.mostrarTenantDropdown && !target.closest('[data-tenant-panel]')) {
+      this.mostrarTenantDropdown = false;
+    }
+    if (this.mostrarSucursalDropdown && !target.closest('[data-branch-panel]')) {
+      this.mostrarSucursalDropdown = false;
     }
   }
 

@@ -1,6 +1,7 @@
-import { Component, OnInit, inject, PLATFORM_ID } from '@angular/core';
+import { Component, OnInit, inject, PLATFORM_ID, DestroyRef } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ProductosService, Producto, ImagenProducto, VarianteProducto } from '../../../services/productos';
 import { CategoriasService, Categoria } from '../../../services/categorias';
 import { TallasColoresService, Talla, ColorPrenda } from '../../../services/tallas-colores';
@@ -20,6 +21,7 @@ export class ProductosComponent implements OnInit {
   private empresaService = inject(EmpresaService);
   private authService = inject(AuthService);
   private platformId = inject(PLATFORM_ID);
+  private destroyRef = inject(DestroyRef);
 
   // Estados de lista
   productos: Producto[] = [];
@@ -85,7 +87,19 @@ export class ProductosComponent implements OnInit {
   }
 
   get userCompanyId(): number | undefined {
-    return this.authService.obtenerUsuario()?.id_empresa;
+    return this.authService.obtenerUsuario()?.id_empresa ?? undefined;
+  }
+
+  get puedeCrear(): boolean {
+    return this.authService.hasPermission('productos.crear');
+  }
+
+  get puedeEditar(): boolean {
+    return this.authService.hasPermission('productos.editar');
+  }
+
+  get puedeEliminar(): boolean {
+    return this.authService.hasPermission('productos.eliminar');
   }
 
   // Métricas computadas
@@ -146,11 +160,25 @@ export class ProductosComponent implements OnInit {
   ngOnInit(): void {
     if (!isPlatformBrowser(this.platformId)) return;
     this.cargarDatosIniciales();
+
+    this.authService.companyChanged$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(empresa => {
+        if (this.esSuperAdmin) {
+          const nuevoFiltro = empresa ? empresa.id_empresa : null;
+          if (this.filtroEmpresa !== nuevoFiltro) {
+            this.filtroEmpresa = nuevoFiltro;
+            this.cargarProductos();
+            this.cargarCatalogosActivos(this.filtroEmpresa || undefined);
+          }
+        }
+      });
   }
 
   cargarDatosIniciales(): void {
     if (this.esSuperAdmin) {
       this.cargarEmpresas();
+      this.filtroEmpresa = this.authService.getEffectiveCompanyId();
     } else {
       this.filtroEmpresa = this.userCompanyId || null;
     }
@@ -168,6 +196,16 @@ export class ProductosComponent implements OnInit {
   }
 
   onFiltroEmpresaChange(): void {
+    if (this.esSuperAdmin) {
+      if (this.filtroEmpresa) {
+        const emp = this.empresas.find(e => e.id_empresa === Number(this.filtroEmpresa));
+        if (emp && emp.id_empresa) {
+          this.authService.setSelectedCompany({ id_empresa: emp.id_empresa, nombre_empresa: emp.nombre_empresa });
+        }
+      } else {
+        this.authService.setSelectedCompany(null);
+      }
+    }
     this.cargarProductos();
     this.cargarCatalogosActivos(this.filtroEmpresa || undefined);
   }

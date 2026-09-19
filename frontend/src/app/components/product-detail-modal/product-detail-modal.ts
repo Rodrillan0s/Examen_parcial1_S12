@@ -30,7 +30,12 @@ export interface ProductoFashion {
   selector: 'app-product-detail-modal',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  templateUrl: './product-detail-modal.html'
+  templateUrl: './product-detail-modal.html',
+  styles: [`
+    :host {
+      display: contents;
+    }
+  `]
 })
 export class ProductDetailModalComponent implements OnChanges, OnDestroy {
   @Input() producto: DetallePrendaCatalogo | ProductoFashion | null = null;

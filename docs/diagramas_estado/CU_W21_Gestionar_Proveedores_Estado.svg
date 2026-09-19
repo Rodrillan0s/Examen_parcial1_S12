@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 720" width="760" height="720">
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 1 L 7 4 L 0 7 Z" fill="#222222"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="760" height="720" fill="#ffffff"/>
+  <text x="380.0" y="46" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="normal" fill="#000000" text-anchor="middle">CU_W21: Gestionar proveedores</text>
+
+  <!-- Estado Inicial -->
+  <circle cx="380" cy="95" r="11" fill="#222222"/>
+
+  <line x1="380" y1="106" x2="380" y2="155" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="390" y="134.5" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">ingresar_datos_proveedor(nit, razon)</text>
+  <!-- Estado: FormularioProveedorActivo -->
+  <g id="s1">
+    <rect x="272.5" y="155" width="215" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="380" y="178.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">FormularioProveedorActivo</text>
+  </g>
+  <line x1="380" y1="193" x2="380" y2="265" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="390" y="233.0" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">verificar_nit_existente(nit)</text>
+  <!-- Estado: VerificandoUnicidadNIT -->
+  <g id="s2">
+    <rect x="282.5" y="265" width="195" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="380" y="288.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">VerificandoUnicidadNIT</text>
+  </g>
+  <!-- Estado: DuplicidadNITDetectada -->
+  <g id="s3_err">
+    <rect x="97.5" y="380" width="185" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="190" y="403.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">DuplicidadNITDetectada</text>
+  </g>
+  <!-- Estado: ProveedorGuardado -->
+  <g id="s3_ok">
+    <rect x="440.0" y="380" width="180" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="530" y="403.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">ProveedorGuardado</text>
+  </g>
+  <line x1="340" y1="303" x2="220" y2="380" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="120" y="340" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222" text-anchor="start">[NIT ya registrado]</text>
+  <line x1="420" y1="303" x2="500" y2="380" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="440" y="340" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222" text-anchor="start">[NIT disponible]</text>
+  <path d="M 190 380 Q 110 200 272 174" fill="none" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="80" y="230" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">cambiar_nit()</text>
+  <line x1="530" y1="418" x2="530" y2="485" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="540" y="455.5" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">registrar_bitacora("PROVEEDOR")</text>
+  <!-- Estado: BitacoraProveedorRegistrada -->
+  <g id="s4">
+    <rect x="422.5" y="485" width="215" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="530" y="508.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">BitacoraProveedorRegistrada</text>
+  </g>
+  <!-- Estado Final -->
+  <circle cx="380" cy="630" r="14" fill="none" stroke="#222222" stroke-width="1.4"/>
+  <circle cx="380" cy="630" r="8.5" fill="#222222"/>
+
+  <line x1="510" y1="523" x2="398" y2="620" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+</svg>

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 680" width="720" height="680">
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 1 L 7 4 L 0 7 Z" fill="#222222"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="720" height="680" fill="#ffffff"/>
+  <text x="360.0" y="46" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="normal" fill="#000000" text-anchor="middle">CU11 W/M: Consultar pedidos e historial</text>
+
+  <!-- Estado Inicial -->
+  <circle cx="360" cy="95" r="11" fill="#222222"/>
+
+  <line x1="360" y1="106" x2="360" y2="155" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="370" y="134.5" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">abrir_historial_pedidos()</text>
+  <!-- Estado: ListadoPedidosCargado -->
+  <g id="s1">
+    <rect x="260.0" y="155" width="200" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="360" y="178.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">ListadoPedidosCargado</text>
+  </g>
+  <path d="M 460.0 166.4 C 505.0 146.4 505.0 203.5 460.0 183.5" fill="none" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="511.0" y="177.0" font-family="Arial, Helvetica, sans-serif" font-size="10" fill="#222222">filtrar_por_estado(entregado/camino)</text>
+  <line x1="360" y1="193" x2="360" y2="280" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="370" y="240.5" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">seleccionar_pedido(id_pedido)</text>
+  <!-- Estado: DetallePedidoExpandido -->
+  <g id="s2">
+    <rect x="255.0" y="280" width="210" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="360" y="303.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">DetallePedidoExpandido</text>
+  </g>
+  <line x1="360" y1="318" x2="360" y2="405" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="370" y="365.5" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">consultar_tracking_envio()</text>
+  <!-- Estado: TimelineTrackingVisible -->
+  <g id="s3">
+    <rect x="255.0" y="405" width="210" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="360" y="428.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">TimelineTrackingVisible</text>
+  </g>
+  <line x1="360" y1="443" x2="360" y2="530" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="370" y="490.5" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">cerrar_detalle()</text>
+  <!-- Estado Final -->
+  <circle cx="360" cy="595" r="14" fill="none" stroke="#222222" stroke-width="1.4"/>
+  <circle cx="360" cy="595" r="8.5" fill="#222222"/>
+
+</svg>

@@ -1,0 +1,137 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1320 860" width="1320" height="860" style="background-color: #ffffff; font-family: Arial, Helvetica, sans-serif;">
+  <defs>
+    <!-- Flecha sincrónica (cerrada y rellena) -->
+    <marker id="arrow_sync" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#000000"/>
+    </marker>
+    <!-- Flecha de retorno / asincrónico (abierta) -->
+    <marker id="arrow_return" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 1 L 10 5 L 0 9" fill="none" stroke="#000000" stroke-width="1.4"/>
+    </marker>
+  </defs>
+
+  <!-- Marco Exterior -->
+  <rect x="15" y="15" width="1290" height="830" fill="#ffffff" stroke="#000000" stroke-width="1.5"/>
+  
+  <!-- Pestaña de Título UML -->
+  <path d="M 15 15 L 420 15 L 435 35 L 435 45 L 15 45 Z" fill="#ffffff" stroke="#000000" stroke-width="1.5"/>
+  <text x="30" y="34" font-size="12.5" font-weight="bold" fill="#000000">CU06 W/M: Consultar detalle de producto</text>
+
+  <!-- ==================== PARTICIPANTES ==================== -->
+
+  <!-- Actor -->
+  <g transform="translate(90, 55)">
+    <circle cx="0" cy="18" r="9" fill="#ffffff" stroke="#000000" stroke-width="1.5"/>
+    <line x1="0" y1="27" x2="0" y2="48" stroke="#000000" stroke-width="1.5"/>
+    <line x1="-15" y1="35" x2="15" y2="35" stroke="#000000" stroke-width="1.5"/>
+    <line x1="0" y1="48" x2="-12" y2="65" stroke="#000000" stroke-width="1.5"/>
+    <line x1="0" y1="48" x2="12" y2="65" stroke="#000000" stroke-width="1.5"/>
+    <text x="0" y="78" font-size="11" font-weight="bold" text-anchor="middle" fill="#000000">CLIENTE</text>
+  </g>
+
+  <!-- IU -->
+  <g>
+    <rect x="217.5" y="85" width="145" height="36" fill="#ffffff" stroke="#000000" stroke-width="1.4"/>
+    <text x="290" y="107" font-size="12" font-weight="bold" text-anchor="middle" fill="#000000">IU_DetalleProducto</text>
+  </g>
+
+  <!-- Controller -->
+  <g>
+    <rect x="457.5" y="85" width="145" height="36" fill="#ffffff" stroke="#000000" stroke-width="1.4"/>
+    <text x="530" y="107" font-size="12" font-weight="bold" text-anchor="middle" fill="#000000">catalogo_routes</text>
+  </g>
+
+  <!-- Service -->
+  <g>
+    <rect x="707.5" y="85" width="145" height="36" fill="#ffffff" stroke="#000000" stroke-width="1.4"/>
+    <text x="780" y="107" font-size="12" font-weight="bold" text-anchor="middle" fill="#000000">productos_services</text>
+  </g>
+
+  <!-- Repo -->
+  <g>
+    <rect x="967.5" y="85" width="145" height="36" fill="#ffffff" stroke="#000000" stroke-width="1.4"/>
+    <text x="1040" y="107" font-size="12" font-weight="bold" text-anchor="middle" fill="#000000">catalogo_repos</text>
+  </g>
+
+  <!-- T_BITACORA -->
+  <g>
+    <rect x="1185" y="85" width="110" height="36" fill="#ffffff" stroke="#000000" stroke-width="1.4"/>
+    <text x="1240" y="107" font-size="12" font-weight="bold" text-anchor="middle" fill="#000000">T_BITACORA</text>
+  </g>
+
+  <!-- ==================== LÍNEAS DE VIDA (PUNTEADAS) ==================== -->
+  <line x1="90" y1="138" x2="90" y2="820" stroke="#000000" stroke-width="1" stroke-dasharray="5,5"/>
+  <line x1="290" y1="121" x2="290" y2="820" stroke="#000000" stroke-width="1" stroke-dasharray="5,5"/>
+  <line x1="530" y1="121" x2="530" y2="820" stroke="#000000" stroke-width="1" stroke-dasharray="5,5"/>
+  <line x1="780" y1="121" x2="780" y2="820" stroke="#000000" stroke-width="1" stroke-dasharray="5,5"/>
+  <line x1="1040" y1="121" x2="1040" y2="820" stroke="#000000" stroke-width="1" stroke-dasharray="5,5"/>
+  <line x1="1240" y1="121" x2="1240" y2="820" stroke="#000000" stroke-width="1" stroke-dasharray="5,5"/>
+
+  <!-- ==================== BARRAS DE ACTIVACIÓN ==================== -->
+  <rect x="284" y="160" width="12" height="615" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+  <rect x="524" y="195" width="12" height="325" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+  <rect x="524" y="590" width="12" height="155" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+  <rect x="774" y="225" width="12" height="270" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+  <rect x="774" y="620" width="12" height="105" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+  <rect x="1034" y="290" width="12" height="65" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+  <rect x="1034" y="445" width="12" height="40" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+  <rect x="1034" y="650" width="12" height="40" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+  <rect x="1234" y="375" width="12" height="30" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+
+  <!-- Fragmento alt: [PRODUCTO ACTIVO Y EXISTENTE] -->
+  <rect x="40" y="260" width="1250" height="280" fill="none" stroke="#000000" stroke-width="1.3"/>
+  <path d="M 40 260 L 95 260 L 105 277 L 105 285 L 40 285 Z" fill="#ffffff" stroke="#000000" stroke-width="1.3"/>
+  <text x="70" y="277" font-size="11.5" font-weight="bold" text-anchor="middle" fill="#000000">alt</text>
+  <text x="118" y="278" font-size="11" font-weight="bold" fill="#000000">[PRODUCTO ACTIVO Y EXISTENTE]</text>
+  <line x1="40" y1="425" x2="1290" y2="425" stroke="#000000" stroke-width="1.2" stroke-dasharray="6,4"/>
+  <text x="55" y="442" font-size="11" font-weight="bold" fill="#000000">[PRODUCTO INEXISTENTE O INACTIVO]</text>
+
+  <!-- Fragmento opt: [CONSULTAR GUÍA DE TALLAS DE PRENDA] -->
+  <rect x="40" y="555" width="1250" height="205" fill="none" stroke="#000000" stroke-width="1.3"/>
+  <path d="M 40 555 L 95 555 L 105 572 L 105 580 L 40 580 Z" fill="#ffffff" stroke="#000000" stroke-width="1.3"/>
+  <text x="70" y="572" font-size="11.5" font-weight="bold" text-anchor="middle" fill="#000000">opt</text>
+  <text x="118" y="573" font-size="11" font-weight="bold" fill="#000000">[CONSULTAR GUÍA DE TALLAS DE PRENDA]</text>
+
+  <!-- ==================== MENSAJES ==================== -->
+  <line x1="90" y1="165" x2="284" y2="165" stroke="#000000" stroke-width="1.3" marker-end="url(#arrow_sync)"/>
+  <text x="187.0" y="158" font-size="10.5" text-anchor="middle" fill="#000000">1: SeleccionarPrenda(id_producto)</text>
+  <line x1="296" y1="200" x2="524" y2="200" stroke="#000000" stroke-width="1.3" marker-end="url(#arrow_sync)"/>
+  <text x="410.0" y="193" font-size="10.5" text-anchor="middle" fill="#000000">2: GET /api/catalogo/productos/{id}</text>
+  <line x1="536" y1="230" x2="774" y2="230" stroke="#000000" stroke-width="1.3" marker-end="url(#arrow_sync)"/>
+  <text x="655.0" y="223" font-size="10.5" text-anchor="middle" fill="#000000">3: obtener_detalle_producto(id_producto)</text>
+  <line x1="786" y1="295" x2="1034" y2="295" stroke="#000000" stroke-width="1.3" marker-end="url(#arrow_sync)"/>
+  <text x="910.0" y="288" font-size="10.5" text-anchor="middle" fill="#000000">4: obtener_producto_por_id(id_producto)</text>
+  <line x1="1034" y1="320" x2="786" y2="320" stroke="#000000" stroke-width="1.3" stroke-dasharray="4,3" marker-end="url(#arrow_return)"/>
+  <text x="910.0" y="313" font-size="10.5" text-anchor="middle" fill="#000000">5: return producto_info</text>
+  <line x1="786" y1="345" x2="1034" y2="345" stroke="#000000" stroke-width="1.3" marker-end="url(#arrow_sync)"/>
+  <text x="910.0" y="338" font-size="10.5" text-anchor="middle" fill="#000000">6: obtener_variantes_e_imagenes(id_producto)</text>
+  <line x1="1034" y1="365" x2="786" y2="365" stroke="#000000" stroke-width="1.3" stroke-dasharray="4,3" marker-end="url(#arrow_return)"/>
+  <text x="910.0" y="358" font-size="10.5" text-anchor="middle" fill="#000000">7: return variantes, imagenes</text>
+  <line x1="786" y1="385" x2="1234" y2="385" stroke="#000000" stroke-width="1.3" marker-end="url(#arrow_sync)"/>
+  <text x="910" y="378" font-size="10.5" text-anchor="middle" fill="#000000">8: registrar_bitacora(CONSULTA_DETALLE, id_producto)</text>
+  <line x1="774" y1="405" x2="536" y2="405" stroke="#000000" stroke-width="1.3" stroke-dasharray="4,3" marker-end="url(#arrow_return)"/>
+  <text x="655.0" y="398" font-size="10.5" text-anchor="middle" fill="#000000">9: respuesta_exitosa(detalle_completo)</text>
+  <line x1="524" y1="420" x2="296" y2="420" stroke="#000000" stroke-width="1.3" stroke-dasharray="4,3" marker-end="url(#arrow_return)"/>
+  <text x="410.0" y="413" font-size="10.5" text-anchor="middle" fill="#000000">10: RenderizarDetallePrenda(detalle)</text>
+  <line x1="1034" y1="455" x2="786" y2="455" stroke="#000000" stroke-width="1.3" stroke-dasharray="4,3" marker-end="url(#arrow_return)"/>
+  <text x="910.0" y="448" font-size="10.5" text-anchor="middle" fill="#000000">11: return None</text>
+  <line x1="774" y1="485" x2="536" y2="485" stroke="#000000" stroke-width="1.3" stroke-dasharray="4,3" marker-end="url(#arrow_return)"/>
+  <text x="655.0" y="478" font-size="10.5" text-anchor="middle" fill="#000000">12: respuesta_no_encontrado()</text>
+  <line x1="524" y1="515" x2="296" y2="515" stroke="#000000" stroke-width="1.3" stroke-dasharray="4,3" marker-end="url(#arrow_return)"/>
+  <text x="410.0" y="508" font-size="10.5" text-anchor="middle" fill="#000000">13: MostrarAlerta(&quot;Prenda no disponible&quot;)</text>
+  <line x1="296" y1="595" x2="524" y2="595" stroke="#000000" stroke-width="1.3" marker-end="url(#arrow_sync)"/>
+  <text x="410.0" y="588" font-size="10.5" text-anchor="middle" fill="#000000">14: GET /api/catalogo/tallas/guia</text>
+  <line x1="536" y1="625" x2="774" y2="625" stroke="#000000" stroke-width="1.3" marker-end="url(#arrow_sync)"/>
+  <text x="655.0" y="618" font-size="10.5" text-anchor="middle" fill="#000000">15: obtener_guia_tallas()</text>
+  <line x1="786" y1="655" x2="1034" y2="655" stroke="#000000" stroke-width="1.3" marker-end="url(#arrow_sync)"/>
+  <text x="910.0" y="648" font-size="10.5" text-anchor="middle" fill="#000000">16: get_medidas_guia_tallas()</text>
+  <line x1="1034" y1="685" x2="786" y2="685" stroke="#000000" stroke-width="1.3" stroke-dasharray="4,3" marker-end="url(#arrow_return)"/>
+  <text x="910.0" y="678" font-size="10.5" text-anchor="middle" fill="#000000">17: return tabla_medidas</text>
+  <line x1="774" y1="710" x2="536" y2="710" stroke="#000000" stroke-width="1.3" stroke-dasharray="4,3" marker-end="url(#arrow_return)"/>
+  <text x="655.0" y="703" font-size="10.5" text-anchor="middle" fill="#000000">18: respuesta_guia(tabla_medidas)</text>
+  <line x1="524" y1="735" x2="296" y2="735" stroke="#000000" stroke-width="1.3" stroke-dasharray="4,3" marker-end="url(#arrow_return)"/>
+  <text x="410.0" y="728" font-size="10.5" text-anchor="middle" fill="#000000">19: MostrarModalTallas(tabla_medidas)</text>
+  <line x1="284" y1="760" x2="90" y2="760" stroke="#000000" stroke-width="1.3" stroke-dasharray="4,3" marker-end="url(#arrow_return)"/>
+  <text x="187.0" y="753" font-size="10.5" text-anchor="middle" fill="#000000">20: PresentarFichaProducto()</text>
+
+</svg>

@@ -20,7 +20,13 @@ import { MisReservasComponent } from './pages/reservas/mis-reservas/mis-reservas
 import { MisPedidosComponent } from './pages/pedidos/mis-pedidos/mis-pedidos';
 import { ListaInventarioComponent } from './pages/inventario/lista-inventario/lista-inventario';
 import { PagoComponent } from './pages/pago/pago';
+import { CajaComponent } from './pages/caja/caja';
+import { CajaPagoComponent } from './pages/caja/pago/caja-pago';
+import { CajaComprobanteComponent } from './pages/caja/comprobante/caja-comprobante';
+import { ReportesComponent } from './pages/reportes/reportes';
 import { authGuard } from './guards/auth-guard';
+import { permissionGuard } from './guards/permission-guard';
+import { scopeGuard } from './guards/scope-guard';
 
 export const routes: Routes = [
   // RUTAS PÚBLICAS Y DE CLIENTE DE LA TIENDA E-COMMERCE DE ROPA
@@ -45,13 +51,18 @@ export const routes: Routes = [
   { path: 'tallas-colores', redirectTo: 'admin/tallas-colores', pathMatch: 'full' },
   { path: 'productos', redirectTo: 'admin/productos', pathMatch: 'full' },
   { path: 'inventario', redirectTo: 'admin/inventario', pathMatch: 'full' },
+  { path: 'caja', redirectTo: 'admin/caja', pathMatch: 'full' },
+  { path: 'pos', redirectTo: 'admin/caja', pathMatch: 'full' },
+  { path: 'caja/pago/:id', redirectTo: 'admin/caja/pago/:id', pathMatch: 'full' },
+  { path: 'caja/comprobante/:id', redirectTo: 'admin/caja/comprobante/:id', pathMatch: 'full' },
   { path: 'bitacora', redirectTo: 'admin/bitacora', pathMatch: 'full' },
   { path: 'backup', redirectTo: 'admin/backup', pathMatch: 'full' },
+  { path: 'reportes', redirectTo: 'admin/reportes', pathMatch: 'full' },
   { path: 'bi-dashboard', redirectTo: 'admin/bi_dashboard', pathMatch: 'full' },
   { path: 'bi_dashboard', redirectTo: 'admin/bi_dashboard', pathMatch: 'full' },
   { path: 'triaje-chat', redirectTo: 'admin/triaje-chat', pathMatch: 'full' },
 
-  // RUTAS DE ADMINISTRACIÓN INTERNA (REQUIEREN AUTENTICACIÓN Y PERMISOS RBAC)
+  // RUTAS DE ADMINISTRACIÓN INTERNA (REQUIEREN AUTENTICACIÓN, PERMISOS RBAC Y CONTROL DE ALCANCE)
   {
     path: 'admin',
     component: AdminLayoutComponent,
@@ -59,17 +70,29 @@ export const routes: Routes = [
     children: [
       { path: '', redirectTo: 'kpis', pathMatch: 'full' },
       { path: 'kpis', component: DashboardKpisComponent },
-      { path: 'usuarios', component: ListaUsuariosComponent },
-      { path: 'empresas', component: ListaEmpresasComponent },
-      { path: 'sucursales', component: ListaSucursalesComponent },
-      { path: 'categorias', component: ListaCategoriasComponent },
-      { path: 'tallas-colores', component: TallasColoresComponent },
-      { path: 'productos', component: ProductosComponent },
-      { path: 'inventario', component: ListaInventarioComponent },
-      { path: 'bitacora', component: ListaBitacoraComponent },
-      { path: 'backup', component: BackupComponent },
-      { path: 'bi_dashboard', component: BiDashboardComponent },
-      { path: 'bi-dashboard', component: BiDashboardComponent },
+      { path: 'reportes', component: ReportesComponent, canActivate: [permissionGuard('reportes.ver')] },
+      { path: 'usuarios', component: ListaUsuariosComponent, canActivate: [permissionGuard('usuarios.ver')] },
+      { 
+        path: 'empresas', 
+        component: ListaEmpresasComponent, 
+        canActivate: [scopeGuard(['PLATAFORMA']), permissionGuard('empresas.ver')] 
+      },
+      { path: 'sucursales', component: ListaSucursalesComponent, canActivate: [permissionGuard('sucursales.ver')] },
+      { path: 'categorias', component: ListaCategoriasComponent, canActivate: [permissionGuard(['categorias.ver', 'productos.ver'])] },
+      { path: 'tallas-colores', component: TallasColoresComponent, canActivate: [permissionGuard(['tallas.ver', 'productos.ver'])] },
+      { path: 'productos', component: ProductosComponent, canActivate: [permissionGuard('productos.ver')] },
+      { path: 'inventario', component: ListaInventarioComponent, canActivate: [permissionGuard('inventario.ver')] },
+      { path: 'caja', component: CajaComponent, canActivate: [permissionGuard(['ventas.crear', 'ventas.ver', 'admin.acceder'])] },
+      { path: 'caja/pago/:id', component: CajaPagoComponent, canActivate: [permissionGuard(['ventas.crear', 'admin.acceder'])] },
+      { path: 'caja/comprobante/:id', component: CajaComprobanteComponent, canActivate: [permissionGuard(['ventas.crear', 'ventas.ver', 'admin.acceder'])] },
+      { path: 'bitacora', component: ListaBitacoraComponent, canActivate: [permissionGuard('bitacora.ver')] },
+      { 
+        path: 'backup', 
+        component: BackupComponent, 
+        canActivate: [scopeGuard(['PLATAFORMA'])] 
+      },
+      { path: 'bi_dashboard', component: BiDashboardComponent, canActivate: [permissionGuard('reportes.ver')] },
+      { path: 'bi-dashboard', component: BiDashboardComponent, canActivate: [permissionGuard('reportes.ver')] },
       { path: 'triaje-chat', component: TriajeChatComponent },
       { path: 'catalogo', component: CatalogoComponent }
     ]

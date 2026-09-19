@@ -43,8 +43,22 @@ class PostgreSQL:
             if p is not None:
                 self.conn = p.getconn()
                 self._from_pool = True
-                # Si la conexión se cerró por timeout en el servidor remoto, reconectar
-                if self.conn.closed != 0:
+                
+                # Validar que la conexión esté realmente viva antes de usarla
+                is_alive = False
+                if self.conn and self.conn.closed == 0:
+                    try:
+                        with self.conn.cursor() as test_cur:
+                            test_cur.execute("SELECT 1;")
+                        is_alive = True
+                    except Exception:
+                        is_alive = False
+                
+                if not is_alive:
+                    try:
+                        p.putconn(self.conn, close=True)
+                    except Exception:
+                        pass
                     self.conn = psycopg2.connect(
                         host=self.db_host,
                         port=self.db_port,
@@ -92,20 +106,22 @@ class PostgreSQL:
                 self.cur = None
 
             if self.conn:
-                if commit:
-                    try:
-                        self.conn.commit()
-                    except Exception:
-                        pass
-                else:
-                    try:
-                        self.conn.rollback()
-                    except Exception:
-                        pass
+                conn_is_bad = (self.conn.closed != 0)
+                if not conn_is_bad:
+                    if commit:
+                        try:
+                            self.conn.commit()
+                        except Exception:
+                            conn_is_bad = True
+                    else:
+                        try:
+                            self.conn.rollback()
+                        except Exception:
+                            conn_is_bad = True
 
                 if self._from_pool and self._pool is not None:
                     try:
-                        self._pool.putconn(self.conn)
+                        self._pool.putconn(self.conn, close=conn_is_bad)
                     except Exception:
                         try:
                             self.conn.close()

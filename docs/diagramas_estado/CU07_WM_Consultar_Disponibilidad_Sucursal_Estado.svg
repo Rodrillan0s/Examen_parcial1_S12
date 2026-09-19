@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 680" width="780" height="680">
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 1 L 7 4 L 0 7 Z" fill="#222222"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="780" height="680" fill="#ffffff"/>
+  <text x="390.0" y="46" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="normal" fill="#000000" text-anchor="middle">CU07 W/M: Consultar disponibilidad por sucursal</text>
+
+  <!-- Estado Inicial -->
+  <circle cx="390" cy="95" r="11" fill="#222222"/>
+
+  <line x1="390" y1="106" x2="390" y2="155" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="400" y="134.5" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">consultar_stock_sucursales(id_variante)</text>
+  <!-- Estado: VerificandoKardexSucursales -->
+  <g id="s1">
+    <rect x="275.0" y="155" width="230" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="390" y="178.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">VerificandoKardexSucursales</text>
+  </g>
+  <line x1="390" y1="193" x2="390" y2="250" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="400" y="225.5" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">evaluar_disponibilidad_red()</text>
+  <!-- Estado: AnalizandoStockGlobal -->
+  <g id="s2">
+    <rect x="285.0" y="250" width="210" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="390" y="273.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">AnalizandoStockGlobal</text>
+  </g>
+  <!-- Estado: AgotadoEnRed -->
+  <g id="s3_agotado">
+    <rect x="80.0" y="390" width="160" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="160" y="413.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">AgotadoEnRed</text>
+  </g>
+  <!-- Estado: DisponibleEnTienda -->
+  <g id="s3_local">
+    <rect x="302.5" y="390" width="175" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="390" y="413.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">DisponibleEnTienda</text>
+  </g>
+  <!-- Estado: DisponibleEnOtras -->
+  <g id="s3_otras">
+    <rect x="535.0" y="390" width="170" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="620" y="413.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">DisponibleEnOtras</text>
+  </g>
+  <line x1="340" y1="288" x2="200" y2="390" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="130" y="335" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222" text-anchor="start">[Stock = 0]</text>
+  <line x1="390" y1="288" x2="390" y2="390" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="285" y="343.0" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">[Hay stock local]</text>
+  <line x1="440" y1="288" x2="580" y2="390" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="470" y="335" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222" text-anchor="start">[Solo otras tiendas] / ver_mapa()</text>
+  <!-- Estado Final -->
+  <circle cx="390" cy="590" r="14" fill="none" stroke="#222222" stroke-width="1.4"/>
+  <circle cx="390" cy="590" r="8.5" fill="#222222"/>
+
+  <line x1="180" y1="428" x2="372" y2="580" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <line x1="390" y1="428" x2="390" y2="576" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <line x1="600" y1="428" x2="408" y2="580" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+</svg>

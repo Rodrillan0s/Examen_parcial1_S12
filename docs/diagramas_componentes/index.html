@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Diagramas de Componentes de Subsistemas - Sistema Aura</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --primary: #38bdf8;
+      --border: #334155;
+      --accent: #10b981;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 24px;
+    }
+    header {
+      max-width: 1200px;
+      margin: 0 auto 28px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 20px;
+    }
+    h1 { font-size: 1.8rem; font-weight: 700; color: var(--primary); margin-bottom: 8px; }
+    p.sub { color: var(--muted); font-size: 0.95rem; }
+    .nav-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      max-width: 1200px;
+      margin: 0 auto 24px;
+    }
+    .tab-btn {
+      background: var(--card-bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 10px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+    .tab-btn:hover { background: #334155; border-color: var(--primary); }
+    .tab-btn.active {
+      background: var(--primary);
+      color: #0f172a;
+      border-color: var(--primary);
+      font-weight: 700;
+    }
+    .diagram-panel {
+      display: none;
+      max-width: 1200px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    }
+    .diagram-panel.active { display: block; }
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+    }
+    .panel-title { font-size: 1.25rem; font-weight: 600; color: #fff; }
+    .panel-links a {
+      display: inline-block;
+      margin-left: 10px;
+      padding: 6px 12px;
+      background: #334155;
+      color: var(--primary);
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+    .panel-links a:hover { background: var(--primary); color: #0f172a; }
+    .img-container {
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+      overflow-x: auto;
+    }
+    .img-container img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .description-box {
+      margin-top: 18px;
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      font-size: 0.9rem;
+      color: #cbd5e1;
+    }
+    .description-box h4 { color: var(--accent); margin-bottom: 8px; font-size: 0.95rem; }
+    .description-box ul { padding-left: 20px; margin-top: 6px; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Diagramas de Componentes y Subsistemas (UML 2.5)</h1>
+    <p class="sub">Arquitectura de Software - Sistema Web de Comercio Electrónico Aura | Plantilla Oficial SI2 - UAGRM</p>
+  </header>
+
+  <nav class="nav-tabs" id="tabNav">
+    <button class="tab-btn active" onclick="showTab(0)">DC00: Macro General</button>
+    <button class="tab-btn" onclick="showTab(1)">DC01: Autenticación & Usuarios</button>
+    <button class="tab-btn" onclick="showTab(2)">DC02: Gestión de Catálogo</button>
+    <button class="tab-btn" onclick="showTab(3)">DC03: Sucursales, Inv. & Prov.</button>
+    <button class="tab-btn" onclick="showTab(4)">DC04: E-Commerce</button>
+    <button class="tab-btn" onclick="showTab(5)">DC05: Reservas</button>
+    <button class="tab-btn" onclick="showTab(6)">DC06: Punto de Venta (POS)</button>
+  </nav>
+
+  <!-- DC00 -->
+  <div class="diagram-panel active" id="panel-0">
+    <div class="panel-header">
+      <div class="panel-title">DC00: Diagrama General de Componentes y Subsistemas</div>
+      <div class="panel-links">
+        <a href="DC00_Diagrama_General_Componentes_Subsistemas.svg" target="_blank">Ver SVG</a>
+        <a href="DC00_Diagrama_General_Componentes_Subsistemas.png" download>Descargar PNG</a>
+      </div>
+    </div>
+    <div class="img-container">
+      <img src="DC00_Diagrama_General_Componentes_Subsistemas.png" alt="DC00 Diagrama General">
+    </div>
+    <div class="description-box">
+      <h4>Estructura del Diagrama Macro (Plantilla Docente)</h4>
+      <p>Representa los límites de los subsistemas y sus interacciones con el runtime central y dependencias:</p>
+      <ul>
+        <li><strong>Dentro del Cuadro (Implementados):</strong> Autenticación y Usuarios, Catálogo, Sucursales/Inventario/Proveedores, E-Commerce, Reservas, Punto de Venta (POS).</li>
+        <li><strong>Fuera del Cuadro (Futuros/No implementados):</strong> Gestión de Pedidos y Reportes, Inteligencia Artificial y Experiencia del Cliente.</li>
+        <li><strong>Componente Orquestador:</strong> &lt;&lt;source&gt;&gt; run.py.</li>
+        <li><strong>Librerías y APIs:</strong> FastAPI, psycopg2, Gunicorn, Angular, TailwindCSS, PyJWT, ReportLab, CloudinarySDK, Requests, PayPal API, Cloudinary.</li>
+        <li><strong>Base de Datos:</strong> PostgreSQL ("comercio") sobre Oracle Cloud / VPS.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- DC01 -->
+  <div class="diagram-panel" id="panel-1">
+    <div class="panel-header">
+      <div class="panel-title">DC01: Subsistema Autenticación y Gestión de Usuarios</div>
+      <div class="panel-links">
+        <a href="DC01_Subsistema_Autenticacion_Usuarios.svg" target="_blank">Ver SVG</a>
+        <a href="DC01_Subsistema_Autenticacion_Usuarios.png" download>Descargar PNG</a>
+      </div>
+    </div>
+    <div class="img-container">
+      <img src="DC01_Subsistema_Autenticacion_Usuarios.png" alt="DC01 Autenticación y Usuarios">
+    </div>
+    <div class="description-box">
+      <h4>Componentes Internos por Capa</h4>
+      <ul>
+        <li><strong>UI:</strong> login.component, lista-usuarios.component, perfil.component, roles-rbac.component</li>
+        <li><strong>Controladores:</strong> auth_routes.py, users_routes.py, profile_routes.py, rbac_routes.py</li>
+        <li><strong>Lógica de Negocio:</strong> auth_services.py, users_services.py, profile_services.py, rbac_services.py</li>
+        <li><strong>Acceso a Datos:</strong> auth_repos.py, users_repos.py, profile_repos.py, rbac_repos.py</li>
+        <li><strong>Tablas BD:</strong> t_usuario, t_rol, t_permiso, t_rol_permiso, t_sesion, t_empresa</li>
+        <li><strong>Dependencias:</strong> PyJWT, werkzeug, email-validator, FastAPI</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- DC02 -->
+  <div class="diagram-panel" id="panel-2">
+    <div class="panel-header">
+      <div class="panel-title">DC02: Subsistema de Gestión de Catálogo</div>
+      <div class="panel-links">
+        <a href="DC02_Subsistema_Gestion_Catalogo.svg" target="_blank">Ver SVG</a>
+        <a href="DC02_Subsistema_Gestion_Catalogo.png" download>Descargar PNG</a>
+      </div>
+    </div>
+    <div class="img-container">
+      <img src="DC02_Subsistema_Gestion_Catalogo.png" alt="DC02 Gestión de Catálogo">
+    </div>
+    <div class="description-box">
+      <h4>Componentes Internos por Capa</h4>
+      <ul>
+        <li><strong>UI:</strong> productos.component, categorias.component, marcas.component, detalle-producto.component</li>
+        <li><strong>Controladores:</strong> productos_routes.py, categorias_routes.py, marcas_routes.py, busqueda_routes.py</li>
+        <li><strong>Lógica de Negocio:</strong> productos_services.py, categorias_services.py, marcas_services.py, busqueda_services.py</li>
+        <li><strong>Acceso a Datos:</strong> productos_repos.py, categorias_repos.py, marcas_repos.py, busqueda_repos.py</li>
+        <li><strong>Tablas BD:</strong> t_producto, t_categoria, t_marca, t_imagen_producto, t_especificacion_producto</li>
+        <li><strong>Dependencias:</strong> CloudinarySDK, Pillow, Requests, FastAPI</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- DC03 -->
+  <div class="diagram-panel" id="panel-3">
+    <div class="panel-header">
+      <div class="panel-title">DC03: Subsistema Sucursales, Inventario y Proveedores</div>
+      <div class="panel-links">
+        <a href="DC03_Subsistema_Sucursales_Inventario_Proveedores.svg" target="_blank">Ver SVG</a>
+        <a href="DC03_Subsistema_Sucursales_Inventario_Proveedores.png" download>Descargar PNG</a>
+      </div>
+    </div>
+    <div class="img-container">
+      <img src="DC03_Subsistema_Sucursales_Inventario_Proveedores.png" alt="DC03 Sucursales e Inventario">
+    </div>
+    <div class="description-box">
+      <h4>Componentes Internos por Capa</h4>
+      <ul>
+        <li><strong>UI:</strong> sucursales.component, inventario-stock.component, movimientos-stock.component, proveedores.component</li>
+        <li><strong>Controladores:</strong> sucursales_routes.py, inventario_routes.py, movimientos_routes.py, proveedores_routes.py</li>
+        <li><strong>Lógica de Negocio:</strong> sucursales_services.py, inventario_services.py, movimientos_services.py, proveedores_services.py</li>
+        <li><strong>Acceso a Datos:</strong> sucursales_repos.py, inventario_repos.py, movimientos_repos.py, proveedores_repos.py</li>
+        <li><strong>Tablas BD:</strong> t_sucursal, t_inventario, t_movimiento_inventario, t_proveedor, t_orden_compra</li>
+        <li><strong>Dependencias:</strong> Leaflet, psycopg2, pydantic, FastAPI</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- DC04 -->
+  <div class="diagram-panel" id="panel-4">
+    <div class="panel-header">
+      <div class="panel-title">DC04: Subsistema de Gestión de E-Commerce</div>
+      <div class="panel-links">
+        <a href="DC04_Subsistema_Gestion_Ecommerce.svg" target="_blank">Ver SVG</a>
+        <a href="DC04_Subsistema_Gestion_Ecommerce.png" download>Descargar PNG</a>
+      </div>
+    </div>
+    <div class="img-container">
+      <img src="DC04_Subsistema_Gestion_Ecommerce.png" alt="DC04 Gestión de E-Commerce">
+    </div>
+    <div class="description-box">
+      <h4>Componentes Internos por Capa</h4>
+      <ul>
+        <li><strong>UI:</strong> catalogo.component, carrito-drawer.component, checkout.component, pago.component</li>
+        <li><strong>Controladores:</strong> catalogo_routes.py, carrito_routes.py, pedido_routes.py, pago_routes.py</li>
+        <li><strong>Lógica de Negocio:</strong> catalogo_services.py, carrito_services.py, pedido_services.py, pago_services.py</li>
+        <li><strong>Acceso a Datos:</strong> catalogo_repos.py, carrito_repos.py, pedido_repos.py, pago_repos.py</li>
+        <li><strong>Tablas BD:</strong> t_carrito, t_carrito_item, t_venta, t_detalle_venta, t_pago, t_metodo_pago</li>
+        <li><strong>Dependencias:</strong> PayPal Sandbox, Requests, Angular SSR, TailwindCSS</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- DC05 -->
+  <div class="diagram-panel" id="panel-5">
+    <div class="panel-header">
+      <div class="panel-title">DC05: Subsistema de Reservas</div>
+      <div class="panel-links">
+        <a href="DC05_Subsistema_Reservas.svg" target="_blank">Ver SVG</a>
+        <a href="DC05_Subsistema_Reservas.png" download>Descargar PNG</a>
+      </div>
+    </div>
+    <div class="img-container">
+      <img src="DC05_Subsistema_Reservas.png" alt="DC05 Reservas">
+    </div>
+    <div class="description-box">
+      <h4>Componentes Internos por Capa</h4>
+      <ul>
+        <li><strong>UI:</strong> reserva-modal.component, mis-reservas.component, gestion-reservas.component, detalle-reserva.component</li>
+        <li><strong>Controladores:</strong> reserva_routes.py, reserva_admin_routes.py, stock_reserva_routes.py, notif_reserva_routes.py</li>
+        <li><strong>Lógica de Negocio:</strong> reserva_services.py, reserva_admin_services.py, stock_reserva_services.py, notif_reserva_services.py</li>
+        <li><strong>Acceso a Datos:</strong> reserva_repos.py, reserva_admin_repos.py, stock_reserva_repos.py, notif_reserva_repos.py</li>
+        <li><strong>Tablas BD:</strong> t_reserva, t_detalle_reserva, t_inventario, t_sucursal, t_usuario</li>
+        <li><strong>Dependencias:</strong> datetime/cron, smtplib, psycopg2, FastAPI</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- DC06 -->
+  <div class="diagram-panel" id="panel-6">
+    <div class="panel-header">
+      <div class="panel-title">DC06: Subsistema Punto de Venta (POS)</div>
+      <div class="panel-links">
+        <a href="DC06_Subsistema_Punto_De_Venta_POS.svg" target="_blank">Ver SVG</a>
+        <a href="DC06_Subsistema_Punto_De_Venta_POS.png" download>Descargar PNG</a>
+      </div>
+    </div>
+    <div class="img-container">
+      <img src="DC06_Subsistema_Punto_De_Venta_POS.png" alt="DC06 Punto de Venta POS">
+    </div>
+    <div class="description-box">
+      <h4>Componentes Internos por Capa</h4>
+      <ul>
+        <li><strong>UI:</strong> pos-terminal.component, pos-facturacion.component, cierre-caja.component, ticket-impresion.component</li>
+        <li><strong>Controladores:</strong> pos_routes.py, facturacion_routes.py, caja_routes.py, comprobante_routes.py</li>
+        <li><strong>Lógica de Negocio:</strong> pos_services.py, facturacion_services.py, caja_services.py, comprobante_services.py</li>
+        <li><strong>Acceso a Datos:</strong> pos_repos.py, facturacion_repos.py, caja_repos.py, comprobante_repos.py</li>
+        <li><strong>Tablas BD:</strong> t_venta_pos, t_detalle_venta_pos, t_caja_sesion, t_movimiento_caja, t_comprobante</li>
+        <li><strong>Dependencias:</strong> ReportLab, barcode, psycopg2, FastAPI</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    function showTab(idx) {
+      const tabs = document.querySelectorAll('.tab-btn');
+      const panels = document.querySelectorAll('.diagram-panel');
+      tabs.forEach((t, i) => t.classList.toggle('active', i === idx));
+      panels.forEach((p, i) => p.classList.toggle('active', i === idx));
+    }
+  </script>
+</body>
+</html>
