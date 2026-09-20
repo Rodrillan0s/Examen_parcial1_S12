@@ -2,7 +2,14 @@ import { Component, OnInit, inject, PLATFORM_ID, DestroyRef } from '@angular/cor
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ProductosService, Producto, ImagenProducto, VarianteProducto } from '../../../services/productos';
+import {
+  ProductosService,
+  Producto,
+  ImagenProducto,
+  VarianteProducto,
+  PromocionProducto,
+Promocion
+} from '../../../services/productos';
 import { CategoriasService, Categoria } from '../../../services/categorias';
 import { TallasColoresService, Talla, ColorPrenda } from '../../../services/tallas-colores';
 import { AuthService } from '../../../services/auth';
@@ -84,7 +91,15 @@ export class ProductosComponent implements OnInit {
 
   // Modal de Zoom de Imagen
   zoomImagenUrl: string | null = null;
-
+  // Modal de Promociones
+mostrarModalPromocion: boolean = false;
+productoPromocionSeleccionado: Producto | null = null;
+promocionesDisponibles: Promocion[] = [];
+promocionesProducto: PromocionProducto[] = [];
+promocionSeleccionada: number | null = null;
+porcentajeDescuento: number | null = null;
+cargandoPromociones: boolean = false;
+guardandoPromocion: boolean = false;
   // Permisos y Scope
   get esSuperAdmin(): boolean {
     return this.authService.getScopeLevel() === 'PLATAFORMA';
@@ -136,7 +151,24 @@ export class ProductosComponent implements OnInit {
     }
     return res;
   }
+get temporadaActual(): string {
+  const mes = new Date().getMonth() + 1;
 
+  if ([12, 1, 2].includes(mes)) return 'VERANO';
+  if ([3, 4, 5].includes(mes)) return 'OTOÑO';
+  if ([6, 7, 8].includes(mes)) return 'INVIERNO';
+
+  return 'PRIMAVERA';
+}
+
+esTemporadaActual(prod: Producto): boolean {
+  const temporada = (prod.temporada || 'PERMANENTE')
+    .trim()
+    .toUpperCase();
+
+  return temporada === 'PERMANENTE'
+    || temporada === this.temporadaActual;
+}
   // Lista filtrada en cliente
   get productosFiltrados(): Producto[] {
     return this.productos.filter(p => {
@@ -708,6 +740,155 @@ export class ProductosComponent implements OnInit {
       error: (err) => this.mostrarAlerta(err.error?.detail || 'Error al borrar foto.', 'error')
     });
   }
+
+
+
+// ==============================================================================
+// GESTIÓN DE PROMOCIONES
+// ==============================================================================
+
+abrirModalPromocion(prod: Producto): void {
+  this.productoPromocionSeleccionado = prod;
+  this.promocionSeleccionada = null;
+  this.porcentajeDescuento = null;
+  this.promocionesProducto = [];
+  this.promocionesDisponibles = [];
+  this.mostrarModalPromocion = true;
+  this.cargandoPromociones = true;
+
+  this.productosService.listarPromociones(true).subscribe({
+    next: (res) => {
+      this.promocionesDisponibles = res.data || [];
+      this.cargarPromocionesProducto(prod.id_producto!);
+    },
+    error: (err) => {
+      this.mostrarAlerta(
+        err.error?.detail || 'Error al cargar las promociones.',
+        'error'
+      );
+      this.cargandoPromociones = false;
+    }
+  });
+}
+
+cargarPromocionesProducto(id_producto: number): void {
+  this.productosService.listarPromocionesProducto(id_producto).subscribe({
+    next: (res) => {
+      this.promocionesProducto = res.data || [];
+      this.cargandoPromociones = false;
+    },
+    error: (err) => {
+      this.mostrarAlerta(
+        err.error?.detail || 'Error al cargar las promociones del producto.',
+        'error'
+      );
+      this.cargandoPromociones = false;
+    }
+  });
+}
+
+cerrarModalPromocion(): void {
+  this.mostrarModalPromocion = false;
+  this.productoPromocionSeleccionado = null;
+  this.promocionesDisponibles = [];
+  this.promocionesProducto = [];
+  this.promocionSeleccionada = null;
+  this.porcentajeDescuento = null;
+}
+
+asignarPromocion(): void {
+  if (!this.productoPromocionSeleccionado?.id_producto) {
+    return;
+  }
+
+  if (!this.promocionSeleccionada) {
+    this.mostrarAlerta(
+      'Debe seleccionar una promoción.',
+      'error'
+    );
+    return;
+  }
+
+  if (
+    this.porcentajeDescuento === null ||
+    this.porcentajeDescuento <= 0 ||
+    this.porcentajeDescuento > 100
+  ) {
+    this.mostrarAlerta(
+      'El porcentaje de descuento debe estar entre 0.01 y 100.',
+      'error'
+    );
+    return;
+  }
+
+  this.guardandoPromocion = true;
+
+  this.productosService.asignarPromocion(
+    this.productoPromocionSeleccionado.id_producto,
+    this.promocionSeleccionada,
+    this.porcentajeDescuento
+  ).subscribe({
+    next: (res) => {
+      this.mostrarAlerta(
+        res.message || 'Promoción asignada correctamente.',
+        'exito'
+      );
+
+      this.guardandoPromocion = false;
+
+      this.cargarPromocionesProducto(
+        this.productoPromocionSeleccionado!.id_producto!
+      );
+
+      this.cargarProductos();
+
+      this.promocionSeleccionada = null;
+      this.porcentajeDescuento = null;
+    },
+    error: (err) => {
+      this.mostrarAlerta(
+        err.error?.detail || 'Error al asignar la promoción.',
+        'error'
+      );
+      this.guardandoPromocion = false;
+    }
+  });
+}
+
+eliminarPromocionProducto(promocion: PromocionProducto): void {
+  if (
+    !this.productoPromocionSeleccionado?.id_producto ||
+    !promocion.id_promocion_producto
+  ) {
+    return;
+  }
+
+  this.productosService.eliminarPromocion(
+    this.productoPromocionSeleccionado.id_producto,
+    promocion.id_promocion_producto
+  ).subscribe({
+    next: (res) => {
+      this.mostrarAlerta(
+        res.message || 'Promoción quitada del producto.',
+        'exito'
+      );
+
+      this.cargarPromocionesProducto(
+        this.productoPromocionSeleccionado!.id_producto!
+      );
+
+      this.cargarProductos();
+    },
+    error: (err) => {
+      this.mostrarAlerta(
+        err.error?.detail || 'Error al quitar la promoción.',
+        'error'
+      );
+    }
+  });
+}
+
+
 
   // ==============================================================================
   // CAMBIAR ESTADO Y ELIMINAR

@@ -499,3 +499,130 @@ def eliminar_producto_service(
         "action": "ELIMINADO",
         "message": f"Producto '{prod['nombre']}' eliminado permanentemente del catálogo."
     }
+
+
+def asignar_promocion_producto_service(
+    token_data: dict,
+    id_promocion: int,
+    id_producto: int,
+    porcentaje_descuento: float
+) -> int:
+    try:
+        id_empresa = resolver_tenant_operacion(token_data)
+
+        validar_acceso_recurso_tenant(
+            token_data=token_data,
+            tabla="t_producto",
+            campo_id="id_producto",
+            id_recurso=id_producto,
+            id_empresa=id_empresa
+        )
+
+        return productos_repos.asignar_promocion_producto(
+            id_promocion=id_promocion,
+            id_producto=id_producto,
+            porcentaje_descuento=porcentaje_descuento
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
+def obtener_promocion_producto_service(
+    token_data: dict,
+    id_producto: int
+) -> Optional[Dict[str, Any]]:
+    try:
+        id_empresa = resolver_tenant_operacion(token_data)
+
+        validar_acceso_recurso_tenant(
+            token_data=token_data,
+            tabla="t_producto",
+            campo_id="id_producto",
+            id_recurso=id_producto,
+            id_empresa=id_empresa
+        )
+
+        return productos_repos.obtener_promocion_producto(
+            id_producto=id_producto
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )    
+
+def listar_promociones_producto_service(
+    token_data: dict,
+    id_producto: int
+) -> List[Dict[str, Any]]:
+    try:
+        id_empresa = resolver_tenant_operacion(token_data)
+
+        validar_acceso_recurso_tenant(
+            token_data=token_data,
+            tabla="t_producto",
+            campo_id="id_producto",
+            id_recurso=id_producto,
+            id_empresa=id_empresa
+        )
+
+        return productos_repos.listar_promociones_producto(
+            id_producto=id_producto
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )    
+
+def eliminar_promocion_producto_service(
+    token_data: dict,
+    id_producto: int,
+    id_promocion_producto: int
+) -> Dict[str, Any]:
+    try:
+        id_empresa = resolver_tenant_operacion(token_data)
+
+        validar_acceso_recurso_tenant(
+            token_data=token_data,
+            tabla="t_producto",
+            campo_id="id_producto",
+            id_recurso=id_producto,
+            id_empresa=id_empresa
+        )
+
+        eliminado = productos_repos.eliminar_promocion_producto(
+            id_promocion_producto=id_promocion_producto,
+            id_producto=id_producto
+        )
+
+        return {
+            "success": eliminado,
+            "id_promocion_producto": id_promocion_producto
+        }
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+def listar_promociones_service(
+    token_data: dict,
+    solo_activas: bool = True
+) -> List[Dict[str, Any]]:
+    try:
+        return productos_repos.listar_promociones(
+            solo_activas=solo_activas
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )

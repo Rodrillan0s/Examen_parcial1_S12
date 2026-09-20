@@ -29,6 +29,27 @@ export interface VarianteProducto {
   total_movimientos?: number;
 }
 
+export interface PromocionProducto {
+  id_promocion_producto?: number;
+  id_promocion: number;
+  nombre: string;
+  descripcion?: string;
+  fecha_inicio: string;
+  fecha_fin: string;
+  estado: boolean;
+  porcentaje_descuento: number;
+  vigente: boolean;
+  precio_promocional?: number;
+}
+export interface Promocion {
+  id_promocion: number;
+  nombre: string;
+  descripcion?: string;
+  fecha_inicio: string;
+  fecha_fin: string;
+  estado: boolean;
+  vigente: boolean;
+}
 export interface Producto {
   id_producto?: number;
   id_empresa?: number;
@@ -41,7 +62,11 @@ export interface Producto {
   marca?: string;
   genero?: string;
   precio: number;
+
   temporada?: string;
+  temporada_actual?: string;
+  es_temporada_actual?: boolean;
+
   coleccion?: string;
   activo: boolean;
   estado?: boolean;
@@ -52,9 +77,14 @@ export interface Producto {
   total_variantes?: number;
   imagenes?: ImagenProducto[];
   variantes?: VarianteProducto[];
+
   tiene_ra?: boolean;
   tipo_prenda_ra?: 'TOP' | 'PANT' | 'DRESS' | string;
   modelo_2d_url?: string;
+
+  tiene_promocion_vigente?: boolean;
+  visible_para_clientes?: boolean;
+  promocion?: PromocionProducto | null;
 }
 
 @Injectable({
@@ -71,16 +101,37 @@ export class ProductosService {
     busqueda?: string;
   }): Observable<{ success: boolean; total: number; data: Producto[] }> {
     let params = new HttpParams();
-    if (filtros?.id_empresa) params = params.set('id_empresa', filtros.id_empresa.toString());
-    if (filtros?.solo_activos) params = params.set('solo_activos', 'true');
-    if (filtros?.id_categoria) params = params.set('id_categoria', filtros.id_categoria.toString());
-    if (filtros?.busqueda) params = params.set('busqueda', filtros.busqueda);
 
-    return this.http.get<{ success: boolean; total: number; data: Producto[] }>(this.apiUrl, { params });
+    if (filtros?.id_empresa) {
+      params = params.set('id_empresa', filtros.id_empresa.toString());
+    }
+
+    if (filtros?.solo_activos) {
+      params = params.set('solo_activos', 'true');
+    }
+
+    if (filtros?.id_categoria) {
+      params = params.set('id_categoria', filtros.id_categoria.toString());
+    }
+
+    if (filtros?.busqueda) {
+      params = params.set('busqueda', filtros.busqueda);
+    }
+
+    return this.http.get<{
+      success: boolean;
+      total: number;
+      data: Producto[];
+    }>(this.apiUrl, { params });
   }
 
-  obtenerProducto(id_producto: number): Observable<{ success: boolean; data: Producto }> {
-    return this.http.get<{ success: boolean; data: Producto }>(`${this.apiUrl}/${id_producto}`);
+  obtenerProducto(
+    id_producto: number
+  ): Observable<{ success: boolean; data: Producto }> {
+    return this.http.get<{
+      success: boolean;
+      data: Producto;
+    }>(`${this.apiUrl}/${id_producto}`);
   }
 
   crearProducto(datos: {
@@ -97,7 +148,11 @@ export class ProductosService {
     activo?: boolean;
     tallas_ids?: number[];
     colores_ids?: number[];
-    imagenes?: { imagen_url: string; public_id: string; es_principal?: boolean }[];
+    imagenes?: {
+      imagen_url: string;
+      public_id: string;
+      es_principal?: boolean;
+    }[];
     tiene_ra?: boolean;
     tipo_prenda_ra?: string;
     modelo_2d_url?: string;
@@ -125,36 +180,182 @@ export class ProductosService {
     return this.http.put(`${this.apiUrl}/${id_producto}`, datos);
   }
 
-  cambiarEstado(id_producto: number, activo: boolean): Observable<any> {
-    return this.http.put(`${this.apiUrl}/${id_producto}/estado`, { activo });
+  cambiarEstado(
+    id_producto: number,
+    activo: boolean
+  ): Observable<any> {
+    return this.http.put(
+      `${this.apiUrl}/${id_producto}/estado`,
+      { activo }
+    );
+  }
+  listarPromociones(
+  solo_activas: boolean = true
+): Observable<{
+  success: boolean;
+  total: number;
+  data: Promocion[];
+}> {
+  let params = new HttpParams()
+    .set('solo_activas', solo_activas.toString());
+
+  return this.http.get<{
+    success: boolean;
+    total: number;
+    data: Promocion[];
+  }>(
+    `${this.apiUrl}/promociones`,
+    { params }
+  );
+}
+
+  eliminarProducto(
+    id_producto: number
+  ): Observable<{
+    success: boolean;
+    action: string;
+    message: string;
+  }> {
+    return this.http.delete<{
+      success: boolean;
+      action: string;
+      message: string;
+    }>(`${this.apiUrl}/${id_producto}`);
   }
 
-  eliminarProducto(id_producto: number): Observable<{ success: boolean; action: string; message: string }> {
-    return this.http.delete<{ success: boolean; action: string; message: string }>(`${this.apiUrl}/${id_producto}`);
-  }
-
-  subirImagenCloudinary(archivo: File): Observable<{ success: boolean; message: string; data: { imagen_url: string; public_id: string } }> {
+  subirImagenCloudinary(
+    archivo: File
+  ): Observable<{
+    success: boolean;
+    message: string;
+    data: {
+      imagen_url: string;
+      public_id: string;
+    };
+  }> {
     const formData = new FormData();
     formData.append('file', archivo);
-    return this.http.post<{ success: boolean; message: string; data: { imagen_url: string; public_id: string } }>(
+
+    return this.http.post<{
+      success: boolean;
+      message: string;
+      data: {
+        imagen_url: string;
+        public_id: string;
+      };
+    }>(
       `${this.apiUrl}/upload-image`,
       formData
     );
   }
 
-  agregarImagenAProducto(id_producto: number, imagen_url: string, public_id: string, es_principal: boolean = false): Observable<any> {
-    return this.http.post(`${this.apiUrl}/${id_producto}/imagenes`, {
-      imagen_url,
-      public_id,
-      es_principal
-    });
+  agregarImagenAProducto(
+    id_producto: number,
+    imagen_url: string,
+    public_id: string,
+    es_principal: boolean = false
+  ): Observable<any> {
+    return this.http.post(
+      `${this.apiUrl}/${id_producto}/imagenes`,
+      {
+        imagen_url,
+        public_id,
+        es_principal
+      }
+    );
   }
 
-  marcarPortada(id_producto: number, id_imagen: number): Observable<any> {
-    return this.http.put(`${this.apiUrl}/${id_producto}/imagenes/${id_imagen}/principal`, {});
+  marcarPortada(
+    id_producto: number,
+    id_imagen: number
+  ): Observable<any> {
+    return this.http.put(
+      `${this.apiUrl}/${id_producto}/imagenes/${id_imagen}/principal`,
+      {}
+    );
   }
 
-  eliminarImagen(id_producto: number, id_imagen: number): Observable<any> {
-    return this.http.delete(`${this.apiUrl}/${id_producto}/imagenes/${id_imagen}`);
+  eliminarImagen(
+    id_producto: number,
+    id_imagen: number
+  ): Observable<any> {
+    return this.http.delete(
+      `${this.apiUrl}/${id_producto}/imagenes/${id_imagen}`
+    );
+  }
+
+  // ==========================================================================
+  // PROMOCIONES
+  // ==========================================================================
+
+  asignarPromocion(
+    id_producto: number,
+    id_promocion: number,
+    porcentaje_descuento: number
+  ): Observable<{
+    success: boolean;
+    message: string;
+    id_promocion_producto: number;
+  }> {
+    let params = new HttpParams()
+      .set('id_promocion', id_promocion.toString())
+      .set('porcentaje_descuento', porcentaje_descuento.toString());
+
+    return this.http.post<{
+      success: boolean;
+      message: string;
+      id_promocion_producto: number;
+    }>(
+      `${this.apiUrl}/${id_producto}/promocion`,
+      {},
+      { params }
+    );
+  }
+
+  listarPromocionesProducto(
+    id_producto: number
+  ): Observable<{
+    success: boolean;
+    total: number;
+    data: PromocionProducto[];
+  }> {
+    return this.http.get<{
+      success: boolean;
+      total: number;
+      data: PromocionProducto[];
+    }>(
+      `${this.apiUrl}/${id_producto}/promociones`
+    );
+  }
+
+  obtenerPromocionVigente(
+    id_producto: number
+  ): Observable<{
+    success: boolean;
+    data: PromocionProducto | null;
+  }> {
+    return this.http.get<{
+      success: boolean;
+      data: PromocionProducto | null;
+    }>(
+      `${this.apiUrl}/${id_producto}/promocion-vigente`
+    );
+  }
+
+  eliminarPromocion(
+    id_producto: number,
+    id_promocion_producto: number
+  ): Observable<{
+    success: boolean;
+    message: string;
+    data: any;
+  }> {
+    return this.http.delete<{
+      success: boolean;
+      message: string;
+      data: any;
+    }>(
+      `${this.apiUrl}/${id_producto}/promociones/${id_promocion_producto}`
+    );
   }
 }

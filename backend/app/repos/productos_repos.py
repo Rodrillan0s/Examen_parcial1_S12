@@ -18,10 +18,12 @@ def listar_productos(
     offset: int = 0
 ) -> List[Dict[str, Any]]:
     """
-    Lista productos con categoría, Tenant, portada principal y conteos de variantes/fotos.
+    Lista productos con categoría, Tenant, portada principal,
+    conteos de variantes/fotos y promoción vigente.
     """
     db = PostgreSQL()
     db.create_connection()
+
     try:
         schema = _get_schema()
         condiciones = []
@@ -40,13 +42,19 @@ def listar_productos(
 
         if busqueda:
             term = f"%{busqueda.strip()}%"
-            condiciones.append("(p.nombre ILIKE %s OR p.descripcion ILIKE %s OR p.codigo_producto ILIKE %s OR c.nombre ILIKE %s)")
+            condiciones.append(
+                "(p.nombre ILIKE %s OR p.descripcion ILIKE %s "
+                "OR p.codigo_producto ILIKE %s OR c.nombre ILIKE %s)"
+            )
             params.extend([term, term, term, term])
 
-        where_clause = f"WHERE {' AND '.join(condiciones)}" if condiciones else ""
+        where_clause = (
+            f"WHERE {' AND '.join(condiciones)}"
+            if condiciones else ""
+        )
 
         query = f"""
-            SELECT 
+            SELECT
                 p.id_producto,
                 p.id_empresa,
                 e.nombre_empresa AS empresa_nombre,
@@ -64,31 +72,92 @@ def listar_productos(
                 p.estado,
                 p.fecha_registro,
                 p.updated_at,
+
                 COALESCE(
-                    (SELECT img.imagen_url FROM {schema}.t_producto_imagen img 
-                     WHERE img.id_producto = p.id_producto AND img.es_principal = TRUE 
-                     ORDER BY img.id_imagen ASC LIMIT 1),
-                    (SELECT img.imagen_url FROM {schema}.t_producto_imagen img 
-                     WHERE img.id_producto = p.id_producto 
-                     ORDER BY img.id_imagen ASC LIMIT 1),
+                    (
+                        SELECT img.imagen_url
+                        FROM {schema}.t_producto_imagen img
+                        WHERE img.id_producto = p.id_producto
+                          AND img.es_principal = TRUE
+                        ORDER BY img.id_imagen ASC
+                        LIMIT 1
+                    ),
+                    (
+                        SELECT img.imagen_url
+                        FROM {schema}.t_producto_imagen img
+                        WHERE img.id_producto = p.id_producto
+                        ORDER BY img.id_imagen ASC
+                        LIMIT 1
+                    ),
                     p.imagen_url
                 ) AS imagen_principal,
-                (SELECT COUNT(*) FROM {schema}.t_producto_imagen img WHERE img.id_producto = p.id_producto) AS total_imagenes,
-                (SELECT COUNT(*) FROM {schema}.t_producto_talla_color ptc WHERE ptc.id_producto = p.id_producto AND ptc.activo = TRUE) AS total_variantes,
+
+                (
+                    SELECT COUNT(*)
+                    FROM {schema}.t_producto_imagen img
+                    WHERE img.id_producto = p.id_producto
+                ) AS total_imagenes,
+
+                (
+                    SELECT COUNT(*)
+                    FROM {schema}.t_producto_talla_color ptc
+                    WHERE ptc.id_producto = p.id_producto
+                      AND ptc.activo = TRUE
+                ) AS total_variantes,
+
                 COALESCE(p.tiene_ra, FALSE) AS tiene_ra,
                 p.tipo_prenda_ra,
-                p.modelo_2d_url
+                p.modelo_2d_url,
+
+                (
+                    SELECT json_build_object(
+                        'id_promocion', pr.id_promocion,
+                        'nombre', pr.nombre,
+                        'descripcion', pr.descripcion,
+                        'porcentaje_descuento', pp.porcentaje_descuento,
+                        'fecha_inicio', pr.fecha_inicio,
+                        'fecha_fin', pr.fecha_fin,
+                        'precio_promocional',
+                            ROUND(
+                                p.precio * (
+                                    1 - pp.porcentaje_descuento / 100
+                                ),
+                                2
+                            )
+                    )
+                    FROM {schema}.t_promocion_producto pp
+                    INNER JOIN {schema}.t_promocion pr
+                        ON pr.id_promocion = pp.id_promocion
+                    WHERE pp.id_producto = p.id_producto
+                      AND pr.estado = TRUE
+                      AND CURRENT_DATE >= pr.fecha_inicio
+                      AND CURRENT_DATE <= pr.fecha_fin
+                    ORDER BY pr.fecha_inicio DESC
+                    LIMIT 1
+                ) AS promocion
+
             FROM {schema}.t_producto p
-            LEFT JOIN {schema}.t_categoria c ON p.id_categoria = c.id_categoria
-            LEFT JOIN {schema}.empresa e ON p.id_empresa = e.id_empresa
+            LEFT JOIN {schema}.t_categoria c
+                ON p.id_categoria = c.id_categoria
+            LEFT JOIN {schema}.empresa e
+                ON p.id_empresa = e.id_empresa
+
             {where_clause}
+
             ORDER BY p.id_producto DESC
             LIMIT %s OFFSET %s;
         """
+
         params.extend([limit, offset])
-        filas = db.execute_query(query, tuple(params), fetchall=True) or []
+
+        filas = db.execute_query(
+            query,
+            tuple(params),
+            fetchall=True
+        ) or []
 
         resultado = []
+
         for r in filas:
             resultado.append({
                 "id_producto": r[0],
@@ -113,18 +182,23 @@ def listar_productos(
                 "total_variantes": int(r[19]),
                 "tiene_ra": bool(r[20]),
                 "tipo_prenda_ra": r[21],
-                "modelo_2d_url": r[22]
+                "modelo_2d_url": r[22],
+                "promocion": r[23]
             })
+
         return resultado
+
     finally:
         db.close_connection()
 
 def obtener_producto_por_id(id_producto: int, id_empresa: Optional[int] = None) -> Optional[Dict[str, Any]]:
     """
-    Obtiene el detalle completo de un producto con su galería de imágenes y variantes (talla x color).
+    Obtiene el detalle completo de un producto con su galería de imágenes,
+    variantes (talla x color) y promoción vigente.
     """
     db = PostgreSQL()
     db.create_connection()
+
     try:
         schema = _get_schema()
         condiciones = ["p.id_producto = %s"]
@@ -135,7 +209,7 @@ def obtener_producto_por_id(id_producto: int, id_empresa: Optional[int] = None) 
             params.append(id_empresa)
 
         query = f"""
-            SELECT 
+            SELECT
                 p.id_producto,
                 p.id_empresa,
                 e.nombre_empresa,
@@ -158,23 +232,97 @@ def obtener_producto_por_id(id_producto: int, id_empresa: Optional[int] = None) 
                 p.tipo_prenda_ra,
                 p.modelo_2d_url
             FROM {schema}.t_producto p
-            LEFT JOIN {schema}.t_categoria c ON p.id_categoria = c.id_categoria
-            LEFT JOIN {schema}.empresa e ON p.id_empresa = e.id_empresa
+            LEFT JOIN {schema}.t_categoria c
+                ON p.id_categoria = c.id_categoria
+            LEFT JOIN {schema}.empresa e
+                ON p.id_empresa = e.id_empresa
             WHERE {' AND '.join(condiciones)};
         """
-        r = db.execute_query(query, tuple(params), fetchone=True)
+
+        r = db.execute_query(
+            query,
+            tuple(params),
+            fetchone=True
+        )
+
         if not r:
             return None
 
-        # 1. Obtener galería de fotos
+        # 1. Obtener promoción vigente
+        query_promocion = f"""
+            SELECT
+                pr.id_promocion,
+                pr.nombre,
+                pr.descripcion,
+                pr.fecha_inicio,
+                pr.fecha_fin,
+                pp.porcentaje_descuento,
+                ROUND(
+                    p.precio * (
+                        1 - pp.porcentaje_descuento / 100
+                    ),
+                    2
+                ) AS precio_promocional
+            FROM {schema}.t_promocion_producto pp
+            INNER JOIN {schema}.t_promocion pr
+                ON pr.id_promocion = pp.id_promocion
+            INNER JOIN {schema}.t_producto p
+                ON p.id_producto = pp.id_producto
+            WHERE pp.id_producto = %s
+              AND pr.estado = TRUE
+              AND CURRENT_DATE >= pr.fecha_inicio
+              AND CURRENT_DATE <= pr.fecha_fin
+            ORDER BY pr.fecha_inicio DESC
+            LIMIT 1;
+        """
+
+        r_promocion = db.execute_query(
+            query_promocion,
+            (id_producto,),
+            fetchone=True
+        )
+
+        promocion = None
+
+        if r_promocion:
+            promocion = {
+                "id_promocion": r_promocion[0],
+                "nombre": r_promocion[1],
+                "descripcion": r_promocion[2] or "",
+                "fecha_inicio": (
+                    r_promocion[3].isoformat()
+                    if r_promocion[3] else None
+                ),
+                "fecha_fin": (
+                    r_promocion[4].isoformat()
+                    if r_promocion[4] else None
+                ),
+                "porcentaje_descuento": float(r_promocion[5]),
+                "precio_promocional": float(r_promocion[6])
+            }
+
+        # 2. Obtener galería de fotos
         query_imgs = f"""
-            SELECT id_imagen, imagen_url, public_id, es_principal, orden, created_at
+            SELECT
+                id_imagen,
+                imagen_url,
+                public_id,
+                es_principal,
+                orden,
+                created_at
             FROM {schema}.t_producto_imagen
             WHERE id_producto = %s
             ORDER BY es_principal DESC, orden ASC, id_imagen ASC;
         """
-        filas_imgs = db.execute_query(query_imgs, (id_producto,), fetchall=True) or []
+
+        filas_imgs = db.execute_query(
+            query_imgs,
+            (id_producto,),
+            fetchall=True
+        ) or []
+
         imagenes = []
+
         for img in filas_imgs:
             imagenes.append({
                 "id_imagen": img[0],
@@ -185,9 +333,9 @@ def obtener_producto_por_id(id_producto: int, id_empresa: Optional[int] = None) 
                 "created_at": img[5].isoformat() if img[5] else None
             })
 
-        # 2. Obtener variantes (Tallas x Colores)
+        # 3. Obtener variantes (Tallas x Colores)
         query_vars = f"""
-            SELECT 
+            SELECT
                 ptc.id_variante,
                 ptc.id_talla,
                 t.nombre AS talla_nombre,
@@ -198,19 +346,39 @@ def obtener_producto_por_id(id_producto: int, id_empresa: Optional[int] = None) 
                 ptc.precio,
                 ptc.activo,
                 ptc.estado,
-                (SELECT COUNT(*) FROM {schema}.t_inventario inv 
-                 WHERE inv.id_variante = ptc.id_variante AND (inv.stock_actual > 0 OR inv.stock_reservado > 0)) AS tiene_stock,
-                (SELECT COUNT(*) FROM {schema}.t_movimiento_inventario mov 
-                 JOIN {schema}.t_inventario inv2 ON mov.id_inventario = inv2.id_inventario 
-                 WHERE inv2.id_variante = ptc.id_variante) AS total_movimientos
+                (
+                    SELECT COUNT(*)
+                    FROM {schema}.t_inventario inv
+                    WHERE inv.id_variante = ptc.id_variante
+                      AND (
+                          inv.stock_actual > 0
+                          OR inv.stock_reservado > 0
+                      )
+                ) AS tiene_stock,
+                (
+                    SELECT COUNT(*)
+                    FROM {schema}.t_movimiento_inventario mov
+                    JOIN {schema}.t_inventario inv2
+                        ON mov.id_inventario = inv2.id_inventario
+                    WHERE inv2.id_variante = ptc.id_variante
+                ) AS total_movimientos
             FROM {schema}.t_producto_talla_color ptc
-            JOIN {schema}.t_talla t ON ptc.id_talla = t.id_talla
-            JOIN {schema}.t_color col ON ptc.id_color = col.id_color
+            JOIN {schema}.t_talla t
+                ON ptc.id_talla = t.id_talla
+            JOIN {schema}.t_color col
+                ON ptc.id_color = col.id_color
             WHERE ptc.id_producto = %s
             ORDER BY t.id_talla ASC, col.nombre ASC;
         """
-        filas_vars = db.execute_query(query_vars, (id_producto,), fetchall=True) or []
+
+        filas_vars = db.execute_query(
+            query_vars,
+            (id_producto,),
+            fetchall=True
+        ) or []
+
         variantes = []
+
         for v in filas_vars:
             variantes.append({
                 "id_variante": v[0],
@@ -220,7 +388,11 @@ def obtener_producto_por_id(id_producto: int, id_empresa: Optional[int] = None) 
                 "color_nombre": v[4],
                 "codigo_hex": v[5],
                 "sku": v[6] or "",
-                "precio": float(v[7]) if v[7] is not None else float(r[10] or 0.0),
+                "precio": (
+                    float(v[7])
+                    if v[7] is not None
+                    else float(r[10] or 0.0)
+                ),
                 "activo": bool(v[8]),
                 "estado": bool(v[9]),
                 "tiene_stock": int(v[10]) > 0,
@@ -228,9 +400,18 @@ def obtener_producto_por_id(id_producto: int, id_empresa: Optional[int] = None) 
             })
 
         # Imagen de portada resuelta
-        portada = next((img["imagen_url"] for img in imagenes if img["es_principal"]), None)
+        portada = next(
+            (
+                img["imagen_url"]
+                for img in imagenes
+                if img["es_principal"]
+            ),
+            None
+        )
+
         if not portada and imagenes:
             portada = imagenes[0]["imagen_url"]
+
         if not portada:
             portada = r[17] or ""
 
@@ -257,8 +438,10 @@ def obtener_producto_por_id(id_producto: int, id_empresa: Optional[int] = None) 
             "variantes": variantes,
             "tiene_ra": bool(r[18]),
             "tipo_prenda_ra": r[19],
-            "modelo_2d_url": r[20]
+            "modelo_2d_url": r[20],
+            "promocion": promocion
         }
+
     finally:
         db.close_connection()
 
@@ -770,5 +953,435 @@ def eliminar_producto_seguro(id_producto: int) -> Tuple[str, List[str]]:
         db.execute_query(f"DELETE FROM {schema}.t_producto WHERE id_producto = %s;", (id_producto,), commit=True)
 
         return ("ELIMINADO", public_ids)
+    finally:
+        db.close_connection()
+
+# ==============================================================================
+# GESTIÓN DE PROMOCIONES
+# ==============================================================================
+
+def listar_promociones(
+    solo_activas: bool = False
+) -> List[Dict[str, Any]]:
+    """
+    Lista las promociones registradas.
+    Si solo_activas=True, devuelve únicamente promociones habilitadas.
+    """
+    db = PostgreSQL()
+    db.create_connection()
+    try:
+        schema = _get_schema()
+
+        condiciones = []
+        params: List[Any] = []
+
+        if solo_activas:
+            condiciones.append("pr.estado = TRUE")
+
+        where_clause = f"WHERE {' AND '.join(condiciones)}" if condiciones else ""
+
+        query = f"""
+            SELECT
+                pr.id_promocion,
+                pr.nombre,
+                pr.descripcion,
+                pr.fecha_inicio,
+                pr.fecha_fin,
+                pr.estado,
+                CASE
+                    WHEN pr.estado = TRUE
+                     AND CURRENT_DATE BETWEEN pr.fecha_inicio AND pr.fecha_fin
+                    THEN TRUE
+                    ELSE FALSE
+                END AS vigente
+            FROM {schema}.t_promocion pr
+            {where_clause}
+            ORDER BY pr.id_promocion DESC;
+        """
+
+        filas = db.execute_query(query, tuple(params), fetchall=True) or []
+
+        return [
+            {
+                "id_promocion": r[0],
+                "nombre": r[1] or "",
+                "descripcion": r[2] or "",
+                "fecha_inicio": r[3].isoformat() if r[3] else None,
+                "fecha_fin": r[4].isoformat() if r[4] else None,
+                "estado": bool(r[5]),
+                "vigente": bool(r[6])
+            }
+            for r in filas
+        ]
+
+    finally:
+        db.close_connection()
+
+
+def crear_promocion(
+    nombre: str,
+    descripcion: Optional[str],
+    fecha_inicio,
+    fecha_fin,
+    estado: bool = True
+) -> int:
+    """
+    Crea una nueva promoción.
+    """
+    if not nombre or not nombre.strip():
+        raise ValueError("El nombre de la promoción es obligatorio.")
+
+    if fecha_inicio > fecha_fin:
+        raise ValueError("La fecha de inicio no puede ser posterior a la fecha de fin.")
+
+    db = PostgreSQL()
+    db.create_connection()
+    try:
+        schema = _get_schema()
+
+        query = f"""
+            INSERT INTO {schema}.t_promocion (
+                nombre,
+                descripcion,
+                fecha_inicio,
+                fecha_fin,
+                estado
+            )
+            VALUES (%s, %s, %s, %s, %s)
+            RETURNING id_promocion;
+        """
+
+        res = db.execute_query(
+            query,
+            (
+                nombre.strip(),
+                descripcion.strip() if descripcion else None,
+                fecha_inicio,
+                fecha_fin,
+                estado
+            ),
+            fetchone=True,
+            commit=True
+        )
+
+        return res[0]
+
+    finally:
+        db.close_connection()
+
+
+def asignar_promocion_producto(
+    id_promocion: int,
+    id_producto: int,
+    porcentaje_descuento: float
+) -> int:
+    """
+    Asocia un producto a una promoción indicando su porcentaje de descuento.
+    No permite promociones con períodos de fechas superpuestos
+    para el mismo producto.
+    """
+
+    if porcentaje_descuento <= 0 or porcentaje_descuento > 100:
+        raise ValueError(
+            "El porcentaje de descuento debe estar entre 0.01 y 100."
+        )
+
+    db = PostgreSQL()
+    db.create_connection()
+
+    try:
+        schema = _get_schema()
+
+        # Verificar que la promoción exista y esté activa
+        promocion = db.execute_query(
+            f"""
+                SELECT
+                    id_promocion,
+                    fecha_inicio,
+                    fecha_fin
+                FROM {schema}.t_promocion
+                WHERE id_promocion = %s
+                  AND estado = TRUE
+                LIMIT 1;
+            """,
+            (id_promocion,),
+            fetchone=True
+        )
+
+        if not promocion:
+            raise ValueError(
+                "La promoción no existe o está inactiva."
+            )
+
+        fecha_inicio_promocion = promocion[1]
+        fecha_fin_promocion = promocion[2]
+
+        # Verificar que el producto exista
+        producto = db.execute_query(
+            f"""
+                SELECT id_producto
+                FROM {schema}.t_producto
+                WHERE id_producto = %s
+                LIMIT 1;
+            """,
+            (id_producto,),
+            fetchone=True
+        )
+
+        if not producto:
+            raise ValueError("El producto no existe.")
+
+        # Verificar si ya está asociado
+        existente = db.execute_query(
+            f"""
+                SELECT id_promocion_producto
+                FROM {schema}.t_promocion_producto
+                WHERE id_promocion = %s
+                  AND id_producto = %s
+                LIMIT 1;
+            """,
+            (id_promocion, id_producto),
+            fetchone=True
+        )
+
+        # Verificar si existe otra promoción con fechas superpuestas
+        promocion_superpuesta = db.execute_query(
+            f"""
+                SELECT
+                    pp.id_promocion,
+                    pr.nombre,
+                    pr.fecha_inicio,
+                    pr.fecha_fin
+                FROM {schema}.t_promocion_producto pp
+                INNER JOIN {schema}.t_promocion pr
+                    ON pr.id_promocion = pp.id_promocion
+                WHERE pp.id_producto = %s
+                  AND pp.id_promocion <> %s
+                  AND pr.estado = TRUE
+                  AND pr.fecha_inicio <= %s
+                  AND pr.fecha_fin >= %s
+                LIMIT 1;
+            """,
+            (
+                id_producto,
+                id_promocion,
+                fecha_fin_promocion,
+                fecha_inicio_promocion
+            ),
+            fetchone=True
+        )
+
+        if promocion_superpuesta:
+            raise ValueError(
+                f"El producto ya tiene la promoción "
+                f"'{promocion_superpuesta[1]}' programada para un "
+                f"período que se superpone con la nueva promoción."
+            )
+
+        # Si ya está asociado, actualizar el porcentaje
+        if existente:
+            db.execute_query(
+                f"""
+                    UPDATE {schema}.t_promocion_producto
+                    SET porcentaje_descuento = %s
+                    WHERE id_promocion_producto = %s;
+                """,
+                (
+                    porcentaje_descuento,
+                    existente[0]
+                ),
+                commit=True
+            )
+
+            return existente[0]
+
+        # Crear nueva asociación
+        query = f"""
+            INSERT INTO {schema}.t_promocion_producto (
+                id_promocion,
+                id_producto,
+                porcentaje_descuento
+            )
+            VALUES (%s, %s, %s)
+            RETURNING id_promocion_producto;
+        """
+
+        res = db.execute_query(
+            query,
+            (
+                id_promocion,
+                id_producto,
+                porcentaje_descuento
+            ),
+            fetchone=True,
+            commit=True
+        )
+
+        return res[0]
+
+    finally:
+        db.close_connection()
+
+
+def obtener_promocion_producto(
+    id_producto: int
+) -> Optional[Dict[str, Any]]:
+    """
+    Obtiene la promoción actualmente vigente para un producto.
+    Si no existe, retorna None.
+    """
+    db = PostgreSQL()
+    db.create_connection()
+    try:
+        schema = _get_schema()
+
+        query = f"""
+            SELECT
+                pr.id_promocion,
+                pr.nombre,
+                pr.descripcion,
+                pr.fecha_inicio,
+                pr.fecha_fin,
+                pp.porcentaje_descuento
+            FROM {schema}.t_promocion_producto pp
+            JOIN {schema}.t_promocion pr
+                ON pr.id_promocion = pp.id_promocion
+            WHERE pp.id_producto = %s
+              AND pr.estado = TRUE
+              AND CURRENT_DATE BETWEEN pr.fecha_inicio AND pr.fecha_fin
+            ORDER BY pr.fecha_inicio DESC
+            LIMIT 1;
+        """
+
+        r = db.execute_query(
+            query,
+            (id_producto,),
+            fetchone=True
+        )
+
+        if not r:
+            return None
+
+        return {
+            "id_promocion": r[0],
+            "nombre": r[1],
+            "descripcion": r[2] or "",
+            "fecha_inicio": r[3].isoformat() if r[3] else None,
+            "fecha_fin": r[4].isoformat() if r[4] else None,
+            "porcentaje_descuento": float(r[5])
+        }
+
+    finally:
+        db.close_connection()
+
+def listar_promociones_producto(
+    id_producto: int
+) -> List[Dict[str, Any]]:
+    """
+    Lista todas las promociones asociadas a un producto,
+    incluyendo promociones vigentes y finalizadas.
+    """
+    db = PostgreSQL()
+    db.create_connection()
+    try:
+        schema = _get_schema()
+
+        query = f"""
+            SELECT
+                pp.id_promocion_producto,
+                pr.id_promocion,
+                pr.nombre,
+                pr.descripcion,
+                pr.fecha_inicio,
+                pr.fecha_fin,
+                pr.estado,
+                pp.porcentaje_descuento,
+                CASE
+                    WHEN pr.estado = TRUE
+                     AND CURRENT_DATE BETWEEN pr.fecha_inicio AND pr.fecha_fin
+                    THEN TRUE
+                    ELSE FALSE
+                END AS vigente
+            FROM {schema}.t_promocion_producto pp
+            INNER JOIN {schema}.t_promocion pr
+                ON pr.id_promocion = pp.id_promocion
+            WHERE pp.id_producto = %s
+            ORDER BY pr.fecha_inicio DESC, pp.id_promocion_producto DESC;
+        """
+
+        filas = db.execute_query(
+            query,
+            (id_producto,),
+            fetchall=True
+        ) or []
+
+        return [
+            {
+                "id_promocion_producto": r[0],
+                "id_promocion": r[1],
+                "nombre": r[2] or "",
+                "descripcion": r[3] or "",
+                "fecha_inicio": r[4].isoformat() if r[4] else None,
+                "fecha_fin": r[5].isoformat() if r[5] else None,
+                "estado": bool(r[6]),
+                "porcentaje_descuento": float(r[7]),
+                "vigente": bool(r[8])
+            }
+            for r in filas
+        ]
+
+    finally:
+        db.close_connection()        
+
+def eliminar_promocion_producto(
+    id_promocion_producto: int,
+    id_producto: int
+) -> bool:
+    """
+    Elimina la asociación entre una promoción y un producto.
+    No elimina la promoción.
+    """
+
+    db = PostgreSQL()
+    db.create_connection()
+
+    try:
+        schema = _get_schema()
+
+        existente = db.execute_query(
+            f"""
+                SELECT id_promocion_producto
+                FROM {schema}.t_promocion_producto
+                WHERE id_promocion_producto = %s
+                  AND id_producto = %s
+                LIMIT 1;
+            """,
+            (
+                id_promocion_producto,
+                id_producto
+            ),
+            fetchone=True
+        )
+
+        if not existente:
+            raise ValueError(
+                "La promoción no está asociada al producto."
+            )
+
+        db.execute_query(
+            f"""
+                DELETE FROM {schema}.t_promocion_producto
+                WHERE id_promocion_producto = %s
+                  AND id_producto = %s;
+            """,
+            (
+                id_promocion_producto,
+                id_producto
+            ),
+            commit=True
+        )
+
+        return True
+
     finally:
         db.close_connection()

@@ -1,92 +1,220 @@
-<div 
+<div
   (click)="onCardClick()"
   class="group rounded-3xl bg-white dark:bg-zinc-900/80 border border-zinc-200/90 dark:border-zinc-800/90 hover:border-amber-500/60 dark:hover:border-amber-500/50 transition-all duration-500 overflow-hidden flex flex-col justify-between shadow-sm hover:shadow-xl hover:shadow-amber-500/5 cursor-pointer">
-  
-  <!-- Contenedor Superior de Imagen (Aspect Ratio 3:4 Proporcional) -->
+
+  <!-- Contenedor Superior de Imagen -->
   <div class="relative aspect-[3/4] overflow-hidden bg-zinc-100 dark:bg-zinc-950">
-    <img 
-      [src]="prenda.imagen_principal || fallbackImg" 
-      [alt]="prenda.nombre" 
+
+    <img
+      [src]="prenda.imagen_principal || fallbackImg"
+      [alt]="prenda.nombre"
       loading="lazy"
       decoding="async"
       (error)="onErrorImagen($event)"
-      class="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105" 
+      class="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
     />
 
     <!-- Badges Superiores -->
     <div class="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
-      <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-white/90 dark:bg-zinc-950/80 text-amber-800 dark:text-amber-300 border border-amber-500/20 dark:border-amber-500/30 backdrop-blur-md shadow-sm">
+
+      <!-- Categoría -->
+      <span
+        class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-white/90 dark:bg-zinc-950/80 text-amber-800 dark:text-amber-300 border border-amber-500/20 dark:border-amber-500/30 backdrop-blur-md shadow-sm">
         {{ prenda.categoria_nombre }}
       </span>
-      <span *ngIf="prenda.temporada && prenda.temporada !== 'Atemporal'" 
-            class="px-2 py-0.5 rounded-full text-[9px] font-mono uppercase bg-zinc-900/70 dark:bg-black/70 text-zinc-100 dark:text-zinc-300 border border-zinc-700/50 backdrop-blur-sm">
+
+      <!-- Temporada -->
+      <span
+        *ngIf="prenda.temporada && prenda.temporada !== 'Atemporal'"
+        class="px-2 py-0.5 rounded-full text-[9px] font-mono uppercase bg-zinc-900/70 dark:bg-black/70 text-zinc-100 dark:text-zinc-300 border border-zinc-700/50 backdrop-blur-sm">
         {{ prenda.temporada }}
       </span>
+
+      <!-- Promoción -->
+      <span
+        *ngIf="prenda.promocion"
+        class="px-2 py-0.5 rounded-full text-[9px] font-bold font-mono uppercase bg-red-600/90 dark:bg-red-500/90 text-white border border-red-400/40 backdrop-blur-sm shadow-sm">
+        -{{ prenda.promocion.porcentaje_descuento | number:'1.0-2' }}%
+      </span>
+
     </div>
 
     <!-- Indicador de Cantidad de Fotos -->
-    <div *ngIf="prenda.total_imagenes > 1" 
-         class="absolute bottom-3 right-3 px-2 py-0.5 rounded-full bg-white/90 dark:bg-black/80 text-[10px] font-mono text-zinc-700 dark:text-zinc-300 flex items-center space-x-1 border border-zinc-200 dark:border-zinc-700 backdrop-blur-sm shadow-sm">
-      <svg class="w-3 h-3 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    <div
+      *ngIf="prenda.total_imagenes > 1"
+      class="absolute bottom-3 right-3 px-2 py-0.5 rounded-full bg-white/90 dark:bg-black/80 text-[10px] font-mono text-zinc-700 dark:text-zinc-300 flex items-center space-x-1 border border-zinc-200 dark:border-zinc-700 backdrop-blur-sm shadow-sm">
+
+      <svg
+        class="w-3 h-3 text-amber-600 dark:text-amber-400"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24">
+
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+
       </svg>
+
       <span>{{ prenda.total_imagenes }}</span>
     </div>
 
-    <!-- Overlay "Ver Detalle & Disponibilidad" en Hover -->
-    <div class="absolute inset-0 bg-gradient-to-t from-zinc-950/80 via-zinc-950/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
-      <span class="w-full py-2.5 rounded-xl bg-amber-500 text-zinc-950 font-bold text-xs uppercase tracking-wider text-center shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-transform">
+    <!-- Overlay "Ver Detalle & Disponibilidad" -->
+    <div
+      class="absolute inset-0 bg-gradient-to-t from-zinc-950/80 via-zinc-950/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+
+      <span
+        class="w-full py-2.5 rounded-xl bg-amber-500 text-zinc-950 font-bold text-xs uppercase tracking-wider text-center shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-transform">
         Ver Detalle & Stock
       </span>
+
     </div>
+
   </div>
 
-  <!-- Contenido de la Tarjeta (Datos de la Prenda) -->
+  <!-- Contenido de la Tarjeta -->
   <div class="p-4 sm:p-5 space-y-3 flex-1 flex flex-col justify-between">
-    
+
+    <!-- Información principal -->
     <div class="space-y-1">
-      <div class="flex items-center justify-between text-[11px] font-mono text-zinc-500 dark:text-zinc-400">
-        <span class="truncate">{{ prenda.marca || 'Aurora Atelier' }}</span>
-        <span *ngIf="prenda.codigo_producto" class="shrink-0 text-[10px]">{{ prenda.codigo_producto }}</span>
+
+      <!-- Marca y código -->
+      <div
+        class="flex items-center justify-between text-[11px] font-mono text-zinc-500 dark:text-zinc-400">
+
+        <span class="truncate">
+          {{ prenda.marca || 'Aurora Atelier' }}
+        </span>
+
+        <span
+          *ngIf="prenda.codigo_producto"
+          class="shrink-0 text-[10px]">
+          {{ prenda.codigo_producto }}
+        </span>
+
       </div>
 
-      <h3 class="text-base font-serif font-bold text-zinc-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-300 transition-colors line-clamp-1">
+      <!-- Nombre -->
+      <h3
+        class="text-base font-serif font-bold text-zinc-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-300 transition-colors line-clamp-1">
         {{ prenda.nombre }}
       </h3>
-      
-      <p class="text-xs text-zinc-600 dark:text-zinc-400 line-clamp-2 leading-relaxed font-sans">
+
+      <!-- Descripción -->
+      <p
+        class="text-xs text-zinc-600 dark:text-zinc-400 line-clamp-2 leading-relaxed font-sans">
         {{ prenda.descripcion || 'Confección de alta costura con fibras seleccionadas y acabados a mano.' }}
       </p>
+
     </div>
 
-    <!-- Variantes Resumen (Precio, Colores y Tallas) -->
-    <div class="pt-2.5 border-t border-zinc-100 dark:border-zinc-800/80 space-y-2">
-      
-      <div class="flex items-center justify-between text-xs">
-        <!-- Precio -->
-        <span class="text-lg font-bold font-mono text-amber-700 dark:text-amber-300">
-          Bs. {{ prenda.precio | number:'1.2-2' }}
-        </span>
+    <!-- Variantes Resumen -->
+    <div
+      class="pt-2.5 border-t border-zinc-100 dark:border-zinc-800/80 space-y-2">
 
-        <!-- Swatches de colores disponibles -->
+      <!-- Precio y colores -->
+      <div class="flex items-center justify-between text-xs">
+
+        <!-- Precio -->
+        <div class="flex items-center gap-2">
+
+          <!-- Con promoción -->
+          <ng-container *ngIf="prenda.promocion; else precioNormal">
+
+            <div class="flex flex-col leading-none">
+
+              <!-- Precio normal -->
+              <span
+                class="text-[11px] text-zinc-400 dark:text-zinc-500 line-through font-mono">
+                Bs. {{ prenda.precio | number:'1.2-2' }}
+              </span>
+
+              <!-- Precio promocional -->
+              <span
+                class="text-lg font-bold font-mono text-red-600 dark:text-red-400">
+                Bs. {{ prenda.promocion.precio_promocional | number:'1.2-2' }}
+              </span>
+
+            </div>
+
+            <!-- Descuento -->
+            <span
+              class="px-1.5 py-0.5 rounded-md bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-400 text-[9px] font-bold font-mono">
+              -{{ prenda.promocion.porcentaje_descuento | number:'1.0-2' }}%
+            </span>
+
+          </ng-container>
+
+          <!-- Precio sin promoción -->
+          <ng-template #precioNormal>
+
+            <span
+              class="text-lg font-bold font-mono text-amber-700 dark:text-amber-300">
+              Bs. {{ prenda.precio | number:'1.2-2' }}
+            </span>
+
+          </ng-template>
+
+        </div>
+
+        <!-- Swatches de colores -->
         <div class="flex items-center space-x-1">
-          <span *ngFor="let c of prenda.colores_disponibles.slice(0, 4)" 
-                class="w-3.5 h-3.5 rounded-full border border-black/10 dark:border-white/20 shadow-xs"
-                [style.backgroundColor]="c.codigo_hex"
-                [title]="c.nombre">
+
+          <span
+            *ngFor="let c of prenda.colores_disponibles.slice(0, 4)"
+            class="w-3.5 h-3.5 rounded-full border border-black/10 dark:border-white/20 shadow-xs"
+            [style.backgroundColor]="c.codigo_hex"
+            [title]="c.nombre">
           </span>
-          <span *ngIf="prenda.colores_disponibles.length > 4" class="text-[10px] text-zinc-500 dark:text-zinc-400 font-mono">
+
+          <span
+            *ngIf="prenda.colores_disponibles.length > 4"
+            class="text-[10px] text-zinc-500 dark:text-zinc-400 font-mono">
             +{{ prenda.colores_disponibles.length - 4 }}
           </span>
+
         </div>
+
       </div>
 
-      <!-- Tallas disponibles badges -->
-      <div *ngIf="prenda.tallas_disponibles.length > 0" class="flex flex-wrap gap-1">
-        <span *ngFor="let t of prenda.tallas_disponibles" 
-              class="px-1.5 py-0.2 text-[9px] font-mono rounded bg-zinc-100 dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800">
+      <!-- Nombre de promoción -->
+      <div
+        *ngIf="prenda.promocion"
+        class="flex items-center gap-1.5 text-[10px] text-red-600 dark:text-red-400 font-medium">
+
+        <svg
+          class="w-3 h-3 shrink-0"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24">
+
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+
+        </svg>
+
+        <span class="truncate">
+          {{ prenda.promocion.nombre }}
+        </span>
+
+      </div>
+
+      <!-- Tallas disponibles -->
+      <div
+        *ngIf="prenda.tallas_disponibles.length > 0"
+        class="flex flex-wrap gap-1">
+
+        <span
+          *ngFor="let t of prenda.tallas_disponibles"
+          class="px-1.5 py-0.2 text-[9px] font-mono rounded bg-zinc-100 dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800">
           {{ t.nombre }}
         </span>
+
       </div>
 
     </div>

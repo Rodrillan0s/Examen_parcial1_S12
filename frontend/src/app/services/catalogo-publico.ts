@@ -31,7 +31,15 @@ export interface ColorFiltro {
   nombre: string;
   codigo_hex: string;
 }
-
+export interface PromocionProducto {
+  id_promocion: number;
+  nombre: string;
+  descripcion: string;
+  porcentaje_descuento: number;
+  fecha_inicio: string;
+  fecha_fin: string;
+  precio_promocional: number;
+}
 export interface FiltrosCatalogoResponse {
   categorias: CategoriaFiltro[];
   tallas: TallaFiltro[];
@@ -61,6 +69,7 @@ export interface PrendaCatalogo {
   total_variantes: number;
   tallas_disponibles: { id_talla: number; nombre: string }[];
   colores_disponibles: { id_color: number; nombre: string; codigo_hex: string }[];
+  promocion?: PromocionProducto | null;
 }
 
 export interface VarianteDetalle {
@@ -72,6 +81,7 @@ export interface VarianteDetalle {
   codigo_hex: string;
   sku?: string;
   precio: number;
+  promocion?: PromocionProducto | null;  
   modelo_ra_url?: string | null;
 }
 
@@ -122,6 +132,7 @@ export interface DetallePrendaCatalogo {
   permite_reserva: boolean;
   permite_compra: boolean;
   permite_vestidor_ra: boolean;
+  promocion?: PromocionProducto | null;
   recursos_ra?: {
     modelo_3d_url?: string | null;
     modelo_ar_url?: string | null;
@@ -166,6 +177,7 @@ export interface DisponibilidadVarianteResponse {
     codigo_hex: string;
     sku?: string;
     precio: number;
+    promocion?: PromocionProducto | null;
   };
   stock_total: number;
   hay_disponibilidad: boolean;

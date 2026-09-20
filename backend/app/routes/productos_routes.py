@@ -26,7 +26,24 @@ def listar_productos(
         "total": len(productos),
         "data": productos
     }
+@router.get(
+    "/promociones",
+    summary="Listar promociones"
+)
+def listar_promociones(
+    solo_activas: bool = True,
+    token_data: dict = Depends(verificar_token)
+):
+    promociones = productos_services.listar_promociones_service(
+        token_data=token_data,
+        solo_activas=solo_activas
+    )
 
+    return {
+        "success": True,
+        "total": len(promociones),
+        "data": promociones
+    }
 @router.get('/{id_producto}', summary="Consultar detalle de producto, galería y variantes")
 def obtener_producto(
     id_producto: int,
@@ -195,3 +212,85 @@ def eliminar_producto(
         token_data=token_data,
         ip_cliente=ip_cliente
     )
+
+@router.post(
+    "/{id_producto}/promocion",
+    summary="Asignar promoción a un producto"
+)
+def asignar_promocion_producto(
+    id_producto: int,
+    id_promocion: int,
+    porcentaje_descuento: float,
+    token_data: dict = Depends(verificar_token)
+):
+    id_promocion_producto = productos_services.asignar_promocion_producto_service(
+        token_data=token_data,
+        id_promocion=id_promocion,
+        id_producto=id_producto,
+        porcentaje_descuento=porcentaje_descuento
+    )
+
+    return {
+        "success": True,
+        "message": "Promoción asignada correctamente.",
+        "id_promocion_producto": id_promocion_producto
+    }
+
+@router.get(
+    "/{id_producto}/promociones",
+    summary="Listar promociones de un producto"
+)
+def listar_promociones_producto(
+    id_producto: int,
+    token_data: dict = Depends(verificar_token)
+):
+    promociones = productos_services.listar_promociones_producto_service(
+        token_data=token_data,
+        id_producto=id_producto
+    )
+
+    return {
+        "success": True,
+        "total": len(promociones),
+        "data": promociones
+    }
+
+@router.get(
+    "/{id_producto}/promocion-vigente",
+    summary="Obtener promoción vigente de un producto"
+)
+def obtener_promocion_producto(
+    id_producto: int,
+    token_data: dict = Depends(verificar_token)
+):
+    promocion = productos_services.obtener_promocion_producto_service(
+        token_data=token_data,
+        id_producto=id_producto
+    )
+
+    return {
+        "success": True,
+        "data": promocion
+    }
+
+@router.delete(
+    "/{id_producto}/promociones/{id_promocion_producto}",
+    summary="Quitar promoción de un producto"
+)
+def eliminar_promocion_producto(
+    id_producto: int,
+    id_promocion_producto: int,
+    token_data: dict = Depends(verificar_token)
+):
+    resultado = productos_services.eliminar_promocion_producto_service(
+        token_data=token_data,
+        id_producto=id_producto,
+        id_promocion_producto=id_promocion_producto
+    )
+
+    return {
+        "success": True,
+        "message": "Promoción quitada del producto correctamente.",
+        "data": resultado
+    }
+
