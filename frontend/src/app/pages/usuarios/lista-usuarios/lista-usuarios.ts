@@ -5,6 +5,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
 import { AuthService } from '../../../services/auth';
 import { RbacService, Permiso, Rol } from '../../../services/rbac';
+import { SucursalService, Sucursal } from '../../../services/sucursales';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 export interface Empresa {
@@ -36,6 +37,10 @@ export interface Usuario {
   id_rol?: number;
   password?: string;
   permisos_directos_count?: number;
+  ids_sucursales?: number[];
+  id_sucursal?: number | null;
+  sucursal_nombre?: string;
+  sucursales_nombres?: string;
 }
 
 export interface ModuloPermisos {
@@ -55,6 +60,7 @@ export class ListaUsuariosComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
   public authService = inject(AuthService);
   private rbacService = inject(RbacService);
+  private sucursalService = inject(SucursalService);
   private ngZone = inject(NgZone);
   private apiUrl = environment.apiUrl;
   private destroyRef = inject(DestroyRef);
@@ -64,6 +70,8 @@ export class ListaUsuariosComponent implements OnInit {
   usuariosFiltrados: Usuario[] = [];
   empresas: Empresa[] = []; 
   rolesDisponibles: Rol[] = [];
+  sucursalesDisponibles: Sucursal[] = [];
+  cargandoSucursales: boolean = false;
   
   // --- FILTROS ---
   filtroEmpresa: string = 'TODOS';
@@ -117,6 +125,87 @@ export class ListaUsuariosComponent implements OnInit {
     return u?.id_empresa || null;
   }
 
+  inicializarUsuario(): Usuario {
+    const defaultEmpresaId = (!this.isGlobalAdmin && this.idEmpresaSesion) ? this.idEmpresaSesion : null;
+    return {
+      nombre_usuario: '',
+      nombre_completo: '',
+      correo: '',
+      telefono: '',
+      direccion: '',
+      estado: 'ACTIVO',
+      nro_rol: this.isStoreAdmin ? 4 : 3,
+      id_empresa: defaultEmpresaId,
+      id_sucursal: null,
+      ids_sucursales: []
+    };
+  }
+
+  cargarSucursalesParaUsuario(idEmpresa?: number) {
+    this.cargandoSucursales = true;
+    const targetEmpresa = idEmpresa || (!this.isGlobalAdmin ? (this.idEmpresaSesion || undefined) : undefined);
+    this.sucursalService.listarSucursales(targetEmpresa)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res) => {
+          this.ngZone.run(() => {
+            this.cargandoSucursales = false;
+            if (res && res.data) {
+              this.sucursalesDisponibles = res.data.filter(s => s.activo !== false);
+            } else {
+              this.sucursalesDisponibles = [];
+            }
+            this.cdr.detectChanges();
+          });
+        },
+        error: () => {
+          this.ngZone.run(() => {
+            this.cargandoSucursales = false;
+            this.sucursalesDisponibles = [];
+            this.cdr.detectChanges();
+          });
+        }
+      });
+  }
+
+  requiereSucursal(): boolean {
+    const rolId = Number(this.usuarioForm.nro_rol || this.usuarioForm.id_rol);
+    if (rolId === 4 || rolId === 5) return true;
+    const rolObj = this.rolesDisponibles.find(r => r.id_rol === rolId);
+    if (rolObj) {
+      const name = (rolObj.nombre || '').toUpperCase();
+      if (name.includes('CAJER') || name.includes('ENCARGAD') || name.includes('SUCURSAL') || name.includes('EMPLEAD')) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  puedeTenerSucursal(): boolean {
+    return this.requiereSucursal() || !!this.usuarioForm.id_empresa;
+  }
+
+  onEmpresaFormChange() {
+    this.usuarioForm.id_sucursal = null;
+    const empId = this.usuarioForm.id_empresa ? Number(this.usuarioForm.id_empresa) : undefined;
+    this.cargarSucursalesParaUsuario(empId);
+  }
+
+  onRolFormChange() {
+    if (!this.puedeTenerSucursal()) {
+      this.usuarioForm.id_sucursal = null;
+    }
+  }
+
+  obtenerNombresSucursales(u: Usuario): string {
+    if (u.sucursal_nombre) return u.sucursal_nombre;
+    if (u.sucursales_nombres) return u.sucursales_nombres;
+    if (u.ids_sucursales && u.ids_sucursales.length > 0) {
+      return `Sucursal #${u.ids_sucursales.join(', #')}`;
+    }
+    return '';
+  }
+
   async ngOnInit() {
     this.cargando = true;
     
@@ -130,10 +219,26 @@ export class ListaUsuariosComponent implements OnInit {
       const currentUser = this.authService.obtenerUsuario();
       if (!this.isGlobalAdmin && currentUser?.id_empresa) {
         this.filtroEmpresa = String(currentUser.id_empresa);
+      } else if (this.isGlobalAdmin) {
+        const eff = this.authService.getEffectiveCompanyId();
+        this.filtroEmpresa = eff ? String(eff) : 'TODOS';
       }
       this.cargarRolesDelegables();
       this.cargarEmpresas();
       this.cargarUsuarios();
+
+      this.authService.companyChanged$
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe(empresa => {
+          if (this.isGlobalAdmin) {
+            const nueva = empresa ? String(empresa.id_empresa) : 'TODOS';
+            if (this.filtroEmpresa !== nueva) {
+              this.filtroEmpresa = nueva;
+              this.aplicarFiltros();
+              this.cdr.detectChanges();
+            }
+          }
+        });
     } else {
       this.cargando = false;
       this.mensajeError = "No se pudo iniciar sesión. Por favor recarga la página.";
@@ -145,19 +250,6 @@ export class ListaUsuariosComponent implements OnInit {
     return token ? new HttpHeaders({ 'Authorization': `Bearer ${token}` }) : new HttpHeaders();
   }
 
-  inicializarUsuario(): Usuario {
-    const defaultEmpresaId = (!this.isGlobalAdmin && this.idEmpresaSesion) ? this.idEmpresaSesion : null;
-    return {
-      nombre_usuario: '',
-      nombre_completo: '',
-      correo: '',
-      telefono: '',
-      direccion: '',
-      estado: 'ACTIVO',
-      nro_rol: this.isStoreAdmin ? 4 : 3,
-      id_empresa: defaultEmpresaId
-    };
-  }
 
   mostrarNotificacionExito(msg: string) {
     this.mensajeExito = msg;
@@ -238,6 +330,20 @@ export class ListaUsuariosComponent implements OnInit {
 
   // --- FILTRADO Y MÉTRICAS ---
 
+  onFiltroEmpresaChange() {
+    if (this.isGlobalAdmin) {
+      if (this.filtroEmpresa !== 'TODOS' && this.filtroEmpresa !== '') {
+        const emp = this.empresas.find(e => e.id_empresa === Number(this.filtroEmpresa));
+        if (emp) {
+          this.authService.setSelectedCompany({ id_empresa: emp.id_empresa, nombre_empresa: emp.nombre_empresa });
+        }
+      } else {
+        this.authService.setSelectedCompany(null);
+      }
+    }
+    this.aplicarFiltros();
+  }
+
   aplicarFiltros() {
     let resultado = [...this.usuarios];
 
@@ -299,6 +405,7 @@ export class ListaUsuariosComponent implements OnInit {
     this.modoEdicion = false;
     this.mensajeModalError = '';
     this.usuarioForm = this.inicializarUsuario();
+    this.cargarSucursalesParaUsuario(this.usuarioForm.id_empresa || undefined);
     this.mostrarModal = true;
   }
 
@@ -306,13 +413,16 @@ export class ListaUsuariosComponent implements OnInit {
     this.modoEdicion = true;
     this.mensajeModalError = '';
     const rolEncontrado = usuario.id_rol || usuario.nro_rol || 2;
+    const sucId = usuario.id_sucursal || (usuario.ids_sucursales && usuario.ids_sucursales.length > 0 ? usuario.ids_sucursales[0] : null);
     this.usuarioForm = { 
       ...usuario, 
       nro_rol: Number(rolEncontrado),
       id_rol: Number(rolEncontrado),
       id_empresa: usuario.id_empresa ? Number(usuario.id_empresa) : null,
+      id_sucursal: sucId ? Number(sucId) : null,
       password: '' 
     }; 
+    this.cargarSucursalesParaUsuario(this.usuarioForm.id_empresa || undefined);
     this.mostrarModal = true;
   }
 
@@ -344,6 +454,11 @@ export class ListaUsuariosComponent implements OnInit {
       this.usuarioForm.id_empresa = this.idEmpresaSesion;
     }
 
+    if (this.requiereSucursal() && !this.usuarioForm.id_sucursal) {
+      this.mensajeModalError = 'Debe seleccionar la Sucursal asignada para este rol operativo/encargado.';
+      return;
+    }
+
     this.guardando = true;
 
     const payload: any = {
@@ -352,7 +467,9 @@ export class ListaUsuariosComponent implements OnInit {
       nombre_usuario: this.usuarioForm.nombre_usuario.trim().toLowerCase(),
       id_rol: Number(this.usuarioForm.nro_rol),
       nro_rol: Number(this.usuarioForm.nro_rol),
-      id_empresa: this.usuarioForm.id_empresa ? Number(this.usuarioForm.id_empresa) : null
+      id_empresa: this.usuarioForm.id_empresa ? Number(this.usuarioForm.id_empresa) : null,
+      id_sucursal: this.usuarioForm.id_sucursal ? Number(this.usuarioForm.id_sucursal) : null,
+      ids_sucursales: this.usuarioForm.id_sucursal ? [Number(this.usuarioForm.id_sucursal)] : []
     };
 
     const targetId = this.usuarioForm.id_usuario || this.usuarioForm.nro_usuario;

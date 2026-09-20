@@ -42,7 +42,8 @@ export class LoginComponent {
           // 3. Guardar sesión y redirigir
           this.authService.guardarSesion(respuesta.token, respuesta.usuario);
           this.cargando = false;
-          this.router.navigate(['/home']); 
+          const destino = this.authService.getDefaultRouteForUser(respuesta.usuario);
+          this.router.navigateByUrl(destino); 
         }
       },
       error: (errorHttp) => {

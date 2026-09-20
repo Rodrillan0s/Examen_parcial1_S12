@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 780" width="700" height="780">
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 1 L 7 4 L 0 7 Z" fill="#222222"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="700" height="780" fill="#ffffff"/>
+  <text x="350.0" y="46" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="normal" fill="#000000" text-anchor="middle">CU09 W/M: Realizar compra</text>
+
+  <!-- Estado Inicial -->
+  <circle cx="350" cy="90" r="11" fill="#222222"/>
+
+  <line x1="350" y1="101" x2="350" y2="150" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="360" y="129.5" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">iniciar_checkout()</text>
+  <!-- Estado: ConfigurandoEntrega -->
+  <g id="s1">
+    <rect x="252.5" y="150" width="195" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="350" y="173.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">ConfigurandoEntrega</text>
+  </g>
+  <line x1="350" y1="188" x2="350" y2="240" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="360" y="218.0" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">seleccionar_metodo_pago()</text>
+  <!-- Estado: MetodoPagoConfigurado -->
+  <g id="s2">
+    <rect x="247.5" y="240" width="205" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="350" y="263.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">MetodoPagoConfigurado</text>
+  </g>
+  <line x1="350" y1="278" x2="350" y2="330" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="360" y="308.0" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">confirmar_orden()</text>
+  <!-- Estado: IniciandoTransaccionPedido -->
+  <g id="s3">
+    <rect x="240.0" y="330" width="220" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="350" y="353.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">IniciandoTransaccionPedido</text>
+  </g>
+  <line x1="350" y1="368" x2="350" y2="420" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="360" y="398.0" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">bloquear_stock_kardex()</text>
+  <!-- Estado: StockApartadoTemporal -->
+  <g id="s4">
+    <rect x="250.0" y="420" width="200" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="350" y="443.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">StockApartadoTemporal</text>
+  </g>
+  <line x1="350" y1="458" x2="350" y2="510" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="360" y="488.0" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">registrar_bitacora("COMPRA")</text>
+  <!-- Estado: BitacoraCompraAsentada -->
+  <g id="s5">
+    <rect x="245.0" y="510" width="210" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="350" y="533.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">BitacoraCompraAsentada</text>
+  </g>
+  <line x1="350" y1="548" x2="350" y2="600" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="360" y="578.0" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">generar_numero_pedido()</text>
+  <!-- Estado: PedidoRegistradoExitoso -->
+  <g id="s6">
+    <rect x="242.5" y="600" width="215" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="350" y="623.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">PedidoRegistradoExitoso</text>
+  </g>
+  <line x1="350" y1="638" x2="350" y2="690" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="360" y="668.0" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">mostrar_confirmacion()</text>
+  <!-- Estado Final -->
+  <circle cx="350" cy="705" r="14" fill="none" stroke="#222222" stroke-width="1.4"/>
+  <circle cx="350" cy="705" r="8.5" fill="#222222"/>
+
+</svg>

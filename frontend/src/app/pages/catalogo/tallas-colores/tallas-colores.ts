@@ -59,7 +59,37 @@ export class TallasColoresComponent implements OnInit {
   elementoAeliminar: { tipo: 'TALLA' | 'COLOR', id: number, nombre: string, variantes: number } | null = null;
 
   ngOnInit(): void {
-    this.cargarEmpresasSiEsAdmin();
+    if (this.esSuperAdmin) {
+      this.cargarEmpresasSiEsAdmin();
+      this.filtroEmpresaId = this.authService.getEffectiveCompanyId() || 0;
+    }
+    this.cargarDatos();
+
+    this.authService.companyChanged$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(empresa => {
+        if (this.esSuperAdmin) {
+          const nueva = empresa ? empresa.id_empresa : 0;
+          if (this.filtroEmpresaId !== nueva) {
+            this.filtroEmpresaId = nueva;
+            this.cargarDatos();
+            this.cdr.detectChanges();
+          }
+        }
+      });
+  }
+
+  onFiltroEmpresaChange(): void {
+    if (this.esSuperAdmin) {
+      if (this.filtroEmpresaId > 0) {
+        const emp = this.empresas.find(e => e.id_empresa === this.filtroEmpresaId);
+        if (emp && emp.id_empresa) {
+          this.authService.setSelectedCompany({ id_empresa: emp.id_empresa, nombre_empresa: emp.nombre_empresa });
+        }
+      } else {
+        this.authService.setSelectedCompany(null);
+      }
+    }
     this.cargarDatos();
   }
 

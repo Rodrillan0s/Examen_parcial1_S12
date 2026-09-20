@@ -1,11 +1,11 @@
 <div *ngIf="producto" 
-     class="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/80 dark:bg-zinc-950/90 backdrop-blur-md animate-fade-in transition-colors overflow-y-auto">
+     class="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-hidden bg-black/80 dark:bg-zinc-950/90 backdrop-blur-md transition-colors">
   
   <!-- Backdrop Click Handler -->
-  <div (click)="closeModal()" class="fixed inset-0 z-0 cursor-pointer"></div>
+  <div (click)="closeModal()" class="fixed inset-0 cursor-pointer"></div>
 
-  <!-- Luxury Dynamic Modal Card: Altura flexible (máx 88vh), ancho responsivo, con pie sticky permanente donde los botones NUNCA se salen de la tarjeta -->
-  <div class="relative z-10 w-full max-w-4xl lg:max-w-5xl max-h-[92vh] sm:max-h-[88vh] rounded-2xl sm:rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl text-zinc-900 dark:text-zinc-100 flex flex-col overflow-hidden animate-slide-up transition-all my-auto">
+  <!-- Luxury Dynamic Modal Card (contenido dentro del viewport) -->
+  <div class="relative w-full max-w-4xl lg:max-w-5xl max-h-[94vh] sm:max-h-[90vh] rounded-2xl sm:rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl text-zinc-900 dark:text-zinc-100 flex flex-col overflow-hidden text-left z-10">
     
     <!-- ========================================================================= -->
     <!-- 1. ENCABEZADO STICKY (Siempre visible arriba)                             -->

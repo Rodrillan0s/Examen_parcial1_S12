@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 720" width="820" height="720">
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 1 L 7 4 L 0 7 Z" fill="#222222"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="820" height="720" fill="#ffffff"/>
+  <text x="410.0" y="46" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="normal" fill="#000000" text-anchor="middle">CU_W22: Gestionar inventario</text>
+
+  <!-- Estado Inicial -->
+  <circle cx="410" cy="95" r="11" fill="#222222"/>
+
+  <line x1="410" y1="106" x2="410" y2="155" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="420" y="134.5" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">abrir_modulo_kardex()</text>
+  <!-- Estado: SeleccionandoTipoMovimiento -->
+  <g id="s1">
+    <rect x="292.5" y="155" width="235" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="410" y="178.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">SeleccionandoTipoMovimiento</text>
+  </g>
+  <!-- Estado: IngresoPorCompra -->
+  <g id="s2_ing">
+    <rect x="85.0" y="280" width="170" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="170" y="303.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">IngresoPorCompra</text>
+  </g>
+  <!-- Estado: BajaPorMerma -->
+  <g id="s2_mer">
+    <rect x="330.0" y="280" width="160" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="410" y="303.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">BajaPorMerma</text>
+  </g>
+  <!-- Estado: TransferenciaTiendas -->
+  <g id="s2_tra">
+    <rect x="560.0" y="280" width="180" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="650" y="303.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">TransferenciaTiendas</text>
+  </g>
+  <line x1="350" y1="193" x2="210" y2="280" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="150" y="235" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222" text-anchor="start">[Tipo Entrada]</text>
+  <line x1="410" y1="193" x2="410" y2="280" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="420" y="240.5" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">[Tipo Salida]</text>
+  <line x1="470" y1="193" x2="610" y2="280" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="525" y="230" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222" text-anchor="start">[Tipo Traspaso]</text>
+  <!-- Estado: SaldoKardexActualizado -->
+  <g id="s3">
+    <rect x="307.5" y="410" width="205" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="410" y="433.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">SaldoKardexActualizado</text>
+  </g>
+  <line x1="190" y1="318" x2="370" y2="410" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <line x1="410" y1="318" x2="410" y2="410" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <line x1="630" y1="318" x2="450" y2="410" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <line x1="410" y1="448" x2="410" y2="520" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="420" y="488.0" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">registrar_bitacora("KARDEX")</text>
+  <!-- Estado: BitacoraInventarioAsentada -->
+  <g id="s4">
+    <rect x="302.5" y="520" width="215" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="410" y="543.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">BitacoraInventarioAsentada</text>
+  </g>
+  <line x1="410" y1="558" x2="410" y2="630" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <!-- Estado Final -->
+  <circle cx="410" cy="645" r="14" fill="none" stroke="#222222" stroke-width="1.4"/>
+  <circle cx="410" cy="645" r="8.5" fill="#222222"/>
+
+</svg>

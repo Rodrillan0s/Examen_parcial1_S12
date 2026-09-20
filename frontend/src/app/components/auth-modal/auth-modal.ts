@@ -1,6 +1,7 @@
 import { Component, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { AuthService, AuthTab } from '../../services/auth';
 
 @Component({
@@ -11,6 +12,7 @@ import { AuthService, AuthTab } from '../../services/auth';
 })
 export class AuthModalComponent {
   public authService = inject(AuthService);
+  private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
 
   // Formularios
@@ -139,6 +141,10 @@ export class AuthModalComponent {
           this.authService.authModalTab.set('verify');
         } else if (res.success) {
           this.authService.guardarSesion(res.token, res.usuario);
+          const target = this.authService.getDefaultRouteForUser(res.usuario);
+          if (!this.authService.esCliente()) {
+            this.router.navigateByUrl(target);
+          }
         }
         this.cdr.detectChanges();
       },
@@ -248,12 +254,12 @@ export class AuthModalComponent {
 
     const code = (this.resetData.codigo_recuperacion || '').trim();
     if (!code) {
-      this.errorMessage = 'Ingresa el código de recuperación de 6 dígitos enviado por Brevo.';
+      this.errorMessage = 'Ingresa el código de recuperación';
       return;
     }
 
     if (code.length !== 6) {
-      this.errorMessage = 'El código debe contener exactamente 6 dígitos.';
+      this.errorMessage = 'El código debe contener 6 dígitos';
       return;
     }
 
@@ -264,7 +270,7 @@ export class AuthModalComponent {
       next: (res) => {
         this.isLoading = false;
         if (res.success) {
-          this.successMessage = 'Código verificado exitosamente. Ahora crea tu nueva contraseña.';
+          this.successMessage = 'Código verificado. Ahora crea tu nueva contraseña.';
           this.forgotStep = 'new_password';
         }
         this.cdr.detectChanges();
@@ -289,7 +295,7 @@ export class AuthModalComponent {
     }
 
     if (!this.isNewPasswordValid) {
-      this.errorMessage = 'La contraseña debe cumplir con los requisitos mínimos (8 caracteres y 1 símbolo).';
+      this.errorMessage = 'La contraseña debe cumplir con los requisitos mínimos.';
       return;
     }
 
@@ -340,6 +346,10 @@ export class AuthModalComponent {
             next: (loginRes) => {
               if (loginRes.token) {
                 this.authService.guardarSesion(loginRes.token, loginRes.usuario);
+                const target = this.authService.getDefaultRouteForUser(loginRes.usuario);
+                if (!this.authService.esCliente()) {
+                  this.router.navigateByUrl(target);
+                }
               }
             }
           });

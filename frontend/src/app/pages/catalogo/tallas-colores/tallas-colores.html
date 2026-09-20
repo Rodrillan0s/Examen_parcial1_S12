@@ -136,7 +136,7 @@
         <select 
           *ngIf="esSuperAdmin && empresas.length > 0"
           [(ngModel)]="filtroEmpresaId"
-          (change)="cargarDatos()"
+          (change)="onFiltroEmpresaChange()"
           class="px-3 py-2.5 rounded-xl bg-stone-50 dark:bg-zinc-950/80 border border-stone-200 dark:border-zinc-800 text-xs text-zinc-900 dark:text-zinc-200 focus:outline-none focus:border-amber-500/50 cursor-pointer">
           <option [ngValue]="0">🏢 Todos los Tenants</option>
           <option *ngFor="let emp of empresas" [ngValue]="emp.id_empresa">
@@ -280,7 +280,7 @@
         <select 
           *ngIf="esSuperAdmin && empresas.length > 0"
           [(ngModel)]="filtroEmpresaId"
-          (change)="cargarDatos()"
+          (change)="onFiltroEmpresaChange()"
           class="px-3 py-2.5 rounded-xl bg-stone-50 dark:bg-zinc-950/80 border border-stone-200 dark:border-zinc-800 text-xs text-zinc-900 dark:text-zinc-200 focus:outline-none focus:border-amber-500/50 cursor-pointer">
           <option [ngValue]="0">🏢 Todos los Tenants</option>
           <option *ngFor="let emp of empresas" [ngValue]="emp.id_empresa">

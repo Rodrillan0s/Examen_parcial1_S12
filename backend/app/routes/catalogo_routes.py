@@ -185,3 +185,56 @@ def consultar_disponibilidad_variante(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error al consultar disponibilidad por sucursal: {str(e)}"
         )
+
+# ==============================================================================
+# M14 - VESTIDOR VIRTUAL REALIDAD AUMENTADA
+# ==============================================================================
+
+@router.get('/vestidor/prendas', summary="M14: Listar prendas compatibles con Vestidor Virtual RA")
+def listar_prendas_vestidor_ra(
+    id_empresa: Optional[int] = Query(None, description="Filtrar por Tenant activo"),
+    tipo_prenda: Optional[str] = Query(None, description="Filtrar por tipo: TOP, PANT, DRESS o TODAS")
+):
+    """
+    Retorna la lista de prendas activas habilitadas para el Vestidor Virtual (M14)
+    con sus URLs de modelos 2D transparentes y categorías de pose.
+    """
+    try:
+        prendas = catalogo_repos.obtener_prendas_vestidor_ra(
+            id_empresa=id_empresa,
+            tipo_prenda=tipo_prenda
+        )
+        return {
+            "success": True,
+            "data": prendas
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al consultar prendas para el vestidor: {str(e)}"
+        )
+
+@router.get('/productos/{id_producto}/vestidor', summary="M14: Obtener configuración RA de una prenda")
+def obtener_vestidor_producto(id_producto: int):
+    """
+    Retorna la configuración y recurso 2D de vestidor virtual para la prenda dada.
+    """
+    try:
+        config = catalogo_repos.obtener_config_vestidor_producto(id_producto)
+        if not config:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="La prenda no existe o no se encuentra activa."
+            )
+        return {
+            "success": True,
+            "data": config
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al consultar configuración del vestidor: {str(e)}"
+        )
+

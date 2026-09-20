@@ -4,12 +4,11 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService, AuthTab } from '../../services/auth';
 import { ThemeService } from '../../services/theme';
 import { CarritoService } from '../../services/carrito';
-import { HasPermissionDirective } from '../../directives/has-permission.directive';
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive, HasPermissionDirective],
+  imports: [CommonModule, RouterLink, RouterLinkActive],
   templateUrl: './navbar.html'
 })
 export class NavbarComponent implements OnInit {

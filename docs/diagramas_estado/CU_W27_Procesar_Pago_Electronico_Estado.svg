@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 720" width="780" height="720">
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 1 L 7 4 L 0 7 Z" fill="#222222"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="780" height="720" fill="#ffffff"/>
+  <text x="390.0" y="46" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="normal" fill="#000000" text-anchor="middle">CU_W27: Procesar pago electrónico</text>
+
+  <!-- Estado Inicial -->
+  <circle cx="390" cy="95" r="11" fill="#222222"/>
+
+  <line x1="390" y1="106" x2="390" y2="155" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="400" y="134.5" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">iniciar_pago_tarjeta(datos_cifrados)</text>
+  <!-- Estado: ConectandoPasarelaStripe -->
+  <g id="s1">
+    <rect x="277.5" y="155" width="225" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="390" y="178.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">ConectandoPasarelaStripe</text>
+  </g>
+  <!-- Estado: PagoRechazadoBanco -->
+  <g id="s2_rech">
+    <rect x="67.5" y="280" width="185" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="160" y="303.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">PagoRechazadoBanco</text>
+  </g>
+  <!-- Estado: Desafio3DSecure -->
+  <g id="s2_3ds">
+    <rect x="302.5" y="280" width="175" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="390" y="303.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">Desafio3DSecure</text>
+  </g>
+  <!-- Estado: TransaccionAprobada -->
+  <g id="s2_apr">
+    <rect x="527.5" y="280" width="185" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="620" y="303.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">TransaccionAprobada</text>
+  </g>
+  <line x1="330" y1="193" x2="200" y2="280" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="120" y="235" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222" text-anchor="start">[Fondos insuficientes]</text>
+  <line x1="390" y1="193" x2="390" y2="280" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="400" y="240.5" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">[Requiere OTP / 3DS]</text>
+  <line x1="450" y1="193" x2="580" y2="280" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="460" y="235" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222" text-anchor="start">[Cobro exitoso]</text>
+  <line x1="430" y1="318" x2="580" y2="420" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="450" y="360" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222" text-anchor="start">validar_otp_bancario()</text>
+  <line x1="620" y1="318" x2="620" y2="420" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <!-- Estado: TokenTransaccionGenerado -->
+  <g id="s3">
+    <rect x="512.5" y="420" width="215" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="620" y="443.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">TokenTransaccionGenerado</text>
+  </g>
+  <line x1="620" y1="458" x2="620" y2="530" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="630" y="498.0" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">registrar_bitacora("PAGO_STRIPE")</text>
+  <!-- Estado: BitacoraPagoAsentada -->
+  <g id="s4">
+    <rect x="517.5" y="530" width="205" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="620" y="553.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">BitacoraPagoAsentada</text>
+  </g>
+  <!-- Estado Final -->
+  <circle cx="390" cy="640" r="14" fill="none" stroke="#222222" stroke-width="1.4"/>
+  <circle cx="390" cy="640" r="8.5" fill="#222222"/>
+
+  <line x1="180" y1="318" x2="370" y2="630" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <line x1="590" y1="568" x2="410" y2="630" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+</svg>

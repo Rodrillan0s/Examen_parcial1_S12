@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AURA Atelier — Diagramas de Estructura de Casos de Uso (SI2)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --panel: #111827;
+      --card: #1f2937;
+      --border: #374151;
+      --text: #f3f4f6;
+      --muted: #9ca3af;
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --accent: #10b981;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: rgba(17, 24, 39, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .brand-title {
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #a5b4fc, #6366f1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .brand-sub {
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+    .badge {
+      font-size: 0.75rem;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.4);
+      color: #c7d2fe;
+    }
+    nav {
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 24px;
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    .tab-btn {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .tab-btn:hover {
+      background: #283548;
+      color: var(--text);
+    }
+    .tab-btn.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+    }
+    .main-container {
+      flex: 1;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+    .viewer-card {
+      width: 100%;
+      max-width: 1400px;
+      background: #ffffff;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+    }
+    .viewer-header {
+      background: var(--card);
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .viewer-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--text);
+    }
+    .viewer-actions {
+      display: flex;
+      gap: 10px;
+    }
+    .btn-action {
+      font-size: 0.75rem;
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #2d3748;
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-action:hover {
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+    .image-viewport {
+      padding: 24px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #fdfdfd;
+      overflow: auto;
+      max-height: 80vh;
+    }
+    .image-viewport img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+    footer {
+      background: var(--panel);
+      padding: 16px 24px;
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <div class="brand-title">AURA Atelier — Alta Costura Multi-Tenant</div>
+      <div class="brand-sub">Diagramas de Estructura de Casos de Uso (Arquitectura Navegacional SI2 - UAGRM)</div>
+    </div>
+    <span class="badge">29 Casos de Uso • 6 Subsistemas</span>
+  </header>
+
+  <nav id="tabsContainer">
+    <button class="tab-btn active" onclick="selectDiagram(0)">🌟 General Completo (Master 29 CUs)</button>
+    <button class="tab-btn" onclick="selectDiagram(1)">👥 1. Usuarios y Seguridad</button>
+    <button class="tab-btn" onclick="selectDiagram(2)">👗 2. Catálogo y Colecciones</button>
+    <button class="tab-btn" onclick="selectDiagram(3)">🏬 3. Sucursales e Inventario</button>
+    <button class="tab-btn" onclick="selectDiagram(4)">🛒 4. E-Commerce y Pagos</button>
+    <button class="tab-btn" onclick="selectDiagram(5)">📅 5. Reservas y Citas</button>
+    <button class="tab-btn" onclick="selectDiagram(6)">💳 6. Punto de Venta (POS)</button>
+    <button class="tab-btn" onclick="selectDiagram(7)">📦 UML: Paquetes de Casos de Uso</button>
+  </nav>
+
+  <main class="main-container">
+    <div class="viewer-card">
+      <div class="viewer-header">
+        <span class="viewer-title" id="diagramTitle">Estructura General de Casos de Uso (Master 29 CUs)</span>
+        <div class="viewer-actions">
+          <a id="btnSvg" class="btn-action" target="_blank" href="./DE_CU00_Estructura_Casos_De_Uso_General_Sistema_Aura.svg">Abrir SVG Vectorial</a>
+          <a id="btnPng" class="btn-action" target="_blank" href="./DE_CU00_Estructura_Casos_De_Uso_General_Sistema_Aura.png">Abrir PNG (HD 2x)</a>
+        </div>
+      </div>
+      <div class="image-viewport">
+        <img id="diagramImage" src="./DE_CU00_Estructura_Casos_De_Uso_General_Sistema_Aura.png" alt="Diagrama de Estructura de Casos de Uso">
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    Sistemas de Información II (SI2) • UAGRM — Estándar Metodológico de Diagramas de Estructura de Casos de Uso
+  </footer>
+
+  <script>
+    const diagrams = [
+      {
+        title: "Diagrama Maestro: Estructura General de Casos de Uso (29 CUs en 6 Subsistemas Implementados)",
+        png: "./DE_CU00_Estructura_Casos_De_Uso_General_Sistema_Aura.png",
+        svg: "./DE_CU00_Estructura_Casos_De_Uso_General_Sistema_Aura.svg"
+      },
+      {
+        title: "Subsistema 1: Estructura de Casos de Uso — Usuarios, Autenticación y Auditoría (CU01, CU02, CU03, CU14, Bitácora)",
+        png: "./DE_CU01_Estructura_Usuarios_Autenticacion.png",
+        svg: "./DE_CU01_Estructura_Usuarios_Autenticacion.svg"
+      },
+      {
+        title: "Subsistema 2: Estructura de Casos de Uso — Catálogo y Colecciones de Moda (CU04/CU05, CU06, CU17, CU18, CU19, CU20)",
+        png: "./DE_CU02_Estructura_Catalogo_Colecciones.png",
+        svg: "./DE_CU02_Estructura_Catalogo_Colecciones.svg"
+      },
+      {
+        title: "Subsistema 3: Estructura de Casos de Uso — Sucursales, Almacén e Inventario (CU07, CU15, CU16, CU21, CU22, CU23, CU26)",
+        png: "./DE_CU03_Estructura_Sucursales_Inventario.png",
+        svg: "./DE_CU03_Estructura_Sucursales_Inventario.svg"
+      },
+      {
+        title: "Subsistema 4: Estructura de Casos de Uso — E-Commerce, Compras y Facturación Web (CU08, CU09, CU11, CU27)",
+        png: "./DE_CU04_Estructura_Ecommerce_Compras_Pagos.png",
+        svg: "./DE_CU04_Estructura_Ecommerce_Compras_Pagos.svg"
+      },
+      {
+        title: "Subsistema 5: Estructura de Casos de Uso — Reservas y Citas de Alta Costura (CU10, CU25)",
+        png: "./DE_CU05_Estructura_Reservas.png",
+        svg: "./DE_CU05_Estructura_Reservas.svg"
+      },
+      {
+        title: "Subsistema 6: Estructura de Casos de Uso — Punto de Venta (POS) en Mostrador (CU24, CU28, CU29)",
+        png: "./DE_CU06_Estructura_Punto_De_Venta_POS.png",
+        svg: "./DE_CU06_Estructura_Punto_De_Venta_POS.svg"
+      },
+      {
+        title: "Diagrama Formal UML: Organización en Paquetes de Casos de Uso y Actores",
+        png: "./DE_CU_Paquetes_UML.png",
+        svg: "./DE_CU_Paquetes_UML.svg"
+      }
+    ];
+
+    function selectDiagram(index) {
+      const d = diagrams[index];
+      document.getElementById('diagramTitle').textContent = d.title;
+      document.getElementById('diagramImage').src = d.png;
+      document.getElementById('btnSvg').href = d.svg;
+      document.getElementById('btnPng').href = d.png;
+
+      const buttons = document.querySelectorAll('.tab-btn');
+      buttons.forEach((btn, idx) => {
+        btn.classList.toggle('active', idx === index);
+      });
+    }
+  </script>
+</body>
+</html>

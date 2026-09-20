@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 740 720" width="740" height="720">
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 1 L 7 4 L 0 7 Z" fill="#222222"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="740" height="720" fill="#ffffff"/>
+  <text x="370.0" y="46" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="normal" fill="#000000" text-anchor="middle">CU08 W/M: Gestionar carrito de compras</text>
+
+  <!-- Estado Inicial -->
+  <circle cx="370" cy="95" r="11" fill="#222222"/>
+
+  <line x1="370" y1="106" x2="370" y2="155" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="380" y="134.5" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">agregar_item(id_variante, cant)</text>
+  <!-- Estado: VerificandoStockPrenda -->
+  <g id="s1">
+    <rect x="267.5" y="155" width="205" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="370" y="178.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">VerificandoStockPrenda</text>
+  </g>
+  <line x1="370" y1="193" x2="370" y2="255" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="380" y="228.0" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">[Stock ok] / persistir_item()</text>
+  <!-- Estado: ItemEnCarrito -->
+  <g id="s2">
+    <rect x="277.5" y="255" width="185" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="370" y="278.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">ItemEnCarrito</text>
+  </g>
+  <path d="M 462.5 266.4 C 507.5 246.39999999999998 507.5 303.5 462.5 283.5" fill="none" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="513.5" y="277.0" font-family="Arial, Helvetica, sans-serif" font-size="10" fill="#222222">modificar_cantidad(+/-)</text>
+  <!-- Estado: ItemRemovido -->
+  <g id="s3_del">
+    <rect x="130.0" y="410" width="160" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="210" y="433.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">ItemRemovido</text>
+  </g>
+  <!-- Estado: CarritoConfirmado -->
+  <g id="s3_ready">
+    <rect x="440.0" y="410" width="180" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="530" y="433.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">CarritoConfirmado</text>
+  </g>
+  <line x1="330" y1="293" x2="240" y2="410" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="180" y="350" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222" text-anchor="start">eliminar_item()</text>
+  <line x1="410" y1="293" x2="500" y2="410" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="455" y="335" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222" text-anchor="start">confirmar_carrito()</text>
+  <!-- Estado Final -->
+  <circle cx="370" cy="590" r="14" fill="none" stroke="#222222" stroke-width="1.4"/>
+  <circle cx="370" cy="590" r="8.5" fill="#222222"/>
+
+  <line x1="230" y1="448" x2="356" y2="580" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <line x1="510" y1="448" x2="384" y2="580" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+</svg>

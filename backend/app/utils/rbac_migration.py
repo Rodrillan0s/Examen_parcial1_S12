@@ -210,6 +210,10 @@ def ejecutar_migracion_rbac():
             ('tienda.acceder', 'Acceso a tienda e-commerce', 'Permite navegar y comprar en la tienda', 'acceso'),
             ('admin.acceder', 'Acceso al panel administrativo', 'Permite ingresar al dashboard administrativo', 'acceso'),
             ('bitacora.ver', 'Ver bitácora del sistema', 'Permite consultar la bitácora de auditoría', 'bitacora'),
+
+            # Inventario (W22 - CU22)
+            ('inventario.ver', 'Ver inventario', 'Permite consultar niveles de stock, variantes y movimientos de inventario', 'inventario'),
+            ('inventario.gestionar', 'Gestionar inventario', 'Permite registrar entradas, salidas y ajustes de inventario', 'inventario'),
         ]
 
         for codigo, nombre, desc, modulo in permisos_seed:
@@ -261,7 +265,7 @@ def ejecutar_migracion_rbac():
         """, (codigos_cajero,), commit=True)
 
         # D. ENCARGADO_SUCURSAL
-        codigos_encargado = ['admin.acceder', 'tienda.acceder', 'productos.ver', 'ventas.ver', 'ventas.crear', 'ventas.editar', 'ventas.anular', 'reportes.ver', 'sucursales.ver', 'usuarios.ver', 'bitacora.ver']
+        codigos_encargado = ['admin.acceder', 'tienda.acceder', 'productos.ver', 'ventas.ver', 'ventas.crear', 'ventas.editar', 'ventas.anular', 'reportes.ver', 'sucursales.ver', 'usuarios.ver', 'bitacora.ver', 'inventario.ver', 'inventario.gestionar']
         db.execute_query(f"""
             INSERT INTO {schema}.t_rol_permiso (id_rol, id_permiso)
             SELECT r.id_rol, p.id_permiso
@@ -275,7 +279,7 @@ def ejecutar_migracion_rbac():
         """, (codigos_encargado,), commit=True)
 
         # E. ADMINISTRADOR_TIENDA
-        codigos_admin_tienda = ['admin.acceder', 'tienda.acceder', 'productos.ver', 'productos.crear', 'productos.editar', 'productos.eliminar', 'productos.cambiar_precio', 'ventas.ver', 'reportes.ver', 'reportes.exportar', 'usuarios.ver', 'usuarios.crear', 'usuarios.editar', 'usuarios.desactivar', 'roles.ver', 'sucursales.ver', 'sucursales.crear', 'sucursales.editar', 'sucursales.activar', 'sucursales.desactivar', 'sucursales.asignar', 'bitacora.ver']
+        codigos_admin_tienda = ['admin.acceder', 'tienda.acceder', 'productos.ver', 'productos.crear', 'productos.editar', 'productos.eliminar', 'productos.cambiar_precio', 'ventas.ver', 'reportes.ver', 'reportes.exportar', 'usuarios.ver', 'usuarios.crear', 'usuarios.editar', 'usuarios.desactivar', 'roles.ver', 'sucursales.ver', 'sucursales.crear', 'sucursales.editar', 'sucursales.activar', 'sucursales.desactivar', 'sucursales.asignar', 'bitacora.ver', 'inventario.ver', 'inventario.gestionar']
         db.execute_query(f"""
             INSERT INTO {schema}.t_rol_permiso (id_rol, id_permiso)
             SELECT r.id_rol, p.id_permiso

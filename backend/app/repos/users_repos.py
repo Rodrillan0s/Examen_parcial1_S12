@@ -14,12 +14,16 @@ def obtener_todos_los_usuarios() -> List[Dict[str, Any]]:
                 u.telefono, u.estado, u.id_empresa, e.nombre_empresa,
                 r.nombre AS nombre_rol, r.id_rol,
                 COUNT(DISTINCT up.id_permiso) AS permisos_directos_count,
-                u.direccion, u.ciudad, u.fecha_registro
+                u.direccion, u.ciudad, u.fecha_registro,
+                ARRAY_REMOVE(ARRAY_AGG(DISTINCT us.id_sucursal), NULL) AS ids_sucursales,
+                STRING_AGG(DISTINCT s.nombre, ', ') AS nombres_sucursales
             FROM {schema}.t_usuario u
             LEFT JOIN {schema}.empresa e ON e.id_empresa = u.id_empresa
             LEFT JOIN {schema}.t_usuario_rol ur ON ur.id_usuario = u.id_usuario
             LEFT JOIN {schema}.t_rol r ON r.id_rol = ur.id_rol
             LEFT JOIN {schema}.t_usuario_permiso up ON up.id_usuario = u.id_usuario AND up.activo = TRUE
+            LEFT JOIN {schema}.t_usuario_sucursal us ON us.id_usuario = u.id_usuario
+            LEFT JOIN {schema}.t_sucursal s ON s.id_sucursal = us.id_sucursal
             GROUP BY u.id_usuario, u.username, u.correo, u.nombre, u.apellido, u.telefono, u.estado, u.id_empresa, e.nombre_empresa, r.nombre, r.id_rol, u.direccion, u.ciudad, u.fecha_registro
             ORDER BY u.id_usuario ASC;
         """
@@ -28,6 +32,7 @@ def obtener_todos_los_usuarios() -> List[Dict[str, Any]]:
         usuarios = []
         if resultados:
             for r in resultados:
+                suc_ids = r[15] if r[15] else []
                 usuarios.append({
                     "nro_usuario": r[0],
                     "id_usuario": r[0],
@@ -47,7 +52,11 @@ def obtener_todos_los_usuarios() -> List[Dict[str, Any]]:
                     "permisos_directos_count": r[11] or 0,
                     "direccion": r[12] or "Sin dirección registrada",
                     "ciudad": r[13] or "No especificada",
-                    "fecha_registro": r[14].strftime('%Y-%m-%d %H:%M') if r[14] else "Reciente"
+                    "fecha_registro": r[14].strftime('%Y-%m-%d %H:%M') if r[14] else "Reciente",
+                    "ids_sucursales": suc_ids,
+                    "id_sucursal": suc_ids[0] if suc_ids else None,
+                    "sucursal_nombre": r[16] or "",
+                    "sucursales_nombres": r[16] or ""
                 })
         return usuarios
     finally:
@@ -64,12 +73,16 @@ def obtener_usuarios_por_empresa(id_empresa: int) -> List[Dict[str, Any]]:
                 u.telefono, u.estado, u.id_empresa, e.nombre_empresa,
                 r.nombre AS nombre_rol, r.id_rol,
                 COUNT(DISTINCT up.id_permiso) AS permisos_directos_count,
-                u.direccion, u.ciudad, u.fecha_registro
+                u.direccion, u.ciudad, u.fecha_registro,
+                ARRAY_REMOVE(ARRAY_AGG(DISTINCT us.id_sucursal), NULL) AS ids_sucursales,
+                STRING_AGG(DISTINCT s.nombre, ', ') AS nombres_sucursales
             FROM {schema}.t_usuario u
             LEFT JOIN {schema}.empresa e ON e.id_empresa = u.id_empresa
             LEFT JOIN {schema}.t_usuario_rol ur ON ur.id_usuario = u.id_usuario
             LEFT JOIN {schema}.t_rol r ON r.id_rol = ur.id_rol
             LEFT JOIN {schema}.t_usuario_permiso up ON up.id_usuario = u.id_usuario AND up.activo = TRUE
+            LEFT JOIN {schema}.t_usuario_sucursal us ON us.id_usuario = u.id_usuario
+            LEFT JOIN {schema}.t_sucursal s ON s.id_sucursal = us.id_sucursal
             WHERE u.id_empresa = %s
             GROUP BY u.id_usuario, u.username, u.correo, u.nombre, u.apellido, u.telefono, u.estado, u.id_empresa, e.nombre_empresa, r.nombre, r.id_rol, u.direccion, u.ciudad, u.fecha_registro
             ORDER BY u.id_usuario ASC;
@@ -79,6 +92,7 @@ def obtener_usuarios_por_empresa(id_empresa: int) -> List[Dict[str, Any]]:
         usuarios = []
         if resultados:
             for r in resultados:
+                suc_ids = r[15] if r[15] else []
                 usuarios.append({
                     "nro_usuario": r[0],
                     "id_usuario": r[0],
@@ -98,7 +112,11 @@ def obtener_usuarios_por_empresa(id_empresa: int) -> List[Dict[str, Any]]:
                     "permisos_directos_count": r[11] or 0,
                     "direccion": r[12] or "Sin dirección registrada",
                     "ciudad": r[13] or "No especificada",
-                    "fecha_registro": r[14].strftime('%Y-%m-%d %H:%M') if r[14] else "Reciente"
+                    "fecha_registro": r[14].strftime('%Y-%m-%d %H:%M') if r[14] else "Reciente",
+                    "ids_sucursales": suc_ids,
+                    "id_sucursal": suc_ids[0] if suc_ids else None,
+                    "sucursal_nombre": r[16] or "",
+                    "sucursales_nombres": r[16] or ""
                 })
         return usuarios
     finally:
@@ -115,18 +133,23 @@ def obtener_usuario_por_id(id_usuario: int) -> Optional[Dict[str, Any]]:
                 u.telefono, u.estado, u.id_empresa, e.nombre_empresa,
                 r.nombre AS nombre_rol, r.id_rol,
                 COUNT(DISTINCT up.id_permiso) AS permisos_directos_count,
-                u.direccion, u.ciudad, u.fecha_registro
+                u.direccion, u.ciudad, u.fecha_registro,
+                ARRAY_REMOVE(ARRAY_AGG(DISTINCT us.id_sucursal), NULL) AS ids_sucursales,
+                STRING_AGG(DISTINCT s.nombre, ', ') AS nombres_sucursales
             FROM {schema}.t_usuario u
             LEFT JOIN {schema}.empresa e ON e.id_empresa = u.id_empresa
             LEFT JOIN {schema}.t_usuario_rol ur ON ur.id_usuario = u.id_usuario
             LEFT JOIN {schema}.t_rol r ON r.id_rol = ur.id_rol
             LEFT JOIN {schema}.t_usuario_permiso up ON up.id_usuario = u.id_usuario AND up.activo = TRUE
+            LEFT JOIN {schema}.t_usuario_sucursal us ON us.id_usuario = u.id_usuario
+            LEFT JOIN {schema}.t_sucursal s ON s.id_sucursal = us.id_sucursal
             WHERE u.id_usuario = %s
             GROUP BY u.id_usuario, u.username, u.correo, u.nombre, u.apellido, u.telefono, u.estado, u.id_empresa, e.nombre_empresa, r.nombre, r.id_rol, u.direccion, u.ciudad, u.fecha_registro;
         """
         r = db.execute_query(query, (id_usuario,), fetchone=True)
         
         if r:
+            suc_ids = r[15] if r[15] else []
             return {
                 "nro_usuario": r[0],
                 "id_usuario": r[0],
@@ -146,7 +169,11 @@ def obtener_usuario_por_id(id_usuario: int) -> Optional[Dict[str, Any]]:
                 "permisos_directos_count": r[11] or 0,
                 "direccion": r[12] or "Sin dirección registrada",
                 "ciudad": r[13] or "No especificada",
-                "fecha_registro": r[14].strftime('%Y-%m-%d %H:%M') if r[14] else "Reciente"
+                "fecha_registro": r[14].strftime('%Y-%m-%d %H:%M') if r[14] else "Reciente",
+                "ids_sucursales": suc_ids,
+                "id_sucursal": suc_ids[0] if suc_ids else None,
+                "sucursal_nombre": r[16] or "",
+                "sucursales_nombres": r[16] or ""
             }
         return None
     finally:

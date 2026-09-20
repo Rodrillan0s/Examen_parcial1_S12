@@ -201,3 +201,424 @@ def obtener_metricas_operativo_db(id_usuario: int) -> Dict[str, Any]:
         "nivel_cumplimiento_sla": "100%",
         "estado_turno": "Turno Activo"
     }
+
+
+# ==============================================================================
+# W32 — INDICADORES EMPRESARIALES (CONSULTAS AGREGADAS POSTGRESQL MULTI-TENANT)
+# ==============================================================================
+
+def obtener_resumen_kpis_db(id_empresa: int = None, id_sucursal: int = None, fecha_inicio: str = None, fecha_fin: str = None) -> Dict[str, Any]:
+    """
+    Calcula los KPIs financieros y operacionales agregados en PostgreSQL respetando el contexto multi-tenant.
+    """
+    db = PostgreSQL()
+    db.create_connection()
+    try:
+        schema = Config.SCHEMA or 'comercio'
+        
+        # Filtros dinámicos para ventas
+        where_clauses = ["1=1"]
+        params = []
+        
+        if id_empresa:
+            where_clauses.append("v.id_empresa = %s")
+            params.append(id_empresa)
+            
+        if id_sucursal:
+            where_clauses.append("v.id_sucursal = %s")
+            params.append(id_sucursal)
+            
+        if fecha_inicio:
+            where_clauses.append("DATE(v.fecha_venta) >= %s")
+            params.append(fecha_inicio)
+            
+        if fecha_fin:
+            where_clauses.append("DATE(v.fecha_venta) <= %s")
+            params.append(fecha_fin)
+            
+        where_sql = " AND ".join(where_clauses)
+        
+        # 1. Agregaciones de Ventas
+        q_ventas = f"""
+            SELECT 
+                COUNT(v.id_venta) AS cantidad_ventas,
+                COALESCE(SUM(v.total), 0) AS ventas_totales,
+                COALESCE(SUM(CASE WHEN UPPER(COALESCE(v.estado, '')) != 'ANULADA' THEN v.total ELSE 0 END), 0) AS ingresos_totales,
+                COALESCE(AVG(v.total), 0) AS ticket_promedio,
+                COALESCE(MIN(v.total), 0) AS ticket_minimo,
+                COALESCE(MAX(v.total), 0) AS ticket_maximo
+            FROM {schema}.t_venta v
+            WHERE {where_sql};
+        """
+        v_res = db.execute_query(q_ventas, tuple(params) if params else None, fetchone=True)
+        
+        # 2. Agregaciones de Inventario
+        inv_where = ["1=1"]
+        inv_params = []
+        if id_empresa:
+            inv_where.append("s.id_empresa = %s")
+            inv_params.append(id_empresa)
+        if id_sucursal:
+            inv_where.append("i.id_sucursal = %s")
+            inv_params.append(id_sucursal)
+        inv_where_sql = " AND ".join(inv_where)
+        
+        q_inv = f"""
+            SELECT 
+                COUNT(i.id_inventario) AS total_variantes_registradas,
+                COALESCE(SUM(i.stock_actual), 0) AS stock_total,
+                COALESCE(SUM(i.stock_disponible), 0) AS stock_disponible,
+                COALESCE(SUM(i.stock_reservado), 0) AS stock_reservado,
+                COUNT(CASE WHEN i.stock_disponible <= i.stock_minimo AND i.stock_disponible > 0 THEN 1 END) AS productos_stock_bajo,
+                COUNT(CASE WHEN i.stock_disponible = 0 THEN 1 END) AS productos_agotados
+            FROM {schema}.t_inventario i
+            JOIN {schema}.t_sucursal s ON s.id_sucursal = i.id_sucursal
+            WHERE {inv_where_sql};
+        """
+        inv_res = db.execute_query(q_inv, tuple(inv_params) if inv_params else None, fetchone=True)
+        
+        # 3. Cantidad de Productos Únicos Activos en Catálogo
+        prod_where = ["p.activo = TRUE"]
+        prod_params = []
+        if id_empresa:
+            prod_where.append("p.id_empresa = %s")
+            prod_params.append(id_empresa)
+        prod_where_sql = " AND ".join(prod_where)
+        q_prod = f"SELECT COUNT(*) FROM {schema}.t_producto p WHERE {prod_where_sql};"
+        prod_count = db.execute_query(q_prod, tuple(prod_params) if prod_params else None, fetchone=True)[0]
+        
+        return {
+            "ventas": {
+                "cantidad_ventas": int(v_res[0] or 0),
+                "ventas_totales": float(v_res[1] or 0),
+                "ingresos_totales": float(v_res[2] or 0),
+                "ticket_promedio": float(v_res[3] or 0),
+                "ticket_minimo": float(v_res[4] or 0),
+                "ticket_maximo": float(v_res[5] or 0)
+            },
+            "inventario": {
+                "total_productos_catalogo": int(prod_count or 0),
+                "total_variantes": int(inv_res[0] or 0),
+                "stock_total": int(inv_res[1] or 0),
+                "stock_disponible": int(inv_res[2] or 0),
+                "stock_reservado": int(inv_res[3] or 0),
+                "productos_stock_bajo": int(inv_res[4] or 0),
+                "productos_agotados": int(inv_res[5] or 0)
+            }
+        }
+    finally:
+        db.close_connection()
+
+
+def obtener_ventas_timeline_db(id_empresa: int = None, id_sucursal: int = None, fecha_inicio: str = None, fecha_fin: str = None):
+    """
+    Retorna la serie temporal de ventas agrupada por fecha para graficación reactiva.
+    """
+    db = PostgreSQL()
+    db.create_connection()
+    try:
+        schema = Config.SCHEMA or 'comercio'
+        where = ["1=1"]
+        params = []
+        
+        if id_empresa:
+            where.append("v.id_empresa = %s")
+            params.append(id_empresa)
+        if id_sucursal:
+            where.append("v.id_sucursal = %s")
+            params.append(id_sucursal)
+        if fecha_inicio:
+            where.append("DATE(v.fecha_venta) >= %s")
+            params.append(fecha_inicio)
+        if fecha_fin:
+            where.append("DATE(v.fecha_venta) <= %s")
+            params.append(fecha_fin)
+            
+        where_sql = " AND ".join(where)
+        
+        q = f"""
+            SELECT 
+                DATE(v.fecha_venta) AS fecha,
+                COUNT(v.id_venta) AS cantidad,
+                COALESCE(SUM(v.total), 0) AS total,
+                COALESCE(AVG(v.total), 0) AS ticket_promedio
+            FROM {schema}.t_venta v
+            WHERE {where_sql}
+            GROUP BY DATE(v.fecha_venta)
+            ORDER BY fecha ASC;
+        """
+        rows = db.execute_query(q, tuple(params) if params else None, fetchall=True) or []
+        
+        return [{
+            "fecha": str(r[0]),
+            "cantidad": int(r[1]),
+            "total": float(r[2]),
+            "ticket_promedio": float(r[3])
+        } for r in rows]
+    finally:
+        db.close_connection()
+
+
+def obtener_productos_mas_vendidos_db(id_empresa: int = None, id_sucursal: int = None, fecha_inicio: str = None, fecha_fin: str = None, limit: int = 8):
+    """
+    Retorna los productos con mayor volumen y recaudación.
+    """
+    db = PostgreSQL()
+    db.create_connection()
+    try:
+        schema = Config.SCHEMA or 'comercio'
+        where = ["1=1"]
+        params = []
+        
+        if id_empresa:
+            where.append("v.id_empresa = %s")
+            params.append(id_empresa)
+        if id_sucursal:
+            where.append("v.id_sucursal = %s")
+            params.append(id_sucursal)
+        if fecha_inicio:
+            where.append("DATE(v.fecha_venta) >= %s")
+            params.append(fecha_inicio)
+        if fecha_fin:
+            where.append("DATE(v.fecha_venta) <= %s")
+            params.append(fecha_fin)
+            
+        where_sql = " AND ".join(where)
+        params.append(limit)
+        
+        q = f"""
+            SELECT 
+                p.id_producto,
+                p.nombre,
+                COALESCE(c.nombre, 'Alta Costura') AS categoria,
+                COALESCE(SUM(dv.cantidad), 0) AS unidades_vendidas,
+                COALESCE(SUM(dv.subtotal), 0) AS total_ingresos,
+                COALESCE(AVG(dv.precio_unitario), 0) AS precio_promedio,
+                p.imagen_url
+            FROM {schema}.t_detalle_venta dv
+            JOIN {schema}.t_venta v ON v.id_venta = dv.id_venta
+            JOIN {schema}.t_producto_talla_color ptc ON ptc.id_variante = dv.id_variante
+            JOIN {schema}.t_producto p ON p.id_producto = ptc.id_producto
+            LEFT JOIN {schema}.t_categoria c ON c.id_categoria = p.id_categoria
+            WHERE {where_sql}
+            GROUP BY p.id_producto, p.nombre, c.nombre, p.imagen_url
+            ORDER BY unidades_vendidas DESC, total_ingresos DESC
+            LIMIT %s;
+        """
+        rows = db.execute_query(q, tuple(params), fetchall=True) or []
+        
+        return [{
+            "id_producto": r[0],
+            "nombre": r[1],
+            "categoria": r[2],
+            "unidades_vendidas": int(r[3]),
+            "total_ingresos": float(r[4]),
+            "precio_promedio": float(r[5]),
+            "imagen_url": r[6] or ""
+        } for r in rows]
+    finally:
+        db.close_connection()
+
+
+def obtener_inventario_alertas_db(id_empresa: int = None, id_sucursal: int = None):
+    """
+    Retorna los productos con stock bajo o agotados para reposición inmediata.
+    """
+    db = PostgreSQL()
+    db.create_connection()
+    try:
+        schema = Config.SCHEMA or 'comercio'
+        where = ["(i.stock_disponible <= i.stock_minimo OR i.stock_disponible = 0)"]
+        params = []
+        
+        if id_empresa:
+            where.append("s.id_empresa = %s")
+            params.append(id_empresa)
+        if id_sucursal:
+            where.append("i.id_sucursal = %s")
+            params.append(id_sucursal)
+            
+        where_sql = " AND ".join(where)
+        
+        q = f"""
+            SELECT 
+                p.id_producto,
+                p.nombre AS producto_nombre,
+                ptc.sku,
+                COALESCE(t.nombre, '') AS talla,
+                COALESCE(col.nombre, '') AS color,
+                s.nombre AS sucursal_nombre,
+                i.stock_actual,
+                i.stock_disponible,
+                i.stock_minimo,
+                CASE 
+                    WHEN i.stock_disponible = 0 THEN 'AGOTADO'
+                    WHEN i.stock_disponible <= i.stock_minimo THEN 'BAJO_STOCK'
+                    ELSE 'OPTIMO'
+                END AS estado_alerta
+            FROM {schema}.t_inventario i
+            JOIN {schema}.t_producto_talla_color ptc ON ptc.id_variante = i.id_variante
+            JOIN {schema}.t_producto p ON p.id_producto = ptc.id_producto
+            JOIN {schema}.t_sucursal s ON s.id_sucursal = i.id_sucursal
+            LEFT JOIN {schema}.t_talla t ON t.id_talla = ptc.id_talla
+            LEFT JOIN {schema}.t_color col ON col.id_color = ptc.id_color
+            WHERE {where_sql}
+            ORDER BY i.stock_disponible ASC, p.nombre ASC;
+        """
+        rows = db.execute_query(q, tuple(params) if params else None, fetchall=True) or []
+        
+        return [{
+            "id_producto": r[0],
+            "producto_nombre": r[1],
+            "sku": r[2],
+            "talla": r[3],
+            "color": r[4],
+            "sucursal_nombre": r[5],
+            "stock_actual": int(r[6]),
+            "stock_disponible": int(r[7]),
+            "stock_minimo": int(r[8]),
+            "estado_alerta": r[9]
+        } for r in rows]
+    finally:
+        db.close_connection()
+
+
+def obtener_ventas_por_sucursal_db(id_empresa: int = None, fecha_inicio: str = None, fecha_fin: str = None):
+    """
+    Retorna métricas comparativas entre sucursales: ventas, ingresos y unidades vendidas.
+    """
+    db = PostgreSQL()
+    db.create_connection()
+    try:
+        schema = Config.SCHEMA or 'comercio'
+        
+        # Condiciones para ventas
+        v_where = ["1=1"]
+        params = []
+        if id_empresa:
+            v_where.append("v.id_empresa = %s")
+            params.append(id_empresa)
+        if fecha_inicio:
+            v_where.append("DATE(v.fecha_venta) >= %s")
+            params.append(fecha_inicio)
+        if fecha_fin:
+            v_where.append("DATE(v.fecha_venta) <= %s")
+            params.append(fecha_fin)
+            
+        v_where_sql = " AND ".join(v_where)
+        
+        s_where = ["s.activo = TRUE"]
+        s_params = []
+        if id_empresa:
+            s_where.append("s.id_empresa = %s")
+            s_params.append(id_empresa)
+        s_where_sql = " AND ".join(s_where)
+        
+        q = f"""
+            SELECT 
+                s.id_sucursal,
+                s.nombre AS sucursal_nombre,
+                COALESCE(c.nombre, 'No asignada') AS ciudad,
+                COUNT(v.id_venta) AS cantidad_ventas,
+                COALESCE(SUM(v.total), 0) AS total_ingresos,
+                COALESCE(SUM(dv_agg.total_items), 0) AS total_unidades,
+                COALESCE(AVG(v.total), 0) AS ticket_promedio
+            FROM {schema}.t_sucursal s
+            LEFT JOIN {schema}.t_ciudad c ON c.id_ciudad = s.id_ciudad
+            LEFT JOIN {schema}.t_venta v ON v.id_sucursal = s.id_sucursal AND {v_where_sql}
+            LEFT JOIN (
+                SELECT id_venta, SUM(cantidad) AS total_items
+                FROM {schema}.t_detalle_venta
+                GROUP BY id_venta
+            ) dv_agg ON dv_agg.id_venta = v.id_venta
+            WHERE {s_where_sql}
+            GROUP BY s.id_sucursal, s.nombre, c.nombre
+            ORDER BY total_ingresos DESC;
+        """
+        # params order: v_where params then s_where params
+        all_params = params + s_params
+        rows = db.execute_query(q, tuple(all_params) if all_params else None, fetchall=True) or []
+        
+        return [{
+            "id_sucursal": r[0],
+            "nombre_sucursal": r[1],
+            "ciudad": r[2],
+            "cantidad_ventas": int(r[3]),
+            "total_ingresos": float(r[4]),
+            "total_unidades": int(r[5]),
+            "ticket_promedio": float(r[6])
+        } for r in rows]
+    finally:
+        db.close_connection()
+
+
+def obtener_tenants_dashboard_db():
+    """
+    Retorna todas las empresas / tiendas activas con su resumen de sucursales,
+    productos, inventario total disponible y ventas acumuladas para el panel administrativo.
+    """
+    db = PostgreSQL()
+    db.create_connection()
+    try:
+        schema = Config.SCHEMA or 'comercio'
+        query = f"""
+            SELECT 
+                e.id_empresa,
+                e.nombre_empresa,
+                COALESCE(e.razon_social, e.nombre_empresa) as razon_social,
+                COALESCE(e.nit, '') as nit,
+                COALESCE(e.ciudad, 'Santa Cruz') as ciudad,
+                COALESCE(e.direccion_fiscal, '') as direccion,
+                COALESCE(e.telefono, '') as telefono,
+                COALESCE(e.correo, '') as correo,
+                COALESCE(e.logo, '') as logo,
+                COALESCE(e.estado, 'ACTIVO') as estado,
+                (SELECT COUNT(*) FROM {schema}.t_sucursal s WHERE s.id_empresa = e.id_empresa AND (s.activo = TRUE OR s.estado = TRUE)) as total_sucursales,
+                (SELECT COUNT(*) FROM {schema}.t_producto p WHERE p.id_empresa = e.id_empresa) as total_productos,
+                (SELECT COALESCE(SUM(i.stock_disponible), 0) FROM {schema}.t_inventario i JOIN {schema}.t_sucursal s ON i.id_sucursal = s.id_sucursal WHERE s.id_empresa = e.id_empresa) as total_stock_disponible,
+                (SELECT COUNT(*) FROM {schema}.t_venta v WHERE v.id_empresa = e.id_empresa) as total_ventas_cantidad,
+                (SELECT COALESCE(SUM(v.total), 0) FROM {schema}.t_venta v WHERE v.id_empresa = e.id_empresa) as total_ingresos_historico
+            FROM {schema}.empresa e
+            WHERE UPPER(e.estado) = 'ACTIVO'
+            ORDER BY e.id_empresa ASC;
+        """
+        rows = db.execute_query(query, fetchall=True) or []
+        tenants = []
+        for r in rows:
+            id_emp = r[0]
+            sucs_raw = db.execute_query(f"""
+                SELECT s.id_sucursal, s.nombre, COALESCE(c.nombre, '') as ciudad, COALESCE(s.direccion, '') as direccion
+                FROM {schema}.t_sucursal s
+                LEFT JOIN {schema}.t_ciudad c ON s.id_ciudad = c.id_ciudad
+                WHERE s.id_empresa = %s AND (s.activo = TRUE OR s.estado = TRUE)
+                ORDER BY s.id_sucursal ASC;
+            """, (id_emp,), fetchall=True) or []
+            
+            sucursales = [{
+                "id": s[0],
+                "nombre": s[1],
+                "ciudad": s[2],
+                "direccion": s[3]
+            } for s in sucs_raw]
+
+            tenants.append({
+                "id_empresa": id_emp,
+                "nombre_empresa": r[1],
+                "razon_social": r[2],
+                "nit": r[3],
+                "ciudad": r[4],
+                "direccion": r[5],
+                "telefono": r[6],
+                "correo": r[7],
+                "logo": r[8],
+                "estado": r[9],
+                "total_sucursales": int(r[10]),
+                "total_productos": int(r[11]),
+                "total_stock_disponible": int(r[12]),
+                "total_ventas_cantidad": int(r[13]),
+                "total_ingresos_historico": float(r[14]),
+                "sucursales": sucursales
+            })
+        return tenants
+    finally:
+        db.close_connection()

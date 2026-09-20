@@ -93,6 +93,23 @@ def registrar_usuario(data: dict, payload: dict, request: Optional[Request] = No
         rbac_services.validar_delegacion_permisos(payload, ids_permisos)
         rbac_repos.asignar_permisos_directos_a_usuario(nuevo_id, ids_permisos)
 
+    # 4. Asignación de Sucursales a Usuario (Encargado / Cajero / etc.)
+    ids_sucursales = data.get('ids_sucursales')
+    if ids_sucursales is None and data.get('id_sucursal'):
+        ids_sucursales = [int(data.get('id_sucursal'))]
+    elif isinstance(ids_sucursales, list):
+        ids_sucursales = [int(s) for s in ids_sucursales if s]
+    
+    if ids_sucursales:
+        if not is_global_admin(payload) and id_empresa:
+            from app.repos import sucursales_repos
+            sucs_empresa = sucursales_repos.obtener_sucursales_por_empresa(id_empresa)
+            sucs_validas = {s['id_sucursal'] for s in sucs_empresa}
+            for sid in ids_sucursales:
+                if sid not in sucs_validas:
+                    raise HTTPException(status_code=403, detail="No puede asignar una sucursal ajena a su empresa.")
+        rbac_repos.asignar_sucursales_a_usuario(nuevo_id, ids_sucursales)
+
     # Auditoría
     datos_log = {k: v for k, v in datos_usuario.items() if k != 'password_hash'}
     try:
@@ -127,17 +144,14 @@ def actualizar_usuario(id_usuario: int, data: dict, payload: dict, request: Opti
         if not data.get(campo) or not str(data[campo]).strip():
             raise ValueError(f"El campo '{campo}' es obligatorio.")
 
-    id_rol = data.get('nro_rol') or data.get('id_rol')
-    if not id_rol:
-        raise ValueError("El campo 'id_rol' es obligatorio.")
-    id_rol = int(id_rol)
-
-    # 1. Validación de Jerarquía Estricta
-    rbac_services.validar_asignacion_rol(payload, id_rol)
-
     user_db_before = users_repos.obtener_usuario_por_id(id_usuario)
     if not user_db_before:
         raise HTTPException(status_code=404, detail="Usuario no encontrado.")
+
+    id_rol = data.get('nro_rol') or data.get('id_rol') or user_db_before.get('id_rol')
+    if not id_rol:
+        raise ValueError("El campo 'id_rol' es obligatorio.")
+    id_rol = int(id_rol)
 
     # 1. Validación de Jerarquía Estricta
     try:
@@ -166,19 +180,23 @@ def actualizar_usuario(id_usuario: int, data: dict, payload: dict, request: Opti
     else:
         id_empresa = id_empresa_solicitado
 
-    nombre_completo = str(data['nombre_completo']).strip()
-    partes = nombre_completo.split(' ', 1)
-    nombre = partes[0]
-    apellido = partes[1] if len(partes) > 1 else ''
+    nombre_completo = data.get('nombre_completo')
+    if nombre_completo:
+        partes = str(nombre_completo).strip().split(' ', 1)
+        nombre = partes[0]
+        apellido = partes[1] if len(partes) > 1 else ''
+    else:
+        nombre = data.get('nombre') or user_db_before.get('nombre') or ''
+        apellido = data.get('apellido') or user_db_before.get('apellido') or ''
 
     datos_usuario = {
-        'username': str(data.get('nombre_usuario') or data.get('username')).strip().lower(),
-        'correo': data.get('correo'),
+        'username': str(data.get('nombre_usuario') or data.get('username') or user_db_before.get('username') or '').strip().lower(),
+        'correo': data.get('correo') or user_db_before.get('correo'),
         'nombre': nombre,
         'apellido': apellido,
-        'telefono': data.get('telefono'),
-        'id_empresa': id_empresa,
-        'id_rol': id_rol,
+        'telefono': data.get('telefono') if 'telefono' in data else user_db_before.get('telefono'),
+        'id_empresa': id_empresa if id_empresa is not None else user_db_before.get('id_empresa'),
+        'id_rol': id_rol if id_rol else user_db_before.get('id_rol'),
         'estado': data.get('estado', user_db_before.get('estado'))
     }
 
@@ -193,6 +211,26 @@ def actualizar_usuario(id_usuario: int, data: dict, payload: dict, request: Opti
     if 'ids_permisos' in data and isinstance(data['ids_permisos'], list):
         rbac_services.validar_delegacion_permisos(payload, data['ids_permisos'])
         rbac_repos.asignar_permisos_directos_a_usuario(id_usuario, data['ids_permisos'])
+
+    # 4. Asignación opcional de Sucursales si vienen en el payload
+    if 'ids_sucursales' in data or 'id_sucursal' in data:
+        ids_sucursales = data.get('ids_sucursales')
+        if ids_sucursales is None and data.get('id_sucursal'):
+            ids_sucursales = [int(data.get('id_sucursal'))]
+        elif isinstance(ids_sucursales, list):
+            ids_sucursales = [int(s) for s in ids_sucursales if s]
+        elif ids_sucursales is None:
+            ids_sucursales = []
+
+        if ids_sucursales:
+            if not is_global_admin(payload) and id_empresa:
+                from app.repos import sucursales_repos
+                sucs_empresa = sucursales_repos.obtener_sucursales_por_empresa(id_empresa)
+                sucs_validas = {s['id_sucursal'] for s in sucs_empresa}
+                for sid in ids_sucursales:
+                    if sid not in sucs_validas:
+                        raise HTTPException(status_code=403, detail="No puede asignar una sucursal ajena a su empresa.")
+        rbac_repos.asignar_sucursales_a_usuario(id_usuario, ids_sucursales)
 
     # Auditoría
     datos_log = {k: v for k, v in datos_usuario.items() if k != 'password_hash'}

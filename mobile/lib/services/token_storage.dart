@@ -1,44 +1,43 @@
-//token_storage.dart
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class TokenStorage {
-    static const FlutterSecureStorage _storage = FlutterSecureStorage();
+  static const FlutterSecureStorage _storage = FlutterSecureStorage();
 
-    static Future<void> saveToken(String token) async 
-    {
-        await _storage.write(key: 'auth_token', value: token);
-    }
+  static const String _keyToken = 'auth_token';
+  static const String _keyUserJson = 'auth_user_json';
+  static const String _keyEmpresaId = 'selected_empresa_id';
 
-    static Future<String?> getToken() async 
-    {
-        return _storage.read(key: 'auth_token');
-    }
+  static Future<void> saveToken(String token) async {
+    await _storage.write(key: _keyToken, value: token);
+  }
 
-    static Future<void> clearToken() async 
-    {
-        await _storage.delete(key: 'auth_token');
-    }
+  static Future<String?> getToken() async {
+    return _storage.read(key: _keyToken);
+  }
 
-    static Future<void> saveUserData({
-        required String nroUsuario,
-        required String ci,
-        required String nombreCompleto,
-        required String correo,
-        required String nombreRol,
-        required String telefono,
-        required String idEmpresa,
-    }) 
-    async {
-        await _storage.write(key: 'nro_usuario', value: nroUsuario);
-        await _storage.write(key: 'ci', value: ci);
-        await _storage.write(key: 'nombre_completo', value: nombreCompleto);
-        await _storage.write(key: 'correo', value: correo);
-        await _storage.write(key: 'nombre_rol', value: nombreRol);
-        await _storage.write(key: 'telefono', value: telefono);
-        await _storage.write(key: 'id_empresa', value: idEmpresa);
-    }
+  static Future<void> clearToken() async {
+    await _storage.delete(key: _keyToken);
+    await _storage.delete(key: _keyUserJson);
+  }
 
-    static Future<String?> getValue(String key) async {
-       return _storage.read(key: key);
-    }
+  static Future<void> saveUserJson(String jsonStr) async {
+    await _storage.write(key: _keyUserJson, value: jsonStr);
+  }
+
+  static Future<String?> getUserJson() async {
+    return _storage.read(key: _keyUserJson);
+  }
+
+  static Future<void> saveEmpresaId(int idEmpresa) async {
+    await _storage.write(key: _keyEmpresaId, value: idEmpresa.toString());
+  }
+
+  static Future<int?> getEmpresaId() async {
+    final str = await _storage.read(key: _keyEmpresaId);
+    return str != null ? int.tryParse(str) : null;
+  }
+
+  static Future<void> clearAll() async {
+    await _storage.deleteAll();
+  }
 }

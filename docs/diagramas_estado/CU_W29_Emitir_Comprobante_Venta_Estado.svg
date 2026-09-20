@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 720" width="800" height="720">
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 1 L 7 4 L 0 7 Z" fill="#222222"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="800" height="720" fill="#ffffff"/>
+  <text x="400.0" y="46" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="normal" fill="#000000" text-anchor="middle">CU_W29: Emitir comprobante de venta</text>
+
+  <!-- Estado Inicial -->
+  <circle cx="400" cy="95" r="11" fill="#222222"/>
+
+  <line x1="400" y1="106" x2="400" y2="155" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="410" y="134.5" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">solicitar_comprobante(tipo)</text>
+  <!-- Estado: EligiendoTipoComprobante -->
+  <g id="s1">
+    <rect x="287.5" y="155" width="225" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="400" y="178.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">EligiendoTipoComprobante</text>
+  </g>
+  <!-- Estado: FacturaFiscalValidandoNIT -->
+  <g id="s2_fac">
+    <rect x="122.5" y="280" width="215" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="230" y="303.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">FacturaFiscalValidandoNIT</text>
+  </g>
+  <!-- Estado: ReciboCorrelativoInterno -->
+  <g id="s2_rec">
+    <rect x="467.5" y="280" width="205" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="570" y="303.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">ReciboCorrelativoInterno</text>
+  </g>
+  <line x1="350" y1="193" x2="270" y2="280" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="180" y="235" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222" text-anchor="start">[Es Factura con NIT]</text>
+  <line x1="450" y1="193" x2="530" y2="280" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="460" y="235" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222" text-anchor="start">[Es Recibo Simple]</text>
+  <line x1="230" y1="318" x2="230" y2="395" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="240" y="360.5" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">firmar_digitalmente_cuf()</text>
+  <!-- Estado: FacturaSelladaDigitalmente -->
+  <g id="s3_fac">
+    <rect x="117.5" y="395" width="225" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="230" y="418.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">FacturaSelladaDigitalmente</text>
+  </g>
+  <!-- Estado: ImprimiendoTicketFiscal -->
+  <g id="s4">
+    <rect x="297.5" y="500" width="205" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="400" y="523.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">ImprimiendoTicketFiscal</text>
+  </g>
+  <line x1="250" y1="433" x2="360" y2="500" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="270" y="470" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222" text-anchor="start">enviar_a_impresora()</text>
+  <line x1="550" y1="318" x2="440" y2="500" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="470" y="460" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222" text-anchor="start">enviar_a_impresora()</text>
+  <line x1="400" y1="538" x2="400" y2="595" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="410" y="570.5" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">registrar_bitacora("COMPROBANTE")</text>
+  <!-- Estado: BitacoraFiscalAsentada -->
+  <g id="s5">
+    <rect x="292.5" y="595" width="215" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="400" y="618.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">BitacoraFiscalAsentada</text>
+  </g>
+  <line x1="400" y1="633" x2="400" y2="675" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <!-- Estado Final -->
+  <circle cx="400" cy="690" r="14" fill="none" stroke="#222222" stroke-width="1.4"/>
+  <circle cx="400" cy="690" r="8.5" fill="#222222"/>
+
+</svg>

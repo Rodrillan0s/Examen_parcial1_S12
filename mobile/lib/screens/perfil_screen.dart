@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../services/auth_provider.dart';
 import '../services/profile_service.dart';
 import '../theme/app_theme.dart';
-import '../widgets/ev_widgets.dart';
+import '../widgets/aurora_button.dart';
+import '../widgets/aurora_text_field.dart';
+import 'auth_screens.dart';
 
 class PerfilScreen extends StatefulWidget {
   const PerfilScreen({super.key});
@@ -11,17 +16,10 @@ class PerfilScreen extends StatefulWidget {
 }
 
 class _PerfilScreenState extends State<PerfilScreen> {
-  final _formKey = GlobalKey<FormState>();
-
-  final _telefonoController = TextEditingController();
-  final _correoController = TextEditingController();
-  final _direccionController = TextEditingController();
-  final _passwordController = TextEditingController();
-
-  Map<String, dynamic>? _perfil;
+  final ProfileService _profileService = ProfileService();
+  PerfilModel? _perfil;
   bool _cargando = true;
-  bool _guardando = false;
-  bool _obscurePass = true;
+  String? _error;
 
   @override
   void initState() {
@@ -29,544 +27,572 @@ class _PerfilScreenState extends State<PerfilScreen> {
     _cargarPerfil();
   }
 
-  @override
-  void dispose() {
-    _telefonoController.dispose();
-    _correoController.dispose();
-    _direccionController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
-
   Future<void> _cargarPerfil() async {
-    setState(() => _cargando = true);
+    setState(() {
+      _cargando = true;
+      _error = null;
+    });
 
     try {
-      final perfil = await ProfileService().obtenerPerfil();
-
-      _telefonoController.text = _texto(perfil['telefono']);
-      _correoController.text = _texto(perfil['correo']);
-      _direccionController.text = _texto(perfil['direccion']);
-
-      if (!mounted) return;
-
-      setState(() {
-        _perfil = perfil;
-        _cargando = false;
-      });
+      final p = await _profileService.obtenerPerfil();
+      if (mounted) {
+        setState(() {
+          _perfil = p;
+          _cargando = false;
+        });
+      }
     } catch (e) {
-      if (!mounted) return;
-
-      setState(() => _cargando = false);
-
-      _mostrarError(e.toString().replaceAll('Exception: ', ''));
+      if (mounted) {
+        setState(() {
+          _error = e.toString().replaceAll('Exception: ', '');
+          _cargando = false;
+        });
+      }
     }
   }
 
-  Future<void> _guardarPerfil() async {
+  void _abrirModalEditarPerfil() {
     if (_perfil == null) return;
-    if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _guardando = true);
+    final nombreCtrl = TextEditingController(text: _perfil!.nombre);
+    final apellidoCtrl = TextEditingController(text: _perfil!.apellido);
+    final telCtrl = TextEditingController(text: _perfil!.telefono ?? '');
+    final ciCtrl = TextEditingController(text: _perfil!.ci ?? '');
+    final dirCtrl = TextEditingController(text: _perfil!.direccion ?? '');
+    final ciudadCtrl = TextEditingController(text: _perfil!.ciudad ?? '');
+    bool guardando = false;
+    String? modalError;
 
-    try {
-      await ProfileService().actualizarPerfil(
-        ci: _texto(_perfil!['ci']),
-        telefono: _telefonoController.text.trim(),
-        correo: _correoController.text.trim(),
-        direccion: _direccionController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Container(
+            decoration: const BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 20,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppTheme.borderStrong,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Editar datos personales',
+                    style: GoogleFonts.playfairDisplay(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  if (modalError != null) ...[
+                    Text(
+                      modalError!,
+                      style: GoogleFonts.plusJakartaSans(color: AppTheme.error, fontSize: 12),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  Row(
+                    children: [
+                      Expanded(
+                        child: AuroraTextField(
+                          controller: nombreCtrl,
+                          label: 'Nombre',
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: AuroraTextField(
+                          controller: apellidoCtrl,
+                          label: 'Apellido',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: AuroraTextField(
+                          controller: telCtrl,
+                          label: 'Teléfono',
+                          keyboardType: TextInputType.phone,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: AuroraTextField(
+                          controller: ciCtrl,
+                          label: 'Documento / CI',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  AuroraTextField(
+                    controller: dirCtrl,
+                    label: 'Dirección',
+                    hint: 'Av. San Martín #123',
+                  ),
+                  const SizedBox(height: 12),
+                  AuroraTextField(
+                    controller: ciudadCtrl,
+                    label: 'Ciudad',
+                    hint: 'Santa Cruz',
+                  ),
+                  const SizedBox(height: 24),
+                  AuroraButton(
+                    text: 'Guardar cambios',
+                    isLoading: guardando,
+                    onPressed: () async {
+                      setModalState(() {
+                        guardando = true;
+                        modalError = null;
+                      });
 
-      if (!mounted) return;
+                      final messenger = ScaffoldMessenger.of(context);
+                      try {
+                        final updated = await _profileService.actualizarPerfil(
+                          nombre: nombreCtrl.text,
+                          apellido: apellidoCtrl.text,
+                          telefono: telCtrl.text,
+                          ci: ciCtrl.text,
+                          direccion: dirCtrl.text,
+                          ciudad: ciudadCtrl.text,
+                        );
 
-      _passwordController.clear();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Perfil actualizado correctamente.'),
-          backgroundColor: AppTheme.success,
-        ),
-      );
-
-      await _cargarPerfil();
-    } catch (e) {
-      if (!mounted) return;
-
-      _mostrarError(e.toString().replaceAll('Exception: ', ''));
-    } finally {
-      if (mounted) setState(() => _guardando = false);
-    }
-  }
-
-  String _texto(dynamic valor) {
-    if (valor == null) return '';
-    return valor.toString();
-  }
-
-  String _textoDefault(dynamic valor) {
-    final texto = _texto(valor).trim();
-    return texto.isEmpty ? 'No registrado' : texto;
-  }
-
-  void _mostrarError(String mensaje) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(mensaje),
-        backgroundColor: AppTheme.error,
+                        if (mounted && ctx.mounted) {
+                          setState(() {
+                            _perfil = updated;
+                          });
+                          Navigator.of(ctx).pop();
+                          messenger.showSnackBar(
+                            const SnackBar(
+                              content: Text('Perfil actualizado correctamente.'),
+                              backgroundColor: AppTheme.success,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        setModalState(() {
+                          guardando = false;
+                          modalError = e.toString().replaceAll('Exception: ', '');
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
 
-  String get _iniciales {
-    final nombre = _texto(_perfil?['nombre_completo']).trim();
+  void _abrirModalCambiarPassword() {
+    final passwordCtrl = TextEditingController();
+    final confirmCtrl = TextEditingController();
+    bool guardando = false;
+    String? modalError;
 
-    if (nombre.isEmpty) return '?';
-
-    final partes = nombre.split(' ');
-
-    if (partes.length >= 2) {
-      return '${partes[0][0]}${partes[1][0]}'.toUpperCase();
-    }
-
-    return nombre[0].toUpperCase();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.background,
-      appBar: AppBar(
-        title: const Text('MI PERFIL'),
-        backgroundColor: AppTheme.primary,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: _cargando
-          ? const _LoadingState()
-          : _perfil == null
-              ? _ErrorState(onReintentar: _cargarPerfil)
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      children: [
-                        _PerfilHeader(
-                          iniciales: _iniciales,
-                          nombreCompleto: _textoDefault(_perfil!['nombre_completo']),
-                          nombreUsuario: _textoDefault(_perfil!['nombre_usuario']),
-                          rol: _textoDefault(_perfil!['nombre_rol']),
-                        ),
-                        const SizedBox(height: 14),
-
-                        _InfoCard(
-                          title: 'Datos de cuenta',
-                          children: [
-                            _InfoRow(
-                              icon: Icons.badge_outlined,
-                              label: 'CI',
-                              value: _textoDefault(_perfil!['ci']),
-                            ),
-                            const SizedBox(height: 10),
-                            _InfoRow(
-                              icon: Icons.confirmation_number_outlined,
-                              label: 'Usuario N°',
-                              value: _textoDefault(_perfil!['nro_usuario']),
-                            ),
-                            const SizedBox(height: 10),
-                            _InfoRow(
-                              icon: Icons.verified_user_outlined,
-                              label: 'Estado',
-                              value: _textoDefault(_perfil!['estado']),
-                            ),
-                            const SizedBox(height: 10),
-                            _InfoRow(
-                              icon: Icons.calendar_today_outlined,
-                              label: 'Registro',
-                              value: _textoDefault(_perfil!['fecha_registro']),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 14),
-
-                        _InfoCard(
-                          title: 'Información laboral',
-                          children: [
-                            _InfoRow(
-                              icon: Icons.work_outline_rounded,
-                              label: 'Rol',
-                              value: _textoDefault(_perfil!['nombre_rol']),
-                            ),
-                            const SizedBox(height: 10),
-                            _InfoRow(
-                              icon: Icons.business_outlined,
-                              label: 'Empresa',
-                              value: _textoDefault(_perfil!['nombre_empresa']),
-                            ),
-                            const SizedBox(height: 10),
-                            _InfoRow(
-                              icon: Icons.directions_car_outlined,
-                              label: 'Vehículos',
-                              value: _textoDefault(_perfil!['cant_vehiculos']),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 14),
-
-                        _InfoCard(
-                          title: 'Editar datos personales',
-                          children: [
-                            EvTextField(
-                              label: 'TELÉFONO',
-                              hint: 'Ej: 70012345',
-                              controller: _telefonoController,
-                              keyboardType: TextInputType.phone,
-                              validator: (v) {
-                                if (v == null || v.trim().isEmpty) {
-                                  return 'Ingrese su teléfono';
-                                }
-                                if (v.trim().length < 6) {
-                                  return 'Teléfono inválido';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 16),
-                            EvTextField(
-                              label: 'CORREO ELECTRÓNICO',
-                              hint: 'usuario@ejemplo.com',
-                              controller: _correoController,
-                              keyboardType: TextInputType.emailAddress,
-                              validator: (v) {
-                                if (v == null || v.trim().isEmpty) {
-                                  return 'Ingrese su correo';
-                                }
-                                if (!v.contains('@')) {
-                                  return 'Correo inválido';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 16),
-                            EvTextField(
-                              label: 'DIRECCIÓN',
-                              hint: 'Ej: Av. Cristo Redentor, Santa Cruz',
-                              controller: _direccionController,
-                              keyboardType: TextInputType.streetAddress,
-                              validator: (v) {
-                                if (v == null || v.trim().isEmpty) {
-                                  return 'Ingrese su dirección';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 16),
-                            EvTextField(
-                              label: 'NUEVA CONTRASEÑA (opcional)',
-                              hint: 'Dejar vacío si no desea cambiarla',
-                              controller: _passwordController,
-                              obscure: _obscurePass,
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _obscurePass
-                                      ? Icons.visibility_off_outlined
-                                      : Icons.visibility_outlined,
-                                  size: 18,
-                                  color: AppTheme.textHint,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _obscurePass = !_obscurePass;
-                                  });
-                                },
-                              ),
-                              validator: (v) {
-                                if (v == null || v.trim().isEmpty) {
-                                  return null;
-                                }
-
-                                if (v.trim().length < 8) {
-                                  return 'Mínimo 8 caracteres';
-                                }
-
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 20),
-                            EvPrimaryButton(
-                              label: 'Guardar Cambios',
-                              loading: _guardando,
-                              onPressed: _guardarPerfil,
-                            ),
-                          ],
-                        ),
-                      ],
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Container(
+            decoration: const BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 20,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppTheme.borderStrong,
+                      borderRadius: BorderRadius.circular(2),
                     ),
                   ),
                 ),
-    );
-  }
-}
-
-class _PerfilHeader extends StatelessWidget {
-  final String iniciales;
-  final String nombreCompleto;
-  final String nombreUsuario;
-  final String rol;
-
-  const _PerfilHeader({
-    required this.iniciales,
-    required this.nombreCompleto,
-    required this.nombreUsuario,
-    required this.rol,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppTheme.primary,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 28,
-            backgroundColor: const Color(0xFF2D3A8C),
-            child: Text(
-              iniciales,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+                const SizedBox(height: 16),
                 Text(
-                  nombreCompleto.toUpperCase(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w900,
-                    height: 1.25,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  nombreUsuario,
-                  style: const TextStyle(
-                    color: Color(0xFFBFCFFF),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                  'Cambiar contraseña',
+                  style: GoogleFonts.playfairDisplay(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
+                Text(
+                  'La contraseña debe contener al menos 8 caracteres y 1 carácter especial.',
+                  style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textMuted),
+                ),
+                const SizedBox(height: 16),
+                if (modalError != null) ...[
+                  Text(
+                    modalError!,
+                    style: GoogleFonts.plusJakartaSans(color: AppTheme.error, fontSize: 12),
                   ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.2),
-                    ),
-                  ),
-                  child: Text(
-                    rol.toUpperCase(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.6,
-                    ),
-                  ),
+                  const SizedBox(height: 12),
+                ],
+                AuroraTextField(
+                  controller: passwordCtrl,
+                  label: 'Nueva contraseña',
+                  isPassword: true,
+                ),
+                const SizedBox(height: 12),
+                AuroraTextField(
+                  controller: confirmCtrl,
+                  label: 'Confirmar nueva contraseña',
+                  isPassword: true,
+                ),
+                const SizedBox(height: 24),
+                AuroraButton(
+                  text: 'Actualizar contraseña',
+                  isLoading: guardando,
+                  onPressed: () async {
+                    if (passwordCtrl.text != confirmCtrl.text) {
+                      setModalState(() {
+                        modalError = 'Las contraseñas no coinciden.';
+                      });
+                      return;
+                    }
+
+                    setModalState(() {
+                      guardando = true;
+                      modalError = null;
+                    });
+
+                    final messenger = ScaffoldMessenger.of(context);
+                    try {
+                      await _profileService.cambiarPassword(passwordCtrl.text);
+                      if (mounted && ctx.mounted) {
+                        Navigator.of(ctx).pop();
+                        messenger.showSnackBar(
+                          const SnackBar(
+                            content: Text('Contraseña actualizada con éxito.'),
+                            backgroundColor: AppTheme.success,
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      setModalState(() {
+                        guardando = false;
+                        modalError = e.toString().replaceAll('Exception: ', '');
+                      });
+                    }
+                  },
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final authProvider = context.watch<AuthProvider>();
+
+    if (!authProvider.estaAutenticado) {
+      return Scaffold(
+        backgroundColor: AppTheme.background,
+        appBar: AppBar(title: const Text('Mi Perfil')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.person_outline, size: 64, color: AppTheme.primaryGold),
+                const SizedBox(height: 16),
+                Text(
+                  'Inicia sesión',
+                  style: GoogleFonts.playfairDisplay(fontSize: 22, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Accede a tu cuenta para gestionar tu perfil, consultar tus pedidos y reservas.',
+                  style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textSecondary),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                AuroraButton(
+                  text: 'Iniciar sesión',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AuthScreen()),
+                    );
+                  },
                 ),
               ],
             ),
           ),
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: AppTheme.background,
+      appBar: AppBar(
+        title: const Text('Mi Perfil'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _cargarPerfil,
+          ),
         ],
       ),
+      body: _cargando
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(_error!),
+                      const SizedBox(height: 12),
+                      AuroraButton(
+                        text: 'Reintentar',
+                        width: 150,
+                        onPressed: _cargarPerfil,
+                      ),
+                    ],
+                  ),
+                )
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Tarjeta de Identidad
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: AppTheme.surface,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppTheme.border),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x08000000),
+                              blurRadius: 10,
+                              offset: Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 30,
+                              backgroundColor: AppTheme.primaryGold.withValues(alpha: 0.15),
+                              child: Text(
+                                _perfil?.nombre.isNotEmpty == true
+                                    ? _perfil!.nombre[0].toUpperCase()
+                                    : 'A',
+                                style: GoogleFonts.playfairDisplay(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppTheme.primaryGold,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _perfil?.nombreCompleto ?? 'Usuario',
+                                    style: GoogleFonts.playfairDisplay(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppTheme.textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    _perfil?.correo ?? '',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 12,
+                                      color: AppTheme.textSecondary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.goldLight,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      _perfil?.nombreRol ?? 'Cliente',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppTheme.primaryGold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Detalles de Contacto y Dirección
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: AppTheme.surface,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppTheme.border),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Datos de la cuenta',
+                                  style: GoogleFonts.playfairDisplay(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                TextButton.icon(
+                                  onPressed: _abrirModalEditarPerfil,
+                                  icon: const Icon(Icons.edit_outlined, size: 16),
+                                  label: const Text('Editar'),
+                                ),
+                              ],
+                            ),
+                            const Divider(height: 20),
+                            _buildInfoRow(Icons.phone_outlined, 'Teléfono', _perfil?.telefono ?? 'No especificado'),
+                            _buildInfoRow(Icons.badge_outlined, 'Documento / CI', _perfil?.ci ?? 'No especificado'),
+                            _buildInfoRow(Icons.location_on_outlined, 'Dirección', _perfil?.direccion ?? 'No especificada'),
+                            _buildInfoRow(Icons.location_city_outlined, 'Ciudad', _perfil?.ciudad ?? 'Santa Cruz'),
+                            if (_perfil?.nombreEmpresa != null)
+                              _buildInfoRow(Icons.business_outlined, 'Empresa', _perfil!.nombreEmpresa!),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Acciones de Seguridad
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppTheme.surface,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppTheme.border),
+                        ),
+                        child: Column(
+                          children: [
+                            ListTile(
+                              leading: const Icon(Icons.lock_reset_outlined, color: AppTheme.textPrimary),
+                              title: Text(
+                                'Cambiar contraseña',
+                                style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w600),
+                              ),
+                              trailing: const Icon(Icons.chevron_right),
+                              onTap: _abrirModalCambiarPassword,
+                            ),
+                            const Divider(),
+                            ListTile(
+                              leading: const Icon(Icons.logout, color: AppTheme.error),
+                              title: Text(
+                                'Cerrar sesión',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.error,
+                                ),
+                              ),
+                              onTap: () async {
+                                final confirmar = await showDialog<bool>(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    title: const Text('Cerrar sesión'),
+                                    content: const Text('¿Estás seguro de que deseas cerrar sesión?'),
+                                    actions: [
+                                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+                                      ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Cerrar sesión')),
+                                    ],
+                                  ),
+                                );
+                                if (confirmar == true) {
+                                  await authProvider.logout();
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
     );
   }
-}
 
-class _InfoCard extends StatelessWidget {
-  final String title;
-  final List<Widget> children;
-
-  const _InfoCard({
-    required this.title,
-    required this.children,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppTheme.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
         children: [
+          Icon(icon, size: 18, color: AppTheme.primaryGold),
+          const SizedBox(width: 12),
           Text(
-            title.toUpperCase(),
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-              color: AppTheme.textSecondary,
-              letterSpacing: 1.1,
-            ),
-          ),
-          const SizedBox(height: 14),
-          ...children,
-        ],
-      ),
-    );
-  }
-}
-
-class _InfoRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-
-  const _InfoRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(
-          icon,
-          size: 16,
-          color: AppTheme.textSecondary,
-        ),
-        const SizedBox(width: 8),
-        SizedBox(
-          width: 90,
-          child: Text(
             label,
-            style: const TextStyle(
-              fontSize: 11,
-              color: AppTheme.textSecondary,
-            ),
+            style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textSecondary),
           ),
-        ),
-        Expanded(
-          child: Text(
+          const Spacer(),
+          Text(
             value,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.textPrimary,
-              height: 1.35,
-            ),
+            style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
           ),
-        ),
-      ],
-    );
-  }
-}
-
-class _LoadingState extends StatelessWidget {
-  const _LoadingState();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: SizedBox(
-        width: 26,
-        height: 26,
-        child: CircularProgressIndicator(
-          strokeWidth: 2.5,
-          color: AppTheme.primary,
-        ),
-      ),
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  final Future<void> Function() onReintentar;
-
-  const _ErrorState({
-    required this.onReintentar,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 54,
-              height: 54,
-              decoration: BoxDecoration(
-                color: AppTheme.error.withOpacity(0.08),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.error_outline_rounded,
-                color: AppTheme.error,
-                size: 30,
-              ),
-            ),
-            const SizedBox(height: 14),
-            const Text(
-              'No se pudo cargar el perfil',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Verificá tu conexión e intentá nuevamente.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                color: AppTheme.textSecondary,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 20),
-            OutlinedButton.icon(
-              onPressed: onReintentar,
-              icon: const Icon(Icons.refresh_rounded, size: 16),
-              label: const Text('REINTENTAR'),
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }

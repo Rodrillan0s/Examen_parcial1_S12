@@ -269,12 +269,4 @@ html:not(.dark) {
   td {
     border-color: #f1f5f9 !important;
   }
-
-  /* Modal Dialog Windows */
-  .fixed.inset-0 > div:not([class*="fixed"]):not([class*="bg-black\/"]):not(.modal-backdrop) {
-    background-color: #ffffff !important;
-    border-color: #e2e8f0 !important;
-    color: #0f172a !important;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15) !important;
-  }
 }

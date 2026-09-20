@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 680" width="720" height="680">
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 0 1 L 7 4 L 0 7 Z" fill="#222222"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="720" height="680" fill="#ffffff"/>
+  <text x="360.0" y="46" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="normal" fill="#000000" text-anchor="middle">CU_W23: Gestionar disponibilidad de prendas</text>
+
+  <!-- Estado Inicial -->
+  <circle cx="360" cy="95" r="11" fill="#222222"/>
+
+  <line x1="360" y1="106" x2="360" y2="155" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="370" y="134.5" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">cargar_matriz_disponibilidad()</text>
+  <!-- Estado: MatrizDisponibilidadCargada -->
+  <g id="s1">
+    <rect x="245.0" y="155" width="230" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="360" y="178.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">MatrizDisponibilidadCargada</text>
+  </g>
+  <path d="M 475.0 166.4 C 520.0 146.4 520.0 203.5 475.0 183.5" fill="none" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="526.0" y="177.0" font-family="Arial, Helvetica, sans-serif" font-size="10" fill="#222222">toggle_visibilidad_sucursal()</text>
+  <line x1="360" y1="193" x2="360" y2="275" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="370" y="238.0" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">aplicar_regla_comercial()</text>
+  <!-- Estado: VerificandoPoliticaCatalogo -->
+  <g id="s2">
+    <rect x="250.0" y="275" width="220" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="360" y="298.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">VerificandoPoliticaCatalogo</text>
+  </g>
+  <line x1="360" y1="313" x2="360" y2="395" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="370" y="358.0" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">persistir_disponibilidad_db()</text>
+  <!-- Estado: ReglaDisponibilidadPersistida -->
+  <g id="s3">
+    <rect x="242.5" y="395" width="235" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="360" y="418.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">ReglaDisponibilidadPersistida</text>
+  </g>
+  <line x1="360" y1="433" x2="360" y2="515" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <text x="370" y="478.0" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#222222">registrar_bitacora("DISPONIBILIDAD")</text>
+  <!-- Estado: BitacoraReglaAsentada -->
+  <g id="s4">
+    <rect x="252.5" y="515" width="215" height="38" rx="9" ry="9" fill="#f4f4f4" stroke="#777777" stroke-width="0.9"/>
+    <text x="360" y="538.5" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#111111" text-anchor="middle">BitacoraReglaAsentada</text>
+  </g>
+  <line x1="360" y1="553" x2="360" y2="620" stroke="#222222" stroke-width="1.1" marker-end="url(#arrow)"/>
+  <!-- Estado Final -->
+  <circle cx="360" cy="635" r="14" fill="none" stroke="#222222" stroke-width="1.4"/>
+  <circle cx="360" cy="635" r="8.5" fill="#222222"/>
+
+</svg>

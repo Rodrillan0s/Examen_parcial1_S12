@@ -1,6 +1,7 @@
-import { Component, OnInit, inject, PLATFORM_ID } from '@angular/core';
+import { Component, OnInit, inject, PLATFORM_ID, DestroyRef } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ProductosService, Producto, ImagenProducto, VarianteProducto } from '../../../services/productos';
 import { CategoriasService, Categoria } from '../../../services/categorias';
 import { TallasColoresService, Talla, ColorPrenda } from '../../../services/tallas-colores';
@@ -20,6 +21,7 @@ export class ProductosComponent implements OnInit {
   private empresaService = inject(EmpresaService);
   private authService = inject(AuthService);
   private platformId = inject(PLATFORM_ID);
+  private destroyRef = inject(DestroyRef);
 
   // Estados de lista
   productos: Producto[] = [];
@@ -42,7 +44,7 @@ export class ProductosComponent implements OnInit {
   // Modal Principal (Crear / Editar)
   mostrarModal: boolean = false;
   modoEdicion: boolean = false;
-  tabModalActiva: 'general' | 'variantes' | 'galeria' = 'general';
+  tabModalActiva: 'general' | 'variantes' | 'galeria' | 'ar' = 'general';
   guardando: boolean = false;
 
   // Formulario de Producto
@@ -62,10 +64,14 @@ export class ProductosComponent implements OnInit {
     tallas_seleccionadas: number[];
     colores_seleccionados: number[];
     imagenes: ImagenProducto[];
+    tiene_ra: boolean;
+    tipo_prenda_ra: string;
+    modelo_2d_url: string;
   } = this.getFormVacio();
 
   // Subida de imagen
   subiendoImagen: boolean = false;
+  subiendoFoto2D: boolean = false;
 
   // Modal Rápido de Galería
   mostrarModalGaleria: boolean = false;
@@ -85,7 +91,19 @@ export class ProductosComponent implements OnInit {
   }
 
   get userCompanyId(): number | undefined {
-    return this.authService.obtenerUsuario()?.id_empresa;
+    return this.authService.obtenerUsuario()?.id_empresa ?? undefined;
+  }
+
+  get puedeCrear(): boolean {
+    return this.authService.hasPermission('productos.crear');
+  }
+
+  get puedeEditar(): boolean {
+    return this.authService.hasPermission('productos.editar');
+  }
+
+  get puedeEliminar(): boolean {
+    return this.authService.hasPermission('productos.eliminar');
   }
 
   // Métricas computadas
@@ -146,11 +164,25 @@ export class ProductosComponent implements OnInit {
   ngOnInit(): void {
     if (!isPlatformBrowser(this.platformId)) return;
     this.cargarDatosIniciales();
+
+    this.authService.companyChanged$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(empresa => {
+        if (this.esSuperAdmin) {
+          const nuevoFiltro = empresa ? empresa.id_empresa : null;
+          if (this.filtroEmpresa !== nuevoFiltro) {
+            this.filtroEmpresa = nuevoFiltro;
+            this.cargarProductos();
+            this.cargarCatalogosActivos(this.filtroEmpresa || undefined);
+          }
+        }
+      });
   }
 
   cargarDatosIniciales(): void {
     if (this.esSuperAdmin) {
       this.cargarEmpresas();
+      this.filtroEmpresa = this.authService.getEffectiveCompanyId();
     } else {
       this.filtroEmpresa = this.userCompanyId || null;
     }
@@ -168,6 +200,16 @@ export class ProductosComponent implements OnInit {
   }
 
   onFiltroEmpresaChange(): void {
+    if (this.esSuperAdmin) {
+      if (this.filtroEmpresa) {
+        const emp = this.empresas.find(e => e.id_empresa === Number(this.filtroEmpresa));
+        if (emp && emp.id_empresa) {
+          this.authService.setSelectedCompany({ id_empresa: emp.id_empresa, nombre_empresa: emp.nombre_empresa });
+        }
+      } else {
+        this.authService.setSelectedCompany(null);
+      }
+    }
     this.cargarProductos();
     this.cargarCatalogosActivos(this.filtroEmpresa || undefined);
   }
@@ -289,7 +331,10 @@ export class ProductosComponent implements OnInit {
           activo: p.activo,
           tallas_seleccionadas: tallasIds,
           colores_seleccionados: coloresIds,
-          imagenes: p.imagenes || []
+          imagenes: p.imagenes || [],
+          tiene_ra: !!p.tiene_ra,
+          tipo_prenda_ra: p.tipo_prenda_ra || 'TOP',
+          modelo_2d_url: p.modelo_2d_url || ''
         };
 
         this.mostrarModal = true;
@@ -305,6 +350,7 @@ export class ProductosComponent implements OnInit {
   cerrarModal(): void {
     this.mostrarModal = false;
     this.subiendoImagen = false;
+    this.subiendoFoto2D = false;
     this.productoForm = this.getFormVacio();
   }
 
@@ -349,7 +395,10 @@ export class ProductosComponent implements OnInit {
         genero: this.productoForm.genero,
         activo: this.productoForm.activo,
         tallas_ids: this.productoForm.tallas_seleccionadas,
-        colores_ids: this.productoForm.colores_seleccionados
+        colores_ids: this.productoForm.colores_seleccionados,
+        tiene_ra: !!this.productoForm.tiene_ra,
+        tipo_prenda_ra: this.productoForm.tiene_ra ? this.productoForm.tipo_prenda_ra : undefined,
+        modelo_2d_url: this.productoForm.tiene_ra ? (this.productoForm.modelo_2d_url || undefined) : undefined
       };
 
       this.productosService.actualizarProducto(this.productoForm.id_producto, payload).subscribe({
@@ -384,7 +433,10 @@ export class ProductosComponent implements OnInit {
           imagen_url: img.imagen_url,
           public_id: img.public_id,
           es_principal: img.es_principal
-        }))
+        })),
+        tiene_ra: !!this.productoForm.tiene_ra,
+        tipo_prenda_ra: this.productoForm.tiene_ra ? this.productoForm.tipo_prenda_ra : undefined,
+        modelo_2d_url: this.productoForm.tiene_ra ? (this.productoForm.modelo_2d_url || undefined) : undefined
       };
 
       this.productosService.crearProducto(payload).subscribe({
@@ -703,6 +755,46 @@ export class ProductosComponent implements OnInit {
   }
 
   // ==============================================================================
+  // GESTIÓN VESTIDOR VIRTUAL RA (M14)
+  // ==============================================================================
+
+  subirFoto2D(event: any): void {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const tiposPermitidos = ['image/png', 'image/webp', 'image/jpeg', 'image/jpg'];
+    if (!tiposPermitidos.includes(file.type)) {
+      this.mostrarAlerta('Se recomienda subir una imagen PNG o WEBP con fondo transparente para el vestidor.', 'info');
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      this.mostrarAlerta('La imagen supera el límite permitido de 10 MB.', 'error');
+      event.target.value = '';
+      return;
+    }
+
+    this.subiendoFoto2D = true;
+    this.productosService.subirImagenCloudinary(file).subscribe({
+      next: (res) => {
+        this.productoForm.modelo_2d_url = res.data.imagen_url;
+        this.productoForm.tiene_ra = true;
+        this.subiendoFoto2D = false;
+        this.mostrarAlerta('Foto 2D transparente subida exitosamente a Cloudinary.', 'exito');
+        event.target.value = '';
+      },
+      error: (err) => {
+        this.mostrarAlerta(err.error?.detail || 'Error al subir foto 2D a Cloudinary.', 'error');
+        this.subiendoFoto2D = false;
+        event.target.value = '';
+      }
+    });
+  }
+
+  eliminarFoto2D(): void {
+    this.productoForm.modelo_2d_url = '';
+  }
+
+  // ==============================================================================
   // HELPERS
   // ==============================================================================
 
@@ -740,7 +832,10 @@ export class ProductosComponent implements OnInit {
       activo: true,
       tallas_seleccionadas: [] as number[],
       colores_seleccionados: [] as number[],
-      imagenes: [] as ImagenProducto[]
+      imagenes: [] as ImagenProducto[],
+      tiene_ra: false,
+      tipo_prenda_ra: 'TOP',
+      modelo_2d_url: ''
     };
   }
 }

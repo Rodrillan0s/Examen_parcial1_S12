@@ -200,8 +200,10 @@
   </div>
 
   <!-- MODAL DE DETALLE COMPLETO -->
-  <div *ngIf="mostrarModalDetalle && reservaDetalle" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 dark:bg-zinc-950/85 backdrop-blur-md animate-fade-in">
-    <div class="relative w-full max-w-xl rounded-3xl bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 p-6 sm:p-8 shadow-2xl space-y-6 text-zinc-900 dark:text-white max-h-[90vh] overflow-y-auto">
+  <div *ngIf="mostrarModalDetalle && reservaDetalle" class="fixed inset-0 z-50 overflow-y-auto bg-black/70 dark:bg-zinc-950/85 backdrop-blur-md animate-fade-in">
+    <div class="flex min-h-full items-center justify-center p-3 sm:p-6 text-center">
+      <div (click)="cerrarDetalle()" class="fixed inset-0 -z-10 cursor-pointer"></div>
+      <div class="relative w-full max-w-xl max-h-[calc(100vh-2.5rem)] rounded-3xl bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 p-6 sm:p-8 shadow-2xl space-y-6 text-zinc-900 dark:text-white overflow-y-auto text-left animate-slide-up">
       
       <div class="flex items-center justify-between border-b border-stone-200 dark:border-zinc-800 pb-4">
         <div>
@@ -271,6 +273,7 @@
 
     </div>
   </div>
+</div>
 
   <!-- MODAL DE CONFIRMACIÓN DE CANCELACIÓN -->
   <div *ngIf="mostrarModalCancelar && reservaACancelar" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 dark:bg-zinc-950/90 backdrop-blur-md animate-fade-in">

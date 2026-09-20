@@ -6,11 +6,20 @@ import { NavbarComponent } from './components/navbar/navbar';
 import { FooterComponent } from './components/footer/footer';
 import { AuthModalComponent } from './components/auth-modal/auth-modal';
 import { CarritoDrawerComponent } from './components/carrito-drawer/carrito-drawer';
+import { AssistantFloatingComponent } from './components/assistant/assistant-floating';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, NavbarComponent, FooterComponent, AuthModalComponent, CarritoDrawerComponent],
+  imports: [
+    CommonModule, 
+    RouterOutlet, 
+    NavbarComponent, 
+    FooterComponent, 
+    AuthModalComponent, 
+    CarritoDrawerComponent,
+    AssistantFloatingComponent
+  ],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })

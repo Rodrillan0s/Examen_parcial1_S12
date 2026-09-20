@@ -74,7 +74,10 @@ def listar_productos(
                     p.imagen_url
                 ) AS imagen_principal,
                 (SELECT COUNT(*) FROM {schema}.t_producto_imagen img WHERE img.id_producto = p.id_producto) AS total_imagenes,
-                (SELECT COUNT(*) FROM {schema}.t_producto_talla_color ptc WHERE ptc.id_producto = p.id_producto AND ptc.activo = TRUE) AS total_variantes
+                (SELECT COUNT(*) FROM {schema}.t_producto_talla_color ptc WHERE ptc.id_producto = p.id_producto AND ptc.activo = TRUE) AS total_variantes,
+                COALESCE(p.tiene_ra, FALSE) AS tiene_ra,
+                p.tipo_prenda_ra,
+                p.modelo_2d_url
             FROM {schema}.t_producto p
             LEFT JOIN {schema}.t_categoria c ON p.id_categoria = c.id_categoria
             LEFT JOIN {schema}.empresa e ON p.id_empresa = e.id_empresa
@@ -107,7 +110,10 @@ def listar_productos(
                 "updated_at": r[16].isoformat() if r[16] else None,
                 "imagen_principal": r[17] or "",
                 "total_imagenes": int(r[18]),
-                "total_variantes": int(r[19])
+                "total_variantes": int(r[19]),
+                "tiene_ra": bool(r[20]),
+                "tipo_prenda_ra": r[21],
+                "modelo_2d_url": r[22]
             })
         return resultado
     finally:
@@ -147,7 +153,10 @@ def obtener_producto_por_id(id_producto: int, id_empresa: Optional[int] = None) 
                 p.estado,
                 p.fecha_registro,
                 p.updated_at,
-                p.imagen_url
+                p.imagen_url,
+                COALESCE(p.tiene_ra, FALSE) AS tiene_ra,
+                p.tipo_prenda_ra,
+                p.modelo_2d_url
             FROM {schema}.t_producto p
             LEFT JOIN {schema}.t_categoria c ON p.id_categoria = c.id_categoria
             LEFT JOIN {schema}.empresa e ON p.id_empresa = e.id_empresa
@@ -245,7 +254,10 @@ def obtener_producto_por_id(id_producto: int, id_empresa: Optional[int] = None) 
             "updated_at": r[16].isoformat() if r[16] else None,
             "imagen_principal": portada,
             "imagenes": imagenes,
-            "variantes": variantes
+            "variantes": variantes,
+            "tiene_ra": bool(r[18]),
+            "tipo_prenda_ra": r[19],
+            "modelo_2d_url": r[20]
         }
     finally:
         db.close_connection()
@@ -289,7 +301,10 @@ def crear_producto(
     coleccion: Optional[str] = None,
     marca: str = "Aurora Atelier",
     genero: str = "Femenino",
-    activo: bool = True
+    activo: bool = True,
+    tiene_ra: bool = False,
+    tipo_prenda_ra: Optional[str] = None,
+    modelo_2d_url: Optional[str] = None
 ) -> int:
     """
     Crea el producto base en t_producto y retorna su id_producto.
@@ -302,16 +317,17 @@ def crear_producto(
             INSERT INTO {schema}.t_producto (
                 id_empresa, id_categoria, nombre, descripcion, precio,
                 codigo_producto, temporada, coleccion, marca, genero,
-                activo, estado, fecha_registro, updated_at
+                activo, estado, tiene_ra, tipo_prenda_ra, modelo_2d_url,
+                fecha_registro, updated_at
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
             RETURNING id_producto;
         """
         params = (
             id_empresa, id_categoria, nombre.strip(), descripcion.strip(), precio,
             codigo_producto, temporada.strip() if temporada else None,
             coleccion.strip() if coleccion else None, marca, genero,
-            activo, activo
+            activo, activo, bool(tiene_ra), tipo_prenda_ra, modelo_2d_url
         )
         res = db.execute_query(query, params, fetchone=True, commit=True)
         id_prod = res[0]
@@ -340,7 +356,10 @@ def actualizar_producto(
     coleccion: Optional[str] = None,
     marca: str = "Aurora Atelier",
     genero: str = "Femenino",
-    activo: bool = True
+    activo: bool = True,
+    tiene_ra: bool = False,
+    tipo_prenda_ra: Optional[str] = None,
+    modelo_2d_url: Optional[str] = None
 ) -> bool:
     """
     Actualiza la información general del producto.
@@ -363,6 +382,9 @@ def actualizar_producto(
                 genero = %s,
                 activo = %s,
                 estado = %s,
+                tiene_ra = %s,
+                tipo_prenda_ra = %s,
+                modelo_2d_url = %s,
                 updated_at = NOW()
             WHERE id_producto = %s;
         """
@@ -370,7 +392,8 @@ def actualizar_producto(
             id_categoria, nombre.strip(), descripcion.strip(), precio,
             codigo_producto, temporada.strip() if temporada else None,
             coleccion.strip() if coleccion else None, marca, genero,
-            activo, activo, id_producto
+            activo, activo, bool(tiene_ra), tipo_prenda_ra, modelo_2d_url,
+            id_producto
         )
         filas = db.execute_query(query, params, commit=True)
         return filas > 0

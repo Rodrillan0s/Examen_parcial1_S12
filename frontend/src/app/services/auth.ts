@@ -1,7 +1,14 @@
 import { Injectable, inject, PLATFORM_ID, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { isPlatformBrowser } from '@angular/common';
+import { BehaviorSubject, Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
+
+export interface EmpresaSeleccionada {
+  id_empresa: number;
+  nombre_empresa: string;
+  sucursales?: any[];
+}
 
 export interface Usuario {
   id_usuario?: number;
@@ -13,8 +20,13 @@ export interface Usuario {
   telefono?: string;
   id_rol?: number;
   nombre_rol?: string;
-  id_empresa?: number;
+  id_empresa?: number | null;
   nombre_empresa?: string;
+  id_sucursal?: number | null;
+  nombre_sucursal?: string;
+  sucursal_nombre?: string;
+  sucursales_detalle?: any[];
+  alcance?: 'PLATAFORMA' | 'EMPRESA' | 'SUCURSAL';
   roles?: string[];
   permisos?: string[];
   sucursales?: number[];
@@ -47,12 +59,10 @@ export class AuthService {
     nombre_dispositivo?: string;
   } | null>(null);
 
-  // Sucursal seleccionada (Multi-tenant)
-  activeBranch = signal<{ id: number; nombre: string; ciudad: string }>({
-    id: 1,
-    nombre: 'Sucursal Central Equipetrol',
-    ciudad: 'Santa Cruz'
-  });
+  // Empresa seleccionada (Multi-tenant)
+  selectedCompany = signal<EmpresaSeleccionada | null>(this.obtenerEmpresaInicial());
+  private companyChangedSubject = new BehaviorSubject<EmpresaSeleccionada | null>(this.obtenerEmpresaInicial());
+  public companyChanged$: Observable<EmpresaSeleccionada | null> = this.companyChangedSubject.asObservable();
 
   public branchList = [
     { id: 1, nombre: 'Sucursal Central Equipetrol', ciudad: 'Santa Cruz' },
@@ -60,10 +70,79 @@ export class AuthService {
     { id: 3, nombre: 'Sucursal Cochabamba Jardin', ciudad: 'Cochabamba' }
   ];
 
+  private obtenerSucursalActivaInicial(): { id: number; nombre: string; ciudad: string } | null {
+    const u = this.obtenerUsuarioInicial();
+    if (u) {
+      const sucursalesDetalle = (u as any).sucursales_detalle;
+      if (Array.isArray(sucursalesDetalle) && sucursalesDetalle.length > 0) {
+        const s = sucursalesDetalle[0];
+        return {
+          id: s.id || s.id_sucursal,
+          nombre: s.nombre,
+          ciudad: s.ciudad || ''
+        };
+      }
+      if (Array.isArray(u.sucursales) && u.sucursales.length > 0) {
+        const branchId = u.sucursales[0];
+        const found = this.branchList.find(b => b.id === branchId);
+        if (found) return found;
+        return {
+          id: branchId,
+          nombre: u.nombre_sucursal || `Sucursal ${branchId}`,
+          ciudad: ''
+        };
+      }
+      if (u.id_sucursal) {
+        return {
+          id: u.id_sucursal,
+          nombre: u.sucursal_nombre || u.nombre_sucursal || `Sucursal ${u.id_sucursal}`,
+          ciudad: ''
+        };
+      }
+    }
+    if (isPlatformBrowser(this.platformId)) {
+      const stored = localStorage.getItem('aurora_selected_branch');
+      if (stored) {
+        try {
+          return JSON.parse(stored);
+        } catch {
+          // ignore
+        }
+      }
+    }
+    return null;
+  }
+
+  // Sucursal seleccionada (Multi-tenant)
+  activeBranch = signal<{ id: number; nombre: string; ciudad: string } | null>(this.obtenerSucursalActivaInicial());
+  private branchChangedSubject = new BehaviorSubject<{ id: number; nombre: string; ciudad: string } | null>(this.obtenerSucursalActivaInicial());
+  public branchChanged$: Observable<{ id: number; nombre: string; ciudad: string } | null> = this.branchChangedSubject.asObservable();
+
   private obtenerUsuarioInicial(): Usuario | null {
     if (isPlatformBrowser(this.platformId)) {
       const u = localStorage.getItem('usuario');
       return u ? JSON.parse(u) : null;
+    }
+    return null;
+  }
+
+  private obtenerEmpresaInicial(): EmpresaSeleccionada | null {
+    const u = this.obtenerUsuarioInicial();
+    if (u && u.id_empresa && u.id_empresa > 0) {
+      return {
+        id_empresa: u.id_empresa,
+        nombre_empresa: u.nombre_empresa || 'Mi Empresa'
+      };
+    }
+    if (isPlatformBrowser(this.platformId)) {
+      const stored = localStorage.getItem('aurora_selected_company');
+      if (stored) {
+        try {
+          return JSON.parse(stored);
+        } catch {
+          return null;
+        }
+      }
     }
     return null;
   }
@@ -205,6 +284,37 @@ export class AuthService {
     this.permissions.set(usuario.permisos || []);
     this.roles.set(usuario.roles || []);
     this.branches.set(usuario.sucursales || []);
+
+    if (usuario.id_empresa && usuario.id_empresa > 0) {
+      this.setSelectedCompany({
+        id_empresa: usuario.id_empresa,
+        nombre_empresa: usuario.nombre_empresa || 'Mi Empresa'
+      });
+    }
+
+    if (usuario.sucursales && usuario.sucursales.length > 0) {
+      const branchId = usuario.sucursales[0];
+      const detalle = (usuario as any).sucursales_detalle?.find((d: any) => d.id === branchId || d.id_sucursal === branchId);
+      if (detalle) {
+        this.setBranch({
+          id: detalle.id || detalle.id_sucursal,
+          nombre: detalle.nombre,
+          ciudad: detalle.ciudad || ''
+        });
+      } else {
+        const found = this.branchList.find(b => b.id === branchId);
+        if (found) {
+          this.setBranch(found);
+        } else {
+          this.setBranch({
+            id: branchId,
+            nombre: usuario.nombre_sucursal || `Sucursal ${branchId}`,
+            ciudad: ''
+          });
+        }
+      }
+    }
+
     this.closeAuthModal();
   }
 
@@ -212,11 +322,17 @@ export class AuthService {
     if (isPlatformBrowser(this.platformId)) {
       localStorage.removeItem('token');
       localStorage.removeItem('usuario');
+      localStorage.removeItem('aurora_selected_company');
+      localStorage.removeItem('aurora_selected_branch');
     }
     this.currentUser.set(null);
     this.permissions.set([]);
     this.roles.set([]);
     this.branches.set([]);
+    this.selectedCompany.set(null);
+    this.companyChangedSubject.next(null);
+    this.activeBranch.set(null);
+    this.branchChangedSubject.next(null);
     
     // Force a full reload to clear any remaining in-memory state in the SPA
     if (isPlatformBrowser(this.platformId)) {
@@ -265,8 +381,8 @@ export class AuthService {
     const roles = (user.roles || []).map(r => r.toUpperCase());
     if (rol === 'ADMINISTRADOR' || user.id_rol === 1 || roles.includes('ADMINISTRADOR')) return false;
     if (rol === 'ADMINISTRADOR_TIENDA' || user.id_rol === 3 || roles.includes('ADMINISTRADOR_TIENDA')) return false;
-    if (rol === 'ENCARGADO' || rol === 'ENCARGADO_SUCURSAL' || user.id_rol === 4) return false;
-    if (rol === 'EMPLEADO' || rol === 'CAJERO' || user.id_rol === 5) return false;
+    if (rol === 'ENCARGADO' || rol === 'ENCARGADO_SUCURSAL' || user.id_rol === 4 || roles.includes('ENCARGADO') || roles.includes('ENCARGADO_SUCURSAL')) return false;
+    if (rol === 'EMPLEADO' || rol === 'CAJERO' || user.id_rol === 5 || roles.includes('CAJERO') || roles.includes('EMPLEADO')) return false;
     return rol === 'CLIENTE' || user.id_rol === 2 || roles.includes('CLIENTE');
   }
 
@@ -279,8 +395,8 @@ export class AuthService {
     if (rol === 'ADMINISTRADOR' || user.id_rol === 1 || roles.includes('ADMINISTRADOR')) return true;
     if (rol === 'ADMINISTRADOR_TIENDA' || user.id_rol === 3 || roles.includes('ADMINISTRADOR_TIENDA')) return true;
     if (rol === 'ENCARGADO' || rol === 'ENCARGADO_SUCURSAL' || user.id_rol === 4 || roles.includes('ENCARGADO')) return true;
-    if (rol === 'EMPLEADO' || rol === 'CAJERO' || user.id_rol === 5 || roles.includes('EMPLEADO')) return true;
-    if (this.hasPermission('admin.acceder')) return true;
+    if (rol === 'EMPLEADO' || rol === 'CAJERO' || user.id_rol === 5 || roles.includes('EMPLEADO') || roles.includes('CAJERO')) return true;
+    if (this.hasPermission('admin.acceder') || this.hasPermission('ventas.crear')) return true;
     return false;
   }
 
@@ -288,7 +404,8 @@ export class AuthService {
     const user = this.obtenerUsuario();
     if (!user) return 'INVITADO';
     if (user.nombre_rol) return user.nombre_rol;
-    return user.id_rol === 2 ? 'CLIENTE' : 'PERSONAL';
+    if (user.roles && user.roles.length > 0) return user.roles[0];
+    return user.id_rol === 2 ? 'CLIENTE' : (user.id_rol === 5 ? 'CAJERO' : 'PERSONAL');
   }
 
   // --- MÉTODOS DE DETECCIÓN DE NIVEL DE ACCESO Y ALCANCE (SCOPE) ---
@@ -299,17 +416,40 @@ export class AuthService {
     
     const rol = (user.nombre_rol || '').toUpperCase();
     const rolesList = (user.roles || []).map(r => r.toUpperCase());
+    const idRol = user.id_rol;
 
-    if (rol === 'ADMINISTRADOR' || user.id_rol === 1 || rolesList.includes('ADMINISTRADOR')) {
-      return 'PLATAFORMA';
-    }
-    if (rol === 'ADMINISTRADOR_TIENDA' || rolesList.includes('ADMINISTRADOR_TIENDA')) {
-      return 'EMPRESA';
-    }
-    if (rol === 'ENCARGADO_SUCURSAL' || rol === 'CAJERO' || rolesList.includes('ENCARGADO_SUCURSAL') || rolesList.includes('CAJERO')) {
+    // 1. Cajero / Empleado operativo SIEMPRE es SUCURSAL
+    if (idRol === 5 || rol === 'CAJERO' || rol === 'EMPLEADO' || rolesList.includes('CAJERO') || rolesList.includes('EMPLEADO')) {
       return 'SUCURSAL';
     }
-    return user.id_empresa ? 'EMPRESA' : 'PLATAFORMA';
+
+    // 2. Encargado de sucursal SIEMPRE es SUCURSAL
+    if (idRol === 4 || rol === 'ENCARGADO' || rol === 'ENCARGADO_SUCURSAL' || rolesList.includes('ENCARGADO') || rolesList.includes('ENCARGADO_SUCURSAL')) {
+      return 'SUCURSAL';
+    }
+
+    // 3. Superadministrador de plataforma (sin empresa fija asignada)
+    if ((idRol === 1 || rol === 'ADMINISTRADOR' || rolesList.includes('ADMINISTRADOR') || rolesList.includes('SUPERADMIN')) && (!user.id_empresa || user.id_empresa === 0)) {
+      return 'PLATAFORMA';
+    }
+
+    // 4. Si el backend provee claim de alcance explícito:
+    if (user.alcance === 'SUCURSAL') {
+      return 'SUCURSAL';
+    }
+    if (user.alcance === 'EMPRESA') {
+      return 'EMPRESA';
+    }
+    if (user.alcance === 'PLATAFORMA' && (!user.id_empresa || user.id_empresa === 0)) {
+      return 'PLATAFORMA';
+    }
+
+    // 5. Administrador de tienda con empresa asignada
+    if (idRol === 3 || rol === 'ADMINISTRADOR_TIENDA' || rolesList.includes('ADMINISTRADOR_TIENDA') || (user.id_empresa && user.id_empresa > 0)) {
+      return 'EMPRESA';
+    }
+
+    return 'PLATAFORMA';
   }
 
   isGlobalAdmin(): boolean {
@@ -317,11 +457,64 @@ export class AuthService {
   }
 
   isStoreAdmin(): boolean {
-    return this.getScopeLevel() === 'EMPRESA';
+    const user = this.obtenerUsuario();
+    if (!user) return false;
+    if (this.isCashier() || this.isBranchManager()) return false;
+    const rol = (user.nombre_rol || '').toUpperCase();
+    const rolesList = (user.roles || []).map(r => r.toUpperCase());
+    return user.id_rol === 3 || rol === 'ADMINISTRADOR_TIENDA' || rolesList.includes('ADMINISTRADOR_TIENDA') ||
+           ((user.id_rol === 1 || rol === 'ADMINISTRADOR' || rolesList.includes('ADMINISTRADOR')) && !!user.id_empresa);
   }
 
   isBranchManager(): boolean {
-    return this.getScopeLevel() === 'SUCURSAL';
+    const user = this.obtenerUsuario();
+    if (!user) return false;
+    const rol = (user.nombre_rol || '').toUpperCase();
+    const rolesList = (user.roles || []).map(r => r.toUpperCase());
+    return user.id_rol === 4 || rol === 'ENCARGADO_SUCURSAL' || rol === 'ENCARGADO' || rolesList.includes('ENCARGADO_SUCURSAL') || rolesList.includes('ENCARGADO');
+  }
+
+  isCashier(): boolean {
+    const user = this.obtenerUsuario();
+    if (!user) return false;
+    const rol = (user.nombre_rol || '').toUpperCase();
+    const rolesList = (user.roles || []).map(r => r.toUpperCase());
+    return user.id_rol === 5 || rol === 'CAJERO' || rol === 'EMPLEADO' || rolesList.includes('CAJERO') || rolesList.includes('EMPLEADO');
+  }
+
+  getDefaultRouteForUser(usuario?: Usuario | null): string {
+    const u = usuario || this.obtenerUsuario();
+    if (!u) return '/';
+
+    const rol = (u.nombre_rol || '').toUpperCase();
+    const rolesList = (u.roles || []).map(r => r.toUpperCase());
+
+    // Cliente retail
+    if (u.id_rol === 2 || rol === 'CLIENTE' || rolesList.includes('CLIENTE')) {
+      return '/';
+    }
+
+    // Cajero y operador POS
+    if (u.id_rol === 5 || rol === 'CAJERO' || rol === 'EMPLEADO' || rolesList.includes('CAJERO') || rolesList.includes('EMPLEADO')) {
+      return '/admin/caja';
+    }
+
+    // Encargado de sucursal
+    if (u.id_rol === 4 || rol === 'ENCARGADO' || rol === 'ENCARGADO_SUCURSAL' || rolesList.includes('ENCARGADO') || rolesList.includes('ENCARGADO_SUCURSAL')) {
+      return '/admin/caja';
+    }
+
+    // Administrador (Global o de Tienda)
+    if (this.hasPermission('reportes.ver') || u.id_rol === 1 || u.id_rol === 3 || rol === 'ADMINISTRADOR' || rol === 'ADMINISTRADOR_TIENDA') {
+      return '/admin/kpis';
+    }
+
+    // Operador con permiso de ventas
+    if (this.hasPermission('ventas.crear')) {
+      return '/admin/caja';
+    }
+
+    return '/admin/caja';
   }
 
   getUserCompanyName(): string {
@@ -329,46 +522,83 @@ export class AuthService {
     if (user && user.nombre_empresa && user.nombre_empresa.trim().length > 0) {
       return user.nombre_empresa;
     }
-    return 'AURA Atelier';
+    const sel = this.selectedCompany();
+    if (sel && sel.nombre_empresa) {
+      return sel.nombre_empresa;
+    }
+    return 'Aurora Store';
   }
 
   getUserBranchName(): string {
+    const user = this.obtenerUsuario();
+    if (user && user.nombre_sucursal && user.nombre_sucursal.trim().length > 0) {
+      return user.nombre_sucursal;
+    }
+    if (user && user.sucursal_nombre && user.sucursal_nombre.trim().length > 0) {
+      return user.sucursal_nombre;
+    }
+    const sucursalesDetalle = (user as any)?.sucursales_detalle;
+    if (Array.isArray(sucursalesDetalle) && sucursalesDetalle.length > 0 && sucursalesDetalle[0].nombre) {
+      return sucursalesDetalle[0].nombre;
+    }
     const active = this.activeBranch();
     if (active && active.nombre) return active.nombre;
-    return 'Sucursal Central Equipetrol';
+    return 'Sucursal Principal';
   }
 
   getUserScopeContext() {
     const scope = this.getScopeLevel();
     const empresa = this.getUserCompanyName();
     const sucursal = this.getUserBranchName();
+    const user = this.obtenerUsuario();
+    const rol = (user?.nombre_rol || 'Personal').toUpperCase();
 
     if (scope === 'PLATAFORMA') {
       return {
         scope,
-        headerTitle: 'AURA · Administración de plataforma',
-        sidebarTitle: 'AURA',
-        sidebarSubtitle: 'Administración de plataforma',
-        badgeText: 'GLOBAL PLATFORM',
-        badgeClass: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
+        headerTitle: 'Aurora Store',
+        headerSubtitle: 'Plataforma Global',
+        sidebarTitle: 'Aurora Store',
+        sidebarSubtitle: 'Administración Global',
+        badgeText: 'PLATAFORMA',
+        badgeClass: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
+        canSelectCompany: true,
+        canSelectBranch: true,
+        isGlobalAdmin: true,
+        isStoreAdmin: false,
+        isBranchLevel: false
       };
     } else if (scope === 'EMPRESA') {
       return {
         scope,
-        headerTitle: `AURA · ${empresa}`,
+        headerTitle: 'Aurora Store',
+        headerSubtitle: `Empresa: ${empresa}`,
         sidebarTitle: empresa,
-        sidebarSubtitle: 'Gestión de Empresa',
-        badgeText: 'MI EMPRESA',
-        badgeClass: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+        sidebarSubtitle: 'Gestión de Tienda',
+        badgeText: 'EMPRESA',
+        badgeClass: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+        canSelectCompany: false, // NO dropdown para cambiar de empresa
+        canSelectBranch: true,   // Solo sucursales autorizadas de su empresa
+        isGlobalAdmin: false,
+        isStoreAdmin: true,
+        isBranchLevel: false
       };
     } else {
+      // SUCURSAL (Encargado de Sucursal o Cajero)
+      const sub = this.isCashier() ? `Caja · ${sucursal}` : `Sucursal: ${sucursal}`;
       return {
         scope,
-        headerTitle: `AURA · ${empresa} · ${sucursal}`,
+        headerTitle: 'Aurora Store',
+        headerSubtitle: `${empresa} · ${sucursal}`,
         sidebarTitle: sucursal,
-        sidebarSubtitle: `Sucursal · ${empresa}`,
-        badgeText: 'MI SUCURSAL',
-        badgeClass: 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+        sidebarSubtitle: `${empresa} (${rol})`,
+        badgeText: this.isCashier() ? 'CAJA / POS' : 'SUCURSAL',
+        badgeClass: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+        canSelectCompany: false, // NO cambiar empresa
+        canSelectBranch: false,  // Fija a su sucursal autorizada
+        isGlobalAdmin: false,
+        isStoreAdmin: false,
+        isBranchLevel: true
       };
     }
   }
@@ -385,7 +615,81 @@ export class AuthService {
     this.isAuthModalOpen.set(false);
   }
 
-  setBranch(branch: { id: number; nombre: string; ciudad: string }) {
-    this.activeBranch.set(branch);
+  setBranch(branch: { id: number; nombre: string; ciudad?: string } | null) {
+    const scope = this.getScopeLevel();
+    if (scope === 'SUCURSAL') {
+      const fixed = this.obtenerSucursalActivaInicial();
+      this.activeBranch.set(fixed);
+      this.branchChangedSubject.next(fixed);
+      return;
+    }
+
+    const payload = branch ? {
+      id: branch.id,
+      nombre: branch.nombre,
+      ciudad: branch.ciudad || ''
+    } : null;
+
+    this.activeBranch.set(payload);
+    this.branchChangedSubject.next(payload);
+
+    if (isPlatformBrowser(this.platformId)) {
+      if (payload) {
+        localStorage.setItem('aurora_selected_branch', JSON.stringify(payload));
+      } else {
+        localStorage.removeItem('aurora_selected_branch');
+      }
+    }
+  }
+
+  setSelectedCompany(empresa: EmpresaSeleccionada | null) {
+    const user = this.obtenerUsuario();
+    // Roles de tienda quedan anclados a su propia empresa
+    if (user && user.id_empresa && user.id_empresa > 0) {
+      const fixed: EmpresaSeleccionada = {
+        id_empresa: user.id_empresa,
+        nombre_empresa: user.nombre_empresa || 'Mi Empresa'
+      };
+      this.selectedCompany.set(fixed);
+      this.companyChangedSubject.next(fixed);
+      return;
+    }
+
+    this.selectedCompany.set(empresa);
+    this.companyChangedSubject.next(empresa);
+
+    if (isPlatformBrowser(this.platformId)) {
+      if (empresa) {
+        localStorage.setItem('aurora_selected_company', JSON.stringify(empresa));
+      } else {
+        localStorage.removeItem('aurora_selected_company');
+      }
+    }
+
+    // Si la empresa provee sucursales, actualizamos la lista y fijamos la primera sucursal
+    if (empresa && Array.isArray(empresa.sucursales) && empresa.sucursales.length > 0) {
+      this.branchList = empresa.sucursales.map(s => ({
+        id: s.id || s.id_sucursal,
+        nombre: s.nombre,
+        ciudad: s.ciudad || ''
+      }));
+      this.setBranch(this.branchList[0]);
+    } else if (!empresa) {
+      this.setBranch(null);
+    }
+  }
+
+  getEffectiveCompanyId(): number | null {
+    const u = this.obtenerUsuario();
+    if (u && u.id_empresa && u.id_empresa > 0) {
+      return u.id_empresa;
+    }
+    return this.selectedCompany()?.id_empresa ?? null;
+  }
+
+  getEffectiveCompanyName(): string {
+    const effId = this.getEffectiveCompanyId();
+    if (!effId) return 'Todas las Empresas (Global)';
+    return this.selectedCompany()?.nombre_empresa || this.getUserCompanyName();
   }
 }

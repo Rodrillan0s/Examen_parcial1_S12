@@ -193,7 +193,10 @@ def crear_producto_service(datos: dict, token_data: dict, ip_cliente: str = "") 
         coleccion=datos.get("coleccion"),
         marca=datos.get("marca", "Aurora Atelier"),
         genero=datos.get("genero", "Femenino"),
-        activo=bool(datos.get("activo", True))
+        activo=bool(datos.get("activo", True)),
+        tiene_ra=bool(datos.get("tiene_ra", False)),
+        tipo_prenda_ra=datos.get("tipo_prenda_ra"),
+        modelo_2d_url=datos.get("modelo_2d_url")
     )
 
     # 6. Generar variantes si se especificaron tallas y colores
@@ -303,7 +306,10 @@ def actualizar_producto_service(
         coleccion=datos.get("coleccion"),
         marca=datos.get("marca", "Aurora Atelier"),
         genero=datos.get("genero", "Femenino"),
-        activo=activo
+        activo=activo,
+        tiene_ra=bool(datos.get("tiene_ra", False)),
+        tipo_prenda_ra=datos.get("tipo_prenda_ra"),
+        modelo_2d_url=datos.get("modelo_2d_url")
     )
 
     # 6. Sincronizar variantes si se enviaron listas
