@@ -1,6 +1,7 @@
 import { Component, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { AuthService, AuthTab } from '../../services/auth';
 
 @Component({
@@ -11,6 +12,7 @@ import { AuthService, AuthTab } from '../../services/auth';
 })
 export class AuthModalComponent {
   public authService = inject(AuthService);
+  private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
 
   // Formularios
@@ -139,6 +141,10 @@ export class AuthModalComponent {
           this.authService.authModalTab.set('verify');
         } else if (res.success) {
           this.authService.guardarSesion(res.token, res.usuario);
+          const target = this.authService.getDefaultRouteForUser(res.usuario);
+          if (!this.authService.esCliente()) {
+            this.router.navigateByUrl(target);
+          }
         }
         this.cdr.detectChanges();
       },
@@ -340,6 +346,10 @@ export class AuthModalComponent {
             next: (loginRes) => {
               if (loginRes.token) {
                 this.authService.guardarSesion(loginRes.token, loginRes.usuario);
+                const target = this.authService.getDefaultRouteForUser(loginRes.usuario);
+                if (!this.authService.esCliente()) {
+                  this.router.navigateByUrl(target);
+                }
               }
             }
           });

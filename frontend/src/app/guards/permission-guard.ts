@@ -31,14 +31,9 @@ export function permissionGuard(requiredPermissions: string | string[]): CanActi
     if (!tieneAcceso) {
       console.warn(`[PermissionGuard] Acceso denegado a '${state.url}'. Permisos requeridos:`, permissionsToCheck);
 
-      // Redirección contextual según el rol/alcance del usuario
-      if (authService.isCashier()) {
-        router.navigate(['/admin/caja']);
-      } else if (authService.hasPermission('reportes.ver') || authService.isStoreAdmin() || authService.isGlobalAdmin()) {
-        router.navigate(['/admin/kpis']);
-      } else {
-        router.navigate(['/admin/caja']);
-      }
+      // Redirección contextual inteligente según el rol/alcance del usuario
+      const destino = authService.getDefaultRouteForUser(usuario);
+      router.navigateByUrl(destino);
       return false;
     }
 

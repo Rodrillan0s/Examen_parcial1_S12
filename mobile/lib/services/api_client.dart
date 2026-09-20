@@ -1,37 +1,48 @@
-//api_client.dart
 import 'package:dio/dio.dart';
 import '../config/app_config.dart';
 import 'token_storage.dart';
 
 class ApiClient {
-  static final Dio dio = Dio(
-    BaseOptions(
-      baseUrl: AppConfig.apiBaseUrl,
-      connectTimeout: const Duration(seconds: 20),
-      receiveTimeout: const Duration(seconds: 20),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-    ),
-  )..interceptors.add(
+  static Dio? _dioInstance;
+
+  static Dio get dio {
+    _dioInstance ??= _createDio();
+    // Actualizar baseUrl si AppConfig cambió
+    _dioInstance!.options.baseUrl = AppConfig.apiBaseUrl;
+    return _dioInstance!;
+  }
+
+  static Dio _createDio() {
+    final dio = Dio(
+      BaseOptions(
+        baseUrl: AppConfig.apiBaseUrl,
+        connectTimeout: const Duration(seconds: 20),
+        receiveTimeout: const Duration(seconds: 20),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      ),
+    );
+
+    dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          // Inyectar el token automáticamente en CADA petición que hagas
           final token = await TokenStorage.getToken();
-          if (token != null) {
+          if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
           }
           return handler.next(options);
         },
         onError: (DioException e, handler) async {
-          // Si el token expira (401), aquí podrías forzar el cierre de sesión
           if (e.response?.statusCode == 401) {
             await TokenStorage.clearToken();
-            // TODO: Redirigir al LoginScreen
           }
           return handler.next(e);
         },
       ),
     );
+
+    return dio;
+  }
 }

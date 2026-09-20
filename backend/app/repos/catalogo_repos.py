@@ -446,7 +446,10 @@ def obtener_detalle_producto_publico(id_producto: int, id_empresa: Optional[int]
                 p.temporada,
                 p.coleccion,
                 p.fecha_registro,
-                p.updated_at
+                p.updated_at,
+                COALESCE(p.tiene_ra, FALSE) AS tiene_ra,
+                p.modelo_2d_url,
+                p.tipo_prenda_ra
             FROM {schema}.t_producto p
             LEFT JOIN {schema}.empresa e ON e.id_empresa = p.id_empresa
             LEFT JOIN {schema}.t_categoria c ON c.id_categoria = p.id_categoria
@@ -632,14 +635,147 @@ def obtener_detalle_producto_publico(id_producto: int, id_empresa: Optional[int]
             "sucursales_stock": sucursales_stock,
             "stock_total_general": stock_total_general,
             "hay_stock_disponible": stock_total_general > 0,
-            # Preparación para futuras fases:
+            # M14: Vestidor Virtual en Realidad Aumentada
+            "tiene_ra": bool(p_row[15]),
+            "modelo_2d_url": p_row[16],
+            "tipo_prenda_ra": p_row[17] or "TOP",
             "permite_reserva": True,
             "permite_compra": True,
-            "permite_vestidor_ra": tiene_modelo_ra,
+            "permite_vestidor_ra": bool(p_row[15]) or tiene_modelo_ra,
             "recursos_ra": {
+                "modelo_2d_url": p_row[16],
+                "tipo_prenda_ra": p_row[17] or "TOP",
                 "modelo_3d_url": modelo_3d_global,
                 "modelo_ar_url": modelo_ar_global
             }
+        }
+    finally:
+        db.close_connection()
+
+# ==============================================================================
+# M14 - VESTIDOR VIRTUAL REALIDAD AUMENTADA
+# ==============================================================================
+
+ORDEN_TALLAS = {'XXS': 0, 'XS': 1, 'S': 2, 'M': 3, 'L': 4, 'XL': 5, 'XXL': 6, '2XL': 6, '3XL': 7}
+
+def _ordenar_tallas(tallas: Optional[List[str]]) -> List[str]:
+    if not tallas:
+        return ['S', 'M', 'L']
+    def key_fn(t):
+        t_str = str(t).strip().upper()
+        if t_str in ORDEN_TALLAS:
+            return (0, ORDEN_TALLAS[t_str], t_str)
+        if t_str.isdigit():
+            return (1, int(t_str), t_str)
+        return (2, 0, t_str)
+    return sorted(list(set(str(t).strip() for t in tallas if t)), key=key_fn)
+
+def obtener_prendas_vestidor_ra(id_empresa: Optional[int] = None, tipo_prenda: Optional[str] = None) -> List[Dict[str, Any]]:
+    """
+    Retorna la lista de prendas activas compatibles con el Vestidor Virtual (M14),
+    incluyendo las tallas disponibles según inventario / variantes activas.
+    """
+    db = PostgreSQL()
+    db.create_connection()
+    try:
+        schema = _get_schema()
+        conds = ["p.activo = TRUE", "p.tiene_ra = TRUE"]
+        params: List[Any] = []
+
+        if id_empresa:
+            conds.append("p.id_empresa = %s")
+            params.append(id_empresa)
+
+        if tipo_prenda and tipo_prenda.upper() != 'TODAS':
+            conds.append("UPPER(p.tipo_prenda_ra) = %s")
+            params.append(tipo_prenda.upper())
+
+        where_clause = " AND ".join(conds)
+        q = f"""
+            SELECT 
+                p.id_producto,
+                p.nombre,
+                p.precio,
+                p.modelo_2d_url,
+                p.tipo_prenda_ra,
+                img.imagen_url AS imagen_preview,
+                COALESCE(
+                    (
+                        SELECT array_agg(DISTINCT t.nombre)
+                        FROM {schema}.t_producto_talla_color ptc
+                        JOIN {schema}.t_talla t ON ptc.id_talla = t.id_talla
+                        WHERE ptc.id_producto = p.id_producto AND ptc.activo = TRUE
+                    ),
+                    ARRAY['S', 'M', 'L']::varchar[]
+                ) AS tallas_disponibles
+            FROM {schema}.t_producto p
+            LEFT JOIN LATERAL (
+                SELECT imagen_url 
+                FROM {schema}.t_producto_imagen 
+                WHERE id_producto = p.id_producto 
+                ORDER BY es_principal DESC, orden ASC, id_imagen ASC 
+                LIMIT 1
+            ) img ON TRUE
+            WHERE {where_clause}
+            ORDER BY p.id_producto ASC;
+        """
+        rows = db.execute_query(q, tuple(params) if params else None, fetchall=True) or []
+        resultado = []
+        for r in rows:
+            resultado.append({
+                "id_producto": r[0],
+                "nombre": r[1],
+                "precio": float(r[2]) if r[2] is not None else 0.0,
+                "modelo_2d_url": r[3] or r[5],
+                "tipo_prenda_ra": r[4] or "TOP",
+                "imagen_preview": r[5] or r[3],
+                "tallas_disponibles": _ordenar_tallas(r[6])
+            })
+        return resultado
+    finally:
+        db.close_connection()
+
+def obtener_config_vestidor_producto(id_producto: int) -> Optional[Dict[str, Any]]:
+    """
+    Obtiene la configuración de vestidor virtual para una prenda específica,
+    incluyendo sus tallas disponibles.
+    """
+    db = PostgreSQL()
+    db.create_connection()
+    try:
+        schema = _get_schema()
+        q = f"""
+            SELECT 
+                p.id_producto,
+                p.nombre,
+                p.precio,
+                COALESCE(p.tiene_ra, FALSE) AS tiene_ra,
+                p.modelo_2d_url,
+                p.tipo_prenda_ra,
+                COALESCE(
+                    (
+                        SELECT array_agg(DISTINCT t.nombre)
+                        FROM {schema}.t_producto_talla_color ptc
+                        JOIN {schema}.t_talla t ON ptc.id_talla = t.id_talla
+                        WHERE ptc.id_producto = p.id_producto AND ptc.activo = TRUE
+                    ),
+                    ARRAY['S', 'M', 'L']::varchar[]
+                ) AS tallas_disponibles
+            FROM {schema}.t_producto p
+            WHERE p.id_producto = %s AND p.activo = TRUE
+            LIMIT 1;
+        """
+        r = db.execute_query(q, (id_producto,), fetchone=True)
+        if not r:
+            return None
+        return {
+            "id_producto": r[0],
+            "nombre": r[1],
+            "precio": float(r[2]) if r[2] is not None else 0.0,
+            "tiene_ra": bool(r[3]),
+            "modelo_2d_url": r[4],
+            "tipo_prenda_ra": r[5] or "TOP",
+            "tallas_disponibles": _ordenar_tallas(r[6])
         }
     finally:
         db.close_connection()

@@ -14,6 +14,7 @@ import { AuthService } from '../../services/auth';
 import { ThemeService } from '../../services/theme';
 import { NotificacionesService, Notificacion } from '../../services/notificaciones';
 import { KpisService, TenantDashboardItem } from '../../services/kpis';
+import { SucursalService } from '../../services/sucursales';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
@@ -28,6 +29,7 @@ export class AdminLayoutComponent implements OnInit {
   public authService            = inject(AuthService);
   private notificacionesService  = inject(NotificacionesService);
   private kpisService           = inject(KpisService);
+  private sucursalService       = inject(SucursalService);
   private router                = inject(Router);
   private platformId            = inject(PLATFORM_ID);
   private cdr                   = inject(ChangeDetectorRef);
@@ -51,6 +53,7 @@ export class AdminLayoutComponent implements OnInit {
   mostrarTenantDropdown: boolean = false;
   mostrarSucursalDropdown: boolean = false;
   cargandoTenants: boolean = false;
+  sucursalesDeEmpresa: Array<{ id: number; nombre: string; ciudad?: string }> = [];
 
   sucursalActiva: { id: number; nombre: string; ciudad?: string } | null = null;
 
@@ -63,22 +66,67 @@ export class AdminLayoutComponent implements OnInit {
 
   get sucursalesDisponibles(): Array<{ id: number; nombre: string; ciudad?: string }> {
     const scope = this.authService.getScopeLevel();
+    if (scope === 'SUCURSAL') {
+      const act = this.authService.activeBranch();
+      return act ? [act] : [];
+    }
+    if (this.sucursalesDeEmpresa.length > 0) {
+      return this.sucursalesDeEmpresa;
+    }
     if (scope === 'PLATAFORMA') {
       if (this.tiendaActiva && this.tiendaActiva.sucursales && this.tiendaActiva.sucursales.length > 0) {
         return this.tiendaActiva.sucursales;
       }
-      return this.authService.branchList;
     } else if (scope === 'EMPRESA') {
-      // Buscar la empresa del usuario
       const miEmpresa = this.tenants.find(t => t.id_empresa === this.usuarioActual?.id_empresa);
       if (miEmpresa && miEmpresa.sucursales && miEmpresa.sucursales.length > 0) {
         return miEmpresa.sucursales;
       }
-      return this.authService.branchList;
-    } else {
-      // SUCURSAL: solo la asignada
-      return [this.authService.activeBranch()];
     }
+    const act = this.authService.activeBranch();
+    return act ? [act] : [];
+  }
+
+  cargarSucursalesHeader(autoSelectFirst: boolean = false) {
+    const scope = this.authService.getScopeLevel();
+    if (scope === 'SUCURSAL') {
+      const br = this.authService.activeBranch();
+      this.sucursalesDeEmpresa = br ? [br] : [];
+      this.sucursalActiva = br;
+      return;
+    }
+    const empId = scope === 'EMPRESA' 
+      ? (this.usuarioActual?.id_empresa || undefined) 
+      : (this.tiendaActiva?.id_empresa || this.authService.selectedCompany()?.id_empresa || undefined);
+
+    this.sucursalService.listarSucursales(empId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res) => {
+          if (res && res.data) {
+            this.sucursalesDeEmpresa = res.data
+              .filter((s: any) => s.activo !== false)
+              .map((s: any) => ({
+                id: s.id_sucursal,
+                nombre: s.nombre,
+                ciudad: s.ciudad || ''
+              }));
+
+            const act = this.authService.activeBranch();
+            if (autoSelectFirst && this.sucursalesDeEmpresa.length > 0) {
+              this.seleccionarSucursal(this.sucursalesDeEmpresa[0], true);
+            } else if (this.sucursalesDeEmpresa.length > 0 && act && this.sucursalesDeEmpresa.some(s => s.id === act.id)) {
+              this.sucursalActiva = this.sucursalesDeEmpresa.find(s => s.id === act.id) || null;
+            } else if (this.sucursalesDeEmpresa.length > 0 && (scope === 'EMPRESA' || this.tiendaActiva)) {
+              this.seleccionarSucursal(this.sucursalesDeEmpresa[0], true);
+            } else if (this.sucursalesDeEmpresa.length === 0) {
+              this.seleccionarSucursal(null, true);
+            }
+            this.cdr.detectChanges();
+          }
+        },
+        error: (err) => console.warn('Error cargando sucursales para header:', err)
+      });
   }
 
   // ------------------------------------------------------------------
@@ -95,7 +143,17 @@ export class AdminLayoutComponent implements OnInit {
       return;
     }
 
+    // Si el usuario aterriza directamente en '/admin' o '/admin/', redirigir a su panel por defecto
+    const currentUrl = this.router.url.split('?')[0];
+    if (currentUrl === '/admin' || currentUrl === '/admin/') {
+      const target = this.authService.getDefaultRouteForUser(this.usuarioActual);
+      if (target !== '/admin') {
+        this.router.navigateByUrl(target);
+      }
+    }
+
     this.sucursalActiva = this.authService.activeBranch();
+    this.cargarSucursalesHeader();
     this.construirMenuPorPermisosYAlcance();
 
     // Sincronizar tema con el servicio global reactivo
@@ -130,17 +188,75 @@ export class AdminLayoutComponent implements OnInit {
         this.cdr.detectChanges();
       });
 
+    // Suscribirse a cambios en sucursal activa para sincronizar header
+    this.authService.branchChanged$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((branch) => {
+        this.sucursalActiva = branch;
+        this.cdr.detectChanges();
+      });
+
+    // Suscribirse a cambios de empresa para recargar las sucursales de dicha empresa
+    this.authService.companyChanged$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((emp) => {
+        if (this.scopeContext.canSelectCompany) {
+          if (emp) {
+            const match = this.tenants.find(t => t.id_empresa === emp.id_empresa);
+            if (match) this.tiendaActiva = match;
+          } else {
+            this.tiendaActiva = null;
+          }
+          this.cargarSucursalesHeader(true);
+        }
+      });
+
     this.cargarTenantsGlobales();
   }
 
   cargarTenantsGlobales() {
+    const scope = this.authService.getScopeLevel();
+
+    // Para Cajeros y usuarios de nivel sucursal/operativo, no consultar /api/kpis/tenants (evita 403)
+    if (scope !== 'PLATAFORMA' && !this.authService.isStoreAdmin()) {
+      this.cargandoTenants = false;
+      const idEmp = this.usuarioActual?.id_empresa;
+      const nomEmp = this.authService.getUserCompanyName();
+      if (idEmp) {
+        this.tiendaActiva = {
+          id_empresa: idEmp,
+          nombre_empresa: nomEmp,
+          razon_social: nomEmp,
+          nit: '',
+          ciudad: '',
+          direccion: '',
+          telefono: '',
+          correo: '',
+          logo: '',
+          estado: 'ACTIVO',
+          total_sucursales: 1,
+          total_productos: 0,
+          total_stock_disponible: 0,
+          total_ventas_cantidad: 0,
+          total_ingresos_historico: 0,
+          sucursales: [{
+            id: this.authService.activeBranch()?.id || 1,
+            nombre: this.authService.activeBranch()?.nombre || 'Sucursal Principal',
+            ciudad: this.authService.activeBranch()?.ciudad || '',
+            direccion: ''
+          }]
+        };
+      }
+      this.cdr.detectChanges();
+      return;
+    }
+
     this.cargandoTenants = true;
     this.kpisService.obtenerTenants().subscribe({
       next: (res) => {
         this.cargandoTenants = false;
         if (res.success && res.data) {
           this.tenants = res.data;
-          const scope = this.authService.getScopeLevel();
 
           if (scope === 'PLATAFORMA') {
             const actual = this.authService.selectedCompany() || this.kpisService.obtenerTiendaActual();
@@ -157,7 +273,7 @@ export class AdminLayoutComponent implements OnInit {
               }
             }
           } else {
-            // EMPRESA o SUCURSAL: fijar su empresa
+            // EMPRESA: fijar su empresa
             const idEmp = this.usuarioActual?.id_empresa;
             if (idEmp) {
               const miTienda = this.tenants.find(t => t.id_empresa === idEmp);
@@ -198,6 +314,7 @@ export class AdminLayoutComponent implements OnInit {
     this.tiendaActiva = tienda;
     this.mostrarTenantDropdown = false;
     this.sucursalActiva = null;
+    this.cargarSucursalesHeader(true);
     this.cdr.detectChanges();
   }
 
@@ -210,8 +327,8 @@ export class AdminLayoutComponent implements OnInit {
     }
   }
 
-  seleccionarSucursal(suc: { id: number; nombre: string; ciudad?: string } | null) {
-    if (!this.scopeContext.canSelectBranch) return;
+  seleccionarSucursal(suc: { id: number; nombre: string; ciudad?: string } | null, force: boolean = false) {
+    if (!force && !this.scopeContext.canSelectBranch && this.scopeContext.scope === 'SUCURSAL') return;
     this.sucursalActiva = suc;
     if (suc) {
       this.authService.setBranch({
@@ -219,6 +336,8 @@ export class AdminLayoutComponent implements OnInit {
         nombre: suc.nombre,
         ciudad: suc.ciudad || ''
       });
+    } else {
+      this.authService.setBranch(null);
     }
     this.mostrarSucursalDropdown = false;
     this.cdr.detectChanges();
@@ -236,13 +355,21 @@ export class AdminLayoutComponent implements OnInit {
     // Catálogo maestro de opciones del sistema Aurora Store
     const menuMaster = [
       {
+        titulo: 'VENTAS & POS',
+        icono: 'M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z',
+        expandido: true,
+        submenus: [
+          { nombre: 'Punto de Venta / Caja', ruta: '/admin/caja', permiso: 'ventas.crear' }
+        ]
+      },
+      {
         titulo: 'CATÁLOGO',
         icono: 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z',
         expandido: true,
         submenus: [
           { nombre: 'Categorías', ruta: '/admin/categorias', permiso: 'categorias.ver' },
           { nombre: 'Tallas y Colores', ruta: '/admin/tallas-colores', permiso: 'tallas.ver' },
-          { nombre: 'Productos', ruta: '/admin/productos', permiso: 'productos.ver' }
+          { nombre: 'Productos & Prendas', ruta: '/admin/productos', permiso: 'productos.ver' }
         ]
       },
       {
@@ -251,14 +378,6 @@ export class AdminLayoutComponent implements OnInit {
         expandido: true,
         submenus: [
           { nombre: 'Gestión de Inventario', ruta: '/admin/inventario', permiso: 'inventario.ver' }
-        ]
-      },
-      {
-        titulo: 'VENTAS & POS',
-        icono: 'M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z',
-        expandido: true,
-        submenus: [
-          { nombre: 'Punto de Venta / Caja', ruta: '/admin/caja', permiso: 'ventas.crear' }
         ]
       },
       {

@@ -233,6 +233,10 @@
                     <span *ngIf="prod.marca" class="text-[10px] text-zinc-400 px-1.5 py-0.5 rounded bg-zinc-800/80 border border-zinc-700/50">
                       {{ prod.marca }}
                     </span>
+                    <span *ngIf="prod.tiene_ra" class="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/40 text-amber-300">
+                      <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                      AR {{ prod.tipo_prenda_ra || 'TOP' }}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -462,6 +466,22 @@
           Galería de Fotos
           <span *ngIf="productoForm.imagenes.length > 0" class="px-1.5 py-0.2 rounded-full bg-zinc-800 text-zinc-200 text-[10px]">
             {{ productoForm.imagenes.length }}
+          </span>
+        </button>
+
+        <button 
+          type="button"
+          (click)="tabModalActiva = 'ar'"
+          [ngClass]="tabModalActiva === 'ar' 
+            ? 'bg-amber-500/15 text-amber-300 border-amber-500/30' 
+            : 'text-zinc-400 hover:text-zinc-200 border-transparent'"
+          class="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer">
+          <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+          Vestidor Virtual RA
+          <span *ngIf="productoForm.tiene_ra" class="px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold">
+            ACTIVO
           </span>
         </button>
       </div>
@@ -786,6 +806,233 @@
               Aún no has agregado fotos a esta prenda.
             </div>
           </div>
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- TAB 4: VESTIDOR VIRTUAL REALIDAD AUMENTADA (M14)                    -->
+        <!-- =================================================================== -->
+        <div *ngIf="tabModalActiva === 'ar'" class="space-y-6">
+
+          <!-- Banner Informativo M14 -->
+          <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-950/40 via-zinc-900 to-zinc-950 border border-amber-500/30 p-4">
+            <div class="flex items-start gap-3">
+              <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center shrink-0 text-amber-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                  <h4 class="text-sm font-bold text-zinc-100">Probador Virtual en Realidad Aumentada (M14)</h4>
+                  <span class="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    Cámara en Vivo
+                  </span>
+                </div>
+                <p class="text-xs text-zinc-400 mt-1 leading-relaxed">
+                  Permite a tus clientes probarse esta prenda en tiempo real sobre su cuerpo utilizando la cámara de la app móvil. Sube una fotografía 2D recortada (PNG o WebP con fondo transparente).
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Switch Habilitar RA -->
+          <div class="flex items-center justify-between p-4 rounded-2xl bg-zinc-950/70 border border-zinc-800">
+            <div>
+              <span class="text-sm font-semibold text-zinc-200 block">Habilitar Vestidor Virtual para esta Prenda</span>
+              <span class="text-xs text-zinc-500">Muestra el botón "Probar en Vestidor Virtual" en la app móvil.</span>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input 
+                type="checkbox" 
+                [(ngModel)]="productoForm.tiene_ra" 
+                name="tiene_ra"
+                class="sr-only peer">
+              <div class="w-11 h-6 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+            </label>
+          </div>
+
+          <!-- Configuración de RA (Visible solo si tiene_ra está activo) -->
+          <div *ngIf="productoForm.tiene_ra" class="space-y-6 animate-fade-in">
+            
+            <!-- Selector de Tipo de Prenda y Puntos de Anclaje -->
+            <div>
+              <label class="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-2.5">
+                1. Tipo de Prenda y Puntos de Anclaje Corporal
+              </label>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <!-- TOP -->
+                <button 
+                  type="button" 
+                  (click)="productoForm.tipo_prenda_ra = 'TOP'"
+                  class="p-4 rounded-2xl border text-left transition-all relative flex flex-col justify-between cursor-pointer"
+                  [ngClass]="productoForm.tipo_prenda_ra === 'TOP' 
+                    ? 'bg-amber-500/10 border-amber-500/60 shadow-lg shadow-amber-500/10' 
+                    : 'bg-zinc-950/50 border-zinc-800 hover:border-zinc-700'">
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="text-xl">👕</span>
+                    <span *ngIf="productoForm.tipo_prenda_ra === 'TOP'" class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+                  </div>
+                  <div>
+                    <h5 class="text-xs font-bold text-zinc-100">Parte Superior (TOP)</h5>
+                    <p class="text-[11px] text-zinc-400 mt-1">Polos, camisas, blusas, casacas, chompas.</p>
+                    <span class="text-[10px] text-amber-400/90 font-mono mt-2 inline-block">Ancla: Hombros & Pecho</span>
+                  </div>
+                </button>
+
+                <!-- PANT -->
+                <button 
+                  type="button" 
+                  (click)="productoForm.tipo_prenda_ra = 'PANT'"
+                  class="p-4 rounded-2xl border text-left transition-all relative flex flex-col justify-between cursor-pointer"
+                  [ngClass]="productoForm.tipo_prenda_ra === 'PANT' 
+                    ? 'bg-amber-500/10 border-amber-500/60 shadow-lg shadow-amber-500/10' 
+                    : 'bg-zinc-950/50 border-zinc-800 hover:border-zinc-700'">
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="text-xl">👖</span>
+                    <span *ngIf="productoForm.tipo_prenda_ra === 'PANT'" class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+                  </div>
+                  <div>
+                    <h5 class="text-xs font-bold text-zinc-100">Parte Inferior (PANT)</h5>
+                    <p class="text-[11px] text-zinc-400 mt-1">Pantalones, jeans, shorts, faldas.</p>
+                    <span class="text-[10px] text-amber-400/90 font-mono mt-2 inline-block">Ancla: Caderas & Rodillas</span>
+                  </div>
+                </button>
+
+                <!-- DRESS -->
+                <button 
+                  type="button" 
+                  (click)="productoForm.tipo_prenda_ra = 'DRESS'"
+                  class="p-4 rounded-2xl border text-left transition-all relative flex flex-col justify-between cursor-pointer"
+                  [ngClass]="productoForm.tipo_prenda_ra === 'DRESS' 
+                    ? 'bg-amber-500/10 border-amber-500/60 shadow-lg shadow-amber-500/10' 
+                    : 'bg-zinc-950/50 border-zinc-800 hover:border-zinc-700'">
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="text-xl">👗</span>
+                    <span *ngIf="productoForm.tipo_prenda_ra === 'DRESS'" class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+                  </div>
+                  <div>
+                    <h5 class="text-xs font-bold text-zinc-100">Cuerpo Entero (DRESS)</h5>
+                    <p class="text-[11px] text-zinc-400 mt-1">Vestidos, enterizos, trajes largos.</p>
+                    <span class="text-[10px] text-amber-400/90 font-mono mt-2 inline-block">Ancla: Hombros a Tobillos</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <!-- Subida y Previsualización de la Prenda 2D -->
+            <div>
+              <label class="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-2.5">
+                2. Fotografía 2D Recortada sin Fondo
+              </label>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                
+                <!-- Columna Izquierda: Botón de Subida e Instrucciones -->
+                <div class="space-y-3">
+                  <div class="p-4 rounded-2xl bg-zinc-950/80 border border-zinc-800 text-left space-y-3">
+                    <div class="space-y-1.5">
+                      <h6 class="text-xs font-semibold text-zinc-200">Requisitos para un buen seguimiento:</h6>
+                      <ul class="text-[11px] text-zinc-400 space-y-1 list-disc list-inside">
+                        <li>Formato <strong class="text-amber-300">PNG</strong> o <strong class="text-amber-300">WebP</strong> con transparencia.</li>
+                        <li>Prenda recortada sin maniquí ni fondo.</li>
+                        <li>Vista frontal recta simétrica.</li>
+                        <li>Resolución recomendada: 800x1000px o superior.</li>
+                      </ul>
+                    </div>
+
+                    <!-- Input Oculto de Archivo -->
+                    <input 
+                      type="file" 
+                      #foto2DInput
+                      accept="image/png,image/webp" 
+                      (change)="subirFoto2D($event)" 
+                      class="hidden">
+
+                    <!-- Botón de Subida a Cloudinary -->
+                    <button 
+                      type="button" 
+                      (click)="foto2DInput.click()" 
+                      [disabled]="subiendoFoto2D"
+                      class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-zinc-950 font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 active:scale-[0.99] transition-all cursor-pointer disabled:opacity-50">
+                      <svg *ngIf="subiendoFoto2D" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      <svg *ngIf="!subiendoFoto2D" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                      </svg>
+                      <span>{{ subiendoFoto2D ? 'Subiendo a Cloudinary...' : (productoForm.modelo_2d_url ? 'Reemplazar Foto 2D' : 'Subir Foto 2D Transparente') }}</span>
+                    </button>
+
+                    <!-- O ingresar URL directa -->
+                    <div class="pt-2 border-t border-zinc-800/80">
+                      <label class="block text-[11px] font-medium text-zinc-400 mb-1">O pegar URL de imagen Cloudinary directa:</label>
+                      <input 
+                        type="url" 
+                        [(ngModel)]="productoForm.modelo_2d_url" 
+                        name="modelo_2d_url"
+                        placeholder="https://res.cloudinary.com/.../prenda.png" 
+                        class="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-700/60 text-xs text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-amber-500 transition-colors font-mono">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Columna Derecha: Vista Previa con Cuadrícula de Transparencia -->
+                <div class="flex flex-col items-center">
+                  <div 
+                    class="w-full h-72 rounded-2xl border-2 border-zinc-800 flex items-center justify-center relative overflow-hidden p-4 group"
+                    style="background-image: linear-gradient(45deg, #18181b 25%, transparent 25%), linear-gradient(-45deg, #18181b 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #18181b 75%), linear-gradient(-45deg, transparent 75%, #18181b 75%); background-size: 16px 16px; background-position: 0 0, 0 8px, 8px -8px, -8px 0px; background-color: #0d0d10;">
+                    
+                    <!-- Prenda Cargada -->
+                    <ng-container *ngIf="productoForm.modelo_2d_url; else sinFoto2D">
+                      <img 
+                        [src]="productoForm.modelo_2d_url" 
+                        alt="Prenda 2D RA"
+                        class="max-h-full max-w-full object-contain filter drop-shadow-[0_10px_20px_rgba(0,0,0,0.6)] transition-transform duration-300 group-hover:scale-105">
+
+                      <!-- Badge de Verificación -->
+                      <div class="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-[10px] font-semibold flex items-center gap-1.5 backdrop-blur-md">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        Prenda 2D lista
+                      </div>
+
+                      <!-- Botón de Quitar Prenda -->
+                      <button 
+                        type="button" 
+                        (click)="eliminarFoto2D()" 
+                        title="Quitar foto 2D"
+                        class="absolute top-3 right-3 p-2 rounded-xl bg-zinc-950/80 border border-zinc-700/80 text-rose-400 hover:bg-rose-500 hover:text-white transition-colors cursor-pointer shadow-lg backdrop-blur-md">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </ng-container>
+
+                    <!-- Estado Vacío -->
+                    <ng-template #sinFoto2D>
+                      <div class="text-center p-6 space-y-2">
+                        <div class="w-14 h-14 rounded-2xl bg-zinc-900/90 border border-zinc-800 flex items-center justify-center mx-auto text-zinc-600">
+                          <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                        <p class="text-xs font-semibold text-zinc-400">Sin fotografía 2D asignada</p>
+                        <p class="text-[11px] text-zinc-600 max-w-xs">
+                          La cuadrícula oscura te permite comprobar que el fondo esté perfectamente transparente.
+                        </p>
+                      </div>
+                    </ng-template>
+
+                  </div>
+                  <span class="text-[10px] text-zinc-500 mt-2">
+                    Vista previa de transparencia — La prenda debe verse nítida y sin bordes blancos.
+                  </span>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+
         </div>
 
       </div>

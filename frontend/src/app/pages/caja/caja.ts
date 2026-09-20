@@ -72,10 +72,6 @@ export class CajaComponent implements OnInit {
     return this.authService.getEffectiveCompanyName();
   }
 
-  get sucursalActiva(): { id: number; nombre: string; ciudad?: string } {
-    return this.authService.activeBranch();
-  }
-
   get empresaRequerida(): boolean {
     return this.esSuperAdmin && !this.empresaActivaId;
   }
@@ -97,6 +93,10 @@ export class CajaComponent implements OnInit {
   mensajeExito: string = '';
   mensajeError: string = '';
   pestanaDerecha: 'CARRITO' | 'POR_COBRAR' = 'CARRITO';
+
+  get sucursalActiva(): { id: number; nombre: string; ciudad?: string } | null {
+    return this.authService.activeBranch();
+  }
 
   // --- SESIÓN Y ESTADO DE CAJA ---
   estadoCaja: CajaEstadoResponse | null = null;
@@ -211,6 +211,14 @@ export class CajaComponent implements OnInit {
     }
 
     this.authService.companyChanged$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        if (this.inicializado) {
+          this.onContextoCambio();
+        }
+      });
+
+    this.authService.branchChanged$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         if (this.inicializado) {

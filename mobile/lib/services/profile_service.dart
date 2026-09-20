@@ -1,119 +1,125 @@
 import 'package:dio/dio.dart';
 import 'api_client.dart';
 
+class PerfilModel {
+  final int idUsuario;
+  final String username;
+  final String nombre;
+  final String apellido;
+  final String nombreCompleto;
+  final String correo;
+  final String? telefono;
+  final String? ci;
+  final String? direccion;
+  final String? ciudad;
+  final String? estado;
+  final String? fechaRegistro;
+  final int? idRol;
+  final String? nombreRol;
+  final int? idEmpresa;
+  final String? nombreEmpresa;
+
+  PerfilModel({
+    required this.idUsuario,
+    required this.username,
+    required this.nombre,
+    required this.apellido,
+    required this.nombreCompleto,
+    required this.correo,
+    this.telefono,
+    this.ci,
+    this.direccion,
+    this.ciudad,
+    this.estado,
+    this.fechaRegistro,
+    this.idRol,
+    this.nombreRol,
+    this.idEmpresa,
+    this.nombreEmpresa,
+  });
+
+  factory PerfilModel.fromJson(Map<String, dynamic> json) {
+    return PerfilModel(
+      idUsuario: json['id_usuario'] ?? json['nro_usuario'] ?? 0,
+      username: json['username'] ?? json['nombre_usuario'] ?? '',
+      nombre: json['nombre'] ?? '',
+      apellido: json['apellido'] ?? '',
+      nombreCompleto: json['nombre_completo'] ?? '${json['nombre'] ?? ''} ${json['apellido'] ?? ''}'.trim(),
+      correo: json['correo'] ?? '',
+      telefono: json['telefono']?.toString(),
+      ci: json['ci']?.toString(),
+      direccion: json['direccion']?.toString(),
+      ciudad: json['ciudad']?.toString(),
+      estado: json['estado']?.toString(),
+      fechaRegistro: json['fecha_registro']?.toString(),
+      idRol: json['id_rol'],
+      nombreRol: json['nombre_rol'],
+      idEmpresa: json['id_empresa'],
+      nombreEmpresa: json['nombre_empresa'],
+    );
+  }
+}
+
 class ProfileService {
-  static const String _basePath = '/api/perfil';
+  final Dio _dio = ApiClient.dio;
 
-  Future<Map<String, dynamic>> obtenerPerfil() async {
+  Future<PerfilModel> obtenerPerfil() async {
     try {
-      final response = await ApiClient.dio.get('$_basePath/');
+      final response = await _dio.get('/api/perfil/');
       final data = response.data;
-
-      if (data is! Map) {
-        throw Exception('Respuesta inválida del servidor.');
+      if (data['success'] == true && data['data'] != null) {
+        return PerfilModel.fromJson(data['data']);
       }
-
-      if (data['success'] != true) {
-        throw Exception(data['message'] ?? 'No se pudo obtener el perfil.');
-      }
-
-      final perfil = data['data'];
-
-      if (perfil is! Map) {
-        throw Exception('Datos de perfil inválidos.');
-      }
-
-      return Map<String, dynamic>.from(perfil);
+      throw Exception(data['message'] ?? 'No se pudo obtener el perfil.');
     } on DioException catch (e) {
-      throw Exception(_parsearErrorDio(e));
+      final msg = e.response?.data?['detail'] ?? e.response?.data?['message'] ?? 'Error de conexión.';
+      throw Exception(msg.toString());
     }
   }
 
-  Future<Map<String, dynamic>> actualizarPerfil({
-    required String ci,
-    required String telefono,
-    required String correo,
-    required String direccion,
-    String? password,
+  Future<PerfilModel> actualizarPerfil({
+    required String nombre,
+    required String apellido,
+    String? telefono,
+    String? ci,
+    String? direccion,
+    String? ciudad,
   }) async {
     try {
       final body = {
-        'ci': ci,
-        'telefono': telefono,
-        'correo': correo,
-        'direccion': direccion,
+        'nombre': nombre.trim(),
+        'apellido': apellido.trim(),
+        'telefono': telefono?.trim(),
+        'ci': ci?.trim(),
+        'direccion': direccion?.trim(),
+        'ciudad': ciudad?.trim(),
       };
 
-      if (password != null && password.trim().isNotEmpty) {
-        body['password'] = password.trim();
-      }
-
-      final response = await ApiClient.dio.put(
-        '$_basePath/',
-        data: body,
-      );
-
+      final response = await _dio.put('/api/perfil/', data: body);
       final data = response.data;
-
-      if (data is! Map) {
-        throw Exception('Respuesta inválida del servidor.');
+      if (data['success'] == true && data['data'] != null) {
+        return PerfilModel.fromJson(data['data']);
       }
-
-      if (data['success'] != true) {
-        throw Exception(data['message'] ?? 'No se pudo actualizar el perfil.');
-      }
-
-      return Map<String, dynamic>.from(data);
+      throw Exception(data['message'] ?? 'No se pudo actualizar el perfil.');
     } on DioException catch (e) {
-      throw Exception(_parsearErrorDio(e));
+      final msg = e.response?.data?['detail'] ?? e.response?.data?['message'] ?? 'Error al actualizar perfil.';
+      throw Exception(msg.toString());
     }
   }
 
-  String _parsearErrorDio(DioException e) {
-    if (e.response?.data != null) {
-      final data = e.response!.data;
-
-      if (data is Map && data['detail'] is List) {
-        final errores = data['detail'] as List;
-        return errores.map((err) {
-          if (err is Map && err['msg'] != null) return err['msg'].toString();
-          return err.toString();
-        }).join('\n');
+  Future<void> cambiarPassword(String nuevaPassword) async {
+    try {
+      final response = await _dio.put(
+        '/api/perfil/cambiar-password',
+        data: {'password': nuevaPassword},
+      );
+      final data = response.data;
+      if (data['success'] != true) {
+        throw Exception(data['message'] ?? 'Error al cambiar contraseña.');
       }
-
-      if (data is Map && data['detail'] != null) {
-        return data['detail'].toString();
-      }
-
-      if (data is Map && data['message'] != null) {
-        return data['message'].toString();
-      }
-    }
-
-    switch (e.type) {
-      case DioExceptionType.connectionTimeout:
-      case DioExceptionType.receiveTimeout:
-      case DioExceptionType.sendTimeout:
-        return 'Tiempo de espera agotado. Verificá tu conexión.';
-      case DioExceptionType.connectionError:
-        return 'No se pudo conectar al servidor.';
-      default:
-        break;
-    }
-
-    switch (e.response?.statusCode) {
-      case 400:
-        return 'Datos inválidos. Revisá el formulario.';
-      case 401:
-        return 'Tu sesión expiró. Iniciá sesión nuevamente.';
-      case 403:
-        return 'No tienes permiso para esta acción.';
-      case 404:
-        return 'Servicio no encontrado.';
-      case 500:
-        return 'Error interno del servidor.';
-      default:
-        return 'Ocurrió un error inesperado.';
+    } on DioException catch (e) {
+      final msg = e.response?.data?['detail'] ?? e.response?.data?['message'] ?? 'Error al cambiar contraseña.';
+      throw Exception(msg.toString());
     }
   }
 }

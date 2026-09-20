@@ -163,6 +163,14 @@ export class ListaInventarioComponent implements OnInit {
     return this.authService.hasPermission('inventario.gestionar');
   }
 
+  get esNivelSucursal(): boolean {
+    return this.authService.getScopeLevel() === 'SUCURSAL';
+  }
+
+  get sucursalAsignadaNombre(): string {
+    return this.authService.activeBranch()?.nombre || 'Sucursal Asignada';
+  }
+
   ngOnInit(): void {
     if (this.esSuperAdmin) {
       this.cargarEmpresas();
@@ -172,7 +180,8 @@ export class ListaInventarioComponent implements OnInit {
     this.authService.companyChanged$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
-        this.filtroSucursal = '';
+        const br = this.authService.activeBranch();
+        this.filtroSucursal = br && br.id ? String(br.id) : '';
         if (this.empresaRequerida) {
           this.inventario = [];
           this.sucursales = [];
@@ -181,6 +190,28 @@ export class ListaInventarioComponent implements OnInit {
           this.cdr.detectChanges();
         } else {
           this.cargarCatalogos();
+          if (this.tabActiva === 'stock') {
+            this.cargarInventario();
+          } else if (this.tabActiva === 'ordenes') {
+            this.cargarOrdenesCompra();
+          } else if (this.tabActiva === 'lotes') {
+            this.cargarLotes();
+          }
+        }
+      });
+
+    // Suscripción reactiva al cambio de sucursal en el selector superior
+    this.authService.branchChanged$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((branch) => {
+        if (this.esNivelSucursal) {
+          const act = this.authService.activeBranch();
+          this.filtroSucursal = act && act.id ? String(act.id) : '';
+        } else {
+          this.filtroSucursal = branch && branch.id ? String(branch.id) : '';
+        }
+        if (!this.empresaRequerida) {
+          this.paginaActual = 1;
           if (this.tabActiva === 'stock') {
             this.cargarInventario();
           } else if (this.tabActiva === 'ordenes') {
@@ -249,6 +280,10 @@ export class ListaInventarioComponent implements OnInit {
         next: (res) => {
           if (res && res.data) {
             this.sucursales = res.data.filter(s => s.activo !== false);
+            if (this.esNivelSucursal) {
+              const activeBr = this.authService.activeBranch();
+              this.filtroSucursal = activeBr && activeBr.id ? String(activeBr.id) : (this.sucursales[0] ? String(this.sucursales[0].id_sucursal) : '');
+            }
             if (this.sucursales.length > 0 && !this.sucursalDestinoImportacion) {
               this.sucursalDestinoImportacion = this.sucursales[0].id_sucursal ?? null;
             }
@@ -293,6 +328,14 @@ export class ListaInventarioComponent implements OnInit {
       this.totalItems = 0;
       this.cdr.detectChanges();
       return;
+    }
+
+    // Aislamiento forzoso de sucursal para Encargados y Cajeros
+    if (this.esNivelSucursal) {
+      const activeBr = this.authService.activeBranch();
+      if (activeBr && activeBr.id) {
+        this.filtroSucursal = String(activeBr.id);
+      }
     }
 
     this.cargando = true;
@@ -341,8 +384,30 @@ export class ListaInventarioComponent implements OnInit {
     this.cargarInventario();
   }
 
+  onFiltroSucursalChange(): void {
+    if (this.filtroSucursal) {
+      const match = this.sucursales.find(s => String(s.id_sucursal) === this.filtroSucursal);
+      if (match) {
+        this.authService.setBranch({
+          id: match.id_sucursal ?? 0,
+          nombre: match.nombre,
+          ciudad: match.ciudad || ''
+        });
+      }
+    } else {
+      this.authService.setBranch(null);
+    }
+    this.aplicarFiltros();
+  }
+
   limpiarFiltros(): void {
-    this.filtroSucursal = '';
+    if (this.esNivelSucursal) {
+      const activeBr = this.authService.activeBranch();
+      this.filtroSucursal = activeBr && activeBr.id ? String(activeBr.id) : '';
+    } else {
+      this.filtroSucursal = '';
+      this.authService.setBranch(null);
+    }
     this.filtroBusqueda = '';
     this.filtroTalla = '';
     this.filtroColor = '';

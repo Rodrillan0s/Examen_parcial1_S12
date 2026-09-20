@@ -69,7 +69,7 @@ export const routes: Routes = [
     canActivate: [authGuard],
     children: [
       { path: '', redirectTo: 'kpis', pathMatch: 'full' },
-      { path: 'kpis', component: DashboardKpisComponent },
+      { path: 'kpis', component: DashboardKpisComponent, canActivate: [permissionGuard(['reportes.ver', 'admin.acceder'])] },
       { path: 'reportes', component: ReportesComponent, canActivate: [permissionGuard('reportes.ver')] },
       { path: 'usuarios', component: ListaUsuariosComponent, canActivate: [permissionGuard('usuarios.ver')] },
       { 

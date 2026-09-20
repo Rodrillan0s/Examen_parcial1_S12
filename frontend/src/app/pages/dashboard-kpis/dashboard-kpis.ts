@@ -103,6 +103,12 @@ export class DashboardKpisComponent implements OnInit {
         return;
       }
 
+      // Si es cajero o rol sin permiso de analítica, desviar al Terminal POS
+      if (this.authService.isCashier() || (!this.authService.hasPermission('reportes.ver') && !this.authService.isGlobalAdmin() && !this.authService.isStoreAdmin())) {
+        this.router.navigate(['/admin/caja']);
+        return;
+      }
+
       const scope = this.authService.getScopeLevel();
       const idEmpresaUsuario = this.usuarioActual?.id_empresa;
 
@@ -114,6 +120,13 @@ export class DashboardKpisComponent implements OnInit {
           }
         } else if (tienda && tienda.id_empresa === idEmpresaUsuario) {
           this.tiendaSeleccionada = tienda;
+          this.cargarTodosLosIndicadores();
+        }
+      });
+
+      this.authService.branchChanged$.subscribe((branch) => {
+        this.sucursalSeleccionada = branch ? branch.id : null;
+        if (this.tiendaSeleccionada || scope === 'PLATAFORMA' || idEmpresaUsuario) {
           this.cargarTodosLosIndicadores();
         }
       });

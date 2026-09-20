@@ -52,6 +52,9 @@ export interface Producto {
   total_variantes?: number;
   imagenes?: ImagenProducto[];
   variantes?: VarianteProducto[];
+  tiene_ra?: boolean;
+  tipo_prenda_ra?: 'TOP' | 'PANT' | 'DRESS' | string;
+  modelo_2d_url?: string;
 }
 
 @Injectable({
@@ -95,6 +98,9 @@ export class ProductosService {
     tallas_ids?: number[];
     colores_ids?: number[];
     imagenes?: { imagen_url: string; public_id: string; es_principal?: boolean }[];
+    tiene_ra?: boolean;
+    tipo_prenda_ra?: string;
+    modelo_2d_url?: string;
   }): Observable<any> {
     return this.http.post(this.apiUrl, datos);
   }
@@ -112,6 +118,9 @@ export class ProductosService {
     activo?: boolean;
     tallas_ids?: number[];
     colores_ids?: number[];
+    tiene_ra?: boolean;
+    tipo_prenda_ra?: string;
+    modelo_2d_url?: string;
   }): Observable<any> {
     return this.http.put(`${this.apiUrl}/${id_producto}`, datos);
   }

@@ -193,12 +193,18 @@
               </div>
             </td>
 
-            <!-- Empresa / Tenant -->
+            <!-- Empresa / Tenant & Sucursal Asignada -->
             <td class="py-4 px-6 text-zinc-300">
-              <span class="inline-flex items-center gap-1.5 text-xs text-zinc-300 font-medium">
-                <i class="ph ph-storefront text-zinc-500"></i>
-                <span>{{ u.nombre_empresa || 'Plataforma Global' }}</span>
-              </span>
+              <div class="flex flex-col gap-1">
+                <span class="inline-flex items-center gap-1.5 text-xs text-zinc-300 font-medium">
+                  <i class="ph ph-storefront text-zinc-500"></i>
+                  <span>{{ u.nombre_empresa || 'Plataforma Global' }}</span>
+                </span>
+                <span *ngIf="obtenerNombresSucursales(u)" class="inline-flex items-center gap-1 text-[11px] text-amber-400 font-normal">
+                  <i class="ph ph-map-pin text-amber-500"></i>
+                  <span>{{ obtenerNombresSucursales(u) }}</span>
+                </span>
+              </div>
             </td>
 
             <!-- Permisos Directos + Heredados -->
@@ -328,7 +334,7 @@
               <span>Rol Asignado *</span>
               <span class="text-[10px] font-normal text-amber-400">Jerarquía</span>
             </label>
-            <select name="nro_rol" [(ngModel)]="usuarioForm.nro_rol" required
+            <select name="nro_rol" [(ngModel)]="usuarioForm.nro_rol" (change)="onRolFormChange()" required
                     class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-white focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all cursor-pointer">
               <option *ngFor="let r of rolesDisponibles" [ngValue]="r.id_rol">{{ r.nombre }}</option>
             </select>
@@ -341,11 +347,34 @@
             <span>Empresa / Tenant Perteneciente</span>
             <span class="text-[10px] font-normal text-zinc-400">Opcional para Global</span>
           </label>
-          <select name="id_empresa" [(ngModel)]="usuarioForm.id_empresa"
+          <select name="id_empresa" [(ngModel)]="usuarioForm.id_empresa" (change)="onEmpresaFormChange()"
                   class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-white focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all cursor-pointer">
             <option [ngValue]="null">Plataforma Global (Sin Empresa)</option>
             <option *ngFor="let emp of empresas" [ngValue]="emp.id_empresa">{{ emp.nombre_empresa }} (ID #{{ emp.id_empresa }})</option>
           </select>
+        </div>
+
+        <!-- Sucursal Asignada (Obligatorio para Encargado y Cajero, Opcional para otros roles con tienda) -->
+        <div *ngIf="puedeTenerSucursal()">
+          <label class="block font-bold text-zinc-300 mb-1.5 flex items-center justify-between">
+            <span class="flex items-center gap-1.5">
+              <i class="ph ph-map-pin text-amber-400"></i>
+              <span>Sucursal Asignada {{ requiereSucursal() ? '*' : '(Opcional)' }}</span>
+            </span>
+            <span *ngIf="requiereSucursal()" class="text-[10px] font-normal text-amber-400">Obligatorio</span>
+            <span *ngIf="!requiereSucursal()" class="text-[10px] font-normal text-zinc-400">Opcional</span>
+          </label>
+          <select name="id_sucursal" [(ngModel)]="usuarioForm.id_sucursal" [required]="requiereSucursal()"
+                  class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-white focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all cursor-pointer">
+            <option [ngValue]="null">-- {{ requiereSucursal() ? 'Seleccione una sucursal' : 'Sin sucursal fija / Todas' }} --</option>
+            <option *ngFor="let suc of sucursalesDisponibles" [ngValue]="suc.id_sucursal">
+              {{ suc.nombre }} {{ suc.ciudad ? '(' + suc.ciudad + ')' : '' }}
+            </option>
+          </select>
+          <p *ngIf="cargandoSucursales" class="text-[11px] text-zinc-400 mt-1">Cargando sucursales disponibles...</p>
+          <p *ngIf="!cargandoSucursales && sucursalesDisponibles.length === 0" class="text-[11px] text-amber-400/80 mt-1">
+            No hay sucursales disponibles para la empresa seleccionada.
+          </p>
         </div>
 
         <!-- Password -->

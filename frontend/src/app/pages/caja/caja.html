@@ -29,7 +29,7 @@
                   class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
               <span>🏪 {{ empresaActivaNombre }}</span>
               <span class="text-indigo-300 dark:text-indigo-700">·</span>
-              <span>📍 {{ sucursalActiva.nombre || 'Sucursal Principal' }}</span>
+              <span>📍 {{ sucursalActiva?.nombre || 'Sucursal Principal' }}</span>
             </span>
 
             <!-- Badge de Estado de Caja -->
@@ -50,7 +50,7 @@
               {{ estadoCaja?.sesion_activa?.nombre_caja || estadoCaja?.caja_asignada?.nombre || 'Caja 01' }}
             </span>
             <span>•</span>
-            <span>{{ estadoCaja?.sesion_activa?.sucursal_nombre || estadoCaja?.caja_asignada?.sucursal_nombre || sucursalActiva.nombre || 'Sucursal Asignada' }}</span>
+            <span>{{ estadoCaja?.sesion_activa?.sucursal_nombre || estadoCaja?.caja_asignada?.sucursal_nombre || sucursalActiva?.nombre || 'Sucursal Asignada' }}</span>
             <span *ngIf="estadoCaja?.sesion_activa">•</span>
             <span *ngIf="estadoCaja?.sesion_activa">Cajero: <strong class="text-zinc-700 dark:text-slate-200">{{ estadoCaja?.sesion_activa?.cajero_nombre }}</strong></span>
             <span *ngIf="estadoCaja?.sesion_activa">•</span>

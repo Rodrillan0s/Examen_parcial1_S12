@@ -161,6 +161,47 @@ def iniciar_sesion(data: dict, request: Request = None) -> dict:
     permisos_efectivos = rbac_repos.obtener_permisos_efectivos_usuario(nro_usuario)
     sucursales_usuario = rbac_repos.obtener_sucursales_usuario(nro_usuario)
 
+    # Determinar nombre_rol principal
+    nombre_rol_final = usuario_db.get('nombre_rol') or (nombres_roles[0] if nombres_roles else 'CLIENTE')
+
+    # Determinar alcance RBAC de forma rigurosa
+    id_rol_val = usuario_db.get('id_rol')
+    roles_upper = [str(r).upper() for r in nombres_roles]
+    es_global = (id_rol_val == 1 or 'ADMINISTRADOR' in roles_upper or 'SUPERADMIN' in roles_upper) and not usuario_db.get('id_empresa')
+
+    if es_global:
+        alcance_final = 'PLATAFORMA'
+    elif id_rol_val in (1, 3) or 'ADMINISTRADOR' in roles_upper or 'ADMINISTRADOR_TIENDA' in roles_upper:
+        alcance_final = 'EMPRESA'
+    elif id_rol_val in (4, 5) or any(r in ('CAJERO', 'EMPLEADO', 'ENCARGADO', 'ENCARGADO_SUCURSAL') for r in roles_upper):
+        alcance_final = 'SUCURSAL'
+    elif usuario_db.get('id_empresa'):
+        alcance_final = 'SUCURSAL'
+    else:
+        alcance_final = 'PLATAFORMA'
+
+    # 5.1 Enriquecer detalle de sucursales autorizadas
+    sucursales_detalle = []
+    if sucursales_usuario:
+        from app.classes.postgres import PostgreSQL
+        from app.config import Config
+        db_s = PostgreSQL()
+        db_s.create_connection()
+        try:
+            schema_s = Config.SCHEMA or 'comercio'
+            res_s = db_s.execute_query(
+                f"""SELECT s.id_sucursal, s.nombre, s.direccion, c.nombre AS ciudad 
+                    FROM {schema_s}.t_sucursal s 
+                    LEFT JOIN {schema_s}.t_ciudad c ON s.id_ciudad = c.id_ciudad 
+                    WHERE s.id_sucursal = ANY(%s) AND s.activo = TRUE;""",
+                (sucursales_usuario,),
+                fetchall=True
+            )
+            if res_s:
+                sucursales_detalle = [{"id_sucursal": r[0], "id": r[0], "nombre": r[1], "direccion": r[2], "ciudad": r[3] or ''} for r in res_s]
+        finally:
+            db_s.close_connection()
+
     # 6. Generar token de sesión con la información RBAC
     token = security.create_access_token(
         nro_usuario=nro_usuario,
@@ -172,7 +213,8 @@ def iniciar_sesion(data: dict, request: Request = None) -> dict:
         apellido=usuario_db['apellido'],
         roles=nombres_roles,
         permisos=permisos_efectivos,
-        sucursales=sucursales_usuario
+        sucursales=sucursales_usuario,
+        nombre_rol=nombre_rol_final
     )
     
     bitacora_services.registrar_accion(
@@ -191,12 +233,14 @@ def iniciar_sesion(data: dict, request: Request = None) -> dict:
             "nombre": usuario_db['nombre'],
             "apellido": usuario_db['apellido'],
             "id_rol": usuario_db['id_rol'],
+            "nombre_rol": nombre_rol_final,
             "id_empresa": usuario_db['id_empresa'],
             "nombre_empresa": usuario_db.get('nombre_empresa'),
             "roles": nombres_roles,
             "permisos": permisos_efectivos,
             "sucursales": sucursales_usuario,
-            "alcance": "PLATAFORMA" if (usuario_db['id_rol'] == 1 or 'ADMINISTRADOR' in [str(r).upper() for r in nombres_roles] or 'SUPERADMIN' in [str(r).upper() for r in nombres_roles]) and not usuario_db['id_empresa'] else "EMPRESA"
+            "sucursales_detalle": sucursales_detalle,
+            "alcance": alcance_final
         },
         "token": token
     }

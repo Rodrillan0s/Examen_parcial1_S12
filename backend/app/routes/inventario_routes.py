@@ -31,21 +31,34 @@ def listar_inventario(
         alcance = payload.get("alcance")
         id_empresa_efectivo = payload.get("id_empresa") if alcance != "PLATAFORMA" else id_empresa
 
+        # Aislamiento por Sucursal para ENCARGADO_SUCURSAL y CAJERO
+        if not isinstance(id_sucursal, int):
+            id_sucursal = None
+
+        if alcance == "SUCURSAL":
+            sucursales_usuario = payload.get("sucursales") or []
+            if not id_sucursal:
+                id_sucursal = sucursales_usuario[0] if sucursales_usuario else None
+            elif sucursales_usuario and id_sucursal not in sucursales_usuario:
+                raise HTTPException(status_code=403, detail="No tiene permiso para ver el inventario de esta sucursal.")
+
         filtros = {
             "id_sucursal": id_sucursal,
-            "id_producto": id_producto,
-            "id_variante": id_variante,
-            "id_talla": id_talla,
-            "id_color": id_color,
-            "estado": estado,
-            "filtro_stock": filtro_stock,
-            "busqueda": busqueda,
-            "pagina": pagina,
-            "limite": limite
+            "id_producto": id_producto if isinstance(id_producto, int) else None,
+            "id_variante": id_variante if isinstance(id_variante, int) else None,
+            "id_talla": id_talla if isinstance(id_talla, int) else None,
+            "id_color": id_color if isinstance(id_color, int) else None,
+            "estado": estado if isinstance(estado, str) else None,
+            "filtro_stock": filtro_stock if isinstance(filtro_stock, str) else None,
+            "busqueda": busqueda if isinstance(busqueda, str) else None,
+            "pagina": pagina if isinstance(pagina, int) else 1,
+            "limite": limite if isinstance(limite, int) else 20
         }
 
         resultado = inventario_repos.listar_inventario(id_empresa_efectivo, filtros)
         return resultado
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al consultar inventario: {str(e)}")
 
@@ -68,18 +81,31 @@ def listar_movimientos(
         alcance = payload.get("alcance")
         id_empresa_efectivo = payload.get("id_empresa") if alcance != "PLATAFORMA" else id_empresa
 
+        # Aislamiento por Sucursal para ENCARGADO_SUCURSAL y CAJERO
+        if not isinstance(id_sucursal, int):
+            id_sucursal = None
+
+        if alcance == "SUCURSAL":
+            sucursales_usuario = payload.get("sucursales") or []
+            if not id_sucursal:
+                id_sucursal = sucursales_usuario[0] if sucursales_usuario else None
+            elif sucursales_usuario and id_sucursal not in sucursales_usuario:
+                raise HTTPException(status_code=403, detail="No tiene permiso para ver movimientos de esta sucursal.")
+
         filtros = {
-            "id_inventario": id_inventario,
+            "id_inventario": id_inventario if isinstance(id_inventario, int) else None,
             "id_sucursal": id_sucursal,
-            "id_variante": id_variante,
-            "tipo_movimiento": tipo_movimiento,
-            "busqueda": busqueda,
-            "pagina": pagina,
-            "limite": limite
+            "id_variante": id_variante if isinstance(id_variante, int) else None,
+            "tipo_movimiento": tipo_movimiento if isinstance(tipo_movimiento, str) else None,
+            "busqueda": busqueda if isinstance(busqueda, str) else None,
+            "pagina": pagina if isinstance(pagina, int) else 1,
+            "limite": limite if isinstance(limite, int) else 20
         }
 
         resultado = inventario_repos.listar_movimientos_inventario(id_empresa_efectivo, filtros)
         return resultado
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al consultar historial de movimientos: {str(e)}")
 
@@ -151,6 +177,11 @@ def registrar_movimiento(
     alcance = payload.get("alcance")
     id_empresa = payload.get("id_empresa") if alcance != "PLATAFORMA" else None
     id_usuario = payload.get("nro_usuario") or payload.get("id_usuario") or 1
+
+    if alcance == "SUCURSAL":
+        sucursales_usuario = payload.get("sucursales") or []
+        if int(id_sucursal) not in sucursales_usuario:
+            raise HTTPException(status_code=403, detail="No tiene permiso para realizar movimientos de inventario en esta sucursal.")
 
     # 3. Invocar registro atómico
     resultado = inventario_repos.registrar_movimiento_inventario(

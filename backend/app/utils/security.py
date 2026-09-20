@@ -32,17 +32,30 @@ def generar_codigo_seguridad() -> str:
     return str(random.randint(100000, 999999))
 
 # Genera el token JWT de acceso para la sesión del usuario con sus claims RBAC.
-def create_access_token(nro_usuario, username, id_rol, id_empresa, nombre, apellido, roles=None, permisos=None, sucursales=None, nombre_empresa=None, minutes=120):
+def create_access_token(nro_usuario, username, id_rol, id_empresa, nombre, apellido, roles=None, permisos=None, sucursales=None, nombre_empresa=None, nombre_rol=None, minutes=120):
     roles_list = roles or []
     roles_upper = [str(r).upper() for r in roles_list]
     es_global = (id_rol == 1 or 'ADMINISTRADOR' in roles_upper or 'SUPERADMIN' in roles_upper) and (id_empresa is None or id_empresa == 0)
-    alcance = 'PLATAFORMA' if es_global else 'EMPRESA'
+
+    if es_global:
+        alcance = 'PLATAFORMA'
+    elif id_rol in (1, 3) or 'ADMINISTRADOR' in roles_upper or 'ADMINISTRADOR_TIENDA' in roles_upper:
+        alcance = 'EMPRESA'
+    elif id_rol in (4, 5) or any(r in ('CAJERO', 'EMPLEADO', 'ENCARGADO', 'ENCARGADO_SUCURSAL') for r in roles_upper):
+        alcance = 'SUCURSAL'
+    elif id_empresa and id_empresa > 0:
+        alcance = 'SUCURSAL'
+    else:
+        alcance = 'PLATAFORMA'
+
+    rol_final = nombre_rol or (roles_list[0] if roles_list else 'CLIENTE')
 
     payload = {
         'nro_usuario': nro_usuario,
         'id_usuario': nro_usuario,
         'username': username,
         'id_rol': id_rol,
+        'nombre_rol': rol_final,
         'id_empresa': id_empresa,
         'nombre_empresa': nombre_empresa,
         'nombre': nombre,

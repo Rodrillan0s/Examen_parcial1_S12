@@ -15,6 +15,11 @@ def is_global_admin(payload: dict) -> bool:
 def listar_sucursales(id_empresa: Optional[int] = None, payload: dict = None) -> Dict[str, Any]:
     empresa_efectiva = resolver_tenant_operacion(payload, id_empresa, permitir_global=True)
     sucursales = sucursales_repos.obtener_sucursales_por_empresa(empresa_efectiva)
+    
+    if payload and payload.get('alcance') == 'SUCURSAL':
+        sucursales_autorizadas = payload.get('sucursales') or []
+        sucursales = [s for s in sucursales if s.get('id_sucursal') in sucursales_autorizadas]
+
     return {
         "success": True,
         "message": "Sucursales recuperadas exitosamente",

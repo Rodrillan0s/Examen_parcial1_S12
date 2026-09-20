@@ -72,10 +72,31 @@ def _obtener_sucursal_efectiva(token_data: dict, id_sucursal_solicitada: Optiona
     sucursales_usuario = token_data.get("sucursales", [])
     id_rol = token_data.get("id_rol")
     roles = [str(r).upper() for r in token_data.get("roles", [])]
-    es_admin = (id_rol == 1 or "ADMINISTRADOR" in roles or "SUPERADMIN" in roles or token_data.get("alcance") == "PLATAFORMA")
+    alcance = token_data.get("alcance")
+    es_global = (id_rol == 1 or "ADMINISTRADOR" in roles or "SUPERADMIN" in roles or alcance == "PLATAFORMA")
+    es_tienda = (alcance == "EMPRESA")
 
     if id_sucursal_solicitada:
-        if es_admin or (id_sucursal_solicitada in sucursales_usuario):
+        if es_global:
+            return id_sucursal_solicitada
+        if es_tienda and id_empresa:
+            from app.classes.postgres import PostgreSQL
+            from app.config import Config
+            db = PostgreSQL()
+            db.create_connection()
+            try:
+                schema = Config.SCHEMA or 'comercio'
+                valida = db.execute_query(
+                    f"SELECT 1 FROM {schema}.t_sucursal WHERE id_sucursal = %s AND id_empresa = %s AND activo = TRUE;",
+                    (id_sucursal_solicitada, id_empresa),
+                    fetchone=True
+                )
+                if valida:
+                    return id_sucursal_solicitada
+            finally:
+                db.close_connection()
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tienes autorización sobre esta sucursal.")
+        if id_sucursal_solicitada in sucursales_usuario:
             return id_sucursal_solicitada
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -85,7 +106,7 @@ def _obtener_sucursal_efectiva(token_data: dict, id_sucursal_solicitada: Optiona
     if sucursales_usuario:
         return sucursales_usuario[0]
 
-    if es_admin:
+    if es_global or es_tienda:
         if id_empresa:
             from app.classes.postgres import PostgreSQL
             from app.config import Config
