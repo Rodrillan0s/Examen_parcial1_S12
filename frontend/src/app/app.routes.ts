@@ -19,6 +19,8 @@ import { PedidoConfirmadoComponent } from './pages/pedido-confirmado/pedido-conf
 import { MisReservasComponent } from './pages/reservas/mis-reservas/mis-reservas';
 import { MisPedidosComponent } from './pages/pedidos/mis-pedidos/mis-pedidos';
 import { authGuard } from './guards/auth-guard';
+import { ProveedoresComponent } from './pages/proveedores/proveedores';
+
 
 export const routes: Routes = [
   // RUTAS PÚBLICAS Y DE CLIENTE DE LA TIENDA E-COMMERCE DE ROPA
@@ -46,6 +48,7 @@ export const routes: Routes = [
   { path: 'bi-dashboard', redirectTo: 'admin/bi_dashboard', pathMatch: 'full' },
   { path: 'bi_dashboard', redirectTo: 'admin/bi_dashboard', pathMatch: 'full' },
   { path: 'triaje-chat', redirectTo: 'admin/triaje-chat', pathMatch: 'full' },
+  { path: 'proveedores', redirectTo: 'admin/proveedores', pathMatch: 'full' },
 
   // RUTAS DE ADMINISTRACIÓN INTERNA (REQUIEREN AUTENTICACIÓN Y PERMISOS RBAC)
   {
@@ -66,7 +69,8 @@ export const routes: Routes = [
       { path: 'bi_dashboard', component: BiDashboardComponent },
       { path: 'bi-dashboard', component: BiDashboardComponent },
       { path: 'triaje-chat', component: TriajeChatComponent },
-      { path: 'catalogo', component: CatalogoComponent }
+      { path: 'catalogo', component: CatalogoComponent },
+      { path: 'proveedores', component: ProveedoresComponent }
     ]
   },
 

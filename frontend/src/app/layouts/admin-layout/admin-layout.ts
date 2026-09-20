@@ -91,114 +91,142 @@ export class AdminLayoutComponent implements OnInit {
       });
   }
 
-  construirMenuPorAlcance() {
-    const scope = this.authService.getScopeLevel();
-    const empresaNombre = this.authService.getUserCompanyName();
-    const sucursalNombre = this.authService.getUserBranchName();
+construirMenuPorAlcance() {
+  const scope = this.authService.getScopeLevel();
+  const empresaNombre = this.authService.getUserCompanyName();
+  const sucursalNombre = this.authService.getUserBranchName();
 
-    if (scope === 'PLATAFORMA') {
-      this.menuFiltrado = [
-        {
-          titulo: 'CATÁLOGO',
-          icono: 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z',
-          expandido: true,
-          submenus: [
-            { nombre: 'Categorías', ruta: '/admin/categorias', permiso: 'categorias.ver' },
-            { nombre: 'Tallas y Colores', ruta: '/admin/tallas-colores', permiso: 'tallas.ver' },
-            { nombre: 'Productos', ruta: '/admin/productos', permiso: 'productos.ver' }
-          ]
-        },
-        {
-          titulo: 'EMPRESAS',
-          icono: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
-          expandido: true,
-          submenus: [
-            { nombre: 'Cadena de Tiendas (Tenants)', ruta: '/admin/empresas', permiso: 'empresas.ver' },
-            { nombre: 'Sucursales y Ciudades', ruta: '/admin/sucursales', permiso: 'sucursales.ver' }
-          ]
-        },
-        {
-          titulo: 'SEGURIDAD',
-          icono: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z',
-          expandido: true,
-          submenus: [
-            { nombre: 'Usuarios y Permisos', ruta: '/admin/usuarios', permiso: 'usuarios.ver' },
-            { nombre: 'Bitácora del Sistema', ruta: '/admin/bitacora', permiso: 'bitacora.ver' },
-            { nombre: 'Copias de Respaldo', ruta: '/admin/backup', permiso: 'admin.acceder' }
-          ]
-        },
-        {
-          titulo: 'ANALÍTICA',
-          icono: 'M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z',
-          expandido: true,
-          submenus: [
-            { nombre: 'Dashboard de KPIs Globales', ruta: '/admin/kpis', permiso: 'reportes.ver' },
-            { nombre: 'Inteligencia de Ventas (BI)', ruta: '/admin/bi_dashboard', permiso: 'reportes.ver' }
-          ]
-        }
-      ];
-    } else if (scope === 'EMPRESA') {
-      this.menuFiltrado = [
-        {
-          titulo: 'CATÁLOGO',
-          icono: 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z',
-          expandido: true,
-          submenus: [
-            { nombre: 'Categorías', ruta: '/admin/categorias', permiso: 'categorias.ver' },
-            { nombre: 'Tallas y Colores', ruta: '/admin/tallas-colores', permiso: 'tallas.ver' },
-            { nombre: 'Productos', ruta: '/admin/productos', permiso: 'productos.ver' }
-          ]
-        },
-        {
-          titulo: 'EQUIPO',
-          icono: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z',
-          expandido: true,
-          submenus: [
-            { nombre: `Equipo de ${empresaNombre}`, ruta: '/admin/usuarios', permiso: 'usuarios.ver' },
-            { nombre: 'Sucursales', ruta: '/admin/sucursales', permiso: 'sucursales.ver' }
-          ]
-        },
-        {
-          titulo: 'ANALÍTICA',
-          icono: 'M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z',
-          expandido: true,
-          submenus: [
-            { nombre: 'Dashboard de KPIs Empresa', ruta: '/admin/kpis', permiso: 'reportes.ver' },
-            { nombre: 'Inteligencia de Ventas', ruta: '/admin/bi_dashboard', permiso: 'reportes.ver' }
-          ]
-        }
-      ];
-    } else {
-      this.menuFiltrado = [
-        {
-          titulo: 'CATÁLOGO',
-          icono: 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z',
-          expandido: true,
-          submenus: [
-            { nombre: 'Categorías', ruta: '/admin/categorias', permiso: 'categorias.ver' },
-            { nombre: 'Tallas y Colores', ruta: '/admin/tallas-colores', permiso: 'tallas.ver' },
-            { nombre: 'Productos', ruta: '/admin/productos', permiso: 'productos.ver' }
-          ]
-        },
-        {
-          titulo: 'EQUIPO',
-          icono: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z',
-          expandido: true,
-          submenus: [
-            { nombre: `Equipo de ${sucursalNombre}`, ruta: '/admin/usuarios', permiso: 'usuarios.ver' }
-          ]
-        },
-        {
-          titulo: 'ANALÍTICA',
-          icono: 'M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z',
-          expandido: true,
-          submenus: [
-            { nombre: 'Métricas de Sucursal', ruta: '/admin/kpis', permiso: 'reportes.ver' }
-          ]
-        }
-      ];
-    }
+  if (scope === 'PLATAFORMA') {
+    this.menuFiltrado = [
+      {
+        titulo: 'CATÁLOGO',
+        icono: 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z',
+        expandido: true,
+        submenus: [
+          { nombre: 'Categorías', ruta: '/admin/categorias', permiso: 'categorias.ver' },
+          { nombre: 'Tallas y Colores', ruta: '/admin/tallas-colores', permiso: 'tallas.ver' },
+          { nombre: 'Productos', ruta: '/admin/productos', permiso: 'productos.ver' }
+        ]
+      },
+      {
+        titulo: 'PROVEEDORES',
+        icono: 'M20 7h-9M14 17H5m9-5H5m14-5h-4M4 7h.01M4 12h.01M4 17h.01',
+        expandido: true,
+        submenus: [
+          { nombre: 'Gestionar Proveedores', ruta: '/admin/proveedores', permiso: 'proveedores.ver' }
+        ]
+      },
+      {
+        titulo: 'EMPRESAS',
+        icono: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
+        expandido: true,
+        submenus: [
+          { nombre: 'Cadena de Tiendas (Tenants)', ruta: '/admin/empresas', permiso: 'empresas.ver' },
+          { nombre: 'Sucursales y Ciudades', ruta: '/admin/sucursales', permiso: 'sucursales.ver' }
+        ]
+      },
+      {
+        titulo: 'SEGURIDAD',
+        icono: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z',
+        expandido: true,
+        submenus: [
+          { nombre: 'Usuarios y Permisos', ruta: '/admin/usuarios', permiso: 'usuarios.ver' },
+          { nombre: 'Bitácora del Sistema', ruta: '/admin/bitacora', permiso: 'bitacora.ver' },
+          { nombre: 'Copias de Respaldo', ruta: '/admin/backup', permiso: 'admin.acceder' }
+        ]
+      },
+      {
+        titulo: 'ANALÍTICA',
+        icono: 'M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125 1.125 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 4.125 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z',
+        expandido: true,
+        submenus: [
+          { nombre: 'Dashboard de KPIs Globales', ruta: '/admin/kpis', permiso: 'reportes.ver' },
+          { nombre: 'Inteligencia de Ventas (BI)', ruta: '/admin/bi_dashboard', permiso: 'reportes.ver' }
+        ]
+      }
+    ];
+
+  } else if (scope === 'EMPRESA') {
+
+    this.menuFiltrado = [
+      {
+        titulo: 'CATÁLOGO',
+        icono: 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z',
+        expandido: true,
+        submenus: [
+          { nombre: 'Categorías', ruta: '/admin/categorias', permiso: 'categorias.ver' },
+          { nombre: 'Tallas y Colores', ruta: '/admin/tallas-colores', permiso: 'tallas.ver' },
+          { nombre: 'Productos', ruta: '/admin/productos', permiso: 'productos.ver' }
+        ]
+      },
+      {
+        titulo: 'PROVEEDORES',
+        icono: 'M20 7h-9M14 17H5m9-5H5m14-5h-4M4 7h.01M4 12h.01M4 17h.01',
+        expandido: true,
+        submenus: [
+          { nombre: 'Gestionar Proveedores', ruta: '/admin/proveedores', permiso: 'proveedores.ver' }
+        ]
+      },
+      {
+        titulo: 'EQUIPO',
+        icono: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z',
+        expandido: true,
+        submenus: [
+          { nombre: `Equipo de ${empresaNombre}`, ruta: '/admin/usuarios', permiso: 'usuarios.ver' },
+          { nombre: 'Sucursales', ruta: '/admin/sucursales', permiso: 'sucursales.ver' }
+        ]
+      },
+      {
+        titulo: 'ANALÍTICA',
+        icono: 'M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125 1.125 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 4.125 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z',
+        expandido: true,
+        submenus: [
+          { nombre: 'Dashboard de KPIs Empresa', ruta: '/admin/kpis', permiso: 'reportes.ver' },
+          { nombre: 'Inteligencia de Ventas', ruta: '/admin/bi_dashboard', permiso: 'reportes.ver' }
+        ]
+      }
+    ];
+
+  } else {
+
+    this.menuFiltrado = [
+      {
+        titulo: 'CATÁLOGO',
+        icono: 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z',
+        expandido: true,
+        submenus: [
+          { nombre: 'Categorías', ruta: '/admin/categorias', permiso: 'categorias.ver' },
+          { nombre: 'Tallas y Colores', ruta: '/admin/tallas-colores', permiso: 'tallas.ver' },
+          { nombre: 'Productos', ruta: '/admin/productos', permiso: 'productos.ver' }
+        ]
+      },
+      {
+        titulo: 'PROVEEDORES',
+        icono: 'M20 7h-9M14 17H5m9-5H5m14-5h-4M4 7h.01M4 12h.01M4 17h.01',
+        expandido: true,
+        submenus: [
+          { nombre: 'Gestionar Proveedores', ruta: '/admin/proveedores', permiso: 'proveedores.ver' }
+        ]
+      },
+      {
+        titulo: 'EQUIPO',
+        icono: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z',
+        expandido: true,
+        submenus: [
+          { nombre: `Equipo de ${sucursalNombre}`, ruta: '/admin/usuarios', permiso: 'usuarios.ver' }
+        ]
+      },
+      {
+        titulo: 'ANALÍTICA',
+        icono: 'M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125 0 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125 1.125 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 4.125 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125v-6.75z',
+        expandido: true,
+        submenus: [
+          { nombre: 'Métricas de Sucursal', ruta: '/admin/kpis', permiso: 'reportes.ver' }
+        ]
+      }
+    ];
   }
+}
 
   // ------------------------------------------------------------------
   // HOST LISTENERS

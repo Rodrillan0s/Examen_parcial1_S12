@@ -7,7 +7,7 @@ from app.routes import (
     notificaciones_routes, kpis_routes, backup_routes, profile_routes,
     ciudades_routes, media_routes, categorias_routes, tallas_colores_routes,
     productos_routes, catalogo_routes, carrito_routes, pedido_routes,
-    reserva_routes
+    reserva_routes,proveedores_routes
 )
 from app.utils.db_init import inicializar_tablas_seguridad
 from app.utils.rbac_migration import ejecutar_migracion_rbac
@@ -58,5 +58,5 @@ def create_app() -> FastAPI:
     app.include_router(carrito_routes.router)
     app.include_router(pedido_routes.router)
     app.include_router(reserva_routes.router)
-
+    app.include_router(proveedores_routes.router)
     return app
