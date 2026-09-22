@@ -85,7 +85,8 @@ def create_app() -> FastAPI:
     app.include_router(reserva_routes.router)
     app.include_router(proveedores_routes.router, prefix='/api/proveedores')
     app.include_router(inventario_routes.router)
-    app.include_router(pago_routes.router, prefix='/api/pagos')     
+    app.include_router(pago_routes.router)     
+
     app.include_router(comprobante_routes.router, prefix='/api/comprobantes')
     app.include_router(caja_routes.router)
     app.include_router(pos_routes.router)
