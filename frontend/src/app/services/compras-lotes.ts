@@ -113,17 +113,25 @@ export class ComprasLotesService {
   // ============================================================================
 
   descargarPlantillaExcel(): Observable<Blob> {
+    let params = new HttpParams();
+    const idEmpresa = this.authService.getEffectiveCompanyId();
+    if (idEmpresa) params = params.set('id_empresa', idEmpresa.toString());
+
     return this.http.get(
       `${this.apiUrl}/api/inventario/importacion/plantilla`,
-      { headers: this.getHeaders(), responseType: 'blob' }
+      { headers: this.getHeaders(), params, responseType: 'blob' }
     );
   }
 
   previsualizarArchivoExcel(archivo: File, idSucursal?: number): Observable<{ success: boolean; data: PreviewResultadoData }> {
     const formData = new FormData();
     formData.append('archivo', archivo, archivo.name);
+    const idEmpresa = this.authService.getEffectiveCompanyId();
     if (idSucursal) {
       formData.append('id_sucursal', idSucursal.toString());
+    }
+    if (idEmpresa) {
+      formData.append('id_empresa', idEmpresa.toString());
     }
 
     return this.http.post<{ success: boolean; data: PreviewResultadoData }>(
@@ -135,6 +143,7 @@ export class ComprasLotesService {
 
   confirmarImportacion(payload: {
     id_sucursal: number;
+    id_empresa?: number | null;
     filas: FilaPreview[];
     generar_orden_compra: boolean;
     id_proveedor?: number | null;

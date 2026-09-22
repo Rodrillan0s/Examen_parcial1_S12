@@ -180,6 +180,8 @@ export class ListaInventarioComponent implements OnInit {
     this.authService.companyChanged$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
+        // La sucursal pertenece al tenant anterior; obligar a resolverla de nuevo.
+        this.sucursalDestinoImportacion = null;
         const br = this.authService.activeBranch();
         this.filtroSucursal = br && br.id ? String(br.id) : '';
         if (this.empresaRequerida) {
@@ -720,6 +722,7 @@ export class ListaInventarioComponent implements OnInit {
 
     const payload = {
       id_sucursal: Number(this.sucursalDestinoImportacion),
+      id_empresa: this.authService.getEffectiveCompanyId(),
       filas: filasValidas,
       generar_orden_compra: this.generarOrdenCompraImportacion,
       numero_lote: this.numeroLoteImportacion.trim() || undefined,

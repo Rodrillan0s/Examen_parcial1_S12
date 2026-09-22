@@ -47,6 +47,8 @@ export class ProductosComponent implements OnInit {
   categoriasDisponibles: Categoria[] = [];
   tallasDisponibles: Talla[] = [];
   coloresDisponibles: ColorPrenda[] = [];
+  private productosRequestVersion = 0;
+  private catalogosRequestVersion = 0;
 
   // Modal Principal (Crear / Editar)
   mostrarModal: boolean = false;
@@ -204,6 +206,8 @@ esTemporadaActual(prod: Producto): boolean {
           const nuevoFiltro = empresa ? empresa.id_empresa : null;
           if (this.filtroEmpresa !== nuevoFiltro) {
             this.filtroEmpresa = nuevoFiltro;
+            this.productos = [];
+            this.mostrarModal = false;
             this.cargarProductos();
             this.cargarCatalogosActivos(this.filtroEmpresa || undefined);
           }
@@ -258,15 +262,19 @@ esTemporadaActual(prod: Producto): boolean {
 
   cargarProductos(): void {
     this.cargando = true;
+    const requestVersion = ++this.productosRequestVersion;
+    const empresaSolicitada = this.filtroEmpresa;
     const params: any = {};
-    if (this.filtroEmpresa) params.id_empresa = this.filtroEmpresa;
+    if (empresaSolicitada) params.id_empresa = empresaSolicitada;
 
     this.productosService.listarProductos(params).subscribe({
       next: (res) => {
+        if (requestVersion !== this.productosRequestVersion || empresaSolicitada !== this.filtroEmpresa) return;
         this.productos = res.data || [];
         this.cargando = false;
       },
       error: (err) => {
+        if (requestVersion !== this.productosRequestVersion || empresaSolicitada !== this.filtroEmpresa) return;
         this.mostrarAlerta(err.error?.detail || 'Error al cargar los productos.', 'error');
         this.cargando = false;
       }
@@ -274,6 +282,10 @@ esTemporadaActual(prod: Producto): boolean {
   }
 
   cargarCatalogosActivos(idEmpresa?: number): void {
+    const requestVersion = ++this.catalogosRequestVersion;
+    this.tallasDisponibles = [];
+    this.coloresDisponibles = [];
+    this.categoriasDisponibles = [];
     const paramsCat: any = { solo_activas: true };
     const paramsTallas: any = { solo_activas: true };
     const paramsColores: any = { solo_activos: true };
@@ -287,6 +299,7 @@ esTemporadaActual(prod: Producto): boolean {
     // 1. Categorías activas
     this.categoriasService.listarCategorias(paramsCat).subscribe({
       next: (res) => {
+        if (requestVersion !== this.catalogosRequestVersion) return;
         this.categoriasDisponibles = res.data || [];
       },
       error: (err) => console.error('Error al cargar categorías activas:', err)
@@ -295,6 +308,7 @@ esTemporadaActual(prod: Producto): boolean {
     // 2. Tallas activas
     this.tallasColoresService.listarTallas(paramsTallas).subscribe({
       next: (res) => {
+        if (requestVersion !== this.catalogosRequestVersion) return;
         this.tallasDisponibles = res.data || [];
       },
       error: (err) => console.error('Error al cargar tallas activas:', err)
@@ -303,6 +317,7 @@ esTemporadaActual(prod: Producto): boolean {
     // 3. Colores activos
     this.tallasColoresService.listarColores(paramsColores).subscribe({
       next: (res) => {
+        if (requestVersion !== this.catalogosRequestVersion) return;
         this.coloresDisponibles = res.data || [];
       },
       error: (err) => console.error('Error al cargar colores activos:', err)
@@ -333,6 +348,10 @@ esTemporadaActual(prod: Producto): boolean {
   }
 
   abrirModalEditar(prod: Producto): void {
+    if (this.filtroEmpresa && prod.id_empresa !== this.filtroEmpresa) {
+      this.mostrarAlerta('El producto seleccionado no pertenece al Tenant activo.', 'error');
+      return;
+    }
     this.cargando = true;
     this.productosService.obtenerProducto(prod.id_producto!).subscribe({
       next: (res) => {
@@ -413,6 +432,19 @@ esTemporadaActual(prod: Producto): boolean {
 
     this.guardando = true;
 
+    const tallasPermitidas = new Set(
+      this.tallasDisponibles
+        .map(t => t.id_talla)
+        .filter((id): id is number => id !== undefined)
+    );
+    const coloresPermitidos = new Set(
+      this.coloresDisponibles
+        .map(c => c.id_color)
+        .filter((id): id is number => id !== undefined)
+    );
+    const tallasSeleccionadas = this.productoForm.tallas_seleccionadas.filter(id => tallasPermitidas.has(id));
+    const coloresSeleccionados = this.productoForm.colores_seleccionados.filter(id => coloresPermitidos.has(id));
+
     if (this.modoEdicion && this.productoForm.id_producto) {
       // Actualizar
       const payload = {
@@ -426,8 +458,8 @@ esTemporadaActual(prod: Producto): boolean {
         marca: this.productoForm.marca,
         genero: this.productoForm.genero,
         activo: this.productoForm.activo,
-        tallas_ids: this.productoForm.tallas_seleccionadas,
-        colores_ids: this.productoForm.colores_seleccionados,
+        tallas_ids: tallasSeleccionadas,
+        colores_ids: coloresSeleccionados,
         tiene_ra: !!this.productoForm.tiene_ra,
         tipo_prenda_ra: this.productoForm.tiene_ra ? this.productoForm.tipo_prenda_ra : undefined,
         modelo_2d_url: this.productoForm.tiene_ra ? (this.productoForm.modelo_2d_url || undefined) : undefined

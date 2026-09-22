@@ -333,7 +333,12 @@ def confirmar_e_importar_lote_db(
     4. Afecta t_inventario (stock_actual += cant, stock_disponible += cant) en la sucursal seleccionada.
     5. Registra auditoría en t_movimiento_inventario (tipo_movimiento='ENTRADA_COMPRA').
     """
-    id_empresa = int(token_data.get("id_empresa") or token_data.get("empresa_id") or 1)
+    id_empresa = int(
+        payload.get("id_empresa")
+        or token_data.get("id_empresa")
+        or token_data.get("empresa_id")
+        or 1
+    )
     id_usuario = int(token_data.get("nro_usuario") or token_data.get("id_usuario") or 1)
 
     id_sucursal = payload.get("id_sucursal")

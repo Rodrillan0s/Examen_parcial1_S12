@@ -12,6 +12,7 @@ router = APIRouter(tags=["Gestión de Compras, Lotes e Importación Masiva"])
 # --- Modelos Pydantic ---
 class ConfirmarImportacionIn(BaseModel):
     id_sucursal: int = Field(..., description="ID de la sucursal donde ingresará la mercadería")
+    id_empresa: Optional[int] = Field(None, description="Empresa seleccionada para administradores globales")
     filas: List[Dict[str, Any]] = Field(..., description="Listado de filas validadas para importar")
     generar_orden_compra: bool = Field(True, description="Si genera automáticamente registro de Orden de Compra")
     id_proveedor: Optional[int] = Field(None, description="ID del proveedor opcional")
@@ -33,14 +34,17 @@ class RecepcionOrdenIn(BaseModel):
 # ==============================================================================
 
 @router.get("/api/inventario/importacion/plantilla")
-def descargar_plantilla_excel(token_data: dict = Depends(require_permission('compras.ver'))):
+def descargar_plantilla_excel(
+    id_empresa: Optional[int] = Query(None, description="Empresa seleccionada para administradores globales"),
+    token_data: dict = Depends(require_permission('compras.ver'))
+):
     """
     Descarga la plantilla fija y oficial de Excel (.xlsx) para importación de prendas por lote.
     Incluye formato predefinido, validaciones y catálogo de categorías, tallas y colores.
     """
     try:
-        id_empresa = resolver_tenant_operacion(token_data, permitir_global=False)
-        buf = compras_lotes_services.generar_plantilla_excel_lotes(id_empresa)
+        empresa_efectiva = resolver_tenant_operacion(token_data, id_empresa, permitir_global=False)
+        buf = compras_lotes_services.generar_plantilla_excel_lotes(empresa_efectiva)
         filename = "plantilla_importacion_prendas_lote.xlsx"
         return StreamingResponse(
             buf,
@@ -50,6 +54,8 @@ def descargar_plantilla_excel(token_data: dict = Depends(require_permission('com
                 "Access-Control-Expose-Headers": "Content-Disposition"
             }
         )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -61,6 +67,7 @@ def descargar_plantilla_excel(token_data: dict = Depends(require_permission('com
 async def previsualizar_archivo_excel(
     archivo: UploadFile = File(...),
     id_sucursal: Optional[int] = Form(None),
+    id_empresa: Optional[int] = Form(None),
     token_data: dict = Depends(require_permission('compras.crear'))
 ):
     """
@@ -68,13 +75,13 @@ async def previsualizar_archivo_excel(
     Retorna la clasificación por fila (nuevo producto vs existente) y totales sin modificar la BD.
     """
     try:
-        id_empresa = resolver_tenant_operacion(token_data, permitir_global=False)
+        empresa_efectiva = resolver_tenant_operacion(token_data, id_empresa, permitir_global=False)
         id_sucursal = resolver_sucursal_autorizada(token_data, id_sucursal)
         content = await archivo.read()
         if not content:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El archivo enviado está vacío.")
 
-        resumen = compras_lotes_services.analizar_y_previsualizar_excel(content, id_empresa, id_sucursal)
+        resumen = compras_lotes_services.analizar_y_previsualizar_excel(content, empresa_efectiva, id_sucursal)
         return {
             "success": True,
             "data": resumen
@@ -99,8 +106,15 @@ def confirmar_importacion_lote(
     y genera los registros de auditoría y lote.
     """
     try:
+        datos = payload.model_dump()
+        datos['id_empresa'] = resolver_tenant_operacion(
+            token_data,
+            datos.get('id_empresa'),
+            permitir_global=False
+        )
+        resolver_sucursal_autorizada(token_data, datos.get('id_sucursal'))
         resultado = compras_lotes_services.confirmar_e_importar_lote_db(
-            payload.model_dump(),
+            datos,
             token_data
         )
         return resultado
