@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/pago_service.dart';
 import '../services/pedido_service.dart';
 import '../theme/app_theme.dart';
@@ -70,7 +71,11 @@ class _PagoScreenState extends State<PagoScreen> {
 
     if (titular.length < 3) return false;
     if (numero.length < 13 || numero.length > 19) return false;
-    if (mes.length != 2 || (int.tryParse(mes) ?? 0) < 1 || (int.tryParse(mes) ?? 0) > 12) return false;
+    if (mes.length != 2 ||
+        (int.tryParse(mes) ?? 0) < 1 ||
+        (int.tryParse(mes) ?? 0) > 12) {
+      return false;
+    }
     if (anio.length < 2 || anio.length > 4) return false;
     if (cvv.length < 3 || cvv.length > 4) return false;
 
@@ -84,7 +89,8 @@ class _PagoScreenState extends State<PagoScreen> {
 
   Future<void> _pagarConTarjeta(ResumenPedidoPagoModel resumen) async {
     if (!_formularioTarjetaValido()) {
-      setState(() => _errorMensaje = 'Por favor completa todos los campos de la tarjeta.');
+      setState(() =>
+          _errorMensaje = 'Por favor completa todos los campos de la tarjeta.');
       return;
     }
 
@@ -114,7 +120,8 @@ class _PagoScreenState extends State<PagoScreen> {
         if (res != null) {
           _resultadoPago = res;
         } else {
-          _errorMensaje = pagoService.error ?? 'No fue posible autorizar el pago.';
+          _errorMensaje =
+              pagoService.error ?? 'No fue posible autorizar el pago.';
         }
       });
 
@@ -127,8 +134,10 @@ class _PagoScreenState extends State<PagoScreen> {
 
   Future<void> _iniciarPagoPayPal(ResumenPedidoPagoModel resumen) async {
     if (_deseaFactura) {
-      if (_nitCiController.text.trim().isEmpty || _razonSocialController.text.trim().isEmpty) {
-        setState(() => _errorMensaje = 'Por favor ingresa NIT/CI y Razón Social para la factura.');
+      if (_nitCiController.text.trim().isEmpty ||
+          _razonSocialController.text.trim().isEmpty) {
+        setState(() => _errorMensaje =
+            'Por favor ingresa NIT/CI y Razón Social para la factura.');
         return;
       }
     }
@@ -151,13 +160,37 @@ class _PagoScreenState extends State<PagoScreen> {
     if (ordenData == null || ordenData['order_id'] == null) {
       setState(() {
         _procesando = false;
-        _errorMensaje = pagoService.error ?? 'No fue posible iniciar la orden de PayPal.';
+        _errorMensaje =
+            pagoService.error ?? 'No fue posible iniciar la orden de PayPal.';
       });
       return;
     }
 
     final orderId = ordenData['order_id'] as String;
     final totalUsd = ordenData['total_usd'] ?? '0.00';
+    final approveUrl = ordenData['approve_url']?.toString();
+
+    if (approveUrl == null || approveUrl.isEmpty) {
+      setState(() {
+        _procesando = false;
+        _errorMensaje = 'PayPal no devolvió la URL de aprobación.';
+      });
+      return;
+    }
+
+    final opened = await launchUrl(
+      Uri.parse(approveUrl),
+      mode: LaunchMode.externalApplication,
+    );
+    if (!opened || !mounted) {
+      if (mounted) {
+        setState(() {
+          _procesando = false;
+          _errorMensaje = 'No se pudo abrir PayPal en el dispositivo.';
+        });
+      }
+      return;
+    }
 
     // Diálogo de autorización PayPal para confirmar el cobro
     final confirmar = await showDialog<bool>(
@@ -179,7 +212,8 @@ class _PagoScreenState extends State<PagoScreen> {
             Expanded(
               child: Text(
                 'Autorizar con PayPal',
-                style: GoogleFonts.playfairDisplay(fontSize: 18, fontWeight: FontWeight.w700),
+                style: GoogleFonts.playfairDisplay(
+                    fontSize: 18, fontWeight: FontWeight.w700),
               ),
             ),
           ],
@@ -189,8 +223,9 @@ class _PagoScreenState extends State<PagoScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Estás a punto de pagar a través de la pasarela oficial de PayPal:',
-              style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textSecondary),
+              'PayPal se abrió en el navegador. Aprueba allí la orden y vuelve a esta pantalla para confirmar:',
+              style: GoogleFonts.plusJakartaSans(
+                  fontSize: 13, color: AppTheme.textSecondary),
             ),
             const SizedBox(height: 14),
             Container(
@@ -204,21 +239,31 @@ class _PagoScreenState extends State<PagoScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('ID de Orden PayPal:', style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textMuted)),
-                  Text(orderId, style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w700)),
+                  Text('ID de Orden PayPal:',
+                      style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11, color: AppTheme.textMuted)),
+                  Text(orderId,
+                      style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 6),
-                  Text('Monto a cobrar:', style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textMuted)),
+                  Text('Monto a cobrar:',
+                      style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11, color: AppTheme.textMuted)),
                   Text(
                     'USD \$$totalUsd (Equiv. Bs. ${resumen.total.toStringAsFixed(2)})',
-                    style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w800, color: const Color(0xFF0070BA)),
+                    style: GoogleFonts.plusJakartaSans(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF0070BA)),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 12),
             Text(
-              'Al confirmar, se procesará la captura inmediata y se emitirá tu comprobante oficial.',
-              style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textMuted),
+              'La captura solo se realizará después de que PayPal confirme la aprobación.',
+              style: GoogleFonts.plusJakartaSans(
+                  fontSize: 11, color: AppTheme.textMuted),
             ),
           ],
         ),
@@ -231,10 +276,11 @@ class _PagoScreenState extends State<PagoScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0070BA),
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Aprobar Pago'),
+            child: const Text('Ya aprobé en PayPal'),
           ),
         ],
       ),
@@ -263,7 +309,8 @@ class _PagoScreenState extends State<PagoScreen> {
         if (res != null) {
           _resultadoPago = res;
         } else {
-          _errorMensaje = pagoService.error ?? 'No fue posible capturar la orden en PayPal.';
+          _errorMensaje = pagoService.error ??
+              'No fue posible capturar la orden en PayPal.';
         }
       });
 
@@ -289,7 +336,8 @@ class _PagoScreenState extends State<PagoScreen> {
       appBar: AppBar(
         title: Text(
           'Pago Electrónico Seguro',
-          style: GoogleFonts.playfairDisplay(fontSize: 18, fontWeight: FontWeight.w700),
+          style: GoogleFonts.playfairDisplay(
+              fontSize: 18, fontWeight: FontWeight.w700),
         ),
       ),
       body: pagoService.cargando && resumen == null
@@ -313,13 +361,16 @@ class _PagoScreenState extends State<PagoScreen> {
             const SizedBox(height: 16),
             Text(
               'No se pudo cargar el pedido',
-              style: GoogleFonts.playfairDisplay(fontSize: 20, fontWeight: FontWeight.w700),
+              style: GoogleFonts.playfairDisplay(
+                  fontSize: 20, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
             Text(
-              error ?? 'El pedido no se encuentra disponible para pago o ya ha sido pagado.',
+              error ??
+                  'El pedido no se encuentra disponible para pago o ya ha sido pagado.',
               textAlign: TextAlign.center,
-              style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textSecondary),
+              style: GoogleFonts.plusJakartaSans(
+                  fontSize: 13, color: AppTheme.textSecondary),
             ),
             const SizedBox(height: 24),
             AuroraButton(
@@ -349,11 +400,13 @@ class _PagoScreenState extends State<PagoScreen> {
             decoration: BoxDecoration(
               color: AppTheme.goldLight,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.3)),
+              border: Border.all(
+                  color: AppTheme.primaryGold.withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [
-                const Icon(Icons.lock_outline, color: AppTheme.primaryGold, size: 22),
+                const Icon(Icons.lock_outline,
+                    color: AppTheme.primaryGold, size: 22),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -466,7 +519,8 @@ class _PagoScreenState extends State<PagoScreen> {
           // Selector de Método de Pago
           Text(
             'Selecciona el Método de Pago',
-            style: GoogleFonts.playfairDisplay(fontSize: 16, fontWeight: FontWeight.w700),
+            style: GoogleFonts.playfairDisplay(
+                fontSize: 16, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 12),
 
@@ -497,9 +551,11 @@ class _PagoScreenState extends State<PagoScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Icon(Icons.credit_card, color: AppTheme.primaryGold, size: 24),
+                            const Icon(Icons.credit_card,
+                                color: AppTheme.primaryGold, size: 24),
                             if (_metodoSeleccionado == 'TARJETA')
-                              const Icon(Icons.check_circle, color: AppTheme.primaryGold, size: 18),
+                              const Icon(Icons.check_circle,
+                                  color: AppTheme.primaryGold, size: 18),
                           ],
                         ),
                         const SizedBox(height: 10),
@@ -549,9 +605,11 @@ class _PagoScreenState extends State<PagoScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Icon(Icons.account_balance_wallet, color: Color(0xFF0070BA), size: 24),
+                            const Icon(Icons.account_balance_wallet,
+                                color: Color(0xFF0070BA), size: 24),
                             if (_metodoSeleccionado == 'PAYPAL')
-                              const Icon(Icons.check_circle, color: Color(0xFF0070BA), size: 18),
+                              const Icon(Icons.check_circle,
+                                  color: Color(0xFF0070BA), size: 18),
                           ],
                         ),
                         const SizedBox(height: 10),
@@ -591,11 +649,13 @@ class _PagoScreenState extends State<PagoScreen> {
               decoration: BoxDecoration(
                 color: AppTheme.errorLight,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.error.withValues(alpha: 0.3)),
+                border:
+                    Border.all(color: AppTheme.error.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.error_outline, color: AppTheme.error, size: 20),
+                  const Icon(Icons.error_outline,
+                      color: AppTheme.error, size: 20),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -632,7 +692,9 @@ class _PagoScreenState extends State<PagoScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Titular
-          Text('Nombre del Titular', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w700)),
+          Text('Nombre del Titular',
+              style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12, fontWeight: FontWeight.w700)),
           const SizedBox(height: 6),
           TextField(
             controller: _titularController,
@@ -641,14 +703,19 @@ class _PagoScreenState extends State<PagoScreen> {
               hintText: 'Como figura en la tarjeta',
               filled: true,
               fillColor: AppTheme.surfaceVariant,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none),
             ),
           ),
           const SizedBox(height: 14),
 
           // Número de tarjeta
-          Text('Número de Tarjeta', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w700)),
+          Text('Número de Tarjeta',
+              style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12, fontWeight: FontWeight.w700)),
           const SizedBox(height: 6),
           TextField(
             controller: _numeroTarjetaController,
@@ -663,8 +730,11 @@ class _PagoScreenState extends State<PagoScreen> {
               prefixIcon: const Icon(Icons.credit_card_outlined),
               filled: true,
               fillColor: AppTheme.surfaceVariant,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none),
             ),
           ),
           const SizedBox(height: 14),
@@ -676,7 +746,9 @@ class _PagoScreenState extends State<PagoScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Mes', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w700)),
+                    Text('Mes',
+                        style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 6),
                     TextField(
                       controller: _mesController,
@@ -690,8 +762,11 @@ class _PagoScreenState extends State<PagoScreen> {
                         hintText: 'MM',
                         filled: true,
                         fillColor: AppTheme.surfaceVariant,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 12),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none),
                       ),
                     ),
                   ],
@@ -702,7 +777,9 @@ class _PagoScreenState extends State<PagoScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Año', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w700)),
+                    Text('Año',
+                        style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 6),
                     TextField(
                       controller: _anioController,
@@ -716,8 +793,11 @@ class _PagoScreenState extends State<PagoScreen> {
                         hintText: 'AA / AAAA',
                         filled: true,
                         fillColor: AppTheme.surfaceVariant,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 12),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none),
                       ),
                     ),
                   ],
@@ -728,7 +808,9 @@ class _PagoScreenState extends State<PagoScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('CVV', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w700)),
+                    Text('CVV',
+                        style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 6),
                     TextField(
                       controller: _cvvController,
@@ -743,8 +825,11 @@ class _PagoScreenState extends State<PagoScreen> {
                         hintText: '•••',
                         filled: true,
                         fillColor: AppTheme.surfaceVariant,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 12),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none),
                       ),
                     ),
                   ],
@@ -760,7 +845,8 @@ class _PagoScreenState extends State<PagoScreen> {
 
           // Botón Confirmar Pago
           AuroraButton(
-            text: 'Confirmar Pago de ${currencyFormatter.format(resumen.total)}',
+            text:
+                'Confirmar Pago de ${currencyFormatter.format(resumen.total)}',
             isLoading: _procesando,
             icon: Icons.lock_outline,
             onPressed: _procesando ? null : () => _pagarConTarjeta(resumen),
@@ -790,14 +876,16 @@ class _PagoScreenState extends State<PagoScreen> {
             decoration: BoxDecoration(
               color: const Color(0xFF0070BA).withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFF0070BA).withValues(alpha: 0.2)),
+              border: Border.all(
+                  color: const Color(0xFF0070BA).withValues(alpha: 0.2)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.language, color: Color(0xFF0070BA), size: 20),
+                    const Icon(Icons.language,
+                        color: Color(0xFF0070BA), size: 20),
                     const SizedBox(width: 8),
                     Text(
                       'Pago Internacional con PayPal',
@@ -812,7 +900,8 @@ class _PagoScreenState extends State<PagoScreen> {
                 const SizedBox(height: 6),
                 Text(
                   'El cobro se procesará de manera segura al cambio oficial por un total de ${currencyFormatter.format(resumen.total)}. Puedes asociar tu cuenta de PayPal o pagar con tu saldo internacional.',
-                  style: GoogleFonts.plusJakartaSans(fontSize: 12, height: 1.4, color: AppTheme.textSecondary),
+                  style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12, height: 1.4, color: AppTheme.textSecondary),
                 ),
               ],
             ),
@@ -832,18 +921,21 @@ class _PagoScreenState extends State<PagoScreen> {
                 backgroundColor: const Color(0xFFFFC439),
                 foregroundColor: const Color(0xFF003087),
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
               ),
               icon: _procesando
                   ? const SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF003087)),
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Color(0xFF003087)),
                     )
                   : const Icon(Icons.payment, size: 20),
               label: Text(
                 _procesando ? 'Conectando con PayPal...' : 'Pagar con PayPal',
-                style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w800),
+                style: GoogleFonts.plusJakartaSans(
+                    fontSize: 14, fontWeight: FontWeight.w800),
               ),
               onPressed: _procesando ? null : () => _iniciarPagoPayPal(resumen),
             ),
@@ -864,12 +956,14 @@ class _PagoScreenState extends State<PagoScreen> {
               Checkbox(
                 value: _deseaFactura,
                 activeColor: AppTheme.primaryGold,
-                onChanged: (val) => setState(() => _deseaFactura = val ?? false),
+                onChanged: (val) =>
+                    setState(() => _deseaFactura = val ?? false),
               ),
               Expanded(
                 child: Text(
                   'Deseo Factura Electrónica con datos fiscales',
-                  style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w600),
+                  style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12, fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -893,8 +987,11 @@ class _PagoScreenState extends State<PagoScreen> {
                     hintText: 'Ej: 8492019',
                     filled: true,
                     fillColor: AppTheme.surface,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide.none),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -905,8 +1002,11 @@ class _PagoScreenState extends State<PagoScreen> {
                     hintText: 'Nombre o Empresa',
                     filled: true,
                     fillColor: AppTheme.surface,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide.none),
                   ),
                 ),
               ],
@@ -934,20 +1034,24 @@ class _PagoScreenState extends State<PagoScreen> {
             decoration: BoxDecoration(
               color: AppTheme.successLight,
               shape: BoxShape.circle,
-              border: Border.all(color: AppTheme.success.withValues(alpha: 0.3), width: 2),
+              border: Border.all(
+                  color: AppTheme.success.withValues(alpha: 0.3), width: 2),
             ),
-            child: const Icon(Icons.check_circle_outline, size: 44, color: AppTheme.success),
+            child: const Icon(Icons.check_circle_outline,
+                size: 44, color: AppTheme.success),
           ),
           const SizedBox(height: 18),
           Text(
             '¡Pago Procesado con Éxito!',
-            style: GoogleFonts.playfairDisplay(fontSize: 22, fontWeight: FontWeight.w700),
+            style: GoogleFonts.playfairDisplay(
+                fontSize: 22, fontWeight: FontWeight.w700),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 6),
           Text(
             'La venta ha sido registrada formalmente y el inventario ha sido actualizado.',
-            style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textSecondary),
+            style: GoogleFonts.plusJakartaSans(
+                fontSize: 13, color: AppTheme.textSecondary),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 28),
@@ -961,14 +1065,19 @@ class _PagoScreenState extends State<PagoScreen> {
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: AppTheme.border),
               boxShadow: const [
-                BoxShadow(color: Color(0x08000000), blurRadius: 10, offset: Offset(0, 4)),
+                BoxShadow(
+                    color: Color(0x08000000),
+                    blurRadius: 10,
+                    offset: Offset(0, 4)),
               ],
             ),
             child: Column(
               children: [
                 _buildFilaFicha(
                   'Documento Emitido',
-                  resultado.tipoDocumento == 'FACTURA' ? 'Factura Electrónica' : 'Comprobante de Venta',
+                  resultado.tipoDocumento == 'FACTURA'
+                      ? 'Factura Electrónica'
+                      : 'Comprobante de Venta',
                   esDestacado: true,
                 ),
                 const Divider(height: 20),
@@ -978,7 +1087,8 @@ class _PagoScreenState extends State<PagoScreen> {
                 const Divider(height: 20),
                 _buildFilaFicha('Método de Pago', resultado.metodoPago),
                 const Divider(height: 20),
-                _buildFilaFicha('Transacción Bancaria', resultado.codigoTransaccion),
+                _buildFilaFicha(
+                    'Transacción Bancaria', resultado.codigoTransaccion),
                 const Divider(height: 20),
                 _buildFilaFicha(
                   'Total Pagado',
@@ -1001,12 +1111,14 @@ class _PagoScreenState extends State<PagoScreen> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.email_outlined, color: AppTheme.primaryGold, size: 20),
+                const Icon(Icons.email_outlined,
+                    color: AppTheme.primaryGold, size: 20),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     'Se ha enviado una copia digital a tu correo electrónico.',
-                    style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textSecondary),
+                    style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12, color: AppTheme.textSecondary),
                   ),
                 ),
               ],
@@ -1056,7 +1168,8 @@ class _PagoScreenState extends State<PagoScreen> {
             valor,
             style: GoogleFonts.plusJakartaSans(
               fontSize: esGrande ? 16 : 13,
-              fontWeight: esDestacado || esGrande ? FontWeight.w800 : FontWeight.w600,
+              fontWeight:
+                  esDestacado || esGrande ? FontWeight.w800 : FontWeight.w600,
               color: colorValor ?? AppTheme.textPrimary,
             ),
             textAlign: TextAlign.end,

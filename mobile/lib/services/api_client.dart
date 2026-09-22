@@ -28,6 +28,9 @@ class ApiClient {
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
+          // Los servicios conservan una instancia Dio; sincronizar la URL aquí
+          // permite cambiar entre local y producción desde la app sin reiniciarla.
+          options.baseUrl = AppConfig.apiBaseUrl;
           final token = await TokenStorage.getToken();
           if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';

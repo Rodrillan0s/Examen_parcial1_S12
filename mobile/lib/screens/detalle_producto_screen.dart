@@ -132,6 +132,22 @@ class _DetalleProductoScreenState extends State<DetalleProductoScreen> {
         _disponibilidadSucursales = list;
         _cargandoDisponibilidad = false;
       });
+      if (catalogo.sucursalSeleccionada == null &&
+          catalogo.sucursalPersistidaId != null) {
+        for (final sucursal in list) {
+          if (sucursal.idSucursal == catalogo.sucursalPersistidaId &&
+              sucursal.disponible) {
+            await catalogo.seleccionarSucursal(SucursalContextModel(
+              idSucursal: sucursal.idSucursal,
+              idEmpresa:
+                  catalogo.tenantSeleccionado?.idEmpresa ?? _prenda!.idEmpresa,
+              nombre: sucursal.nombre,
+              direccion: sucursal.direccion,
+            ));
+            break;
+          }
+        }
+      }
     }
   }
 
@@ -141,14 +157,16 @@ class _DetalleProductoScreenState extends State<DetalleProductoScreen> {
       AuthDialogHelper.mostrarModalLoginRequerido(
         context,
         titulo: 'Inicia sesión para comprar',
-        mensaje: 'Para añadir prendas a tu bolsa de compras y sincronizar tus pedidos, ingresa con tu cuenta de Aurora Store.',
+        mensaje:
+            'Para añadir prendas a tu bolsa de compras y sincronizar tus pedidos, ingresa con tu cuenta de Aurora Store.',
       );
       return;
     }
 
     if (_varianteSeleccionada == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor selecciona una talla y color.')),
+        const SnackBar(
+            content: Text('Por favor selecciona una talla y color.')),
       );
       return;
     }
@@ -200,7 +218,8 @@ class _DetalleProductoScreenState extends State<DetalleProductoScreen> {
       AuthDialogHelper.mostrarModalLoginRequerido(
         context,
         titulo: 'Inicia sesión para reservar',
-        mensaje: 'Para agendar una cita privada en nuestras sucursales exclusivas, por favor identifícate con tu cuenta de Aurora Store.',
+        mensaje:
+            'Para agendar una cita privada en nuestras sucursales exclusivas, por favor identifícate con tu cuenta de Aurora Store.',
       );
       return;
     }
@@ -268,7 +287,8 @@ class _DetalleProductoScreenState extends State<DetalleProductoScreen> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Se requiere acceso a la cámara para el vestidor virtual.'),
+          content:
+              Text('Se requiere acceso a la cámara para el vestidor virtual.'),
           backgroundColor: Colors.black87,
         ),
       );
@@ -288,7 +308,8 @@ class _DetalleProductoScreenState extends State<DetalleProductoScreen> {
       appBar: AppBar(
         title: Text(
           _prenda?.nombre ?? 'Detalle de la Prenda',
-          style: GoogleFonts.playfairDisplay(fontSize: 18, fontWeight: FontWeight.w700),
+          style: GoogleFonts.playfairDisplay(
+              fontSize: 18, fontWeight: FontWeight.w700),
         ),
       ),
       body: _cargando
@@ -339,13 +360,18 @@ class _DetalleProductoScreenState extends State<DetalleProductoScreen> {
                                         return Image.network(
                                           url,
                                           fit: BoxFit.cover,
-                                          errorBuilder: (_, __, ___) => const Center(
-                                            child: Icon(Icons.checkroom, size: 64, color: AppTheme.textMuted),
+                                          errorBuilder: (_, __, ___) =>
+                                              const Center(
+                                            child: Icon(Icons.checkroom,
+                                                size: 64,
+                                                color: AppTheme.textMuted),
                                           ),
                                         );
                                       }
                                       return const Center(
-                                        child: Icon(Icons.checkroom, size: 64, color: AppTheme.textMuted),
+                                        child: Icon(Icons.checkroom,
+                                            size: 64,
+                                            color: AppTheme.textMuted),
                                       );
                                     },
                                   ),
@@ -356,18 +382,23 @@ class _DetalleProductoScreenState extends State<DetalleProductoScreen> {
                                       left: 0,
                                       right: 0,
                                       child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         children: List.generate(
                                           _prenda!.imagenes.length,
                                           (index) => Container(
-                                            margin: const EdgeInsets.symmetric(horizontal: 3),
-                                            width: _imagenActualIndex == index ? 18 : 6,
+                                            margin: const EdgeInsets.symmetric(
+                                                horizontal: 3),
+                                            width: _imagenActualIndex == index
+                                                ? 18
+                                                : 6,
                                             height: 6,
                                             decoration: BoxDecoration(
                                               color: _imagenActualIndex == index
                                                   ? AppTheme.primary
                                                   : Colors.black26,
-                                              borderRadius: BorderRadius.circular(3),
+                                              borderRadius:
+                                                  BorderRadius.circular(3),
                                             ),
                                           ),
                                         ),
@@ -384,7 +415,8 @@ class _DetalleProductoScreenState extends State<DetalleProductoScreen> {
                                 children: [
                                   // Marca y Categoría
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       Text(
                                         _prenda!.marca.toUpperCase(),
@@ -400,7 +432,8 @@ class _DetalleProductoScreenState extends State<DetalleProductoScreen> {
                                           if (_prenda!.tieneRa) ...[
                                             const AuroraBadge(
                                               text: 'AR VESTIDOR',
-                                              backgroundColor: Color(0xFFFEF3C7),
+                                              backgroundColor:
+                                                  Color(0xFFFEF3C7),
                                               textColor: Color(0xFFB45309),
                                               isSmall: true,
                                             ),
@@ -438,75 +471,86 @@ class _DetalleProductoScreenState extends State<DetalleProductoScreen> {
                                     ),
                                   ),
 
-                                   // Botón de Realidad Aumentada (M14)
-                                   if (_prenda!.tieneRa) ...[
-                                     const SizedBox(height: 14),
-                                     InkWell(
-                                       onTap: _abrirVestidorVirtual,
-                                       borderRadius: BorderRadius.circular(14),
-                                       child: Container(
-                                         width: double.infinity,
-                                         padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 16),
-                                         decoration: BoxDecoration(
-                                           color: const Color(0xFF09090B),
-                                           borderRadius: BorderRadius.circular(14),
-                                           border: Border.all(color: const Color(0xFFB45309), width: 1.2),
-                                           boxShadow: [
-                                             BoxShadow(
-                                               color: const Color(0xFFB45309).withValues(alpha: 0.18),
-                                               blurRadius: 10,
-                                               offset: const Offset(0, 4),
-                                             ),
-                                           ],
-                                         ),
-                                         child: Row(
-                                           children: [
-                                             Container(
-                                               padding: const EdgeInsets.all(8),
-                                               decoration: BoxDecoration(
-                                                 color: const Color(0xFFB45309).withValues(alpha: 0.2),
-                                                 borderRadius: BorderRadius.circular(10),
-                                               ),
-                                               child: const Icon(
-                                                 Icons.view_in_ar_rounded,
-                                                 color: Color(0xFFF59E0B),
-                                                 size: 20,
-                                               ),
-                                             ),
-                                             const SizedBox(width: 12),
-                                             Expanded(
-                                               child: Column(
-                                                 crossAxisAlignment: CrossAxisAlignment.start,
-                                                 mainAxisSize: MainAxisSize.min,
-                                                 children: [
-                                                   Text(
-                                                     'Probar en Vestidor RA',
-                                                     style: GoogleFonts.plusJakartaSans(
-                                                       color: Colors.white,
-                                                       fontSize: 14,
-                                                       fontWeight: FontWeight.w700,
-                                                     ),
-                                                   ),
-                                                   Text(
-                                                     'Pruébate esta prenda con tu cámara en tiempo real',
-                                                     style: GoogleFonts.plusJakartaSans(
-                                                       color: Colors.white70,
-                                                       fontSize: 11,
-                                                     ),
-                                                   ),
-                                                 ],
-                                               ),
-                                             ),
-                                             const Icon(
-                                               Icons.arrow_forward_ios_rounded,
-                                               color: Color(0xFFF59E0B),
-                                               size: 14,
-                                             ),
-                                           ],
-                                         ),
-                                       ),
-                                     ),
-                                   ],
+                                  // Botón de Realidad Aumentada (M14)
+                                  if (_prenda!.tieneRa) ...[
+                                    const SizedBox(height: 14),
+                                    InkWell(
+                                      onTap: _abrirVestidorVirtual,
+                                      borderRadius: BorderRadius.circular(14),
+                                      child: Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 13, horizontal: 16),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF09090B),
+                                          borderRadius:
+                                              BorderRadius.circular(14),
+                                          border: Border.all(
+                                              color: const Color(0xFFB45309),
+                                              width: 1.2),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: const Color(0xFFB45309)
+                                                  .withValues(alpha: 0.18),
+                                              blurRadius: 10,
+                                              offset: const Offset(0, 4),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.all(8),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFFB45309)
+                                                    .withValues(alpha: 0.2),
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                              ),
+                                              child: const Icon(
+                                                Icons.view_in_ar_rounded,
+                                                color: Color(0xFFF59E0B),
+                                                size: 20,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Text(
+                                                    'Probar en Vestidor RA',
+                                                    style: GoogleFonts
+                                                        .plusJakartaSans(
+                                                      color: Colors.white,
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                    ),
+                                                  ),
+                                                  Text(
+                                                    'Pruébate esta prenda con tu cámara en tiempo real',
+                                                    style: GoogleFonts
+                                                        .plusJakartaSans(
+                                                      color: Colors.white70,
+                                                      fontSize: 11,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            const Icon(
+                                              Icons.arrow_forward_ios_rounded,
+                                              color: Color(0xFFF59E0B),
+                                              size: 14,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
 
                                   const Divider(height: 28),
 
@@ -524,22 +568,32 @@ class _DetalleProductoScreenState extends State<DetalleProductoScreen> {
                                       spacing: 8,
                                       children: _prenda!.tallas.map((t) {
                                         final idTalla = t['id_talla'] as int;
-                                        final nombreTalla = t['nombre'].toString();
-                                        final isSelected = _tallaSeleccionadaId == idTalla;
+                                        final nombreTalla =
+                                            t['nombre'].toString();
+                                        final isSelected =
+                                            _tallaSeleccionadaId == idTalla;
 
                                         return ChoiceChip(
                                           label: Text(nombreTalla),
                                           selected: isSelected,
-                                          onSelected: (_) => _actualizarVarianteSeleccionada(idTalla, _colorSeleccionadoId),
+                                          onSelected: (_) =>
+                                              _actualizarVarianteSeleccionada(
+                                                  idTalla,
+                                                  _colorSeleccionadoId),
                                           selectedColor: AppTheme.primary,
                                           backgroundColor: AppTheme.surface,
-                                          labelStyle: GoogleFonts.plusJakartaSans(
+                                          labelStyle:
+                                              GoogleFonts.plusJakartaSans(
                                             fontSize: 13,
                                             fontWeight: FontWeight.w600,
-                                            color: isSelected ? Colors.white : AppTheme.textPrimary,
+                                            color: isSelected
+                                                ? Colors.white
+                                                : AppTheme.textPrimary,
                                           ),
                                           side: BorderSide(
-                                            color: isSelected ? AppTheme.primary : AppTheme.borderStrong,
+                                            color: isSelected
+                                                ? AppTheme.primary
+                                                : AppTheme.borderStrong,
                                           ),
                                         );
                                       }).toList(),
@@ -561,21 +615,38 @@ class _DetalleProductoScreenState extends State<DetalleProductoScreen> {
                                       spacing: 12,
                                       children: _prenda!.colores.map((c) {
                                         final idColor = c['id_color'] as int;
-                                        final nombreColor = c['nombre'].toString();
-                                        final hex = (c['codigo_hex'] ?? '#000000').toString().replaceAll('#', '');
-                                        final colorVal = int.tryParse('FF$hex', radix: 16) ?? 0xFF000000;
-                                        final isSelected = _colorSeleccionadoId == idColor;
+                                        final nombreColor =
+                                            c['nombre'].toString();
+                                        final hex =
+                                            (c['codigo_hex'] ?? '#000000')
+                                                .toString()
+                                                .replaceAll('#', '');
+                                        final colorVal =
+                                            int.tryParse('FF$hex', radix: 16) ??
+                                                0xFF000000;
+                                        final isSelected =
+                                            _colorSeleccionadoId == idColor;
 
                                         return InkWell(
-                                          onTap: () => _actualizarVarianteSeleccionada(_tallaSeleccionadaId, idColor),
-                                          borderRadius: BorderRadius.circular(24),
+                                          onTap: () =>
+                                              _actualizarVarianteSeleccionada(
+                                                  _tallaSeleccionadaId,
+                                                  idColor),
+                                          borderRadius:
+                                              BorderRadius.circular(24),
                                           child: Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 12, vertical: 6),
                                             decoration: BoxDecoration(
-                                              color: isSelected ? AppTheme.goldLight : AppTheme.surfaceVariant,
-                                              borderRadius: BorderRadius.circular(20),
+                                              color: isSelected
+                                                  ? AppTheme.goldLight
+                                                  : AppTheme.surfaceVariant,
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
                                               border: Border.all(
-                                                color: isSelected ? AppTheme.primaryGold : AppTheme.border,
+                                                color: isSelected
+                                                    ? AppTheme.primaryGold
+                                                    : AppTheme.border,
                                                 width: isSelected ? 1.5 : 1,
                                               ),
                                             ),
@@ -588,16 +659,22 @@ class _DetalleProductoScreenState extends State<DetalleProductoScreen> {
                                                   decoration: BoxDecoration(
                                                     color: Color(colorVal),
                                                     shape: BoxShape.circle,
-                                                    border: Border.all(color: Colors.black12),
+                                                    border: Border.all(
+                                                        color: Colors.black12),
                                                   ),
                                                 ),
                                                 const SizedBox(width: 8),
                                                 Text(
                                                   nombreColor,
-                                                  style: GoogleFonts.plusJakartaSans(
+                                                  style: GoogleFonts
+                                                      .plusJakartaSans(
                                                     fontSize: 12,
-                                                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                                                    color: isSelected ? AppTheme.primaryGold : AppTheme.textPrimary,
+                                                    fontWeight: isSelected
+                                                        ? FontWeight.w600
+                                                        : FontWeight.w500,
+                                                    color: isSelected
+                                                        ? AppTheme.primaryGold
+                                                        : AppTheme.textPrimary,
                                                   ),
                                                 ),
                                               ],
@@ -615,18 +692,23 @@ class _DetalleProductoScreenState extends State<DetalleProductoScreen> {
                                     decoration: BoxDecoration(
                                       color: AppTheme.surface,
                                       borderRadius: BorderRadius.circular(16),
-                                      border: Border.all(color: AppTheme.border),
+                                      border:
+                                          Border.all(color: AppTheme.border),
                                     ),
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Row(
                                           children: [
-                                            const Icon(Icons.storefront, size: 20, color: AppTheme.primaryGold),
+                                            const Icon(Icons.storefront,
+                                                size: 20,
+                                                color: AppTheme.primaryGold),
                                             const SizedBox(width: 8),
                                             Text(
                                               'Disponibilidad en Sucursales',
-                                              style: GoogleFonts.playfairDisplay(
+                                              style:
+                                                  GoogleFonts.playfairDisplay(
                                                 fontSize: 16,
                                                 fontWeight: FontWeight.w700,
                                               ),
@@ -638,55 +720,122 @@ class _DetalleProductoScreenState extends State<DetalleProductoScreen> {
                                           const Center(
                                             child: Padding(
                                               padding: EdgeInsets.all(12),
-                                              child: CircularProgressIndicator(strokeWidth: 2),
+                                              child: CircularProgressIndicator(
+                                                  strokeWidth: 2),
                                             ),
                                           )
-                                        else if (_disponibilidadSucursales.isEmpty)
+                                        else if (_disponibilidadSucursales
+                                            .isEmpty)
                                           Text(
                                             'Selecciona una talla y color para verificar tiendas con stock físico.',
-                                            style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textMuted),
+                                            style: GoogleFonts.plusJakartaSans(
+                                                fontSize: 12,
+                                                color: AppTheme.textMuted),
                                           )
                                         else
-                                          ..._disponibilidadSucursales.map((suc) {
+                                          ..._disponibilidadSucursales
+                                              .map((suc) {
+                                            final catalogo =
+                                                context.read<CatalogoService>();
+                                            final seleccionada = catalogo
+                                                    .sucursalSeleccionada
+                                                    ?.idSucursal ==
+                                                suc.idSucursal;
                                             return Padding(
-                                              padding: const EdgeInsets.symmetric(vertical: 6),
-                                              child: Row(
-                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                children: [
-                                                  Expanded(
-                                                    child: Column(
-                                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                                      children: [
-                                                        Text(
-                                                          suc.nombre,
-                                                          style: GoogleFonts.plusJakartaSans(
-                                                            fontSize: 13,
-                                                            fontWeight: FontWeight.w600,
-                                                          ),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 6),
+                                              child: InkWell(
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                                onTap: suc.disponible
+                                                    ? () =>
+                                                        catalogo.seleccionarSucursal(
+                                                            SucursalContextModel(
+                                                          idSucursal:
+                                                              suc.idSucursal,
+                                                          idEmpresa: catalogo
+                                                                  .tenantSeleccionado
+                                                                  ?.idEmpresa ??
+                                                              _prenda!
+                                                                  .idEmpresa,
+                                                          nombre: suc.nombre,
+                                                          direccion:
+                                                              suc.direccion,
+                                                        ))
+                                                    : null,
+                                                child: Padding(
+                                                  padding:
+                                                      const EdgeInsets.all(8),
+                                                  child: Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .spaceBetween,
+                                                    children: [
+                                                      Expanded(
+                                                        child: Column(
+                                                          crossAxisAlignment:
+                                                              CrossAxisAlignment
+                                                                  .start,
+                                                          children: [
+                                                            Row(
+                                                              children: [
+                                                                if (seleccionada)
+                                                                  const Icon(
+                                                                      Icons
+                                                                          .check_circle,
+                                                                      size: 16,
+                                                                      color: AppTheme
+                                                                          .primaryGold),
+                                                                if (seleccionada)
+                                                                  const SizedBox(
+                                                                      width: 5),
+                                                                Flexible(
+                                                                  child: Text(
+                                                                    suc.nombre,
+                                                                    style: GoogleFonts
+                                                                        .plusJakartaSans(
+                                                                      fontSize:
+                                                                          13,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .w600,
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                            Text(
+                                                              suc.direccion,
+                                                              style: GoogleFonts
+                                                                  .plusJakartaSans(
+                                                                fontSize: 11,
+                                                                color: AppTheme
+                                                                    .textMuted,
+                                                              ),
+                                                            ),
+                                                          ],
                                                         ),
-                                                        Text(
-                                                          suc.direccion,
-                                                          style: GoogleFonts.plusJakartaSans(
-                                                            fontSize: 11,
-                                                            color: AppTheme.textMuted,
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
+                                                      ),
+                                                      AuroraBadge(
+                                                        text: suc.disponible
+                                                            ? '${suc.stockDisponible} en stock'
+                                                            : 'Agotado',
+                                                        backgroundColor: suc
+                                                                .disponible
+                                                            ? AppTheme
+                                                                .successLight
+                                                            : AppTheme
+                                                                .errorLight,
+                                                        textColor: suc
+                                                                .disponible
+                                                            ? AppTheme.success
+                                                            : AppTheme.error,
+                                                        isSmall: true,
+                                                      ),
+                                                    ],
                                                   ),
-                                                  AuroraBadge(
-                                                    text: suc.disponible
-                                                        ? '${suc.stockDisponible} en stock'
-                                                        : 'Agotado',
-                                                    backgroundColor: suc.disponible
-                                                        ? AppTheme.successLight
-                                                        : AppTheme.errorLight,
-                                                    textColor: suc.disponible
-                                                        ? AppTheme.success
-                                                        : AppTheme.error,
-                                                    isSmall: true,
-                                                  ),
-                                                ],
+                                                ),
                                               ),
                                             );
                                           }),

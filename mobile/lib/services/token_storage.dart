@@ -6,6 +6,7 @@ class TokenStorage {
   static const String _keyToken = 'auth_token';
   static const String _keyUserJson = 'auth_user_json';
   static const String _keyEmpresaId = 'selected_empresa_id';
+  static const String _keySucursalId = 'selected_sucursal_id';
 
   static Future<void> saveToken(String token) async {
     await _storage.write(key: _keyToken, value: token);
@@ -35,6 +36,21 @@ class TokenStorage {
   static Future<int?> getEmpresaId() async {
     final str = await _storage.read(key: _keyEmpresaId);
     return str != null ? int.tryParse(str) : null;
+  }
+
+  static Future<void> saveSucursalContext(
+      {required int idEmpresa, required int idSucursal}) async {
+    await _storage.write(key: _keyEmpresaId, value: idEmpresa.toString());
+    await _storage.write(key: _keySucursalId, value: idSucursal.toString());
+  }
+
+  static Future<int?> getSucursalId() async {
+    final str = await _storage.read(key: _keySucursalId);
+    return str != null ? int.tryParse(str) : null;
+  }
+
+  static Future<void> clearSucursalContext() async {
+    await _storage.delete(key: _keySucursalId);
   }
 
   static Future<void> clearAll() async {

@@ -48,8 +48,14 @@ class UsuarioModel {
       nombreRol: json['nombre_rol'],
       idEmpresa: json['id_empresa'],
       nombreEmpresa: json['nombre_empresa'],
-      roles: (json['roles'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
-      permisos: (json['permisos'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
+      roles: (json['roles'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
+      permisos: (json['permisos'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
       sucursales: json['sucursales'] as List<dynamic>? ?? [],
     );
   }
@@ -129,7 +135,12 @@ class AuthService {
         'message': data['message'] ?? 'Error desconocido al iniciar sesión',
       };
     } on DioException catch (e) {
-      final errorMsg = e.response?.data?['detail'] ?? e.response?.data?['message'] ?? 'Error de conexión con el servidor.';
+      final errorMsg = e.response?.data?['detail'] ??
+          e.response?.data?['message'] ??
+          (e.type == DioExceptionType.connectionError ||
+                  e.type == DioExceptionType.connectionTimeout
+              ? 'No se pudo conectar a ${ApiClient.dio.options.baseUrl}. En un teléfono físico usa la IP LAN del PC, por ejemplo http://192.168.0.9:5000.'
+              : 'Error de conexión con el servidor.');
       return {
         'success': false,
         'message': errorMsg.toString(),
@@ -163,7 +174,9 @@ class AuthService {
           'nombre': nombre.trim(),
           'apellido': apellido.trim(),
           'telefono': telefono?.trim(),
-          'nombre_usuario': (nombreUsuario != null && nombreUsuario.isNotEmpty) ? nombreUsuario.trim() : correo.trim().split('@')[0],
+          'nombre_usuario': (nombreUsuario != null && nombreUsuario.isNotEmpty)
+              ? nombreUsuario.trim()
+              : correo.trim().split('@')[0],
           'aceptar_terminos': true,
           'device_fingerprint': 'mobile_android_client',
           'nombre_dispositivo': 'Aurora Mobile App',
@@ -193,7 +206,9 @@ class AuthService {
         'message': data['message'] ?? 'Error al registrar usuario.',
       };
     } on DioException catch (e) {
-      final errorMsg = e.response?.data?['detail'] ?? e.response?.data?['message'] ?? 'Error de validación en el registro.';
+      final errorMsg = e.response?.data?['detail'] ??
+          e.response?.data?['message'] ??
+          'Error de validación en el registro.';
       return {
         'success': false,
         'message': errorMsg.toString(),
@@ -228,7 +243,9 @@ class AuthService {
         'message': data['message'] ?? 'Dispositivo verificado.',
       };
     } on DioException catch (e) {
-      final errorMsg = e.response?.data?['detail'] ?? e.response?.data?['message'] ?? 'Código incorrecto o expirado.';
+      final errorMsg = e.response?.data?['detail'] ??
+          e.response?.data?['message'] ??
+          'Código incorrecto o expirado.';
       return {
         'success': false,
         'message': errorMsg.toString(),

@@ -21,6 +21,20 @@ class AuroraProductCard extends StatelessWidget {
       symbol: 'Bs. ',
       decimalDigits: 2,
     );
+    final promotionPrice = prenda.promocion?['precio_promocional'];
+    final hasPromotion = promotionPrice != null;
+    final promotionValue =
+        hasPromotion ? double.tryParse(promotionPrice.toString()) : null;
+    final stockLabel = switch (prenda.stockDisponibleCatalogo) {
+      <= 0 => 'Agotado',
+      < 3 => 'Quedan pocas unidades',
+      _ => 'Disponible',
+    };
+    final stockColor = prenda.stockDisponibleCatalogo <= 0
+        ? AppTheme.error
+        : prenda.stockDisponibleCatalogo < 3
+            ? AppTheme.primaryGold
+            : AppTheme.success;
 
     return InkWell(
       onTap: onTap,
@@ -63,13 +77,16 @@ class AuroraProductCard extends StatelessWidget {
                                   ),
                                 );
                               },
-                              loadingBuilder: (context, child, loadingProgress) {
+                              loadingBuilder:
+                                  (context, child, loadingProgress) {
                                 if (loadingProgress == null) return child;
                                 return Center(
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    value: loadingProgress.expectedTotalBytes != null
-                                        ? loadingProgress.cumulativeBytesLoaded /
+                                    value: loadingProgress.expectedTotalBytes !=
+                                            null
+                                        ? loadingProgress
+                                                .cumulativeBytesLoaded /
                                             loadingProgress.expectedTotalBytes!
                                         : null,
                                   ),
@@ -91,7 +108,8 @@ class AuroraProductCard extends StatelessWidget {
                       top: 8,
                       left: 8,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.9),
                           borderRadius: BorderRadius.circular(20),
@@ -124,7 +142,9 @@ class AuroraProductCard extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    prenda.marca.isNotEmpty ? prenda.marca : 'Aurora Collection',
+                    prenda.marca.isNotEmpty
+                        ? prenda.marca
+                        : 'Aurora Collection',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 10,
                       fontWeight: FontWeight.w600,
@@ -147,12 +167,39 @@ class AuroraProductCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
+                  if (hasPromotion && promotionValue != null) ...[
+                    Text(
+                      currencyFormatter.format(prenda.precio),
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        decoration: TextDecoration.lineThrough,
+                        color: AppTheme.textMuted,
+                      ),
+                    ),
+                    Text(
+                      currencyFormatter.format(promotionValue),
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.error,
+                      ),
+                    ),
+                  ] else
+                    Text(
+                      currencyFormatter.format(prenda.precio),
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                  const SizedBox(height: 4),
                   Text(
-                    currencyFormatter.format(prenda.precio),
+                    stockLabel,
                     style: GoogleFonts.plusJakartaSans(
-                      fontSize: 13,
+                      fontSize: 10,
                       fontWeight: FontWeight.w700,
-                      color: AppTheme.textPrimary,
+                      color: stockColor,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -162,38 +209,42 @@ class AuroraProductCard extends StatelessWidget {
                       scrollDirection: Axis.horizontal,
                       child: Row(
                         children: [
-                        ...prenda.coloresDisponibles.take(4).map((c) {
-                          final hex = (c['codigo_hex'] ?? '#000000').toString().replaceAll('#', '');
-                          final colorVal = int.tryParse('FF$hex', radix: 16) ?? 0xFF000000;
-                          return Container(
-                            margin: const EdgeInsets.only(right: 4),
-                            width: 10,
-                            height: 10,
-                            decoration: BoxDecoration(
-                              color: Color(colorVal),
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 1.5),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Color(0x15000000),
-                                  blurRadius: 2,
-                                ),
-                              ],
+                          ...prenda.coloresDisponibles.take(4).map((c) {
+                            final hex = (c['codigo_hex'] ?? '#000000')
+                                .toString()
+                                .replaceAll('#', '');
+                            final colorVal =
+                                int.tryParse('FF$hex', radix: 16) ?? 0xFF000000;
+                            return Container(
+                              margin: const EdgeInsets.only(right: 4),
+                              width: 10,
+                              height: 10,
+                              decoration: BoxDecoration(
+                                color: Color(colorVal),
+                                shape: BoxShape.circle,
+                                border:
+                                    Border.all(color: Colors.white, width: 1.5),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x15000000),
+                                    blurRadius: 2,
+                                  ),
+                                ],
+                              ),
+                            );
+                          }),
+                          if (prenda.coloresDisponibles.length > 4)
+                            Text(
+                              '+${prenda.coloresDisponibles.length - 4}',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 9,
+                                color: AppTheme.textMuted,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                          );
-                        }),
-                        if (prenda.coloresDisponibles.length > 4)
-                          Text(
-                            '+${prenda.coloresDisponibles.length - 4}',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 9,
-                              color: AppTheme.textMuted,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),

@@ -407,6 +407,23 @@ def listar_catalogo_publico(
                       AND CURRENT_DATE <= pr_temp.fecha_fin
                 )
             )
+            """,
+
+            # El catálogo público solo muestra productos con disponibilidad real.
+            f"""
+            EXISTS (
+                SELECT 1
+                FROM {schema}.t_inventario inv_visible
+                INNER JOIN {schema}.t_producto_talla_color var_visible
+                    ON var_visible.id_variante = inv_visible.id_variante
+                INNER JOIN {schema}.t_sucursal suc_visible
+                    ON suc_visible.id_sucursal = inv_visible.id_sucursal
+                WHERE var_visible.id_producto = p.id_producto
+                  AND var_visible.activo = TRUE
+                  AND suc_visible.id_empresa = p.id_empresa
+                  AND suc_visible.activo = TRUE
+                  AND COALESCE(inv_visible.stock_disponible, 0) > 0
+            )
             """
         ]
 
@@ -579,7 +596,20 @@ def listar_catalogo_publico(
                       AND CURRENT_DATE <= pr.fecha_fin
                     ORDER BY pr.fecha_inicio DESC
                     LIMIT 1
-                ) AS promocion
+                ) AS promocion,
+
+                COALESCE((
+                    SELECT SUM(inv.stock_disponible)
+                    FROM {schema}.t_inventario inv
+                    INNER JOIN {schema}.t_sucursal suc
+                        ON suc.id_sucursal = inv.id_sucursal
+                    INNER JOIN {schema}.t_producto_talla_color var
+                        ON var.id_variante = inv.id_variante
+                    WHERE var.id_producto = p.id_producto
+                      AND var.activo = TRUE
+                      AND suc.id_empresa = p.id_empresa
+                      AND suc.activo = TRUE
+                ), 0) AS stock_disponible_catalogo
 
             FROM {schema}.t_producto p
             LEFT JOIN {schema}.t_categoria c
@@ -696,6 +726,12 @@ def listar_catalogo_publico(
                 "total_imagenes": r[14],
                 "total_variantes": r[15],
                 "promocion": r[16],
+                "stock_disponible_catalogo": int(r[17] or 0),
+                "estado_stock": (
+                    "AGOTADO" if (r[17] or 0) <= 0
+                    else "POCAS" if (r[17] or 0) < 3
+                    else "DISPONIBLE"
+                ),
                 "tallas_disponibles": prod_vars["tallas"],
                 "colores_disponibles": prod_vars["colores"]
             })

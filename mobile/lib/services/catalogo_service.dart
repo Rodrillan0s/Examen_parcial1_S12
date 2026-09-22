@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'api_client.dart';
+import 'token_storage.dart';
 
 class TenantModel {
   final int idEmpresa;
@@ -147,6 +148,9 @@ class PrendaModel {
   final String marca;
   final String genero;
   final double precio;
+  final Map<String, dynamic>? promocion;
+  final String estadoStock;
+  final int stockDisponibleCatalogo;
   final String? imagenPrincipal;
   final int totalImagenes;
   final int totalVariantes;
@@ -167,6 +171,9 @@ class PrendaModel {
     required this.marca,
     required this.genero,
     required this.precio,
+    this.promocion,
+    this.estadoStock = 'DISPONIBLE',
+    this.stockDisponibleCatalogo = 0,
     this.imagenPrincipal,
     this.totalImagenes = 0,
     this.totalVariantes = 0,
@@ -191,6 +198,13 @@ class PrendaModel {
       precio: (json['precio'] != null)
           ? double.tryParse(json['precio'].toString()) ?? 0.0
           : 0.0,
+      promocion: json['promocion'] is Map
+          ? Map<String, dynamic>.from(json['promocion'] as Map)
+          : null,
+      estadoStock: json['estado_stock']?.toString() ?? 'DISPONIBLE',
+      stockDisponibleCatalogo:
+          int.tryParse(json['stock_disponible_catalogo']?.toString() ?? '') ??
+              0,
       imagenPrincipal: json['imagen_principal'],
       totalImagenes: json['total_imagenes'] ?? 0,
       totalVariantes: json['total_variantes'] ?? 0,
@@ -393,11 +407,27 @@ class DisponibilidadSucursalModel {
   }
 }
 
+class SucursalContextModel {
+  final int idSucursal;
+  final int idEmpresa;
+  final String nombre;
+  final String direccion;
+
+  const SucursalContextModel({
+    required this.idSucursal,
+    required this.idEmpresa,
+    required this.nombre,
+    required this.direccion,
+  });
+}
+
 class CatalogoService extends ChangeNotifier {
   final Dio _dio = ApiClient.dio;
 
   List<TenantModel> _tenants = [];
   TenantModel? _tenantSeleccionado;
+  SucursalContextModel? _sucursalSeleccionada;
+  int? _sucursalPersistidaId;
   FiltrosCatalogoModel? _filtros;
 
   List<PrendaModel> _productos = [];
@@ -416,6 +446,8 @@ class CatalogoService extends ChangeNotifier {
 
   List<TenantModel> get tenants => _tenants;
   TenantModel? get tenantSeleccionado => _tenantSeleccionado;
+  SucursalContextModel? get sucursalSeleccionada => _sucursalSeleccionada;
+  int? get sucursalPersistidaId => _sucursalPersistidaId;
   FiltrosCatalogoModel? get filtros => _filtros;
   List<PrendaModel> get productos => _productos;
   int get totalProductos => _totalProductos;
@@ -436,8 +468,10 @@ class CatalogoService extends ChangeNotifier {
 
   Future<void> inicializar() async {
     await cargarTenants();
-    await cargarFiltros();
-    await cargarProductos();
+    if (_tenantSeleccionado != null) {
+      await cargarFiltros();
+      await cargarProductos();
+    }
   }
 
   Future<void> cargarTenants() async {
@@ -447,21 +481,53 @@ class CatalogoService extends ChangeNotifier {
         _tenants = (res.data['data'] as List<dynamic>)
             .map((e) => TenantModel.fromJson(e))
             .toList();
-        if (_tenants.isNotEmpty && _tenantSeleccionado == null) {
-          _tenantSeleccionado = _tenants.first;
+        final savedEmpresaId = await TokenStorage.getEmpresaId();
+        _sucursalPersistidaId = await TokenStorage.getSucursalId();
+        if (savedEmpresaId != null) {
+          for (final tenant in _tenants) {
+            if (tenant.idEmpresa == savedEmpresaId) {
+              _tenantSeleccionado = tenant;
+              break;
+            }
+          }
         }
         notifyListeners();
       }
     } catch (_) {}
   }
 
-  void seleccionarTenant(TenantModel tenant) {
+  Future<void> seleccionarTenant(TenantModel tenant) async {
     if (_tenantSeleccionado?.idEmpresa != tenant.idEmpresa) {
+      final empresaAnterior = _tenantSeleccionado?.idEmpresa;
       _tenantSeleccionado = tenant;
+      _sucursalSeleccionada = null;
+      await TokenStorage.saveEmpresaId(tenant.idEmpresa);
+      await TokenStorage.clearSucursalContext();
+      if (empresaAnterior != null) {
+        notifyListeners();
+      }
       cargarFiltros();
       cargarProductos();
       notifyListeners();
     }
+  }
+
+  Future<void> seleccionarSucursal(SucursalContextModel? sucursal) async {
+    if (sucursal != null &&
+        sucursal.idEmpresa != _tenantSeleccionado?.idEmpresa) {
+      return;
+    }
+    _sucursalSeleccionada = sucursal;
+    _sucursalPersistidaId = sucursal?.idSucursal;
+    if (sucursal == null) {
+      await TokenStorage.clearSucursalContext();
+    } else {
+      await TokenStorage.saveSucursalContext(
+        idEmpresa: sucursal.idEmpresa,
+        idSucursal: sucursal.idSucursal,
+      );
+    }
+    notifyListeners();
   }
 
   Future<void> cargarFiltros() async {
@@ -471,7 +537,8 @@ class CatalogoService extends ChangeNotifier {
         queryParams['id_empresa'] = _tenantSeleccionado!.idEmpresa;
       }
 
-      final res = await _dio.get('/api/catalogo/filtros', queryParameters: queryParams);
+      final res =
+          await _dio.get('/api/catalogo/filtros', queryParameters: queryParams);
       if (res.data['success'] == true && res.data['data'] != null) {
         _filtros = FiltrosCatalogoModel.fromJson(res.data['data']);
         notifyListeners();
@@ -515,7 +582,8 @@ class CatalogoService extends ChangeNotifier {
         params['orden'] = _orden;
       }
 
-      final res = await _dio.get('/api/catalogo/productos', queryParameters: params);
+      final res =
+          await _dio.get('/api/catalogo/productos', queryParameters: params);
       if (res.data['success'] == true && res.data['data'] != null) {
         _productos = (res.data['data'] as List<dynamic>)
             .map((e) => PrendaModel.fromJson(e))
@@ -526,7 +594,8 @@ class CatalogoService extends ChangeNotifier {
         _totalProductos = 0;
       }
     } on DioException catch (e) {
-      _error = e.response?.data?['detail'] ?? 'Error al cargar catálogo de productos.';
+      _error = e.response?.data?['detail'] ??
+          'Error al cargar catálogo de productos.';
       _productos = [];
     } catch (e) {
       _error = 'Error de conexión con el catálogo.';
@@ -574,18 +643,21 @@ class CatalogoService extends ChangeNotifier {
         params['id_empresa'] = _tenantSeleccionado!.idEmpresa;
       }
 
-      final res = await _dio.get('/api/catalogo/productos/$idProducto', queryParameters: params);
+      final res = await _dio.get('/api/catalogo/productos/$idProducto',
+          queryParameters: params);
       if (res.data['success'] == true && res.data['data'] != null) {
         return DetallePrendaModel.fromJson(res.data['data']);
       }
       throw Exception(res.data['message'] ?? 'No se pudo cargar la prenda.');
     } on DioException catch (e) {
-      final msg = e.response?.data?['detail'] ?? 'Error al consultar detalle de la prenda.';
+      final msg = e.response?.data?['detail'] ??
+          'Error al consultar detalle de la prenda.';
       throw Exception(msg.toString());
     }
   }
 
-  Future<List<DisponibilidadSucursalModel>> consultarDisponibilidadVariante(int idVariante) async {
+  Future<List<DisponibilidadSucursalModel>> consultarDisponibilidadVariante(
+      int idVariante) async {
     try {
       final params = <String, dynamic>{};
       if (_tenantSeleccionado != null) {
@@ -598,9 +670,11 @@ class CatalogoService extends ChangeNotifier {
       );
 
       if (res.data['success'] == true && res.data['data'] != null) {
-        final sucursalesRaw = res.data['data']['sucursales'] as List<dynamic>? ?? [];
+        final sucursalesRaw =
+            res.data['data']['sucursales'] as List<dynamic>? ?? [];
         return sucursalesRaw
-            .map((e) => DisponibilidadSucursalModel.fromJson(Map<String, dynamic>.from(e)))
+            .map((e) => DisponibilidadSucursalModel.fromJson(
+                Map<String, dynamic>.from(e)))
             .toList();
       }
       return [];
