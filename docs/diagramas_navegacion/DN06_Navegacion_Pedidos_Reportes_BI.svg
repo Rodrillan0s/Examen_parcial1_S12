@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2260 920" width="2260" height="920" style="background-color: #ffffff; font-family: 'Segoe UI', Arial, Helvetica, sans-serif;">
+  <defs>
+    <!-- Marcador de flecha de transición UML estándar -->
+    <marker id="uml_arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto">
+      <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#111827"/>
+    </marker>
+    <!-- Marcador de flecha abierta para retornos -->
+    <marker id="uml_return_arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto">
+      <path d="M 2 1.5 L 8 5 L 2 8.5" fill="none" stroke="#111827" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <!-- Marco Estándar UML -->
+  <rect x="15" y="15" width="2230" height="890" fill="#ffffff" stroke="#111827" stroke-width="1.5"/>
+  <path d="M 15 15 L 640 15 L 655 35 L 655 45 L 15 45 Z" fill="#f8fafc" stroke="#111827" stroke-width="1.5"/>
+  <text x="30" y="34" font-size="12" font-weight="bold" fill="#0f172a">stm [Módulo 07] DN06: Navegación de Pedidos, Indicadores Empresariales y Reportes BI (CU11WM, CU32W, CU33W)</text>
+
+  <g id="actor_ADMINISTRADOR">
+    <circle cx="100" cy="230" r="12" fill="#ffffff" stroke="#111827" stroke-width="1.8"/>
+    <line x1="100" y1="242" x2="100" y2="275" stroke="#111827" stroke-width="1.8"/>
+    <line x1="82" y1="253" x2="118" y2="253" stroke="#111827" stroke-width="1.8"/>
+    <line x1="100" y1="275" x2="86" y2="302" stroke="#111827" stroke-width="1.8"/>
+    <line x1="100" y1="275" x2="114" y2="302" stroke="#111827" stroke-width="1.8"/>
+    <text x="100" y="320" font-size="11" font-weight="bold" fill="#111827" text-anchor="middle">ADMINISTRADOR</text>
+    <text x="100" y="333" font-size="9" font-style="italic" fill="#64748b" text-anchor="middle">Supervisión Estratégica</text>
+  </g>
+  <g id="actor_ADMINISTRADOR_TIENDA">
+    <circle cx="100" cy="590" r="12" fill="#ffffff" stroke="#111827" stroke-width="1.8"/>
+    <line x1="100" y1="602" x2="100" y2="635" stroke="#111827" stroke-width="1.8"/>
+    <line x1="82" y1="613" x2="118" y2="613" stroke="#111827" stroke-width="1.8"/>
+    <line x1="100" y1="635" x2="86" y2="662" stroke="#111827" stroke-width="1.8"/>
+    <line x1="100" y1="635" x2="114" y2="662" stroke="#111827" stroke-width="1.8"/>
+    <text x="100" y="678" font-size="10.5" font-weight="bold" fill="#111827" text-anchor="middle">ADMINISTRADOR</text>
+    <text x="100" y="691" font-size="10.5" font-weight="bold" fill="#111827" text-anchor="middle">TIENDA</text>
+    <text x="100" y="704" font-size="9" font-style="italic" fill="#64748b" text-anchor="middle">Gestor Operativo</text>
+  </g>
+  <g id="screen_hub_bi">
+    <rect x="280" y="360" width="280" height="110" rx="6" ry="6" fill="#ffffff" stroke="#111827" stroke-width="1.5"/>
+    <line x1="280" y1="394" x2="560" y2="394" stroke="#111827" stroke-width="1.2"/>
+    <text x="420.0" y="373" font-size="9" font-style="italic" fill="#374151" text-anchor="middle">«screen»</text>
+    <text x="420.0" y="387" font-size="11" font-weight="bold" fill="#111827" text-anchor="middle">Hub_Analitica_Reportes_Screen</text>
+    <text x="290" y="410" font-size="9.5" fill="#1f2937">entry / cargar_permisos_alcance_datos()</text>
+    <text x="290" y="426" font-size="9.5" fill="#1f2937">[ver_dashboard_bi] -&gt; Dashboard_KPIs</text>
+    <text x="290" y="442" font-size="9.5" fill="#1f2937">[consultar_ventas_stock] -&gt; Monitor_Operativo</text>
+    <text x="290" y="458" font-size="9.5" fill="#1f2937">[generar_reportes] -&gt; Generador_Reportes</text>
+  </g>
+  <g id="screen_kpis">
+    <rect x="700" y="180" width="340" height="142" rx="6" ry="6" fill="#ffffff" stroke="#111827" stroke-width="1.5"/>
+    <line x1="700" y1="214" x2="1040" y2="214" stroke="#111827" stroke-width="1.2"/>
+    <text x="870.0" y="193" font-size="9" font-style="italic" fill="#374151" text-anchor="middle">«screen»</text>
+    <text x="870.0" y="207" font-size="11" font-weight="bold" fill="#111827" text-anchor="middle">Dashboard_KPIs_Empresariales_Screen</text>
+    <text x="710" y="230" font-size="9.5" fill="#1f2937">«CU32W: Indicadores Empresariales»</text>
+    <text x="710" y="246" font-size="9.5" fill="#1f2937">entry / procesar_volumen_ventas_mes()</text>
+    <text x="710" y="262" font-size="9.5" fill="#1f2937">do / renderizar_graficos_mrr_churn()</text>
+    <text x="710" y="278" font-size="9.5" fill="#1f2937">[filtrar_por_temporada] / recalcular()</text>
+    <text x="710" y="294" font-size="9.5" fill="#1f2937">[top_prendas_mas_vendidas] / drilldown()</text>
+    <text x="710" y="310" font-size="9.5" fill="#1f2937">[exportar_snapshot_pdf] / compilar_pdf()</text>
+  </g>
+  <g id="screen_monitor">
+    <rect x="700" y="540" width="340" height="126" rx="6" ry="6" fill="#ffffff" stroke="#111827" stroke-width="1.5"/>
+    <line x1="700" y1="574" x2="1040" y2="574" stroke="#111827" stroke-width="1.2"/>
+    <text x="870.0" y="553" font-size="9" font-style="italic" fill="#374151" text-anchor="middle">«screen»</text>
+    <text x="870.0" y="567" font-size="11" font-weight="bold" fill="#111827" text-anchor="middle">Monitor_Ventas_Inventario_Screen</text>
+    <text x="710" y="590" font-size="9.5" fill="#1f2937">«CU31W: Consultar Ventas e Inventario»</text>
+    <text x="710" y="606" font-size="9.5" fill="#1f2937">entry / cruzar_rotacion_prenda_vs_stock()</text>
+    <text x="710" y="622" font-size="9.5" fill="#1f2937">[ver_alertas_quiebre_stock] / filtrar()</text>
+    <text x="710" y="638" font-size="9.5" fill="#1f2937">[ver_reservas_sin_retirar] / listar()</text>
+    <text x="710" y="654" font-size="9.5" fill="#1f2937">[descargar_tabla_excel] / exportar_csv()</text>
+  </g>
+  <g id="screen_reportes">
+    <rect x="1180" y="360" width="340" height="142" rx="6" ry="6" fill="#ffffff" stroke="#111827" stroke-width="1.5"/>
+    <line x1="1180" y1="394" x2="1520" y2="394" stroke="#111827" stroke-width="1.2"/>
+    <text x="1350.0" y="373" font-size="9" font-style="italic" fill="#374151" text-anchor="middle">«screen»</text>
+    <text x="1350.0" y="387" font-size="11" font-weight="bold" fill="#111827" text-anchor="middle">Generador_Reportes_Demanda_Screen</text>
+    <text x="1190" y="410" font-size="9.5" fill="#1f2937">«CU33W: Generar Reportes Bajo Demanda»</text>
+    <text x="1190" y="426" font-size="9.5" fill="#1f2937">entry / listar_plantillas_disponibles()</text>
+    <text x="1190" y="442" font-size="9.5" fill="#1f2937">[seleccionar_tipo_reporte] -&gt; Config_Filtros</text>
+    <text x="1190" y="458" font-size="9.5" fill="#1f2937">[reporte_fiscal_ventas] / preparar_sin()</text>
+    <text x="1190" y="474" font-size="9.5" fill="#1f2937">[reporte_rotacion_prendas] / calcular()</text>
+    <text x="1190" y="490" font-size="9.5" fill="#1f2937">[reporte_rendimiento_sucursales] / agrupar()</text>
+  </g>
+  <g id="screen_config">
+    <rect x="1640" y="360" width="320" height="110" rx="6" ry="6" fill="#ffffff" stroke="#111827" stroke-width="1.5" stroke-dasharray="4,3"/>
+    <line x1="1640" y1="394" x2="1960" y2="394" stroke="#111827" stroke-width="1.2"/>
+    <text x="1800.0" y="373" font-size="9" font-style="italic" fill="#374151" text-anchor="middle">«modal»</text>
+    <text x="1800.0" y="387" font-size="11" font-weight="bold" fill="#111827" text-anchor="middle">Configuracion_Parametros_Reporte_Modal</text>
+    <text x="1650" y="410" font-size="9.5" fill="#1f2937">entry / fijar_rango_fechas_sucursales()</text>
+    <text x="1650" y="426" font-size="9.5" fill="#1f2937">[elegir_formato_pdf_excel] / set_format()</text>
+    <text x="1650" y="442" font-size="9.5" fill="#1f2937">[ejecutar_generacion] / compilar_dataset()</text>
+    <text x="1650" y="458" font-size="9.5" fill="#1f2937">[reporte_listo] -&gt; Visor_Descarga_Modal</text>
+  </g>
+  <g id="screen_visor">
+    <rect x="1640" y="680" width="320" height="110" rx="6" ry="6" fill="#ffffff" stroke="#111827" stroke-width="1.5" stroke-dasharray="4,3"/>
+    <line x1="1640" y1="714" x2="1960" y2="714" stroke="#111827" stroke-width="1.2"/>
+    <text x="1800.0" y="693" font-size="9" font-style="italic" fill="#374151" text-anchor="middle">«modal»</text>
+    <text x="1800.0" y="707" font-size="11" font-weight="bold" fill="#111827" text-anchor="middle">Visor_Descarga_Reporte_Modal</text>
+    <text x="1650" y="730" font-size="9.5" fill="#1f2937">entry / previsualizar_documento()</text>
+    <text x="1650" y="746" font-size="9.5" fill="#1f2937">[descargar_archivo_pdf] / save_local()</text>
+    <text x="1650" y="762" font-size="9.5" fill="#1f2937">[enviar_por_correo_gerencia] / send_smtp()</text>
+    <text x="1650" y="778" font-size="9.5" fill="#1f2937">[cerrar] -&gt; Hub_Analitica_Reportes</text>
+  </g>
+  <path d="M 140 260 L 280 390" fill="none" stroke="#111827" stroke-width="1.4" marker-end="url(#uml_arrow)"/>
+  <text x="210.0" y="319.0" font-size="9" font-weight="500" fill="#111827" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[alcance_global]</text>
+  <path d="M 140 620 L 280 430" fill="none" stroke="#111827" stroke-width="1.4" marker-end="url(#uml_arrow)"/>
+  <text x="210.0" y="519.0" font-size="9" font-weight="500" fill="#111827" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[alcance_sucursal_propia]</text>
+  <path d="M 560 382.0 L 620 390 L 620 240 L 700 236.8" fill="none" stroke="#111827" stroke-width="1.4" marker-end="url(#uml_arrow)"/>
+  <text x="590.0" y="380.0" font-size="9" font-weight="500" fill="#111827" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[abrir_dashboard_kpi]</text>
+  <path d="M 560 448.0 L 620 450 L 620 600 L 700 590.4" fill="none" stroke="#111827" stroke-width="1.4" marker-end="url(#uml_arrow)"/>
+  <text x="590.0" y="443.0" font-size="9" font-weight="500" fill="#111827" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[monitorear_rotacion]</text>
+  <path d="M 560 415.0 L 1180 431.0" fill="none" stroke="#111827" stroke-width="1.4" marker-end="url(#uml_arrow)"/>
+  <text x="870.0" y="417.0" font-size="9" font-weight="500" fill="#111827" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[modulo_reportes]</text>
+  <path d="M 1040 251.0 L 1080 240 L 1080 390 L 1180 402.6" fill="none" stroke="#111827" stroke-width="1.4" marker-end="url(#uml_arrow)"/>
+  <text x="1060.0" y="239.5" font-size="9" font-weight="500" fill="#111827" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[exportar_informe_ejecutivo]</text>
+  <path d="M 1040 603.0 L 1080 600 L 1080 430 L 1180 459.4" fill="none" stroke="#111827" stroke-width="1.4" marker-end="url(#uml_arrow)"/>
+  <text x="1060.0" y="595.5" font-size="9" font-weight="500" fill="#111827" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[solicitar_auditoria_detallada]</text>
+  <path d="M 1520 431.0 L 1640 415.0" fill="none" stroke="#111827" stroke-width="1.4" marker-end="url(#uml_arrow)"/>
+  <text x="1580.0" y="417.0" font-size="9" font-weight="500" fill="#111827" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[configurar_filtros]</text>
+  <path d="M 1800.0 470 L 1800.0 680" fill="none" stroke="#111827" stroke-width="1.4" marker-end="url(#uml_arrow)"/>
+  <text x="1800.0" y="569.0" font-size="9" font-weight="500" fill="#111827" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[compilacion_exitosa]</text>
+</svg>

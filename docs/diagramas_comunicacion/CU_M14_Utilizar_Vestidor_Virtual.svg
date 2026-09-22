@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1520 640" width="1520" height="640" style="background-color: #ffffff; font-family: Arial, Helvetica, sans-serif;">
+  <defs>
+    <!-- Marcador flecha derecha para mensaje -->
+    <marker id="msg_arrow_right" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#000000"/>
+    </marker>
+    <!-- Marcador flecha izquierda para retorno -->
+    <marker id="msg_arrow_left" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 9 1 L 0 5 L 9 9 z" fill="#000000"/>
+    </marker>
+  </defs>
+
+  <!-- Marco Exterior Estándar UML -->
+  <rect x="15" y="15" width="1490" height="610" fill="#ffffff" stroke="#000000" stroke-width="1.5"/>
+  <path d="M 15 15 L 680 15 L 695 35 L 695 45 L 15 45 Z" fill="#ffffff" stroke="#000000" stroke-width="1.5"/>
+  <text x="30" y="34" font-size="12" font-weight="bold" fill="#000000">com [CU/M14: Utilizar vestidor virtual (Probador Realidad Aumentada - AR Try-On)]</text>
+
+  <line x1="110" y1="330" x2="268" y2="330" stroke="#000000" stroke-width="1.4"/>
+  <line x1="163.0" y1="319" x2="215.0" y2="319" stroke="#000000" stroke-width="1.3" marker-end="url(#msg_arrow_right)"/>
+  <text x="189.0" y="301" font-size="9.5" font-weight="bold" fill="#000000" text-anchor="middle">1.1: Tocar &apos;Probar Prenda en RA&apos;</text>
+  <text x="189.0" y="313" font-size="9" fill="#222222" text-anchor="middle">y apuntar cámara frontal()</text>
+  <line x1="215.0" y1="343" x2="163.0" y2="343" stroke="#000000" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#msg_arrow_left)"/>
+  <text x="189.0" y="357" font-size="9.5" fill="#333333" text-anchor="middle">1.14: verse con la prenda superpuesta</text>
+  <line x1="360" y1="330" x2="540" y2="330" stroke="#000000" stroke-width="1.4"/>
+  <line x1="424.0" y1="319" x2="476.0" y2="319" stroke="#000000" stroke-width="1.3" marker-end="url(#msg_arrow_right)"/>
+  <text x="450.0" y="301" font-size="9.5" font-weight="bold" fill="#000000" text-anchor="middle">1.2: inicializar_feed_camara()</text>
+  <text x="450.0" y="313" font-size="9" fill="#222222" text-anchor="middle">y stream de frames 60fps</text>
+  <line x1="476.0" y1="343" x2="424.0" y2="343" stroke="#000000" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#msg_arrow_left)"/>
+  <text x="450.0" y="357" font-size="9.5" fill="#333333" text-anchor="middle">1.13: renderizar prenda en tiempo real</text>
+  <line x1="620" y1="330" x2="810" y2="330" stroke="#000000" stroke-width="1.4"/>
+  <line x1="689.0" y1="319" x2="741.0" y2="319" stroke="#000000" stroke-width="1.3" marker-end="url(#msg_arrow_right)"/>
+  <text x="715.0" y="301" font-size="9.5" font-weight="bold" fill="#000000" text-anchor="middle">1.3: procesar_frame_pose(image)</text>
+  <text x="715.0" y="313" font-size="9" fill="#222222" text-anchor="middle">detectando hombros, torso y cadera</text>
+  <line x1="741.0" y1="343" x2="689.0" y2="343" stroke="#000000" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#msg_arrow_left)"/>
+  <text x="715.0" y="357" font-size="9.5" fill="#333333" text-anchor="middle">1.12: superponer_textura_sobre_cuerpo()</text>
+  <line x1="890" y1="330" x2="1070" y2="330" stroke="#000000" stroke-width="1.4"/>
+  <line x1="954.0" y1="319" x2="1006.0" y2="319" stroke="#000000" stroke-width="1.3" marker-end="url(#msg_arrow_right)"/>
+  <text x="980.0" y="301" font-size="9.5" font-weight="bold" fill="#000000" text-anchor="middle">1.4: get_recursos_prenda_ra(id)</text>
+  <text x="980.0" y="313" font-size="9" fill="#222222" text-anchor="middle">descargando texturas 2D/3D</text>
+  <line x1="1006.0" y1="343" x2="954.0" y2="343" stroke="#000000" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#msg_arrow_left)"/>
+  <text x="980.0" y="357" font-size="9.5" fill="#333333" text-anchor="middle">1.11: return PoseData(escala, rotación)()</text>
+  <line x1="1150" y1="330" x2="1185" y2="330" stroke="#000000" stroke-width="1.4"/>
+  <line x1="1185" y1="230" x2="1185" y2="430" stroke="#000000" stroke-width="1.4"/>
+  <line x1="1185" y1="230" x2="1390" y2="230" stroke="#000000" stroke-width="1.4"/>
+  <line x1="1261.5" y1="219" x2="1313.5" y2="219" stroke="#000000" stroke-width="1.3" marker-end="url(#msg_arrow_right)"/>
+  <text x="1287.5" y="211" font-size="9.5" font-weight="bold" fill="#000000" text-anchor="middle">1.5: SELECT MODELO_2D_URL, MODELO_3D_URL</text>
+  <line x1="1313.5" y1="243" x2="1261.5" y2="243" stroke="#000000" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#msg_arrow_left)"/>
+  <text x="1287.5" y="257" font-size="9.5" fill="#333333" text-anchor="middle">1.6: return texturas transparentes prenda</text>
+  <line x1="1185" y1="430" x2="1390" y2="430" stroke="#000000" stroke-width="1.4"/>
+  <line x1="1261.5" y1="419" x2="1313.5" y2="419" stroke="#000000" stroke-width="1.3" marker-end="url(#msg_arrow_right)"/>
+  <text x="1287.5" y="411" font-size="9.5" font-weight="bold" fill="#000000" text-anchor="middle">1.7: INSERT INTO T_VESTIDOR_VIRTUAL (sesión)</text>
+  <line x1="1313.5" y1="443" x2="1261.5" y2="443" stroke="#000000" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#msg_arrow_left)"/>
+  <text x="1287.5" y="457" font-size="9.5" fill="#333333" text-anchor="middle">1.8: return confirmación de prueba RA</text>
+  <!-- Actor: CLIENTE_MOVIL -->
+  <g>
+    <circle cx="90" cy="308" r="11" fill="#ffffff" stroke="#000000" stroke-width="1.8"/>
+    <line x1="90" y1="319" x2="90" y2="346" stroke="#000000" stroke-width="1.8"/>
+    <line x1="72" y1="329" x2="108" y2="329" stroke="#000000" stroke-width="1.8"/>
+    <line x1="90" y1="346" x2="76" y2="366" stroke="#000000" stroke-width="1.8"/>
+    <line x1="90" y1="346" x2="104" y2="366" stroke="#000000" stroke-width="1.8"/>
+    <text x="90" y="384" font-size="10.5" font-weight="bold" fill="#000000" text-anchor="middle">CLIENTE_MOVIL</text>
+  </g>
+  <!-- Boundary: Vestidor_Screen -->
+  <g>
+    <line x1="268" y1="302" x2="268" y2="358" stroke="#000000" stroke-width="2.2"/>
+    <line x1="268" y1="330" x2="280" y2="330" stroke="#000000" stroke-width="1.8"/>
+    <circle cx="320" cy="330" r="40" fill="#ffffff" stroke="#000000" stroke-width="1.8"/>
+    <text x="320" y="322" font-size="8" font-style="italic" fill="#333333" text-anchor="middle">«boundary»</text>
+    <text x="320" y="336" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">Vestidor_</text>
+    <text x="320" y="349" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">Screen</text>
+  </g>
+  <!-- Control: AR_Camera_Ctrl -->
+  <g>
+    <circle cx="580" cy="330" r="40" fill="#ffffff" stroke="#000000" stroke-width="1.8"/>
+    <path d="M 572 284 A 46 46 0 0 1 600 298" fill="none" stroke="#000000" stroke-width="1.7"/>
+    <polygon points="597,292 604,299 594,301" fill="#000000"/>
+    <text x="580" y="322" font-size="8" font-style="italic" fill="#333333" text-anchor="middle">«control»</text>
+    <text x="580" y="336" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">AR_Camera_</text>
+    <text x="580" y="349" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">Ctrl</text>
+  </g>
+  <!-- Control: Pose_Body_Detector -->
+  <g>
+    <circle cx="850" cy="330" r="40" fill="#ffffff" stroke="#000000" stroke-width="1.8"/>
+    <path d="M 842 284 A 46 46 0 0 1 870 298" fill="none" stroke="#000000" stroke-width="1.7"/>
+    <polygon points="867,292 874,299 864,301" fill="#000000"/>
+    <text x="850" y="322" font-size="8" font-style="italic" fill="#333333" text-anchor="middle">«control»</text>
+    <text x="850" y="336" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">Pose_Body_</text>
+    <text x="850" y="349" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">Detector</text>
+  </g>
+  <!-- Control: Vestidor_Service -->
+  <g>
+    <circle cx="1110" cy="330" r="40" fill="#ffffff" stroke="#000000" stroke-width="1.8"/>
+    <path d="M 1102 284 A 46 46 0 0 1 1130 298" fill="none" stroke="#000000" stroke-width="1.7"/>
+    <polygon points="1127,292 1134,299 1124,301" fill="#000000"/>
+    <text x="1110" y="322" font-size="8" font-style="italic" fill="#333333" text-anchor="middle">«control»</text>
+    <text x="1110" y="336" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">Vestidor_</text>
+    <text x="1110" y="349" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">Service</text>
+  </g>
+  <!-- Entity: T_PRENDA_RA -->
+  <g>
+    <circle cx="1430" cy="230" r="40" fill="#ffffff" stroke="#000000" stroke-width="1.8"/>
+    <line x1="1402" y1="273" x2="1458" y2="273" stroke="#000000" stroke-width="2.2"/>
+    <text x="1430" y="222" font-size="8" font-style="italic" fill="#333333" text-anchor="middle">«entity»</text>
+    <text x="1430" y="241" font-size="10.5" font-weight="bold" fill="#000000" text-anchor="middle">T_PRENDA_RA</text>
+  </g>
+  <!-- Entity: T_VESTIDOR_VIRTUAL -->
+  <g>
+    <circle cx="1430" cy="430" r="40" fill="#ffffff" stroke="#000000" stroke-width="1.8"/>
+    <line x1="1402" y1="473" x2="1458" y2="473" stroke="#000000" stroke-width="2.2"/>
+    <text x="1430" y="422" font-size="8" font-style="italic" fill="#333333" text-anchor="middle">«entity»</text>
+    <text x="1430" y="436" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">T_VESTIDOR_</text>
+    <text x="1430" y="449" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">VIRTUAL</text>
+  </g>
+</svg>

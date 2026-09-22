@@ -186,6 +186,37 @@ def guardar_codigo_dispositivo(id_usuario: int, codigo: str, expira_at: datetime
     finally:
         db.close_connection()
 
+def validar_codigo_dispositivo(id_usuario: int, codigo: str) -> bool:
+    db = PostgreSQL()
+    try:
+        db.create_connection()
+        schema = Config.SCHEMA or 'comercio'
+        query = f"""
+            SELECT codigo_verificacion_dispositivo, codigo_dispositivo_expira
+            FROM {schema}.t_seguridad_usuario
+            WHERE id_usuario = %s;
+        """
+        res = db.execute_query(query, (id_usuario,), fetchone=True)
+        if not res or res[0] != codigo:
+            raise ValueError("El código de verificación del dispositivo es inválido.")
+        if res[1] and datetime.now() > res[1]:
+            raise ValueError("El código de verificación del dispositivo ha expirado.")
+
+        db.execute_query(
+            f"""
+            UPDATE {schema}.t_seguridad_usuario
+            SET codigo_verificacion_dispositivo = NULL,
+                codigo_dispositivo_expira = NULL,
+                fecha_actualizacion = CURRENT_TIMESTAMP
+            WHERE id_usuario = %s;
+            """,
+            (id_usuario,),
+            commit=True
+        )
+        return True
+    finally:
+        db.close_connection()
+
 # Registra un nuevo dispositivo como verificado para el usuario.
 def guardar_dispositivo_verificado(id_usuario: int, fingerprint: str, nombre_dispositivo: str = None) -> bool:
     db = PostgreSQL()

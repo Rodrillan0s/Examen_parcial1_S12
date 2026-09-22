@@ -6,6 +6,57 @@ from app.config import Config
 def _get_schema() -> str:
     return Config.SCHEMA or 'comercio'
 
+def obtener_sucursales_autorizadas(payload: dict) -> Optional[List[int]]:
+    """Obtiene sucursales vigentes desde BD, no desde una lista stale del JWT."""
+    alcance = payload.get('alcance')
+    if alcance == 'PLATAFORMA':
+        return None
+
+    id_empresa = payload.get('id_empresa')
+    id_usuario = payload.get('id_usuario') or payload.get('nro_usuario')
+    if not id_empresa:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="El usuario no tiene empresa autorizada.")
+
+    db = PostgreSQL()
+    db.create_connection()
+    try:
+        schema = _get_schema()
+        if alcance == 'SUCURSAL':
+            query = f"""
+                SELECT us.id_sucursal
+                FROM {schema}.t_usuario_sucursal us
+                INNER JOIN {schema}.t_sucursal s ON s.id_sucursal = us.id_sucursal
+                WHERE us.id_usuario = %s AND s.id_empresa = %s AND s.activo = TRUE
+                ORDER BY us.id_sucursal;
+            """
+            rows = db.execute_query(query, (id_usuario, id_empresa), fetchall=True) or []
+        else:
+            query = f"""
+                SELECT id_sucursal
+                FROM {schema}.t_sucursal
+                WHERE id_empresa = %s AND activo = TRUE
+                ORDER BY id_sucursal;
+            """
+            rows = db.execute_query(query, (id_empresa,), fetchall=True) or []
+        return [row[0] for row in rows]
+    finally:
+        db.close_connection()
+
+def resolver_sucursal_autorizada(payload: dict, id_sucursal_solicitada: Optional[int] = None) -> Optional[int]:
+    """Valida una sucursal solicitada y resuelve la predeterminada de alcance sucursal."""
+    autorizadas = obtener_sucursales_autorizadas(payload)
+    if autorizadas is None:
+        return id_sucursal_solicitada
+    if id_sucursal_solicitada is not None:
+        if id_sucursal_solicitada not in autorizadas:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tiene autorización sobre esta sucursal.")
+        return id_sucursal_solicitada
+    if payload.get('alcance') == 'SUCURSAL':
+        if not autorizadas:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="El usuario no tiene sucursales autorizadas.")
+        return autorizadas[0]
+    return None
+
 # --- IDENTIFICACIÓN DE ALCANCE Y ROLES ---
 
 def obtener_alcance_usuario(payload: dict) -> str:

@@ -1,0 +1,185 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2150 850" width="2150" height="850" style="background-color: #ffffff; font-family: 'Segoe UI', Arial, Helvetica, sans-serif;">
+  <!-- Encabezado del Diagrama -->
+  <text x="35" y="34" font-size="16" font-weight="bold" fill="#0f172a">CU/W12: Obtener recomendaciones de productos — Diagrama de Análisis de Clases</text>
+  <text x="35" y="54" font-size="12" font-weight="500" fill="#475569">Sistema Aura Store | Arquitectura Multicapa: Form -&gt; Controller -&gt; Service -&gt; Repository -&gt; Entities (BD Actualizada en MAYÚSCULAS)</text>
+  <text x="35" y="72" font-size="11.5" font-weight="600" fill="#2563eb">Actor(es): Cliente (Web y Móvil), Visitante, Administrador de tienda</text>
+  <line x1="35" y1="82" x2="2115" y2="82" stroke="#cbd5e1" stroke-width="1.2"/>
+
+  <!-- Leyenda de Roles Arquitectónicos -->
+  <g transform="translate(1640, 24)">
+    <rect x="0" y="0" width="475" height="48" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="12" y="19" font-size="11" font-weight="bold" fill="#334155">Capas del Análisis de Clases:</text>
+    <text x="12" y="36" font-size="10.5" fill="#64748b">Boundary (Form) -&gt; Controller -&gt; Service -&gt; Repository -&gt; Entities (BD Actualizada)</text>
+  </g>
+  <!-- Clase: Form / Obtener_Recomendaciones -->
+  <g id="class_form_recomendacion">
+    <rect x="35" y="270" width="260" height="248" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="35" y1="318" x2="295" y2="318" stroke="#111827" stroke-width="1.4"/>
+    <line x1="35" y1="426.0" x2="295" y2="426.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="165.0" y="287" text-anchor="middle" font-size="11" font-weight="bold" fill="#475569">Form</text>
+    <text x="165.0" y="304" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">Obtener_Recomendaciones</text>
+    <text x="45" y="334" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ id_cliente_activo</text>
+    <text x="45" y="350" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ id_categoria_interes</text>
+    <text x="45" y="366" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ estilo_preferido</text>
+    <text x="45" y="382" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ rango_precio_max</text>
+    <text x="45" y="398" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ lista_prendas_sugeridas</text>
+    <text x="45" y="414" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ prenda_seleccionada</text>
+    <text x="45" y="442.0" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ abrir_seccion_para_ti()</text>
+    <text x="45" y="458.0" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ seleccionar_preferencia_estilo()</text>
+    <text x="45" y="474.0" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ filtrar_por_categoria()</text>
+    <text x="45" y="490.0" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ solicitar_nuevas_sugerencias()</text>
+    <text x="45" y="506.0" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ver_detalle_prenda()</text>
+  </g>
+  <!-- Clase: Recomendacion_Controller -->
+  <g id="class_ctrl_recomendacion">
+    <rect x="335" y="340" width="255" height="116" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="335" y1="374" x2="590" y2="374" stroke="#111827" stroke-width="1.4"/>
+    <line x1="335" y1="396" x2="590" y2="396" stroke="#111827" stroke-width="1.4"/>
+    <text x="462.5" y="362" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">Recomendacion_Controller</text>
+    <text x="345" y="412" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ get_recomendaciones(id_cliente)</text>
+    <text x="345" y="428" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ get_prendas_afines(id_cat)</text>
+    <text x="345" y="444" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ registrar_preferencia(id_cli, datos)</text>
+  </g>
+  <!-- Clase: Recomendacion_Service -->
+  <g id="class_srv_recomendacion">
+    <rect x="630" y="325" width="275" height="132" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="630" y1="359" x2="905" y2="359" stroke="#111827" stroke-width="1.4"/>
+    <line x1="630" y1="381" x2="905" y2="381" stroke="#111827" stroke-width="1.4"/>
+    <text x="767.5" y="347" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">Recomendacion_Service</text>
+    <text x="640" y="397" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ generar_recomendaciones_cliente()</text>
+    <text x="640" y="413" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ calcular_scoring_tendencias()</text>
+    <text x="640" y="429" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ asociar_descuentos_vigentes()</text>
+    <text x="640" y="445" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ validar_stock_disponible()</text>
+  </g>
+  <!-- Clase: Recomendacion_Repository -->
+  <g id="class_repo_recomendacion">
+    <rect x="945" y="325" width="275" height="148" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="945" y1="359" x2="1220" y2="359" stroke="#111827" stroke-width="1.4"/>
+    <line x1="945" y1="381" x2="1220" y2="381" stroke="#111827" stroke-width="1.4"/>
+    <text x="1082.5" y="347" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">Recomendacion_Repository</text>
+    <text x="955" y="397" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ find_recomendaciones_cliente(id_cli)</text>
+    <text x="955" y="413" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ find_preferencias_cliente(id_cli)</text>
+    <text x="955" y="429" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ query_prendas_destacadas(criterios)</text>
+    <text x="955" y="445" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ find_promociones_prendas(ids)</text>
+    <text x="955" y="461" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ save_recomendacion(datos)</text>
+  </g>
+  <!-- Clase: T_CLIENTE -->
+  <g id="class_cliente">
+    <rect x="1260" y="90" width="195" height="132" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="1260" y1="124" x2="1455" y2="124" stroke="#111827" stroke-width="1.4"/>
+    <line x1="1260" y1="200.0" x2="1455" y2="200.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="1357.5" y="112" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">T_CLIENTE</text>
+    <text x="1270" y="140" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_CLIENTE</text>
+    <text x="1270" y="156" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_USUARIO</text>
+    <text x="1270" y="172" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ CI</text>
+    <text x="1270" y="188" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ FECHA_REGISTRO</text>
+  </g>
+  <!-- Clase: T_RECOMENDACION -->
+  <g id="class_recomendacion">
+    <rect x="1260" y="285" width="205" height="164" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="1260" y1="319" x2="1465" y2="319" stroke="#111827" stroke-width="1.4"/>
+    <line x1="1260" y1="427.0" x2="1465" y2="427.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="1362.5" y="307" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">T_RECOMENDACION</text>
+    <text x="1270" y="335" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_RECOMENDACION</text>
+    <text x="1270" y="351" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_CLIENTE</text>
+    <text x="1270" y="367" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_PRODUCTO</text>
+    <text x="1270" y="383" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ PUNTUACION</text>
+    <text x="1270" y="399" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ MOTIVO</text>
+    <text x="1270" y="415" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ FECHA_RECOMENDACION</text>
+  </g>
+  <!-- Clase: T_PREFERENCIA_CLIENTE -->
+  <g id="class_preferencia">
+    <rect x="1260" y="550" width="205" height="164" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="1260" y1="584" x2="1465" y2="584" stroke="#111827" stroke-width="1.4"/>
+    <line x1="1260" y1="692.0" x2="1465" y2="692.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="1362.5" y="572" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">T_PREFERENCIA_CLIENTE</text>
+    <text x="1270" y="600" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_PREFERENCIA</text>
+    <text x="1270" y="616" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_CLIENTE</text>
+    <text x="1270" y="632" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_CATEGORIA</text>
+    <text x="1270" y="648" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_TALLA</text>
+    <text x="1270" y="664" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_COLOR</text>
+    <text x="1270" y="680" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ TIPO_PREFERENCIA</text>
+  </g>
+  <!-- Clase: T_PRODUCTO -->
+  <g id="class_producto">
+    <rect x="1520" y="230" width="210" height="244" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="1520" y1="264" x2="1730" y2="264" stroke="#111827" stroke-width="1.4"/>
+    <line x1="1520" y1="452.0" x2="1730" y2="452.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="1625.0" y="252" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">T_PRODUCTO</text>
+    <text x="1530" y="280" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_PRODUCTO</text>
+    <text x="1530" y="296" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_CATEGORIA</text>
+    <text x="1530" y="312" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ CODIGO_PRODUCTO</text>
+    <text x="1530" y="328" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ NOMBRE</text>
+    <text x="1530" y="344" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ DESCRIPCION</text>
+    <text x="1530" y="360" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ MARCA</text>
+    <text x="1530" y="376" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ GENERO</text>
+    <text x="1530" y="392" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ PRECIO</text>
+    <text x="1530" y="408" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ IMAGEN_URL</text>
+    <text x="1530" y="424" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ESTADO</text>
+    <text x="1530" y="440" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ FECHA_REGISTRO</text>
+  </g>
+  <!-- Clase: T_CATEGORIA -->
+  <g id="class_categoria">
+    <rect x="1520" y="80" width="195" height="132" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="1520" y1="114" x2="1715" y2="114" stroke="#111827" stroke-width="1.4"/>
+    <line x1="1520" y1="190.0" x2="1715" y2="190.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="1617.5" y="102" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">T_CATEGORIA</text>
+    <text x="1530" y="130" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_CATEGORIA</text>
+    <text x="1530" y="146" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ NOMBRE</text>
+    <text x="1530" y="162" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ DESCRIPCION</text>
+    <text x="1530" y="178" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ESTADO</text>
+  </g>
+  <!-- Clase: T_PROMOCION_PRODUCTO -->
+  <g id="class_promo_prod">
+    <rect x="1785" y="250" width="215" height="132" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="1785" y1="284" x2="2000" y2="284" stroke="#111827" stroke-width="1.4"/>
+    <line x1="1785" y1="360.0" x2="2000" y2="360.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="1892.5" y="272" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">T_PROMOCION_PRODUCTO</text>
+    <text x="1795" y="300" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_PROMOCION_PRODUCTO</text>
+    <text x="1795" y="316" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_PROMOCION</text>
+    <text x="1795" y="332" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_PRODUCTO</text>
+    <text x="1795" y="348" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ PORCENTAJE_DESCUENTO</text>
+  </g>
+  <!-- Clase: T_PROMOCION -->
+  <g id="class_promocion">
+    <rect x="1785" y="480" width="215" height="164" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="1785" y1="514" x2="2000" y2="514" stroke="#111827" stroke-width="1.4"/>
+    <line x1="1785" y1="622.0" x2="2000" y2="622.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="1892.5" y="502" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">T_PROMOCION</text>
+    <text x="1795" y="530" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_PROMOCION</text>
+    <text x="1795" y="546" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ NOMBRE</text>
+    <text x="1795" y="562" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ DESCRIPCION</text>
+    <text x="1795" y="578" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ FECHA_INICIO</text>
+    <text x="1795" y="594" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ FECHA_FIN</text>
+    <text x="1795" y="610" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ESTADO</text>
+  </g>
+
+  <!-- Asociaciones y Multiplicidades -->
+  <g id="associations">
+    <polyline points="295,410 335,410" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <polyline points="590,410 630,410" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <polyline points="905,410 945,410" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <polyline points="1220,410 1260,410" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <polyline points="1360,220 1360,285" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <text x="1370" y="235" font-size="11" font-weight="bold" fill="#111827">1</text>
+    <text x="1370" y="275" font-size="11" font-weight="bold" fill="#111827">0..*</text>
+    <polyline points="1360,475 1360,550" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <text x="1370" y="490" font-size="11" font-weight="bold" fill="#111827">1</text>
+    <text x="1370" y="540" font-size="11" font-weight="bold" fill="#111827">0..*</text>
+    <polyline points="1465,380 1520,380" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <text x="1472" y="370" font-size="11" font-weight="bold" fill="#111827">0..*</text>
+    <text x="1502" y="370" font-size="11" font-weight="bold" fill="#111827">1</text>
+    <polyline points="1617,195 1617,230" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <text x="1625" y="208" font-size="11" font-weight="bold" fill="#111827">1</text>
+    <text x="1625" y="225" font-size="11" font-weight="bold" fill="#111827">0..*</text>
+    <polyline points="1730,335 1785,335" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <text x="1736" y="325" font-size="11" font-weight="bold" fill="#111827">1</text>
+    <text x="1760" y="325" font-size="11" font-weight="bold" fill="#111827">0..*</text>
+    <polyline points="1892,480 1892,385" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <text x="1900" y="465" font-size="11" font-weight="bold" fill="#111827">1</text>
+    <text x="1900" y="400" font-size="11" font-weight="bold" fill="#111827">0..*</text>
+    <polyline points="1520,140 1490,140 1490,640 1465,640" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <text x="1497" y="132" font-size="11" font-weight="bold" fill="#111827">1</text>
+    <text x="1472" y="630" font-size="11" font-weight="bold" fill="#111827">0..*</text>
+  </g>
+</svg>

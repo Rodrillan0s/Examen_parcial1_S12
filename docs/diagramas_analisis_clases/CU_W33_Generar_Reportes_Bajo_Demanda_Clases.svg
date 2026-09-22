@@ -1,0 +1,144 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2100 840" width="2100" height="840" style="background-color: #ffffff; font-family: 'Segoe UI', Arial, Helvetica, sans-serif;">
+  <!-- Encabezado del Diagrama -->
+  <text x="35" y="34" font-size="16" font-weight="bold" fill="#0f172a">CU/W33: Generar reportes bajo demanda — Diagrama de Análisis de Clases</text>
+  <text x="35" y="54" font-size="12" font-weight="500" fill="#475569">Sistema Aura Store | Motor Documental: Form -&gt; Controller -&gt; Report_Builder_Service -&gt; Query_Repository -&gt; Entities</text>
+  <text x="35" y="72" font-size="11.5" font-weight="600" fill="#2563eb">Actor(es): Administrador, Auditor Contable, Gerente</text>
+  <line x1="35" y1="82" x2="2065" y2="82" stroke="#cbd5e1" stroke-width="1.2"/>
+
+  <!-- Leyenda de Arquitectura Específica -->
+  <g transform="translate(1570, 24)">
+    <rect x="0" y="0" width="495" height="48" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="12" y="19" font-size="11" font-weight="bold" fill="#334155">Arquitectura Exportación Documental:</text>
+    <text x="12" y="36" font-size="10" fill="#64748b">Boundary -&gt; Reportes_Controller -&gt; Report_Builder_Service (PDF/Excel) -&gt; Query_Repo -&gt; Entities</text>
+  </g>
+  <!-- Clase: Form / Generador_Reportes_View -->
+  <g id="class_form_reportes">
+    <rect x="35" y="270" width="260" height="216" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="35" y1="318" x2="295" y2="318" stroke="#111827" stroke-width="1.4"/>
+    <line x1="35" y1="410.0" x2="295" y2="410.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="165.0" y="287" text-anchor="middle" font-size="11" font-weight="bold" fill="#475569">Form</text>
+    <text x="165.0" y="304" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">Generador_Reportes_View</text>
+    <text x="45" y="334" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ tipo_reporte_sel</text>
+    <text x="45" y="350" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ rango_fecha_inicio</text>
+    <text x="45" y="366" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ rango_fecha_fin</text>
+    <text x="45" y="382" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ formato_exportacion</text>
+    <text x="45" y="398" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ sucursal_filtro</text>
+    <text x="45" y="426.0" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ seleccionar_tipo_reporte()</text>
+    <text x="45" y="442.0" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ configurar_parametros()</text>
+    <text x="45" y="458.0" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ generar_previsualizacion()</text>
+    <text x="45" y="474.0" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ descargar_archivo_binario()</text>
+  </g>
+  <!-- Clase: Reportes_Controller -->
+  <g id="class_ctrl_reportes">
+    <rect x="335" y="340" width="245" height="116" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="335" y1="374" x2="580" y2="374" stroke="#111827" stroke-width="1.4"/>
+    <line x1="335" y1="396" x2="580" y2="396" stroke="#111827" stroke-width="1.4"/>
+    <text x="457.5" y="362" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">Reportes_Controller</text>
+    <text x="345" y="412" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ post_generar_reporte(criterios)</text>
+    <text x="345" y="428" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ get_formatos_disponibles()</text>
+    <text x="345" y="444" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ get_auditoria_descargas()</text>
+  </g>
+  <!-- Clase: Report_Builder_Service -->
+  <g id="class_srv_report_builder">
+    <rect x="620" y="320" width="270" height="138" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="620" y1="354" x2="890" y2="354" stroke="#111827" stroke-width="1.4"/>
+    <line x1="620" y1="398.0" x2="890" y2="398.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="755.0" y="342" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">Report_Builder_Service</text>
+    <text x="630" y="370" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">- reportlab_engine</text>
+    <text x="630" y="386" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">- openpyxl_workbook</text>
+    <text x="630" y="414.0" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ compilar_pdf_documental()</text>
+    <text x="630" y="430.0" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ compilar_excel_tabular()</text>
+    <text x="630" y="446.0" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ registrar_trazabilidad_auditoria()</text>
+  </g>
+  <!-- Clase: Reportes_Query_Repository -->
+  <g id="class_repo_reportes">
+    <rect x="930" y="325" width="265" height="132" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="930" y1="359" x2="1195" y2="359" stroke="#111827" stroke-width="1.4"/>
+    <line x1="930" y1="381" x2="1195" y2="381" stroke="#111827" stroke-width="1.4"/>
+    <text x="1062.5" y="347" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">Reportes_Query_Repository</text>
+    <text x="940" y="397" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ query_ventas_tributarias(fechas)</text>
+    <text x="940" y="413" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ query_valoracion_inventario()</text>
+    <text x="940" y="429" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ query_movimientos_kardex(fechas)</text>
+    <text x="940" y="445" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ insert_log_bitacora(auditoria)</text>
+  </g>
+  <!-- Clase: T_VENTA -->
+  <g id="class_venta">
+    <rect x="1245" y="100" width="210" height="244" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="1245" y1="134" x2="1455" y2="134" stroke="#111827" stroke-width="1.4"/>
+    <line x1="1245" y1="322.0" x2="1455" y2="322.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="1350.0" y="122" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">T_VENTA</text>
+    <text x="1255" y="150" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_VENTA</text>
+    <text x="1255" y="166" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_CLIENTE</text>
+    <text x="1255" y="182" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_SUCURSAL</text>
+    <text x="1255" y="198" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_EMPLEADO</text>
+    <text x="1255" y="214" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ NUMERO_VENTA</text>
+    <text x="1255" y="230" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ TIPO_VENTA</text>
+    <text x="1255" y="246" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ FECHA_VENTA</text>
+    <text x="1255" y="262" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ SUBTOTAL</text>
+    <text x="1255" y="278" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ DESCUENTO</text>
+    <text x="1255" y="294" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ TOTAL</text>
+    <text x="1255" y="310" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ESTADO</text>
+  </g>
+  <!-- Clase: T_INVENTARIO -->
+  <g id="class_inventario">
+    <rect x="1245" y="480" width="215" height="228" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="1245" y1="514" x2="1460" y2="514" stroke="#111827" stroke-width="1.4"/>
+    <line x1="1245" y1="686.0" x2="1460" y2="686.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="1352.5" y="502" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">T_INVENTARIO</text>
+    <text x="1255" y="530" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_INVENTARIO</text>
+    <text x="1255" y="546" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_SUCURSAL</text>
+    <text x="1255" y="562" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_VARIANTE</text>
+    <text x="1255" y="578" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ TEMPORADA</text>
+    <text x="1255" y="594" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ STOCK_ACTUAL</text>
+    <text x="1255" y="610" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ STOCK_RESERVADO</text>
+    <text x="1255" y="626" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ STOCK_DISPONIBLE</text>
+    <text x="1255" y="642" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ STOCK_MINIMO</text>
+    <text x="1255" y="658" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ESTADO</text>
+    <text x="1255" y="674" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ FECHA_ACTUALIZACION</text>
+  </g>
+  <!-- Clase: T_MOVIMIENTO_INVENTARIO -->
+  <g id="class_mov_inventario">
+    <rect x="1520" y="490" width="215" height="212" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="1520" y1="524" x2="1735" y2="524" stroke="#111827" stroke-width="1.4"/>
+    <line x1="1520" y1="680.0" x2="1735" y2="680.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="1627.5" y="512" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">T_MOVIMIENTO_INVENTARIO</text>
+    <text x="1530" y="540" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_MOVIMIENTO</text>
+    <text x="1530" y="556" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_INVENTARIO</text>
+    <text x="1530" y="572" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_USUARIO</text>
+    <text x="1530" y="588" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ TIPO_MOVIMIENTO</text>
+    <text x="1530" y="604" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ CANTIDAD</text>
+    <text x="1530" y="620" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ STOCK_ANTERIOR</text>
+    <text x="1530" y="636" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ STOCK_NUEVO</text>
+    <text x="1530" y="652" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ MOTIVO</text>
+    <text x="1530" y="668" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ FECHA_MOVIMIENTO</text>
+  </g>
+  <!-- Clase: T_BITACORA -->
+  <g id="class_bitacora">
+    <rect x="1520" y="150" width="215" height="212" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="1520" y1="184" x2="1735" y2="184" stroke="#111827" stroke-width="1.4"/>
+    <line x1="1520" y1="340.0" x2="1735" y2="340.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="1627.5" y="172" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">T_BITACORA</text>
+    <text x="1530" y="200" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_BITACORA</text>
+    <text x="1530" y="216" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_USUARIO</text>
+    <text x="1530" y="232" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ MODULO</text>
+    <text x="1530" y="248" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ACCION</text>
+    <text x="1530" y="264" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ DESCRIPCION</text>
+    <text x="1530" y="280" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ FECHA_HORA</text>
+    <text x="1530" y="296" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ IP</text>
+    <text x="1530" y="312" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ TENANT_ORIGEN</text>
+    <text x="1530" y="328" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ RESULTADO</text>
+  </g>
+
+  <!-- Asociaciones y Multiplicidades -->
+  <g id="associations">
+    <polyline points="295,410 335,410" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <polyline points="580,410 620,410" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <polyline points="890,410 930,410" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <polyline points="1195,390 1220,390 1220,230 1245,230" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <polyline points="1195,430 1220,430 1220,580 1245,580" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <polyline points="1460,580 1520,580" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <text x="1465" y="570" font-size="11" font-weight="bold" fill="#111827">1</text>
+    <text x="1495" y="570" font-size="11" font-weight="bold" fill="#111827">0..*</text>
+    <polyline points="1195,360 1220,360 1220,20 1490,20 1490,230 1520,230" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+  </g>
+</svg>

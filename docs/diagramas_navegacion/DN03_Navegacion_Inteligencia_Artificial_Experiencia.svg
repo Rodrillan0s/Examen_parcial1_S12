@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2080 920" width="2080" height="920" style="background-color: #ffffff; font-family: 'Segoe UI', Arial, Helvetica, sans-serif;">
+  <defs>
+    <!-- Marcador de flecha de transición UML estándar -->
+    <marker id="uml_arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto">
+      <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#111827"/>
+    </marker>
+    <!-- Marcador de flecha abierta para retornos -->
+    <marker id="uml_return_arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto">
+      <path d="M 2 1.5 L 8 5 L 2 8.5" fill="none" stroke="#111827" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <!-- Marco Estándar UML -->
+  <rect x="15" y="15" width="2050" height="890" fill="#ffffff" stroke="#111827" stroke-width="1.5"/>
+  <path d="M 15 15 L 640 15 L 655 35 L 655 45 L 15 45 Z" fill="#f8fafc" stroke="#111827" stroke-width="1.5"/>
+  <text x="30" y="34" font-size="12" font-weight="bold" fill="#0f172a">stm [Módulo 08] DN03: Navegación de Inteligencia Artificial y Experiencia del Cliente (CU12WM - CU14M, CU15M/CU26W)</text>
+
+  <g id="actor_CLIENTE">
+    <circle cx="100" cy="330" r="12" fill="#ffffff" stroke="#111827" stroke-width="1.8"/>
+    <line x1="100" y1="342" x2="100" y2="375" stroke="#111827" stroke-width="1.8"/>
+    <line x1="82" y1="353" x2="118" y2="353" stroke="#111827" stroke-width="1.8"/>
+    <line x1="100" y1="375" x2="86" y2="402" stroke="#111827" stroke-width="1.8"/>
+    <line x1="100" y1="375" x2="114" y2="402" stroke="#111827" stroke-width="1.8"/>
+    <text x="100" y="420" font-size="11" font-weight="bold" fill="#111827" text-anchor="middle">CLIENTE</text>
+    <text x="100" y="433" font-size="9" font-style="italic" fill="#64748b" text-anchor="middle">Usuario Interactivo</text>
+  </g>
+  <g id="ext_SISTEMA_DE_IA">
+    <rect x="1370.0" y="70.0" width="220" height="60" rx="6" ry="6" fill="#f8fafc" stroke="#111827" stroke-width="1.6" stroke-dasharray="5,3"/>
+    <text x="1480" y="86.0" font-size="8.5" font-style="italic" fill="#475569" text-anchor="middle">«external system»</text>
+    <text x="1480" y="102.0" font-size="11" font-weight="bold" fill="#0f172a" text-anchor="middle">SISTEMA DE IA</text>
+  </g>
+  <g id="screen_portal_ia">
+    <rect x="280" y="300" width="280" height="126" rx="6" ry="6" fill="#ffffff" stroke="#111827" stroke-width="1.5"/>
+    <line x1="280" y1="334" x2="560" y2="334" stroke="#111827" stroke-width="1.2"/>
+    <text x="420.0" y="313" font-size="9" font-style="italic" fill="#374151" text-anchor="middle">«screen»</text>
+    <text x="420.0" y="327" font-size="11" font-weight="bold" fill="#111827" text-anchor="middle">Hub_Experiencia_Cliente_Screen</text>
+    <text x="290" y="350" font-size="9.5" fill="#1f2937">entry / inicializar_preferencias()</text>
+    <text x="290" y="366" font-size="9.5" fill="#1f2937">[ver_recomendaciones] -&gt; Carrousel_Recomendaciones</text>
+    <text x="290" y="382" font-size="9.5" fill="#1f2937">[abrir_asistente] -&gt; Asistente_Chat_Screen</text>
+    <text x="290" y="398" font-size="9.5" fill="#1f2937">[probar_probador] -&gt; Vestidor_Virtual_RA</text>
+    <text x="290" y="414" font-size="9.5" fill="#1f2937">[ver_tiendas_cercanas] -&gt; Mapa_Sucursales</text>
+  </g>
+  <g id="screen_recom">
+    <rect x="700" y="180" width="320" height="126" rx="6" ry="6" fill="#ffffff" stroke="#111827" stroke-width="1.5"/>
+    <line x1="700" y1="214" x2="1020" y2="214" stroke="#111827" stroke-width="1.2"/>
+    <text x="860.0" y="193" font-size="9" font-style="italic" fill="#374151" text-anchor="middle">«screen»</text>
+    <text x="860.0" y="207" font-size="11" font-weight="bold" fill="#111827" text-anchor="middle">Recomendaciones_Personalizadas_Screen</text>
+    <text x="710" y="230" font-size="9.5" fill="#1f2937">«CU12WM: Obtener Recomendaciones»</text>
+    <text x="710" y="246" font-size="9.5" fill="#1f2937">entry / consultar_scoring_afinidad_ia()</text>
+    <text x="710" y="262" font-size="9.5" fill="#1f2937">do / renderizar_carrousel_para_ti()</text>
+    <text x="710" y="278" font-size="9.5" fill="#1f2937">[click_prenda_recomendada] -&gt; Ficha_Prenda</text>
+    <text x="710" y="294" font-size="9.5" fill="#1f2937">[refrescar_preferencias] / recomputar()</text>
+  </g>
+  <g id="screen_chat">
+    <rect x="700" y="520" width="320" height="126" rx="6" ry="6" fill="#ffffff" stroke="#111827" stroke-width="1.5"/>
+    <line x1="700" y1="554" x2="1020" y2="554" stroke="#111827" stroke-width="1.2"/>
+    <text x="860.0" y="533" font-size="9" font-style="italic" fill="#374151" text-anchor="middle">«screen»</text>
+    <text x="860.0" y="547" font-size="11" font-weight="bold" fill="#111827" text-anchor="middle">Asistente_Virtual_Chat_Screen</text>
+    <text x="710" y="570" font-size="9.5" fill="#1f2937">«CU13WM: Interactuar con Asistente IA»</text>
+    <text x="710" y="586" font-size="9.5" fill="#1f2937">entry / iniciar_sesion_deepseek()</text>
+    <text x="710" y="602" font-size="9.5" fill="#1f2937">[enviar_pregunta] / consultar_llm_prendas()</text>
+    <text x="710" y="618" font-size="9.5" fill="#1f2937">[recibir_respuesta] / renderizar_tarjeta_ropa()</text>
+    <text x="710" y="634" font-size="9.5" fill="#1f2937">[click_prenda_sugerida] -&gt; Ficha_Prenda</text>
+  </g>
+  <g id="screen_vestidor">
+    <rect x="1160" y="300" width="340" height="142" rx="6" ry="6" fill="#ffffff" stroke="#111827" stroke-width="1.5"/>
+    <line x1="1160" y1="334" x2="1500" y2="334" stroke="#111827" stroke-width="1.2"/>
+    <text x="1330.0" y="313" font-size="9" font-style="italic" fill="#374151" text-anchor="middle">«screen»</text>
+    <text x="1330.0" y="327" font-size="11" font-weight="bold" fill="#111827" text-anchor="middle">Vestidor_Virtual_RA_Screen</text>
+    <text x="1170" y="350" font-size="9.5" fill="#1f2937">«CU14M: Utilizar Vestidor Virtual RA»</text>
+    <text x="1170" y="366" font-size="9.5" fill="#1f2937">entry / activar_camara_dispositivo()</text>
+    <text x="1170" y="382" font-size="9.5" fill="#1f2937">do / cargar_modelo_3d_textura_prenda()</text>
+    <text x="1170" y="398" font-size="9.5" fill="#1f2937">[ajustar_talla_calce] / recalcular_mesh()</text>
+    <text x="1170" y="414" font-size="9.5" fill="#1f2937">[capturar_foto_outfit] / guardar_en_galeria()</text>
+    <text x="1170" y="430" font-size="9.5" fill="#1f2937">[agregar_al_carrito] -&gt; Carrito_Compras</text>
+  </g>
+  <g id="screen_mapa">
+    <rect x="1160" y="650" width="340" height="126" rx="6" ry="6" fill="#ffffff" stroke="#111827" stroke-width="1.5"/>
+    <line x1="1160" y1="684" x2="1500" y2="684" stroke="#111827" stroke-width="1.2"/>
+    <text x="1330.0" y="663" font-size="9" font-style="italic" fill="#374151" text-anchor="middle">«screen»</text>
+    <text x="1330.0" y="677" font-size="11" font-weight="bold" fill="#111827" text-anchor="middle">Mapa_Ubicaciones_Sucursales_Screen</text>
+    <text x="1170" y="700" font-size="9.5" fill="#1f2937">«CU15M / CU26W: Mostrar Ubicaciones»</text>
+    <text x="1170" y="716" font-size="9.5" fill="#1f2937">entry / solicitar_geolocalizacion_gps()</text>
+    <text x="1170" y="732" font-size="9.5" fill="#1f2937">do / trazar_ruta_sucursal_mas_cercana()</text>
+    <text x="1170" y="748" font-size="9.5" fill="#1f2937">[seleccionar_tienda] / ver_horarios_y_stock()</text>
+    <text x="1170" y="764" font-size="9.5" fill="#1f2937">[iniciar_navegacion_gps] / abrir_google_maps()</text>
+  </g>
+  <path d="M 140 360 L 280 360" fill="none" stroke="#111827" stroke-width="1.4" marker-end="url(#uml_arrow)"/>
+  <text x="210.0" y="354.0" font-size="9" font-weight="500" fill="#111827" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[ingresar_experiencia_ia]</text>
+  <path d="M 560 325.2 L 620 330 L 620 240 L 700 230.4" fill="none" stroke="#111827" stroke-width="1.4" marker-end="url(#uml_arrow)"/>
+  <text x="590.0" y="321.6" font-size="9" font-weight="500" fill="#111827" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[click_sugerencias_moda]</text>
+  <path d="M 560 400.8 L 620 420 L 620 580 L 700 570.4" fill="none" stroke="#111827" stroke-width="1.4" marker-end="url(#uml_arrow)"/>
+  <text x="590.0" y="404.4" font-size="9" font-weight="500" fill="#111827" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[click_abrir_chat_deepseek]</text>
+  <path d="M 560 363.0 L 1160 371.0" fill="none" stroke="#111827" stroke-width="1.4" marker-end="url(#uml_arrow)"/>
+  <text x="860.0" y="361.0" font-size="9" font-weight="500" fill="#111827" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[click_probar_en_vestidor_ra]</text>
+  <path d="M 420.0 426 L 420 720 L 1160 700.4" fill="none" stroke="#111827" stroke-width="1.4" marker-end="url(#uml_arrow)"/>
+  <text x="420.0" y="567.0" font-size="9" font-weight="500" fill="#111827" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[click_buscar_tiendas]</text>
+  <path d="M 1480 130 L 1020 130 L 892.0 180" fill="none" stroke="#111827" stroke-width="1.4" stroke-dasharray="4,4" marker-end="url(#uml_arrow)"/>
+  <text x="1250.0" y="124.0" font-size="9" font-weight="500" fill="#111827" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[vector_embeddings / ranking_afinidad]</text>
+  <path d="M 1540 130 L 1540 560 L 1020 560 L 1020 557.8" fill="none" stroke="#111827" stroke-width="1.4" stroke-dasharray="4,4" marker-end="url(#uml_arrow)"/>
+  <text x="1540.0" y="339.0" font-size="9" font-weight="500" fill="#111827" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[prompt_tokens / deepseek_llm_stream]</text>
+  <path d="M 1600 130 L 1600 350 L 1500 356.8" fill="none" stroke="#111827" stroke-width="1.4" stroke-dasharray="4,4" marker-end="url(#uml_arrow)"/>
+  <text x="1600.0" y="234.0" font-size="9" font-weight="500" fill="#111827" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[segmentacion_pose_mesh_3d]</text>
+</svg>

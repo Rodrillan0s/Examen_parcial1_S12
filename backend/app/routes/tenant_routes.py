@@ -1,22 +1,12 @@
 from fastapi import APIRouter, Body, HTTPException, Depends, Request
 from app.services import tenant_services
-from app.utils.security import require_permission, verificar_token
+from app.utils.security import require_permission, require_platform_admin
 
 router = APIRouter(tags=["Empresas (Tenants)"])
 
 # Dependencia de seguridad estricta para SuperAdministrador de la plataforma
-def require_superadmin(payload: dict = Depends(verificar_token)):
-    id_rol = payload.get('id_rol')
-    roles = [str(r).upper() for r in payload.get('roles', [])]
-    nombre_rol = str(payload.get('nombre_rol', '')).upper()
-    
-    if id_rol == 1 or 'ADMINISTRADOR' in roles or nombre_rol == 'ADMINISTRADOR':
-        return payload
-        
-    raise HTTPException(
-        status_code=403,
-        detail="Acceso denegado: El único autorizado para registrar o gestionar Tiendas/Empresas (Tenants) es el SuperAdministrador."
-    )
+def require_superadmin(payload: dict = Depends(require_platform_admin)):
+    return payload
 
 @router.get('/')
 def get_empresas(payload: dict = Depends(require_permission('sucursales.ver'))):

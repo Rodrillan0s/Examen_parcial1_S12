@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1520 760" width="1520" height="760" style="background-color: #ffffff; font-family: Arial, Helvetica, sans-serif;">
+  <defs>
+    <!-- Marcador flecha derecha para mensaje -->
+    <marker id="msg_arrow_right" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#000000"/>
+    </marker>
+    <!-- Marcador flecha izquierda para retorno -->
+    <marker id="msg_arrow_left" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 9 1 L 0 5 L 9 9 z" fill="#000000"/>
+    </marker>
+  </defs>
+
+  <!-- Marco Exterior Estándar UML -->
+  <rect x="15" y="15" width="1490" height="730" fill="#ffffff" stroke="#000000" stroke-width="1.5"/>
+  <path d="M 15 15 L 680 15 L 695 35 L 695 45 L 15 45 Z" fill="#ffffff" stroke="#000000" stroke-width="1.5"/>
+  <text x="30" y="34" font-size="12" font-weight="bold" fill="#000000">com [CU/W32: Visualizar indicadores empresariales (Analytics &amp; Dashboard KPIs)]</text>
+
+  <line x1="110" y1="380" x2="268" y2="380" stroke="#000000" stroke-width="1.4"/>
+  <line x1="163.0" y1="369" x2="215.0" y2="369" stroke="#000000" stroke-width="1.3" marker-end="url(#msg_arrow_right)"/>
+  <text x="189.0" y="351" font-size="9.5" font-weight="bold" fill="#000000" text-anchor="middle">1.1: Seleccionar rango mensual</text>
+  <text x="189.0" y="363" font-size="9" fill="#222222" text-anchor="middle">y canal (POS vs Online)()</text>
+  <line x1="215.0" y1="393" x2="163.0" y2="393" stroke="#000000" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#msg_arrow_left)"/>
+  <text x="189.0" y="407" font-size="9.5" fill="#333333" text-anchor="middle">1.14: inspeccionar KPIs del negocio</text>
+  <line x1="360" y1="380" x2="540" y2="380" stroke="#000000" stroke-width="1.4"/>
+  <line x1="424.0" y1="369" x2="476.0" y2="369" stroke="#000000" stroke-width="1.3" marker-end="url(#msg_arrow_right)"/>
+  <text x="450.0" y="351" font-size="9.5" font-weight="bold" fill="#000000" text-anchor="middle">1.2: GET /api/kpis/dashboard</text>
+  <text x="450.0" y="363" font-size="9" fill="#222222" text-anchor="middle">(periodo, sucursal_id)</text>
+  <line x1="476.0" y1="393" x2="424.0" y2="393" stroke="#000000" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#msg_arrow_left)"/>
+  <text x="450.0" y="407" font-size="9.5" fill="#333333" text-anchor="middle">1.13: renderizar gráficos ejecutivos</text>
+  <line x1="620" y1="380" x2="810" y2="380" stroke="#000000" stroke-width="1.4"/>
+  <line x1="689.0" y1="369" x2="741.0" y2="369" stroke="#000000" stroke-width="1.3" marker-end="url(#msg_arrow_right)"/>
+  <text x="715.0" y="351" font-size="9.5" font-weight="bold" fill="#000000" text-anchor="middle">1.3: calcular_kpis_ejecutivos()</text>
+  <text x="715.0" y="363" font-size="9" fill="#222222" text-anchor="middle">agregando tickets e ingresos</text>
+  <line x1="741.0" y1="393" x2="689.0" y2="393" stroke="#000000" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#msg_arrow_left)"/>
+  <text x="715.0" y="407" font-size="9.5" fill="#333333" text-anchor="middle">1.12: HTTP 200 OK (graficos, tablas)</text>
+  <line x1="890" y1="380" x2="1070" y2="380" stroke="#000000" stroke-width="1.4"/>
+  <line x1="954.0" y1="369" x2="1006.0" y2="369" stroke="#000000" stroke-width="1.3" marker-end="url(#msg_arrow_right)"/>
+  <text x="980.0" y="351" font-size="9.5" font-weight="bold" fill="#000000" text-anchor="middle">1.4: consultar agregaciones SQL</text>
+  <text x="980.0" y="363" font-size="9" fill="#222222" text-anchor="middle">y comparativa anual (YoY)</text>
+  <line x1="1006.0" y1="393" x2="954.0" y2="393" stroke="#000000" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#msg_arrow_left)"/>
+  <text x="980.0" y="407" font-size="9.5" fill="#333333" text-anchor="middle">1.11: return dataset_metricas_kpis()</text>
+  <line x1="1150" y1="380" x2="1185" y2="380" stroke="#000000" stroke-width="1.4"/>
+  <line x1="1185" y1="240" x2="1185" y2="520" stroke="#000000" stroke-width="1.4"/>
+  <line x1="1185" y1="240" x2="1390" y2="240" stroke="#000000" stroke-width="1.4"/>
+  <line x1="1261.5" y1="229" x2="1313.5" y2="229" stroke="#000000" stroke-width="1.3" marker-end="url(#msg_arrow_right)"/>
+  <text x="1287.5" y="221" font-size="9.5" font-weight="bold" fill="#000000" text-anchor="middle">1.5: SELECT SUM(TOTAL), COUNT(*) ventas</text>
+  <line x1="1313.5" y1="253" x2="1261.5" y2="253" stroke="#000000" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#msg_arrow_left)"/>
+  <text x="1287.5" y="267" font-size="9.5" fill="#333333" text-anchor="middle">1.6: return ingresos consolidados periodo</text>
+  <line x1="1185" y1="380" x2="1390" y2="380" stroke="#000000" stroke-width="1.4"/>
+  <line x1="1261.5" y1="369" x2="1313.5" y2="369" stroke="#000000" stroke-width="1.3" marker-end="url(#msg_arrow_right)"/>
+  <text x="1287.5" y="361" font-size="9.5" font-weight="bold" fill="#000000" text-anchor="middle">1.7: SELECT prendas más vendidas rotación</text>
+  <line x1="1313.5" y1="393" x2="1261.5" y2="393" stroke="#000000" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#msg_arrow_left)"/>
+  <text x="1287.5" y="407" font-size="9.5" fill="#333333" text-anchor="middle">1.8: return ranking prendas estrella</text>
+  <line x1="1185" y1="520" x2="1390" y2="520" stroke="#000000" stroke-width="1.4"/>
+  <line x1="1261.5" y1="509" x2="1313.5" y2="509" stroke="#000000" stroke-width="1.3" marker-end="url(#msg_arrow_right)"/>
+  <text x="1287.5" y="501" font-size="9.5" font-weight="bold" fill="#000000" text-anchor="middle">1.9: SELECT montos por método (Efectivo/QR)</text>
+  <line x1="1313.5" y1="533" x2="1261.5" y2="533" stroke="#000000" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#msg_arrow_left)"/>
+  <text x="1287.5" y="547" font-size="9.5" fill="#333333" text-anchor="middle">1.10: return desglose canales de recaudo</text>
+  <!-- Actor: GERENTE -->
+  <g>
+    <circle cx="90" cy="358" r="11" fill="#ffffff" stroke="#000000" stroke-width="1.8"/>
+    <line x1="90" y1="369" x2="90" y2="396" stroke="#000000" stroke-width="1.8"/>
+    <line x1="72" y1="379" x2="108" y2="379" stroke="#000000" stroke-width="1.8"/>
+    <line x1="90" y1="396" x2="76" y2="416" stroke="#000000" stroke-width="1.8"/>
+    <line x1="90" y1="396" x2="104" y2="416" stroke="#000000" stroke-width="1.8"/>
+    <text x="90" y="434" font-size="10.5" font-weight="bold" fill="#000000" text-anchor="middle">GERENTE</text>
+  </g>
+  <!-- Boundary: IU_DashboardKpis -->
+  <g>
+    <line x1="268" y1="352" x2="268" y2="408" stroke="#000000" stroke-width="2.2"/>
+    <line x1="268" y1="380" x2="280" y2="380" stroke="#000000" stroke-width="1.8"/>
+    <circle cx="320" cy="380" r="40" fill="#ffffff" stroke="#000000" stroke-width="1.8"/>
+    <text x="320" y="372" font-size="8" font-style="italic" fill="#333333" text-anchor="middle">«boundary»</text>
+    <text x="320" y="386" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">IU_</text>
+    <text x="320" y="399" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">DashboardKpis</text>
+  </g>
+  <!-- Control: kpis_routes -->
+  <g>
+    <circle cx="580" cy="380" r="40" fill="#ffffff" stroke="#000000" stroke-width="1.8"/>
+    <path d="M 572 334 A 46 46 0 0 1 600 348" fill="none" stroke="#000000" stroke-width="1.7"/>
+    <polygon points="597,342 604,349 594,351" fill="#000000"/>
+    <text x="580" y="372" font-size="8" font-style="italic" fill="#333333" text-anchor="middle">«control»</text>
+    <text x="580" y="391" font-size="10.5" font-weight="bold" fill="#000000" text-anchor="middle">kpis_routes</text>
+  </g>
+  <!-- Control: Analytics_Engine_Service -->
+  <g>
+    <circle cx="850" cy="380" r="40" fill="#ffffff" stroke="#000000" stroke-width="1.8"/>
+    <path d="M 842 334 A 46 46 0 0 1 870 348" fill="none" stroke="#000000" stroke-width="1.7"/>
+    <polygon points="867,342 874,349 864,351" fill="#000000"/>
+    <text x="850" y="372" font-size="8" font-style="italic" fill="#333333" text-anchor="middle">«control»</text>
+    <text x="850" y="386" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">Analytics_Engine_</text>
+    <text x="850" y="399" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">Service</text>
+  </g>
+  <!-- Control: kpis_repos -->
+  <g>
+    <circle cx="1110" cy="380" r="40" fill="#ffffff" stroke="#000000" stroke-width="1.8"/>
+    <path d="M 1102 334 A 46 46 0 0 1 1130 348" fill="none" stroke="#000000" stroke-width="1.7"/>
+    <polygon points="1127,342 1134,349 1124,351" fill="#000000"/>
+    <text x="1110" y="372" font-size="8" font-style="italic" fill="#333333" text-anchor="middle">«control»</text>
+    <text x="1110" y="391" font-size="10.5" font-weight="bold" fill="#000000" text-anchor="middle">kpis_repos</text>
+  </g>
+  <!-- Entity: T_VENTA -->
+  <g>
+    <circle cx="1430" cy="240" r="40" fill="#ffffff" stroke="#000000" stroke-width="1.8"/>
+    <line x1="1402" y1="283" x2="1458" y2="283" stroke="#000000" stroke-width="2.2"/>
+    <text x="1430" y="232" font-size="8" font-style="italic" fill="#333333" text-anchor="middle">«entity»</text>
+    <text x="1430" y="251" font-size="10.5" font-weight="bold" fill="#000000" text-anchor="middle">T_VENTA</text>
+  </g>
+  <!-- Entity: T_DETALLE_VENTA -->
+  <g>
+    <circle cx="1430" cy="380" r="40" fill="#ffffff" stroke="#000000" stroke-width="1.8"/>
+    <line x1="1402" y1="423" x2="1458" y2="423" stroke="#000000" stroke-width="2.2"/>
+    <text x="1430" y="372" font-size="8" font-style="italic" fill="#333333" text-anchor="middle">«entity»</text>
+    <text x="1430" y="386" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">T_DETALLE_</text>
+    <text x="1430" y="399" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">VENTA</text>
+  </g>
+  <!-- Entity: T_PAGO -->
+  <g>
+    <circle cx="1430" cy="520" r="40" fill="#ffffff" stroke="#000000" stroke-width="1.8"/>
+    <line x1="1402" y1="563" x2="1458" y2="563" stroke="#000000" stroke-width="2.2"/>
+    <text x="1430" y="512" font-size="8" font-style="italic" fill="#333333" text-anchor="middle">«entity»</text>
+    <text x="1430" y="531" font-size="10.5" font-weight="bold" fill="#000000" text-anchor="middle">T_PAGO</text>
+  </g>
+</svg>

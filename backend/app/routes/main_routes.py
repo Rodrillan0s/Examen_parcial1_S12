@@ -1,10 +1,11 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 import io
 import importlib
 import traceback
 import unittest
 import app.utils.db_init
 from app.classes.postgres import PostgreSQL
+from app.utils.security import require_platform_admin
 
 router = APIRouter(tags=["Principal"])
 
@@ -17,7 +18,7 @@ def index():
     }
 
 @router.get("/check-tables")
-def check_tables():
+def check_tables(_: dict = Depends(require_platform_admin)):
     db = PostgreSQL()
     try:
         db.create_connection()
@@ -36,7 +37,7 @@ def check_tables():
 
 
 @router.get("/init-db")
-def init_db():
+def init_db(_: dict = Depends(require_platform_admin)):
     try:
         importlib.reload(app.utils.db_init)
         app.utils.db_init.inicializar_tablas_seguridad()
@@ -46,7 +47,7 @@ def init_db():
 
 
 @router.get("/run-tests")
-def run_tests(test: int = 0):
+def run_tests(test: int = 0, _: dict = Depends(require_platform_admin)):
     init_err = None
     try:
         importlib.reload(app.utils.db_init)

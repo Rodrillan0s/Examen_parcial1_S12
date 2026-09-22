@@ -96,9 +96,9 @@ export const routes: Routes = [
       },
       { path: 'bi_dashboard', component: BiDashboardComponent, canActivate: [permissionGuard('reportes.ver')] },
       { path: 'bi-dashboard', component: BiDashboardComponent, canActivate: [permissionGuard('reportes.ver')] },
-      { path: 'triaje-chat', component: TriajeChatComponent },
-      { path: 'catalogo', component: CatalogoComponent },
-      { path: 'proveedores', component: ProveedoresComponent }
+      { path: 'triaje-chat', component: TriajeChatComponent, canActivate: [permissionGuard('admin.acceder')] },
+      { path: 'catalogo', component: CatalogoComponent, canActivate: [permissionGuard('productos.ver')] },
+      { path: 'proveedores', component: ProveedoresComponent, canActivate: [permissionGuard('compras.ver')] }
     ]
   },
 

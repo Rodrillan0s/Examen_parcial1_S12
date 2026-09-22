@@ -3,7 +3,7 @@ from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
-from app.utils.security import verificar_token
+from app.utils.security import verificar_token, tiene_permiso
 from app.repos import pos_repos, caja_repos
 
 logger = logging.getLogger(__name__)
@@ -31,15 +31,7 @@ def _verificar_acceso_pos(token_data: dict) -> None:
     Verifica que el usuario tenga rol de Cajero, Administrador o Encargado de Sucursal,
     o posea el permiso pos.vender.
     """
-    roles = [str(r).upper() for r in token_data.get("roles", [])]
-    permisos = token_data.get("permisos", [])
-    id_rol = token_data.get("id_rol")
-
-    roles_validos = {"CAJERO", "ADMINISTRADOR", "ADMINISTRADOR_TIENDA", "ENCARGADO_SUCURSAL", "SUPERADMIN"}
-    if id_rol in (1, 3, 4, 5) or any(r in roles_validos for r in roles):
-        return
-
-    if "pos.vender" in permisos or "caja.ver" in permisos:
+    if tiene_permiso(token_data, "pos.vender") or tiene_permiso(token_data, "caja.ver"):
         return
 
     raise HTTPException(
@@ -52,15 +44,7 @@ def _verificar_permiso_descuento(token_data: dict) -> None:
     """
     Verifica que el usuario tenga autorización RBAC para aplicar descuentos en ventas.
     """
-    roles = [str(r).upper() for r in token_data.get("roles", [])]
-    permisos = token_data.get("permisos", [])
-    id_rol = token_data.get("id_rol")
-
-    roles_con_descuento = {"ADMINISTRADOR", "ADMINISTRADOR_TIENDA", "ENCARGADO_SUCURSAL", "SUPERADMIN"}
-    if id_rol in (1, 3, 4) or any(r in roles_con_descuento for r in roles):
-        return
-
-    if "pos.descuento" in permisos:
+    if tiene_permiso(token_data, "pos.descuento"):
         return
 
     raise HTTPException(
@@ -76,7 +60,9 @@ def _obtener_empresa_contexto(token_data: dict, id_empresa_solicitada: Optional[
         return id_empresa_jwt
     if id_empresa_solicitada and id_empresa_solicitada > 0:
         return id_empresa_solicitada
-    return id_empresa_jwt or 1
+    if id_empresa_jwt:
+        return id_empresa_jwt
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="El usuario no tiene una empresa autorizada.")
 
 
 def _obtener_sucursal_contexto(token_data: dict, id_sucursal_solicitada: Optional[int] = None, id_empresa: Optional[int] = None) -> int:
@@ -234,7 +220,7 @@ def registrar_venta_presencial(
             id_sesion_caja=id_sesion_caja,
             id_usuario=id_usuario,
             id_sucursal=id_suc,
-            id_empresa=id_empresa,
+            id_empresa=id_emp,
             id_cliente=body.id_cliente,
             items=items_dict,
             descuento=body.descuento,

@@ -1,0 +1,137 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1780 860" width="1780" height="860" style="background-color: #ffffff; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;">
+  <defs>
+    <marker id="nav_arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto">
+      <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#0f172a"/>
+    </marker>
+  </defs>
+
+  <!-- Marco Exterior -->
+  <rect x="15" y="15" width="1750" height="830" rx="4" ry="4" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+  
+  <!-- Pestaña de Identificación -->
+  <path d="M 15 15 L 750 15 L 765 38 L 765 48 L 15 48 Z" fill="#f8fafc" stroke="#0f172a" stroke-width="1.5"/>
+  <text x="32" y="32" font-size="11.5" font-weight="bold" fill="#0f172a">nav [DN-03] Paquete Inteligencia Artificial</text>
+  <text x="32" y="44" font-size="9" font-style="italic" fill="#475569">Recomendaciones, Chatbot Asistente y Vestidor Virtual (W12, W13, M12-M14)</text>
+
+  <g id="screen_p3_hub">
+    <rect x="60" y="380" width="220" height="88" rx="6" ry="6" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+    <path d="M 60 386 Q 60 380 66 380 L 274 380 Q 280 380 280 386 L 280 410 L 60 410 Z" fill="#f8fafc"/>
+    <line x1="60" y1="410" x2="280" y2="410" stroke="#0f172a" stroke-width="1.2"/>
+    <text x="170.0" y="392" font-size="8.5" font-style="italic" fill="#475569" text-anchor="middle">«pantalla de entrada»</text>
+    <text x="170.0" y="405" font-size="10.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Inicio / Catálogo</text>
+    <text x="70" y="425" font-size="9" fill="#334155">• Botón Recomendaciones</text>
+    <text x="70" y="441" font-size="9" fill="#334155">• Icono Asistente IA</text>
+    <text x="70" y="457" font-size="9" fill="#334155">• Botón Vestidor Virtual</text>
+  </g>
+  <g id="screen_p3_recom">
+    <rect x="420" y="100" width="240" height="72" rx="6" ry="6" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+    <path d="M 420 106 Q 420 100 426 100 L 654 100 Q 660 100 660 106 L 660 130 L 420 130 Z" fill="#f8fafc"/>
+    <line x1="420" y1="130" x2="660" y2="130" stroke="#0f172a" stroke-width="1.2"/>
+    <text x="540.0" y="112" font-size="8.5" font-style="italic" fill="#475569" text-anchor="middle">«menú / sección (W12, M12)»</text>
+    <text x="540.0" y="125" font-size="10.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Recomendaciones</text>
+    <text x="430" y="145" font-size="9" fill="#334155">• Algoritmo de afinidad</text>
+    <text x="430" y="161" font-size="9" fill="#334155">• Novedades de estilo</text>
+  </g>
+  <g id="screen_p3_prod_recom">
+    <rect x="760" y="100" width="260" height="72" rx="6" ry="6" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+    <path d="M 760 106 Q 760 100 766 100 L 1014 100 Q 1020 100 1020 106 L 1020 130 L 760 130 Z" fill="#f8fafc"/>
+    <line x1="760" y1="130" x2="1020" y2="130" stroke="#0f172a" stroke-width="1.2"/>
+    <text x="890.0" y="112" font-size="8.5" font-style="italic" fill="#475569" text-anchor="middle">«pantalla grilla»</text>
+    <text x="890.0" y="125" font-size="10.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Productos Recomendados</text>
+    <text x="770" y="145" font-size="9" fill="#334155">• Prendas sugeridas</text>
+    <text x="770" y="161" font-size="9" fill="#334155">• Nivel de coincidencia</text>
+  </g>
+  <g id="screen_p3_det1">
+    <rect x="1120" y="100" width="240" height="72" rx="6" ry="6" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+    <path d="M 1120 106 Q 1120 100 1126 100 L 1354 100 Q 1360 100 1360 106 L 1360 130 L 1120 130 Z" fill="#f8fafc"/>
+    <line x1="1120" y1="130" x2="1360" y2="130" stroke="#0f172a" stroke-width="1.2"/>
+    <text x="1240.0" y="112" font-size="8.5" font-style="italic" fill="#475569" text-anchor="middle">«pantalla detalle»</text>
+    <text x="1240.0" y="125" font-size="10.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Detalle de Producto</text>
+    <text x="1130" y="145" font-size="9" fill="#334155">• Ficha de prenda</text>
+    <text x="1130" y="161" font-size="9" fill="#334155">• Añadir al carrito</text>
+  </g>
+  <g id="screen_p3_asist">
+    <rect x="420" y="380" width="240" height="72" rx="6" ry="6" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+    <path d="M 420 386 Q 420 380 426 380 L 654 380 Q 660 380 660 386 L 660 410 L 420 410 Z" fill="#f8fafc"/>
+    <line x1="420" y1="410" x2="660" y2="410" stroke="#0f172a" stroke-width="1.2"/>
+    <text x="540.0" y="392" font-size="8.5" font-style="italic" fill="#475569" text-anchor="middle">«interfaz (W13, M13)»</text>
+    <text x="540.0" y="405" font-size="10.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Asistente Inteligente</text>
+    <text x="430" y="425" font-size="9" fill="#334155">• Chatbot DeepSeek AI</text>
+    <text x="430" y="441" font-size="9" fill="#334155">• Asistencia en compras</text>
+  </g>
+  <g id="screen_p3_conv">
+    <rect x="760" y="380" width="260" height="72" rx="6" ry="6" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+    <path d="M 760 386 Q 760 380 766 380 L 1014 380 Q 1020 380 1020 386 L 1020 410 L 760 410 Z" fill="#f8fafc"/>
+    <line x1="760" y1="410" x2="1020" y2="410" stroke="#0f172a" stroke-width="1.2"/>
+    <text x="890.0" y="392" font-size="8.5" font-style="italic" fill="#475569" text-anchor="middle">«pantalla de chat»</text>
+    <text x="890.0" y="405" font-size="10.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Conversación</text>
+    <text x="770" y="425" font-size="9" fill="#334155">• Diálogo interactivo</text>
+    <text x="770" y="441" font-size="9" fill="#334155">• Respuestas sobre tallas</text>
+  </g>
+  <g id="screen_p3_prod_asist">
+    <rect x="1120" y="380" width="240" height="72" rx="6" ry="6" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+    <path d="M 1120 386 Q 1120 380 1126 380 L 1354 380 Q 1360 380 1360 386 L 1360 410 L 1120 410 Z" fill="#f8fafc"/>
+    <line x1="1120" y1="410" x2="1360" y2="410" stroke="#0f172a" stroke-width="1.2"/>
+    <text x="1240.0" y="392" font-size="8.5" font-style="italic" fill="#475569" text-anchor="middle">«tarjeta interactiva»</text>
+    <text x="1240.0" y="405" font-size="10.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Producto Recomendado</text>
+    <text x="1130" y="425" font-size="9" fill="#334155">• Prenda sugerida en chat</text>
+    <text x="1130" y="441" font-size="9" fill="#334155">• Ver detalle</text>
+  </g>
+  <g id="screen_p3_vest">
+    <rect x="420" y="660" width="240" height="56" rx="6" ry="6" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+    <path d="M 420 666 Q 420 660 426 660 L 654 660 Q 660 660 660 666 L 660 690 L 420 690 Z" fill="#f8fafc"/>
+    <line x1="420" y1="690" x2="660" y2="690" stroke="#0f172a" stroke-width="1.2"/>
+    <text x="540.0" y="672" font-size="8.5" font-style="italic" fill="#475569" text-anchor="middle">«sección (M14)»</text>
+    <text x="540.0" y="685" font-size="10.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Vestidor Virtual</text>
+    <text x="430" y="705" font-size="9" fill="#334155">• Probador interactivo RA</text>
+  </g>
+  <g id="screen_p3_sel">
+    <rect x="760" y="660" width="260" height="72" rx="6" ry="6" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+    <path d="M 760 666 Q 760 660 766 660 L 1014 660 Q 1020 660 1020 666 L 1020 690 L 760 690 Z" fill="#f8fafc"/>
+    <line x1="760" y1="690" x2="1020" y2="690" stroke="#0f172a" stroke-width="1.2"/>
+    <text x="890.0" y="672" font-size="8.5" font-style="italic" fill="#475569" text-anchor="middle">«catálogo RA»</text>
+    <text x="890.0" y="685" font-size="10.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Seleccionar Prenda</text>
+    <text x="770" y="705" font-size="9" fill="#334155">• Prendas compatibles</text>
+    <text x="770" y="721" font-size="9" fill="#334155">• Selección de talla</text>
+  </g>
+  <g id="screen_p3_camara">
+    <rect x="1120" y="660" width="240" height="72" rx="6" ry="6" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+    <path d="M 1120 666 Q 1120 660 1126 660 L 1354 660 Q 1360 660 1360 666 L 1360 690 L 1120 690 Z" fill="#f8fafc"/>
+    <line x1="1120" y1="690" x2="1360" y2="690" stroke="#0f172a" stroke-width="1.2"/>
+    <text x="1240.0" y="672" font-size="8.5" font-style="italic" fill="#475569" text-anchor="middle">«pantalla RA»</text>
+    <text x="1240.0" y="685" font-size="10.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Vestidor Virtual (Cámara)</text>
+    <text x="1130" y="705" font-size="9" fill="#334155">• Calce virtual en cámara</text>
+    <text x="1130" y="721" font-size="9" fill="#334155">• Ajuste de posición</text>
+  </g>
+  <g id="screen_p3_vis">
+    <rect x="1440" y="660" width="240" height="72" rx="6" ry="6" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+    <path d="M 1440 666 Q 1440 660 1446 660 L 1674 660 Q 1680 660 1680 666 L 1680 690 L 1440 690 Z" fill="#f8fafc"/>
+    <line x1="1440" y1="690" x2="1680" y2="690" stroke="#0f172a" stroke-width="1.2"/>
+    <text x="1560.0" y="672" font-size="8.5" font-style="italic" fill="#475569" text-anchor="middle">«resultado outfit»</text>
+    <text x="1560.0" y="685" font-size="10.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Visualización</text>
+    <text x="1450" y="705" font-size="9" fill="#334155">• Foto del outfit virtual</text>
+    <text x="1450" y="721" font-size="9" fill="#334155">• Comprar prenda</text>
+  </g>
+  <path d="M 280.0 397.6 L 340.0 405.0 L 340.0 140.0 L 420.0 136.0" fill="none" stroke="#0f172a" stroke-width="1.3" marker-end="url(#nav_arrow)"/>
+  <text x="340.0" y="266.5" font-size="8.5" font-weight="600" fill="#0f172a" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[Recomendaciones]</text>
+  <path d="M 280.0 424.0 L 420.0 416.0" fill="none" stroke="#0f172a" stroke-width="1.3" marker-end="url(#nav_arrow)"/>
+  <text x="350.0" y="414.0" font-size="8.5" font-weight="600" fill="#0f172a" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[Asistente Inteligente]</text>
+  <path d="M 280.0 450.4 L 340.0 445.0 L 340.0 700.0 L 420.0 688.0" fill="none" stroke="#0f172a" stroke-width="1.3" marker-end="url(#nav_arrow)"/>
+  <text x="340.0" y="566.5" font-size="8.5" font-weight="600" fill="#0f172a" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[Vestidor Virtual]</text>
+  <path d="M 660.0 136.0 L 760.0 136.0" fill="none" stroke="#0f172a" stroke-width="1.3" marker-end="url(#nav_arrow)"/>
+  <text x="710.0" y="130.0" font-size="8.5" font-weight="600" fill="#0f172a" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[Ver Productos]</text>
+  <path d="M 1020.0 136.0 L 1120.0 136.0" fill="none" stroke="#0f172a" stroke-width="1.3" marker-end="url(#nav_arrow)"/>
+  <text x="1070.0" y="130.0" font-size="8.5" font-weight="600" fill="#0f172a" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[Seleccionar Prenda]</text>
+  <path d="M 660.0 416.0 L 760.0 416.0" fill="none" stroke="#0f172a" stroke-width="1.3" marker-end="url(#nav_arrow)"/>
+  <text x="710.0" y="410.0" font-size="8.5" font-weight="600" fill="#0f172a" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[Iniciar Conversación]</text>
+  <path d="M 1020.0 416.0 L 1120.0 416.0" fill="none" stroke="#0f172a" stroke-width="1.3" marker-end="url(#nav_arrow)"/>
+  <text x="1070.0" y="410.0" font-size="8.5" font-weight="600" fill="#0f172a" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[Sugerir Prenda]</text>
+  <path d="M 1240.0 380.0 L 1240.0 220.0 L 1240.0 172.0" fill="none" stroke="#0f172a" stroke-width="1.3" marker-end="url(#nav_arrow)"/>
+  <text x="1240.0" y="294.0" font-size="8.5" font-weight="600" fill="#0f172a" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[Ver Detalle de Producto]</text>
+  <path d="M 660.0 688.0 L 760.0 696.0" fill="none" stroke="#0f172a" stroke-width="1.3" marker-end="url(#nav_arrow)"/>
+  <text x="710.0" y="686.0" font-size="8.5" font-weight="600" fill="#0f172a" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[Seleccionar Prenda]</text>
+  <path d="M 1020.0 696.0 L 1120.0 696.0" fill="none" stroke="#0f172a" stroke-width="1.3" marker-end="url(#nav_arrow)"/>
+  <text x="1070.0" y="690.0" font-size="8.5" font-weight="600" fill="#0f172a" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[Abrir Probador RA]</text>
+  <path d="M 1360.0 696.0 L 1440.0 696.0" fill="none" stroke="#0f172a" stroke-width="1.3" marker-end="url(#nav_arrow)"/>
+  <text x="1400.0" y="690.0" font-size="8.5" font-weight="600" fill="#0f172a" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[Capturar / Visualizar]</text>
+</svg>

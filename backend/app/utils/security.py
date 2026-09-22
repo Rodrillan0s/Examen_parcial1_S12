@@ -31,6 +31,12 @@ def verificar_password_hash(password_hash: str, password: str) -> bool:
 def generar_codigo_seguridad() -> str:
     return str(random.randint(100000, 999999))
 
+def _get_jwt_secret() -> str:
+    secret_key = Config.TOKEN_KEY or Config.SECRET_KEY
+    if not secret_key:
+        raise RuntimeError("TOKEN_KEY o SECRET_KEY debe estar configurada para firmar JWT.")
+    return secret_key
+
 # Genera el token JWT de acceso para la sesión del usuario con sus claims RBAC.
 def create_access_token(nro_usuario, username, id_rol, id_empresa, nombre, apellido, roles=None, permisos=None, sucursales=None, nombre_empresa=None, nombre_rol=None, minutes=120):
     roles_list = roles or []
@@ -67,13 +73,13 @@ def create_access_token(nro_usuario, username, id_rol, id_empresa, nombre, apell
         'exp': datetime.now(timezone.utc) + timedelta(minutes=minutes),
         'iat': datetime.now(timezone.utc)
     }
-    secret_key = Config.TOKEN_KEY or Config.SECRET_KEY or 'secret_jwt_key'
+    secret_key = _get_jwt_secret()
     return jwt.encode(payload, secret_key, algorithm="HS256")
 
 # Decodifica y valida la firma del token JWT recibido.
 def decode_access_token(token: str):
     try:
-        secret_key = Config.TOKEN_KEY or Config.SECRET_KEY or 'secret_jwt_key'
+        secret_key = _get_jwt_secret()
         payload = jwt.decode(token, secret_key, algorithms=["HS256"])
         return {
             'success': True,
@@ -134,25 +140,21 @@ def verificar_token_opcional(credentials: Optional[HTTPAuthorizationCredentials]
 # Dependencia reutilizable FastAPI para autorizar según el permiso requerido (<recurso>.<accion>)
 def require_permission(codigo_permiso: str):
     def dependency(payload: dict = Depends(verificar_token)):
-        # 1. Intentar validar permiso mediante el JWT actual
-        permisos_jwt = payload.get('permisos', [])
-        if codigo_permiso in permisos_jwt:
+        if tiene_permiso(payload, codigo_permiso):
             return payload
-
-        # 2. Consulta de permisos efectivos en caliente en la BD (para evitar JWT desactualizados)
-        from app.repos import rbac_repos
-        id_usuario = payload.get('nro_usuario') or payload.get('id_usuario')
-        if id_usuario:
-            permisos_bd = rbac_repos.obtener_permisos_efectivos_usuario(id_usuario)
-            if codigo_permiso in permisos_bd:
-                return payload
-
-        # 3. Si no posee el permiso -> 403 Forbidden
-        raise HTTPException(
-            status_code=403,
-            detail=f"Acceso denegado. No posee el permiso requerido: '{codigo_permiso}'"
-        )
+        raise HTTPException(status_code=403, detail=f"Acceso denegado. No posee el permiso requerido: '{codigo_permiso}'")
     return dependency
+
+def tiene_permiso(payload: dict, codigo_permiso: str) -> bool:
+    permisos_jwt = payload.get('permisos', [])
+    if codigo_permiso in permisos_jwt:
+        return True
+
+    from app.repos import rbac_repos
+    id_usuario = payload.get('nro_usuario') or payload.get('id_usuario')
+    if not id_usuario:
+        return False
+    return codigo_permiso in rbac_repos.obtener_permisos_efectivos_usuario(id_usuario)
 
 # Valida acceso administrativo basándose exclusivamente en el permiso 'admin.acceder'
 def verificar_token_admin(payload: dict = Depends(verificar_token)):
@@ -168,3 +170,11 @@ def verificar_token_admin(payload: dict = Depends(verificar_token)):
             return payload
             
     raise HTTPException(status_code=403, detail="Acceso denegado. Se requiere el permiso 'admin.acceder'.")
+
+def require_platform_admin(payload: dict = Depends(verificar_token)):
+    """Autoriza exclusivamente a un administrador con alcance global."""
+    roles = {str(role).upper() for role in payload.get('roles', [])}
+    es_admin = payload.get('id_rol') == 1 or 'ADMINISTRADOR' in roles or str(payload.get('nombre_rol') or '').upper() == 'ADMINISTRADOR'
+    if not es_admin or payload.get('alcance') != 'PLATAFORMA' or payload.get('id_empresa'):
+        raise HTTPException(status_code=403, detail="Se requiere una cuenta administradora con alcance PLATAFORMA.")
+    return payload

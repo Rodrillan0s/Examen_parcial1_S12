@@ -44,8 +44,8 @@ def registrar_cliente(data: dict, request: Request = None) -> dict:
         'apellido': apellido,
         'telefono': telefono,
         'estado': 'ACTIVO',
-        'id_empresa': data.get('id_empresa'),
-        'id_rol': data.get('id_rol', 2) # Rol por defecto 2 (Cliente)
+        'id_empresa': None,
+        'id_rol': 2
     }
 
     
@@ -255,6 +255,7 @@ def verificar_nuevo_dispositivo(data: dict) -> dict:
     if not id_usuario or not codigo or not fingerprint:
         raise ValueError("El identificador de usuario, código y huella de dispositivo son obligatorios.")
         
+    auth_repos.validar_codigo_dispositivo(id_usuario, codigo)
     auth_repos.guardar_dispositivo_verificado(id_usuario, fingerprint, nombre_dispositivo)
     
     return {

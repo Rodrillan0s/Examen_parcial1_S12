@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Query, UploadFile, File, Form
 from typing import Optional, List, Dict, Any
-from app.utils.security import verificar_token
+from app.utils.security import require_permission
 from app.services import productos_services
 from app.utils import cloudinary_service
 
@@ -12,7 +12,7 @@ def listar_productos(
     solo_activos: bool = Query(False, description="Filtrar solo prendas activas"),
     id_categoria: Optional[int] = Query(None, description="Filtrar por categoría"),
     busqueda: Optional[str] = Query(None, description="Buscar por nombre, código o descripción"),
-    token_data: dict = Depends(verificar_token)
+    token_data: dict = Depends(require_permission('productos.ver'))
 ):
     productos = productos_services.listar_productos_service(
         token_data=token_data,
@@ -32,7 +32,7 @@ def listar_productos(
 )
 def listar_promociones(
     solo_activas: bool = True,
-    token_data: dict = Depends(verificar_token)
+    token_data: dict = Depends(require_permission('productos.ver'))
 ):
     promociones = productos_services.listar_promociones_service(
         token_data=token_data,
@@ -47,7 +47,7 @@ def listar_promociones(
 @router.get('/{id_producto}', summary="Consultar detalle de producto, galería y variantes")
 def obtener_producto(
     id_producto: int,
-    token_data: dict = Depends(verificar_token)
+    token_data: dict = Depends(require_permission('productos.ver'))
 ):
     producto = productos_services.obtener_producto_service(
         id_producto=id_producto,
@@ -62,7 +62,7 @@ def obtener_producto(
 def crear_producto(
     datos: dict,
     request: Request,
-    token_data: dict = Depends(verificar_token)
+    token_data: dict = Depends(require_permission('productos.crear'))
 ):
     ip_cliente = request.client.host if request.client else "127.0.0.1"
     resultado = productos_services.crear_producto_service(
@@ -77,7 +77,7 @@ def actualizar_producto(
     id_producto: int,
     datos: dict,
     request: Request,
-    token_data: dict = Depends(verificar_token)
+    token_data: dict = Depends(require_permission('productos.editar'))
 ):
     ip_cliente = request.client.host if request.client else "127.0.0.1"
     resultado = productos_services.actualizar_producto_service(
@@ -93,7 +93,7 @@ def cambiar_estado(
     id_producto: int,
     datos: dict,
     request: Request,
-    token_data: dict = Depends(verificar_token)
+    token_data: dict = Depends(require_permission('productos.eliminar'))
 ):
     activo = bool(datos.get("activo", True))
     ip_cliente = request.client.host if request.client else "127.0.0.1"
@@ -108,7 +108,7 @@ def cambiar_estado(
 @router.post('/upload-image', summary="Subir imagen de prenda a Cloudinary")
 async def subir_imagen_producto(
     file: UploadFile = File(...),
-    token_data: dict = Depends(verificar_token)
+    token_data: dict = Depends(require_permission('productos.crear'))
 ):
     """
     Sube un archivo de imagen (JPG, PNG, WEBP, máx 5MB) a Cloudinary en la carpeta aurora_store/productos.
@@ -159,7 +159,7 @@ async def subir_imagen_producto(
 def agregar_imagen_a_producto(
     id_producto: int,
     datos: dict,
-    token_data: dict = Depends(verificar_token)
+    token_data: dict = Depends(require_permission('productos.editar'))
 ):
     imagen_url = datos.get("imagen_url")
     public_id = datos.get("public_id")
@@ -180,7 +180,7 @@ def agregar_imagen_a_producto(
 def marcar_portada(
     id_producto: int,
     id_imagen: int,
-    token_data: dict = Depends(verificar_token)
+    token_data: dict = Depends(require_permission('productos.editar'))
 ):
     return productos_services.marcar_portada_service(
         id_producto=id_producto,
@@ -192,7 +192,7 @@ def marcar_portada(
 def eliminar_imagen(
     id_producto: int,
     id_imagen: int,
-    token_data: dict = Depends(verificar_token)
+    token_data: dict = Depends(require_permission('productos.editar'))
 ):
     return productos_services.eliminar_imagen_service(
         id_producto=id_producto,
@@ -204,7 +204,7 @@ def eliminar_imagen(
 def eliminar_producto(
     id_producto: int,
     request: Request,
-    token_data: dict = Depends(verificar_token)
+    token_data: dict = Depends(require_permission('productos.editar'))
 ):
     ip_cliente = request.client.host if request.client else "127.0.0.1"
     return productos_services.eliminar_producto_service(
@@ -221,7 +221,7 @@ def asignar_promocion_producto(
     id_producto: int,
     id_promocion: int,
     porcentaje_descuento: float,
-    token_data: dict = Depends(verificar_token)
+    token_data: dict = Depends(require_permission('productos.editar'))
 ):
     id_promocion_producto = productos_services.asignar_promocion_producto_service(
         token_data=token_data,
@@ -242,7 +242,7 @@ def asignar_promocion_producto(
 )
 def listar_promociones_producto(
     id_producto: int,
-    token_data: dict = Depends(verificar_token)
+    token_data: dict = Depends(require_permission('productos.ver'))
 ):
     promociones = productos_services.listar_promociones_producto_service(
         token_data=token_data,
@@ -261,7 +261,7 @@ def listar_promociones_producto(
 )
 def obtener_promocion_producto(
     id_producto: int,
-    token_data: dict = Depends(verificar_token)
+    token_data: dict = Depends(require_permission('productos.ver'))
 ):
     promocion = productos_services.obtener_promocion_producto_service(
         token_data=token_data,
@@ -280,7 +280,7 @@ def obtener_promocion_producto(
 def eliminar_promocion_producto(
     id_producto: int,
     id_promocion_producto: int,
-    token_data: dict = Depends(verificar_token)
+    token_data: dict = Depends(require_permission('productos.editar'))
 ):
     resultado = productos_services.eliminar_promocion_producto_service(
         token_data=token_data,

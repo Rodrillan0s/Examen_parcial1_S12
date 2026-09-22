@@ -3,7 +3,7 @@ from typing import Optional, Dict, Any, List
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
-from app.utils.security import verificar_token
+from app.utils.security import verificar_token, tiene_permiso
 from app.repos import caja_pago_repos
 
 logger = logging.getLogger(__name__)
@@ -32,15 +32,7 @@ class ProcesarPagoCajaDTO(BaseModel):
     desglose_cambio: Optional[List[Dict[str, Any]]] = Field(None, description="Desglose de billetes y monedas entregados como cambio")
 
 def _verificar_acceso_caja_pago(token_data: dict) -> None:
-    roles = [str(r).upper() for r in token_data.get("roles", [])]
-    permisos = token_data.get("permisos", [])
-    id_rol = token_data.get("id_rol")
-
-    roles_validos = {"CAJERO", "ADMINISTRADOR", "ADMINISTRADOR_TIENDA", "ENCARGADO_SUCURSAL", "SUPERADMIN"}
-    if id_rol in (1, 3, 4, 5) or any(r in roles_validos for r in roles):
-        return
-
-    if "pos.cobrar" in permisos or "pos.vender" in permisos or "caja.abrir" in permisos:
+    if any(tiene_permiso(token_data, codigo) for codigo in ("pos.cobrar", "pos.vender", "caja.abrir", "caja.ver")):
         return
 
     raise HTTPException(

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Body, HTTPException, Depends, Request
 from typing import Optional
 from app.services import ciudades_services
-from app.utils.security import verificar_token
+from app.utils.security import require_permission
 
 router = APIRouter(tags=["Ciudades"])
 
@@ -10,7 +10,7 @@ router = APIRouter(tags=["Ciudades"])
 def get_ciudades(
     solo_activas: bool = False,
     busqueda: Optional[str] = None,
-    payload: dict = Depends(verificar_token)
+    payload: dict = Depends(require_permission('sucursales.ver'))
 ):
     try:
         return ciudades_services.listar_ciudades(solo_activas=solo_activas, busqueda=busqueda)
@@ -22,7 +22,7 @@ def get_ciudades(
 def create_ciudad(
     request: Request,
     data: dict = Body(...),
-    payload: dict = Depends(verificar_token)
+    payload: dict = Depends(require_permission('sucursales.crear'))
 ):
     if not data:
         raise HTTPException(status_code=400, detail="El cuerpo de la petición está vacío.")
@@ -38,7 +38,7 @@ def update_ciudad(
     id_ciudad: int,
     request: Request,
     data: dict = Body(...),
-    payload: dict = Depends(verificar_token)
+    payload: dict = Depends(require_permission('sucursales.editar'))
 ):
     if not data:
         raise HTTPException(status_code=400, detail="El cuerpo de la petición está vacío.")
@@ -54,7 +54,7 @@ def toggle_estado_ciudad(
     id_ciudad: int,
     request: Request,
     data: dict = Body(...),
-    payload: dict = Depends(verificar_token)
+    payload: dict = Depends(require_permission('sucursales.editar'))
 ):
     try:
         return ciudades_services.cambiar_estado_ciudad(id_ciudad, data, payload, request)
@@ -67,7 +67,7 @@ def toggle_estado_ciudad(
 def delete_ciudad(
     id_ciudad: int,
     request: Request,
-    payload: dict = Depends(verificar_token)
+    payload: dict = Depends(require_permission('sucursales.desactivar'))
 ):
     try:
         return ciudades_services.cambiar_estado_ciudad(id_ciudad, {"estado": False}, payload, request)

@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2100 840" width="2100" height="840" style="background-color: #ffffff; font-family: 'Segoe UI', Arial, Helvetica, sans-serif;">
+  <!-- Encabezado del Diagrama -->
+  <text x="35" y="34" font-size="16" font-weight="bold" fill="#0f172a">CU/M12: Obtener recomendaciones de productos (App Móvil) — Diagrama de Análisis de Clases</text>
+  <text x="35" y="54" font-size="12" font-weight="500" fill="#475569">Sistema Aura Mobile | Arquitectura Móvil Flutter: Screen -&gt; Cubit -&gt; Mobile_API_Client -&gt; Backend Entities</text>
+  <text x="35" y="72" font-size="11.5" font-weight="600" fill="#2563eb">Actor(es): Cliente Móvil, Visitante</text>
+  <line x1="35" y1="82" x2="2065" y2="82" stroke="#cbd5e1" stroke-width="1.2"/>
+
+  <!-- Leyenda de Arquitectura Específica -->
+  <g transform="translate(1570, 24)">
+    <rect x="0" y="0" width="495" height="48" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="12" y="19" font-size="11" font-weight="bold" fill="#334155">Arquitectura Nativa Flutter Mobile:</text>
+    <text x="12" y="36" font-size="10" fill="#64748b">Mobile_Screen -&gt; Recomendaciones_Cubit -&gt; Mobile_API_Client -&gt; Entities (Cloud Backend)</text>
+  </g>
+  <!-- Clase: Screen / Feed_Recomendados_Screen -->
+  <g id="class_screen_recomendados">
+    <rect x="35" y="270" width="260" height="200" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="35" y1="318" x2="295" y2="318" stroke="#111827" stroke-width="1.4"/>
+    <line x1="35" y1="394.0" x2="295" y2="394.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="165.0" y="287" text-anchor="middle" font-size="11" font-weight="bold" fill="#475569">Screen</text>
+    <text x="165.0" y="304" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">Feed_Recomendados_Screen</text>
+    <text x="45" y="334" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ controller_scroll</text>
+    <text x="45" y="350" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ lista_cards_sugeridas</text>
+    <text x="45" y="366" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ flag_cargando_feed</text>
+    <text x="45" y="382" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ categoria_filtro_rapido</text>
+    <text x="45" y="410.0" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ refrescar_feed_para_ti()</text>
+    <text x="45" y="426.0" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ deslizar_carrusel_estilos()</text>
+    <text x="45" y="442.0" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ navegar_detalle_prenda()</text>
+    <text x="45" y="458.0" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ marcar_no_me_interesa()</text>
+  </g>
+  <!-- Clase: Recomendaciones_Cubit -->
+  <g id="class_cubit_recomendados">
+    <rect x="335" y="330" width="255" height="138" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="335" y1="364" x2="590" y2="364" stroke="#111827" stroke-width="1.4"/>
+    <line x1="335" y1="408.0" x2="590" y2="408.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="462.5" y="352" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">Recomendaciones_Cubit</text>
+    <text x="345" y="380" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">- estado_actual_feed</text>
+    <text x="345" y="396" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">- lista_cache_prendas</text>
+    <text x="345" y="424.0" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ cargar_recomendaciones()</text>
+    <text x="345" y="440.0" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ filtrar_por_estilo(tag)</text>
+    <text x="345" y="456.0" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ emit(RecomendacionesLoaded)</text>
+  </g>
+  <!-- Clase: Catalogo_Mobile_API_Client -->
+  <g id="class_client_api">
+    <rect x="630" y="340" width="265" height="122" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="630" y1="374" x2="895" y2="374" stroke="#111827" stroke-width="1.4"/>
+    <line x1="630" y1="418.0" x2="895" y2="418.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="762.5" y="362" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">Catalogo_Mobile_API_Client</text>
+    <text x="640" y="390" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">- http_client_dio</text>
+    <text x="640" y="406" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">- url_base_backend</text>
+    <text x="640" y="434.0" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ get_productos_recomendados()</text>
+    <text x="640" y="450.0" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ post_registrar_interaccion(id)</text>
+  </g>
+  <!-- Clase: T_RECOMENDACION -->
+  <g id="class_recomendacion">
+    <rect x="955" y="280" width="205" height="164" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="955" y1="314" x2="1160" y2="314" stroke="#111827" stroke-width="1.4"/>
+    <line x1="955" y1="422.0" x2="1160" y2="422.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="1057.5" y="302" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">T_RECOMENDACION</text>
+    <text x="965" y="330" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_RECOMENDACION</text>
+    <text x="965" y="346" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_CLIENTE</text>
+    <text x="965" y="362" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_PRODUCTO</text>
+    <text x="965" y="378" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ PUNTUACION</text>
+    <text x="965" y="394" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ MOTIVO</text>
+    <text x="965" y="410" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ FECHA_RECOMENDACION</text>
+  </g>
+  <!-- Clase: T_PREFERENCIA_CLIENTE -->
+  <g id="class_preferencia">
+    <rect x="1220" y="480" width="210" height="164" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="1220" y1="514" x2="1430" y2="514" stroke="#111827" stroke-width="1.4"/>
+    <line x1="1220" y1="622.0" x2="1430" y2="622.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="1325.0" y="502" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">T_PREFERENCIA_CLIENTE</text>
+    <text x="1230" y="530" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_PREFERENCIA</text>
+    <text x="1230" y="546" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_CLIENTE</text>
+    <text x="1230" y="562" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_CATEGORIA</text>
+    <text x="1230" y="578" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_TALLA</text>
+    <text x="1230" y="594" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_COLOR</text>
+    <text x="1230" y="610" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ TIPO_PREFERENCIA</text>
+  </g>
+  <!-- Clase: T_HISTORIAL_NAVEGACION -->
+  <g id="class_historial">
+    <rect x="1220" y="100" width="210" height="148" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="1220" y1="134" x2="1430" y2="134" stroke="#111827" stroke-width="1.4"/>
+    <line x1="1220" y1="226.0" x2="1430" y2="226.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="1325.0" y="122" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">T_HISTORIAL_NAVEGACION</text>
+    <text x="1230" y="150" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_HISTORIAL</text>
+    <text x="1230" y="166" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_CLIENTE</text>
+    <text x="1230" y="182" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_PRODUCTO</text>
+    <text x="1230" y="198" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ TIPO_ACCION</text>
+    <text x="1230" y="214" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ FECHA_HORA</text>
+  </g>
+  <!-- Clase: T_PRODUCTO -->
+  <g id="class_producto">
+    <rect x="1490" y="240" width="210" height="244" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="1490" y1="274" x2="1700" y2="274" stroke="#111827" stroke-width="1.4"/>
+    <line x1="1490" y1="462.0" x2="1700" y2="462.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="1595.0" y="262" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">T_PRODUCTO</text>
+    <text x="1500" y="290" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_PRODUCTO</text>
+    <text x="1500" y="306" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_CATEGORIA</text>
+    <text x="1500" y="322" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ CODIGO_PRODUCTO</text>
+    <text x="1500" y="338" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ NOMBRE</text>
+    <text x="1500" y="354" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ DESCRIPCION</text>
+    <text x="1500" y="370" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ MARCA</text>
+    <text x="1500" y="386" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ GENERO</text>
+    <text x="1500" y="402" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ PRECIO</text>
+    <text x="1500" y="418" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ IMAGEN_URL</text>
+    <text x="1500" y="434" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ESTADO</text>
+    <text x="1500" y="450" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ FECHA_REGISTRO</text>
+  </g>
+
+  <!-- Asociaciones y Multiplicidades -->
+  <g id="associations">
+    <polyline points="295,410 335,410" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <polyline points="590,410 630,410" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <polyline points="895,410 955,410" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <polyline points="1160,390 1490,390" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <text x="1165" y="380" font-size="11" font-weight="bold" fill="#111827">0..*</text>
+    <text x="1465" y="380" font-size="11" font-weight="bold" fill="#111827">1</text>
+    <polyline points="1160,430 1190,430 1190,580 1220,580" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <text x="1165" y="420" font-size="11" font-weight="bold" fill="#111827">1</text>
+    <text x="1195" y="570" font-size="11" font-weight="bold" fill="#111827">0..*</text>
+    <polyline points="1430,160 1460,160 1460,270 1490,270" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <text x="1435" y="150" font-size="11" font-weight="bold" fill="#111827">0..*</text>
+    <text x="1465" y="260" font-size="11" font-weight="bold" fill="#111827">1</text>
+  </g>
+</svg>

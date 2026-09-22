@@ -20,6 +20,8 @@ def login(request: Request, data: dict = Body(...)):
         raise HTTPException(status_code=400, detail="El cuerpo de la petición está vacío.")
     try:
         return auth_services.iniciar_sesion(data, request)
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=f"Configuración de autenticación incompleta: {str(e)}")
     except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e))
     except Exception as e:

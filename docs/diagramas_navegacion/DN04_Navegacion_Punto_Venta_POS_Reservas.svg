@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2240 980" width="2240" height="980" style="background-color: #ffffff; font-family: 'Segoe UI', Arial, Helvetica, sans-serif;">
+  <defs>
+    <!-- Marcador de flecha de transición UML estándar -->
+    <marker id="uml_arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto">
+      <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#111827"/>
+    </marker>
+    <!-- Marcador de flecha abierta para retornos -->
+    <marker id="uml_return_arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto">
+      <path d="M 2 1.5 L 8 5 L 2 8.5" fill="none" stroke="#111827" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <!-- Marco Estándar UML -->
+  <rect x="15" y="15" width="2210" height="950" fill="#ffffff" stroke="#111827" stroke-width="1.5"/>
+  <path d="M 15 15 L 640 15 L 655 35 L 655 45 L 15 45 Z" fill="#f8fafc" stroke="#111827" stroke-width="1.5"/>
+  <text x="30" y="34" font-size="12" font-weight="bold" fill="#0f172a">stm [Módulo 05 &amp; 06] DN04: Navegación de Punto de Venta (POS) y Atención de Reservas (CU24W, CU25W, CU28W, CU29W)</text>
+
+  <g id="actor_CAJERO">
+    <circle cx="100" cy="290" r="12" fill="#ffffff" stroke="#111827" stroke-width="1.8"/>
+    <line x1="100" y1="302" x2="100" y2="335" stroke="#111827" stroke-width="1.8"/>
+    <line x1="82" y1="313" x2="118" y2="313" stroke="#111827" stroke-width="1.8"/>
+    <line x1="100" y1="335" x2="86" y2="362" stroke="#111827" stroke-width="1.8"/>
+    <line x1="100" y1="335" x2="114" y2="362" stroke="#111827" stroke-width="1.8"/>
+    <text x="100" y="380" font-size="11" font-weight="bold" fill="#111827" text-anchor="middle">CAJERO</text>
+    <text x="100" y="393" font-size="9" font-style="italic" fill="#64748b" text-anchor="middle">Operador de Mostrador</text>
+  </g>
+  <g id="actor_ENCARGADO_DE_SUCURSAL">
+    <circle cx="100" cy="650" r="12" fill="#ffffff" stroke="#111827" stroke-width="1.8"/>
+    <line x1="100" y1="662" x2="100" y2="695" stroke="#111827" stroke-width="1.8"/>
+    <line x1="82" y1="673" x2="118" y2="673" stroke="#111827" stroke-width="1.8"/>
+    <line x1="100" y1="695" x2="86" y2="722" stroke="#111827" stroke-width="1.8"/>
+    <line x1="100" y1="695" x2="114" y2="722" stroke="#111827" stroke-width="1.8"/>
+    <text x="100" y="738" font-size="10.5" font-weight="bold" fill="#111827" text-anchor="middle">ENCARGADO</text>
+    <text x="100" y="751" font-size="10.5" font-weight="bold" fill="#111827" text-anchor="middle">DE SUCURSAL</text>
+    <text x="100" y="764" font-size="9" font-style="italic" fill="#64748b" text-anchor="middle">Supervisor de Tienda</text>
+  </g>
+  <g id="screen_apertura">
+    <rect x="280" y="260" width="280" height="94" rx="6" ry="6" fill="#ffffff" stroke="#111827" stroke-width="1.5"/>
+    <line x1="280" y1="294" x2="560" y2="294" stroke="#111827" stroke-width="1.2"/>
+    <text x="420.0" y="273" font-size="9" font-style="italic" fill="#374151" text-anchor="middle">«screen»</text>
+    <text x="420.0" y="287" font-size="11" font-weight="bold" fill="#111827" text-anchor="middle">Apertura_Caja_Turno_Screen</text>
+    <text x="290" y="310" font-size="9.5" fill="#1f2937">entry / ingresar_monto_apertura()</text>
+    <text x="290" y="326" font-size="9.5" fill="#1f2937">[validar_monto_inicial] / registrar_sesion()</text>
+    <text x="290" y="342" font-size="9.5" fill="#1f2937">[caja_abierta] -&gt; Terminal_POS_Screen</text>
+  </g>
+  <g id="screen_pos">
+    <rect x="680" y="260" width="340" height="142" rx="6" ry="6" fill="#ffffff" stroke="#111827" stroke-width="1.5"/>
+    <line x1="680" y1="294" x2="1020" y2="294" stroke="#111827" stroke-width="1.2"/>
+    <text x="850.0" y="273" font-size="9" font-style="italic" fill="#374151" text-anchor="middle">«screen»</text>
+    <text x="850.0" y="287" font-size="11" font-weight="bold" fill="#111827" text-anchor="middle">Terminal_Punto_Venta_POS_Screen</text>
+    <text x="690" y="310" font-size="9.5" fill="#1f2937">«CU24W: Registrar Venta Presencial»</text>
+    <text x="690" y="326" font-size="9.5" fill="#1f2937">entry / inicializar_ticket_venta()</text>
+    <text x="690" y="342" font-size="9.5" fill="#1f2937">[escanear_codigo_barras] / buscar_prenda()</text>
+    <text x="690" y="358" font-size="9.5" fill="#1f2937">[agregar_variante] / actualizar_subtotal()</text>
+    <text x="690" y="374" font-size="9.5" fill="#1f2937">[proceder_al_cobro] -&gt; Modal_Cobro_Caja</text>
+    <text x="690" y="390" font-size="9.5" fill="#1f2937">[cancelar_ticket] / descartar_venta()</text>
+  </g>
+  <g id="screen_cobro">
+    <rect x="1140" y="260" width="320" height="142" rx="6" ry="6" fill="#ffffff" stroke="#111827" stroke-width="1.5" stroke-dasharray="4,3"/>
+    <line x1="1140" y1="294" x2="1460" y2="294" stroke="#111827" stroke-width="1.2"/>
+    <text x="1300.0" y="273" font-size="9" font-style="italic" fill="#374151" text-anchor="middle">«modal»</text>
+    <text x="1300.0" y="287" font-size="11" font-weight="bold" fill="#111827" text-anchor="middle">Cobro_Caja_Modal</text>
+    <text x="1150" y="310" font-size="9.5" fill="#1f2937">«CU28W: Procesar Pago en Caja»</text>
+    <text x="1150" y="326" font-size="9.5" fill="#1f2937">entry / mostrar_total_a_pagar()</text>
+    <text x="1150" y="342" font-size="9.5" fill="#1f2937">[pago_efectivo] / calcular_cambio_bs()</text>
+    <text x="1150" y="358" font-size="9.5" fill="#1f2937">[pago_qr_bancario] / verificar_abono()</text>
+    <text x="1150" y="374" font-size="9.5" fill="#1f2937">[pago_pos_tarjeta] / confirmar_voucher()</text>
+    <text x="1150" y="390" font-size="9.5" fill="#1f2937">[cobro_exitoso] -&gt; Emision_Comprobante</text>
+  </g>
+  <g id="screen_factura">
+    <rect x="1580" y="260" width="320" height="126" rx="6" ry="6" fill="#ffffff" stroke="#111827" stroke-width="1.5"/>
+    <line x1="1580" y1="294" x2="1900" y2="294" stroke="#111827" stroke-width="1.2"/>
+    <text x="1740.0" y="273" font-size="9" font-style="italic" fill="#374151" text-anchor="middle">«screen»</text>
+    <text x="1740.0" y="287" font-size="11" font-weight="bold" fill="#111827" text-anchor="middle">Emision_Comprobante_Screen</text>
+    <text x="1590" y="310" font-size="9.5" fill="#1f2937">«CU29W: Emitir Comprobante de Venta»</text>
+    <text x="1590" y="326" font-size="9.5" fill="#1f2937">entry / firmar_factura_digital_sin()</text>
+    <text x="1590" y="342" font-size="9.5" fill="#1f2937">do / descontar_inventario_kardex()</text>
+    <text x="1590" y="358" font-size="9.5" fill="#1f2937">[imprimir_ticket_termico] / mandar_impresora()</text>
+    <text x="1590" y="374" font-size="9.5" fill="#1f2937">[nueva_venta] -&gt; Terminal_POS_Screen</text>
+  </g>
+  <g id="screen_atender_res">
+    <rect x="680" y="650" width="340" height="110" rx="6" ry="6" fill="#ffffff" stroke="#111827" stroke-width="1.5"/>
+    <line x1="680" y1="684" x2="1020" y2="684" stroke="#111827" stroke-width="1.2"/>
+    <text x="850.0" y="663" font-size="9" font-style="italic" fill="#374151" text-anchor="middle">«screen»</text>
+    <text x="850.0" y="677" font-size="11" font-weight="bold" fill="#111827" text-anchor="middle">Atencion_Despacho_Reservas_Screen</text>
+    <text x="690" y="700" font-size="9.5" fill="#1f2937">«CU25W: Atender y Despachar Reservas»</text>
+    <text x="690" y="716" font-size="9.5" fill="#1f2937">entry / listar_reservas_pendientes_sucursal()</text>
+    <text x="690" y="732" font-size="9.5" fill="#1f2937">[escanear_qr_cliente] -&gt; Validar_Reserva_Modal</text>
+    <text x="690" y="748" font-size="9.5" fill="#1f2937">[cliente_desiste] / liberar_prenda_a_perchero()</text>
+  </g>
+  <g id="screen_val_res">
+    <rect x="1140" y="650" width="320" height="110" rx="6" ry="6" fill="#ffffff" stroke="#111827" stroke-width="1.5" stroke-dasharray="4,3"/>
+    <line x1="1140" y1="684" x2="1460" y2="684" stroke="#111827" stroke-width="1.2"/>
+    <text x="1300.0" y="663" font-size="9" font-style="italic" fill="#374151" text-anchor="middle">«modal»</text>
+    <text x="1300.0" y="677" font-size="11" font-weight="bold" fill="#111827" text-anchor="middle">Validar_Reserva_Modal</text>
+    <text x="1150" y="700" font-size="9.5" fill="#1f2937">entry / comprobar_codigo_y_vigencia()</text>
+    <text x="1150" y="716" font-size="9.5" fill="#1f2937">[reserva_valida] / transferir_items_a_pos()</text>
+    <text x="1150" y="732" font-size="9.5" fill="#1f2937">[derivar_a_caja] -&gt; Cobro_Caja_Modal</text>
+    <text x="1150" y="748" font-size="9.5" fill="#1f2937">[reserva_expirada] / alertar_vencimiento()</text>
+  </g>
+  <g id="screen_cierre">
+    <rect x="1580" y="650" width="320" height="110" rx="6" ry="6" fill="#ffffff" stroke="#111827" stroke-width="1.5"/>
+    <line x1="1580" y1="684" x2="1900" y2="684" stroke="#111827" stroke-width="1.2"/>
+    <text x="1740.0" y="663" font-size="9" font-style="italic" fill="#374151" text-anchor="middle">«screen»</text>
+    <text x="1740.0" y="677" font-size="11" font-weight="bold" fill="#111827" text-anchor="middle">Cierre_Caja_Arqueo_Screen</text>
+    <text x="1590" y="700" font-size="9.5" fill="#1f2937">entry / consolidar_ventas_del_turno()</text>
+    <text x="1590" y="716" font-size="9.5" fill="#1f2937">[declarar_efectivo_en_caja] / contrastar_sistema()</text>
+    <text x="1590" y="732" font-size="9.5" fill="#1f2937">[firmar_cierre_arqueo] / cerrar_sesion()</text>
+    <text x="1590" y="748" font-size="9.5" fill="#1f2937">[imprimir_cierre_x_z] / generar_reporte()</text>
+  </g>
+  <path d="M 140 320 L 280 320" fill="none" stroke="#111827" stroke-width="1.4" marker-end="url(#uml_arrow)"/>
+  <text x="210.0" y="314.0" font-size="9" font-weight="500" fill="#111827" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[iniciar_turno]</text>
+  <path d="M 560 307.0 L 680 331.0" fill="none" stroke="#111827" stroke-width="1.4" marker-end="url(#uml_arrow)"/>
+  <text x="620.0" y="313.0" font-size="9" font-weight="500" fill="#111827" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[turno_iniciado]</text>
+  <path d="M 1020 331.0 L 1140 331.0" fill="none" stroke="#111827" stroke-width="1.4" marker-end="url(#uml_arrow)"/>
+  <text x="1080.0" y="325.0" font-size="9" font-weight="500" fill="#111827" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[cobrar_venta]</text>
+  <path d="M 1460 331.0 L 1580 323.0" fill="none" stroke="#111827" stroke-width="1.4" marker-end="url(#uml_arrow)"/>
+  <text x="1520.0" y="321.0" font-size="9" font-weight="500" fill="#111827" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[pago_asentado]</text>
+  <path d="M 1740.0 386 L 1740 480 L 850 480 L 850.0 402" fill="none" stroke="#111827" stroke-width="1.4" marker-end="url(#uml_arrow)"/>
+  <text x="1740.0" y="427.0" font-size="9" font-weight="500" fill="#111827" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[siguiente_venta]</text>
+  <path d="M 140 680 L 680 680" fill="none" stroke="#111827" stroke-width="1.4" marker-end="url(#uml_arrow)"/>
+  <text x="410.0" y="674.0" font-size="9" font-weight="500" fill="#111827" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[modulo_reservas_tienda]</text>
+  <path d="M 1020 705.0 L 1140 705.0" fill="none" stroke="#111827" stroke-width="1.4" marker-end="url(#uml_arrow)"/>
+  <text x="1080.0" y="699.0" font-size="9" font-weight="500" fill="#111827" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[escanear_voucher_qr]</text>
+  <path d="M 1300.0 650 L 1300.0 402" fill="none" stroke="#111827" stroke-width="1.4" marker-end="url(#uml_arrow)"/>
+  <text x="1300.0" y="520.0" font-size="9" font-weight="500" fill="#111827" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[cobrar_saldo_reserva]</text>
+  <path d="M 1460 705.0 L 1580 705.0" fill="none" stroke="#111827" stroke-width="1.4" marker-end="url(#uml_arrow)"/>
+  <text x="1520.0" y="699.0" font-size="9" font-weight="500" fill="#111827" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[auditar_turnos]</text>
+  <path d="M 1836.0 386 L 1800 560 L 1800 650 L 1804.0 650" fill="none" stroke="#111827" stroke-width="1.4" marker-end="url(#uml_arrow)"/>
+  <text x="1818.0" y="467.0" font-size="9" font-weight="500" fill="#111827" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[fin_jornada / arqueo]</text>
+</svg>

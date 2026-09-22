@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1780 840" width="1780" height="840" style="background-color: #ffffff; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;">
+  <defs>
+    <marker id="nav_arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto">
+      <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#0f172a"/>
+    </marker>
+  </defs>
+
+  <!-- Marco Exterior -->
+  <rect x="15" y="15" width="1750" height="810" rx="4" ry="4" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+  
+  <!-- Pestaña de Identificación -->
+  <path d="M 15 15 L 750 15 L 765 38 L 765 48 L 15 48 Z" fill="#f8fafc" stroke="#0f172a" stroke-width="1.5"/>
+  <text x="32" y="32" font-size="11.5" font-weight="bold" fill="#0f172a">nav [DN-07] Paquete Indicadores y Reportes</text>
+  <text x="32" y="44" font-size="9" font-style="italic" fill="#475569">Consultas Operativas, Indicadores Empresariales y Reportes Bajo Demanda (W31, W32, W33)</text>
+
+  <g id="screen_p7_dash">
+    <rect x="60" y="360" width="220" height="120" rx="6" ry="6" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+    <path d="M 60 366 Q 60 360 66 360 L 274 360 Q 280 360 280 366 L 280 390 L 60 390 Z" fill="#f8fafc"/>
+    <line x1="60" y1="390" x2="280" y2="390" stroke="#0f172a" stroke-width="1.2"/>
+    <text x="170.0" y="372" font-size="8.5" font-style="italic" fill="#475569" text-anchor="middle">«pantalla principal»</text>
+    <text x="170.0" y="385" font-size="10.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Dashboard</text>
+    <text x="70" y="405" font-size="9" fill="#334155">• Ventas</text>
+    <text x="70" y="421" font-size="9" fill="#334155">• Reservas</text>
+    <text x="70" y="437" font-size="9" fill="#334155">• Inventario</text>
+    <text x="70" y="453" font-size="9" fill="#334155">• Indicadores</text>
+    <text x="70" y="469" font-size="9" fill="#334155">• Reportes</text>
+  </g>
+  <g id="screen_p7_v_op">
+    <rect x="400" y="60" width="220" height="56" rx="6" ry="6" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+    <path d="M 400 66 Q 400 60 406 60 L 614 60 Q 620 60 620 66 L 620 90 L 400 90 Z" fill="#f8fafc"/>
+    <line x1="400" y1="90" x2="620" y2="90" stroke="#0f172a" stroke-width="1.2"/>
+    <text x="510.0" y="72" font-size="8.5" font-style="italic" fill="#475569" text-anchor="middle">«consulta operativa (W31)»</text>
+    <text x="510.0" y="85" font-size="10.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Ventas</text>
+    <text x="410" y="105" font-size="9" fill="#334155">• Ventas por fecha y canal</text>
+  </g>
+  <g id="screen_p7_r_op">
+    <rect x="400" y="180" width="220" height="56" rx="6" ry="6" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+    <path d="M 400 186 Q 400 180 406 180 L 614 180 Q 620 180 620 186 L 620 210 L 400 210 Z" fill="#f8fafc"/>
+    <line x1="400" y1="210" x2="620" y2="210" stroke="#0f172a" stroke-width="1.2"/>
+    <text x="510.0" y="192" font-size="8.5" font-style="italic" fill="#475569" text-anchor="middle">«consulta operativa (W31)»</text>
+    <text x="510.0" y="205" font-size="10.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Reservas</text>
+    <text x="410" y="225" font-size="9" fill="#334155">• Reservas recogidas / vencidas</text>
+  </g>
+  <g id="screen_p7_i_op">
+    <rect x="400" y="300" width="220" height="56" rx="6" ry="6" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+    <path d="M 400 306 Q 400 300 406 300 L 614 300 Q 620 300 620 306 L 620 330 L 400 330 Z" fill="#f8fafc"/>
+    <line x1="400" y1="330" x2="620" y2="330" stroke="#0f172a" stroke-width="1.2"/>
+    <text x="510.0" y="312" font-size="8.5" font-style="italic" fill="#475569" text-anchor="middle">«consulta operativa (W31)»</text>
+    <text x="510.0" y="325" font-size="10.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Inventario</text>
+    <text x="410" y="345" font-size="9" fill="#334155">• Existencias por tienda</text>
+  </g>
+  <g id="screen_p7_ind_v">
+    <rect x="720" y="60" width="240" height="56" rx="6" ry="6" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+    <path d="M 720 66 Q 720 60 726 60 L 954 60 Q 960 60 960 66 L 960 90 L 720 90 Z" fill="#f8fafc"/>
+    <line x1="720" y1="90" x2="960" y2="90" stroke="#0f172a" stroke-width="1.2"/>
+    <text x="840.0" y="72" font-size="8.5" font-style="italic" fill="#475569" text-anchor="middle">«dashboard KPIs (W32)»</text>
+    <text x="840.0" y="85" font-size="10.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Indicadores: Ventas</text>
+    <text x="730" y="105" font-size="9" fill="#334155">• Gráficos de ingresos</text>
+  </g>
+  <g id="screen_p7_ind_r">
+    <rect x="720" y="180" width="240" height="56" rx="6" ry="6" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+    <path d="M 720 186 Q 720 180 726 180 L 954 180 Q 960 180 960 186 L 960 210 L 720 210 Z" fill="#f8fafc"/>
+    <line x1="720" y1="210" x2="960" y2="210" stroke="#0f172a" stroke-width="1.2"/>
+    <text x="840.0" y="192" font-size="8.5" font-style="italic" fill="#475569" text-anchor="middle">«dashboard KPIs (W32)»</text>
+    <text x="840.0" y="205" font-size="10.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Indicadores: Reservas</text>
+    <text x="730" y="225" font-size="9" fill="#334155">• Tasa de conversión</text>
+  </g>
+  <g id="screen_p7_ind_i">
+    <rect x="720" y="300" width="240" height="56" rx="6" ry="6" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+    <path d="M 720 306 Q 720 300 726 300 L 954 300 Q 960 300 960 306 L 960 330 L 720 330 Z" fill="#f8fafc"/>
+    <line x1="720" y1="330" x2="960" y2="330" stroke="#0f172a" stroke-width="1.2"/>
+    <text x="840.0" y="312" font-size="8.5" font-style="italic" fill="#475569" text-anchor="middle">«dashboard KPIs (W32)»</text>
+    <text x="840.0" y="325" font-size="10.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Indicadores: Inventario</text>
+    <text x="730" y="345" font-size="9" fill="#334155">• Rotación de prendas</text>
+  </g>
+  <g id="screen_p7_rep_par">
+    <rect x="400" y="560" width="260" height="72" rx="6" ry="6" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+    <path d="M 400 566 Q 400 560 406 560 L 654 560 Q 660 560 660 566 L 660 590 L 400 590 Z" fill="#fefce8"/>
+    <line x1="400" y1="590" x2="660" y2="590" stroke="#0f172a" stroke-width="1.2"/>
+    <text x="530.0" y="572" font-size="8.5" font-style="italic" fill="#475569" text-anchor="middle">«formulario (W33)»</text>
+    <text x="530.0" y="585" font-size="10.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Seleccionar Parámetros</text>
+    <text x="410" y="605" font-size="9" fill="#334155">• Tipo de reporte</text>
+    <text x="410" y="621" font-size="9" fill="#334155">• Fechas y filtros</text>
+  </g>
+  <g id="screen_p7_rep_gen">
+    <rect x="740" y="560" width="260" height="72" rx="6" ry="6" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+    <path d="M 740 566 Q 740 560 746 560 L 994 560 Q 1000 560 1000 566 L 1000 590 L 740 590 Z" fill="#f8fafc"/>
+    <line x1="740" y1="590" x2="1000" y2="590" stroke="#0f172a" stroke-width="1.2"/>
+    <text x="870.0" y="572" font-size="8.5" font-style="italic" fill="#475569" text-anchor="middle">«pantalla procesamiento»</text>
+    <text x="870.0" y="585" font-size="10.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Generar Reporte</text>
+    <text x="750" y="605" font-size="9" fill="#334155">• Compilar datos</text>
+    <text x="750" y="621" font-size="9" fill="#334155">• PDF / Excel</text>
+  </g>
+  <g id="screen_p7_rep_vis">
+    <rect x="1080" y="560" width="260" height="72" rx="6" ry="6" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+    <path d="M 1080 566 Q 1080 560 1086 560 L 1334 560 Q 1340 560 1340 566 L 1340 590 L 1080 590 Z" fill="#f8fafc"/>
+    <line x1="1080" y1="590" x2="1340" y2="590" stroke="#0f172a" stroke-width="1.2"/>
+    <text x="1210.0" y="572" font-size="8.5" font-style="italic" fill="#475569" text-anchor="middle">«visor reporte»</text>
+    <text x="1210.0" y="585" font-size="10.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Visualizar Reporte</text>
+    <text x="1090" y="605" font-size="9" fill="#334155">• Previsualización</text>
+    <text x="1090" y="621" font-size="9" fill="#334155">• Descargar documento</text>
+  </g>
+  <path d="M 280.0 378.0 L 330.0 380.0 L 330.0 100.0 L 400.0 88.0" fill="none" stroke="#0f172a" stroke-width="1.3" marker-end="url(#nav_arrow)"/>
+  <text x="330.0" y="234.0" font-size="8.5" font-weight="600" fill="#0f172a" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[Ventas]</text>
+  <path d="M 280.0 396.0 L 350.0 400.0 L 350.0 220.0 L 400.0 208.0" fill="none" stroke="#0f172a" stroke-width="1.3" marker-end="url(#nav_arrow)"/>
+  <text x="350.0" y="304.0" font-size="8.5" font-weight="600" fill="#0f172a" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[Reservas]</text>
+  <path d="M 280.0 414.0 L 370.0 420.0 L 370.0 340.0 L 400.0 328.0" fill="none" stroke="#0f172a" stroke-width="1.3" marker-end="url(#nav_arrow)"/>
+  <text x="370.0" y="374.0" font-size="8.5" font-weight="600" fill="#0f172a" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[Inventario]</text>
+  <path d="M 620.0 88.0 L 720.0 88.0" fill="none" stroke="#0f172a" stroke-width="1.3" marker-end="url(#nav_arrow)"/>
+  <text x="670.0" y="82.0" font-size="8.5" font-weight="600" fill="#0f172a" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[Ver Indicadores]</text>
+  <path d="M 620.0 208.0 L 720.0 208.0" fill="none" stroke="#0f172a" stroke-width="1.3" marker-end="url(#nav_arrow)"/>
+  <text x="670.0" y="202.0" font-size="8.5" font-weight="600" fill="#0f172a" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[Ver Indicadores]</text>
+  <path d="M 620.0 328.0 L 720.0 328.0" fill="none" stroke="#0f172a" stroke-width="1.3" marker-end="url(#nav_arrow)"/>
+  <text x="670.0" y="322.0" font-size="8.5" font-weight="600" fill="#0f172a" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[Ver Indicadores]</text>
+  <path d="M 170.0 480.0 L 170.0 600.0 L 400.0 596.0" fill="none" stroke="#0f172a" stroke-width="1.3" marker-end="url(#nav_arrow)"/>
+  <text x="170.0" y="534.0" font-size="8.5" font-weight="600" fill="#0f172a" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[Reportes]</text>
+  <path d="M 660.0 596.0 L 740.0 596.0" fill="none" stroke="#0f172a" stroke-width="1.3" marker-end="url(#nav_arrow)"/>
+  <text x="700.0" y="590.0" font-size="8.5" font-weight="600" fill="#0f172a" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[Generar reporte]</text>
+  <path d="M 1000.0 596.0 L 1080.0 596.0" fill="none" stroke="#0f172a" stroke-width="1.3" marker-end="url(#nav_arrow)"/>
+  <text x="1040.0" y="590.0" font-size="8.5" font-weight="600" fill="#0f172a" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[Visualizar reporte]</text>
+</svg>

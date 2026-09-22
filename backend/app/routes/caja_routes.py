@@ -3,7 +3,7 @@ from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
-from app.utils.security import verificar_token
+from app.utils.security import verificar_token, tiene_permiso
 from app.repos import caja_repos
 
 logger = logging.getLogger(__name__)
@@ -38,15 +38,7 @@ def _verificar_permiso_cajero(token_data: dict) -> None:
     Verifica que el usuario tenga rol de Cajero, Administrador o Encargado de Sucursal,
     o posea el permiso explícito caja.ver / caja.abrir.
     """
-    roles = [str(r).upper() for r in token_data.get("roles", [])]
-    permisos = token_data.get("permisos", [])
-    id_rol = token_data.get("id_rol")
-
-    roles_validos = {"CAJERO", "ADMINISTRADOR", "ADMINISTRADOR_TIENDA", "ENCARGADO_SUCURSAL", "SUPERADMIN"}
-    if id_rol in (1, 3, 4, 5) or any(r in roles_validos for r in roles):
-        return
-
-    if "caja.ver" in permisos or "caja.abrir" in permisos or "pos.vender" in permisos:
+    if any(tiene_permiso(token_data, codigo) for codigo in ("caja.ver", "caja.abrir", "pos.vender")):
         return
 
     raise HTTPException(
@@ -62,7 +54,9 @@ def _obtener_empresa_efectiva(token_data: dict, id_empresa_solicitada: Optional[
         return id_empresa_jwt
     if id_empresa_solicitada and id_empresa_solicitada > 0:
         return id_empresa_solicitada
-    return id_empresa_jwt or 1
+    if id_empresa_jwt:
+        return id_empresa_jwt
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="El usuario no tiene una empresa autorizada.")
 
 
 def _obtener_sucursal_efectiva(token_data: dict, id_sucursal_solicitada: Optional[int] = None, id_empresa: Optional[int] = None) -> int:
@@ -224,7 +218,7 @@ def abrir_caja(
         sesion = caja_repos.abrir_caja_sesion(
             id_usuario=id_usuario,
             id_sucursal=id_suc,
-            id_empresa=id_empresa,
+            id_empresa=id_emp,
             id_caja=id_caja,
             conteo_items=conteo_dicts,
             observacion=obs

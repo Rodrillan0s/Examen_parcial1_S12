@@ -3,7 +3,8 @@ from fastapi.responses import StreamingResponse
 from typing import Optional, Dict, Any, List
 from pydantic import BaseModel, Field
 
-from app.utils.security import verificar_token
+from app.utils.security import require_permission
+from app.utils.tenant_guard import resolver_tenant_operacion, resolver_sucursal_autorizada
 from app.services import compras_lotes_services
 
 router = APIRouter(tags=["Gestión de Compras, Lotes e Importación Masiva"])
@@ -32,13 +33,13 @@ class RecepcionOrdenIn(BaseModel):
 # ==============================================================================
 
 @router.get("/api/inventario/importacion/plantilla")
-def descargar_plantilla_excel(token_data: dict = Depends(verificar_token)):
+def descargar_plantilla_excel(token_data: dict = Depends(require_permission('compras.ver'))):
     """
     Descarga la plantilla fija y oficial de Excel (.xlsx) para importación de prendas por lote.
     Incluye formato predefinido, validaciones y catálogo de categorías, tallas y colores.
     """
     try:
-        id_empresa = int(token_data.get("id_empresa") or token_data.get("empresa_id") or 1)
+        id_empresa = resolver_tenant_operacion(token_data, permitir_global=False)
         buf = compras_lotes_services.generar_plantilla_excel_lotes(id_empresa)
         filename = "plantilla_importacion_prendas_lote.xlsx"
         return StreamingResponse(
@@ -60,14 +61,15 @@ def descargar_plantilla_excel(token_data: dict = Depends(verificar_token)):
 async def previsualizar_archivo_excel(
     archivo: UploadFile = File(...),
     id_sucursal: Optional[int] = Form(None),
-    token_data: dict = Depends(verificar_token)
+    token_data: dict = Depends(require_permission('compras.crear'))
 ):
     """
     Lee y valida en memoria el archivo Excel subido (Dry-Run / Preview).
     Retorna la clasificación por fila (nuevo producto vs existente) y totales sin modificar la BD.
     """
     try:
-        id_empresa = int(token_data.get("id_empresa") or token_data.get("empresa_id") or 1)
+        id_empresa = resolver_tenant_operacion(token_data, permitir_global=False)
+        id_sucursal = resolver_sucursal_autorizada(token_data, id_sucursal)
         content = await archivo.read()
         if not content:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El archivo enviado está vacío.")
@@ -89,7 +91,7 @@ async def previsualizar_archivo_excel(
 @router.post("/api/inventario/importacion/confirmar")
 def confirmar_importacion_lote(
     payload: ConfirmarImportacionIn,
-    token_data: dict = Depends(verificar_token)
+    token_data: dict = Depends(require_permission('compras.crear'))
 ):
     """
     Aplica transaccionalmente la importación masiva:
@@ -119,17 +121,21 @@ def confirmar_importacion_lote(
 def listar_ordenes_compra(
     id_sucursal: Optional[int] = Query(None, description="Filtrar por sucursal"),
     estado: Optional[str] = Query(None, description="Filtrar por estado"),
-    token_data: dict = Depends(verificar_token)
+    id_empresa: Optional[int] = Query(None, description="Empresa seleccionada para administradores globales"),
+    token_data: dict = Depends(require_permission('compras.ver'))
 ):
     """Retorna las órdenes de compra activas para la empresa."""
     try:
-        id_empresa = int(token_data.get("id_empresa") or token_data.get("empresa_id") or 1)
-        ordenes = compras_lotes_services.listar_ordenes_compra_db(id_empresa, id_sucursal, estado)
+        empresa_efectiva = resolver_tenant_operacion(token_data, id_empresa, permitir_global=False)
+        id_sucursal = resolver_sucursal_autorizada(token_data, id_sucursal)
+        ordenes = compras_lotes_services.listar_ordenes_compra_db(empresa_efectiva, id_sucursal, estado)
         return {
             "success": True,
             "ordenes": ordenes,
             "total": len(ordenes)
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
@@ -137,16 +143,19 @@ def listar_ordenes_compra(
 @router.get("/api/compras/ordenes/{id_orden}")
 def obtener_detalle_orden_compra(
     id_orden: int,
-    token_data: dict = Depends(verificar_token)
+    id_empresa: Optional[int] = Query(None, description="Empresa seleccionada para administradores globales"),
+    token_data: dict = Depends(require_permission('compras.ver'))
 ):
     """Retorna la cabecera y el detalle de prendas de una orden de compra."""
     try:
-        id_empresa = int(token_data.get("id_empresa") or token_data.get("empresa_id") or 1)
-        detalle = compras_lotes_services.obtener_detalle_orden_compra_db(id_orden, id_empresa)
+        empresa_efectiva = resolver_tenant_operacion(token_data, id_empresa, permitir_global=False)
+        detalle = compras_lotes_services.obtener_detalle_orden_compra_db(id_orden, empresa_efectiva)
         return {
             "success": True,
             "orden": detalle
         }
+    except HTTPException:
+        raise
     except ValueError as ve:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(ve))
     except Exception as e:
@@ -156,7 +165,7 @@ def obtener_detalle_orden_compra(
 @router.put("/api/compras/ordenes/{id_orden}/aprobar")
 def aprobar_orden_compra(
     id_orden: int,
-    token_data: dict = Depends(verificar_token)
+    token_data: dict = Depends(require_permission('compras.crear'))
 ):
     """Aprueba una orden de compra pendiente para permitir su despacho y recepción."""
     try:
@@ -172,7 +181,7 @@ def aprobar_orden_compra(
 def rechazar_orden_compra(
     id_orden: int,
     payload: RechazoOrdenIn,
-    token_data: dict = Depends(verificar_token)
+    token_data: dict = Depends(require_permission('compras.crear'))
 ):
     """Rechaza una orden de compra pendiente justificando el motivo."""
     try:
@@ -188,7 +197,7 @@ def rechazar_orden_compra(
 def recibir_orden_compra(
     id_orden: int,
     payload: RecepcionOrdenIn,
-    token_data: dict = Depends(verificar_token)
+    token_data: dict = Depends(require_permission('compras.crear'))
 ):
     """
     Confirma la recepción física de mercadería de una orden aprobada.
@@ -210,16 +219,20 @@ def recibir_orden_compra(
 @router.get("/api/compras/lotes")
 def listar_lotes_ingresados(
     id_sucursal: Optional[int] = Query(None, description="Filtrar por sucursal"),
-    token_data: dict = Depends(verificar_token)
+    id_empresa: Optional[int] = Query(None, description="Empresa seleccionada para administradores globales"),
+    token_data: dict = Depends(require_permission('compras.ver'))
 ):
     """Lista todos los lotes de mercadería ingresados a la empresa."""
     try:
-        id_empresa = int(token_data.get("id_empresa") or token_data.get("empresa_id") or 1)
-        lotes = compras_lotes_services.listar_lotes_db(id_empresa, id_sucursal)
+        empresa_efectiva = resolver_tenant_operacion(token_data, id_empresa, permitir_global=False)
+        id_sucursal = resolver_sucursal_autorizada(token_data, id_sucursal)
+        lotes = compras_lotes_services.listar_lotes_db(empresa_efectiva, id_sucursal)
         return {
             "success": True,
             "lotes": lotes,
             "total": len(lotes)
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

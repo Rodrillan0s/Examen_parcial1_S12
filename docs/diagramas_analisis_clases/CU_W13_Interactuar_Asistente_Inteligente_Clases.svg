@@ -1,0 +1,143 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2100 840" width="2100" height="840" style="background-color: #ffffff; font-family: 'Segoe UI', Arial, Helvetica, sans-serif;">
+  <!-- Encabezado del Diagrama -->
+  <text x="35" y="34" font-size="16" font-weight="bold" fill="#0f172a">CU/W13: Interactuar con asistente inteligente — Diagrama de Análisis de Clases</text>
+  <text x="35" y="54" font-size="12" font-weight="500" fill="#475569">Sistema Aura Store | Arquitectura IA: Chat_View -&gt; Controller -&gt; DeepSeek_AI_Service -&gt; Tools_Repository -&gt; Entities (BD)</text>
+  <text x="35" y="72" font-size="11.5" font-weight="600" fill="#2563eb">Actor(es): Cliente (Web), Visitante, Administrador</text>
+  <line x1="35" y1="82" x2="2065" y2="82" stroke="#cbd5e1" stroke-width="1.2"/>
+
+  <!-- Leyenda de Arquitectura Específica -->
+  <g transform="translate(1570, 24)">
+    <rect x="0" y="0" width="495" height="48" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="12" y="19" font-size="11" font-weight="bold" fill="#334155">Arquitectura Conversacional / Function Calling:</text>
+    <text x="12" y="36" font-size="10" fill="#64748b">Boundary -&gt; Asistente_Controller -&gt; DeepSeek_LLM_Service -&gt; Tools_Repo -&gt; Entities</text>
+  </g>
+  <!-- Clase: Form / IU_Asistente_Chat -->
+  <g id="class_view_chat">
+    <rect x="35" y="270" width="260" height="216" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="35" y1="318" x2="295" y2="318" stroke="#111827" stroke-width="1.4"/>
+    <line x1="35" y1="410.0" x2="295" y2="410.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="165.0" y="287" text-anchor="middle" font-size="11" font-weight="bold" fill="#475569">Form</text>
+    <text x="165.0" y="304" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">IU_Asistente_Chat</text>
+    <text x="45" y="334" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ texto_mensaje</text>
+    <text x="45" y="350" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ historial_chat</text>
+    <text x="45" y="366" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ token_sesion</text>
+    <text x="45" y="382" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ prendas_sugeridas</text>
+    <text x="45" y="398" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ estado_respuesta</text>
+    <text x="45" y="426.0" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ enviar_mensaje_chat()</text>
+    <text x="45" y="442.0" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ mostrar_respuesta_asistente()</text>
+    <text x="45" y="458.0" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ mostrar_cards_prendas()</text>
+    <text x="45" y="474.0" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ limpiar_conversacion()</text>
+  </g>
+  <!-- Clase: Asistente_Controller -->
+  <g id="class_ctrl_asistente">
+    <rect x="335" y="340" width="240" height="116" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="335" y1="374" x2="575" y2="374" stroke="#111827" stroke-width="1.4"/>
+    <line x1="335" y1="396" x2="575" y2="396" stroke="#111827" stroke-width="1.4"/>
+    <text x="455.0" y="362" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">Asistente_Controller</text>
+    <text x="345" y="412" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ post_chat_mensaje(payload)</text>
+    <text x="345" y="428" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ get_historial_conversacion()</text>
+    <text x="345" y="444" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ parse_intent_usuario()</text>
+  </g>
+  <!-- Clase: DeepSeek_AI_Service -->
+  <g id="class_srv_deepseek">
+    <rect x="615" y="320" width="270" height="154" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="615" y1="354" x2="885" y2="354" stroke="#111827" stroke-width="1.4"/>
+    <line x1="615" y1="414.0" x2="885" y2="414.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="750.0" y="342" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">DeepSeek_AI_Service</text>
+    <text x="625" y="370" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">- api_key_deepseek</text>
+    <text x="625" y="386" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">- modelo_llm</text>
+    <text x="625" y="402" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">- system_prompt_aura</text>
+    <text x="625" y="430.0" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ procesar_mensaje_chat(msg)</text>
+    <text x="625" y="446.0" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ despachar_function_calling()</text>
+    <text x="625" y="462.0" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ sintetizar_respuesta_ia()</text>
+  </g>
+  <!-- Clase: Asistente_Tools_Repository -->
+  <g id="class_repo_tools">
+    <rect x="925" y="330" width="265" height="116" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="925" y1="364" x2="1190" y2="364" stroke="#111827" stroke-width="1.4"/>
+    <line x1="925" y1="386" x2="1190" y2="386" stroke="#111827" stroke-width="1.4"/>
+    <text x="1057.5" y="352" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">Asistente_Tools_Repository</text>
+    <text x="935" y="402" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ejecutar_buscar_prendas(termino)</text>
+    <text x="935" y="418" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ consultar_ventas_pedidos(cli)</text>
+    <text x="935" y="434" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ consultar_sucursales_activas()</text>
+  </g>
+  <!-- Clase: T_PRODUCTO -->
+  <g id="class_producto">
+    <rect x="1240" y="90" width="210" height="244" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="1240" y1="124" x2="1450" y2="124" stroke="#111827" stroke-width="1.4"/>
+    <line x1="1240" y1="312.0" x2="1450" y2="312.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="1345.0" y="112" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">T_PRODUCTO</text>
+    <text x="1250" y="140" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_PRODUCTO</text>
+    <text x="1250" y="156" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_CATEGORIA</text>
+    <text x="1250" y="172" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ CODIGO_PRODUCTO</text>
+    <text x="1250" y="188" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ NOMBRE</text>
+    <text x="1250" y="204" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ DESCRIPCION</text>
+    <text x="1250" y="220" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ MARCA</text>
+    <text x="1250" y="236" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ GENERO</text>
+    <text x="1250" y="252" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ PRECIO</text>
+    <text x="1250" y="268" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ IMAGEN_URL</text>
+    <text x="1250" y="284" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ESTADO</text>
+    <text x="1250" y="300" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ FECHA_REGISTRO</text>
+  </g>
+  <!-- Clase: T_CLIENTE -->
+  <g id="class_cliente">
+    <rect x="1240" y="550" width="200" height="132" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="1240" y1="584" x2="1440" y2="584" stroke="#111827" stroke-width="1.4"/>
+    <line x1="1240" y1="660.0" x2="1440" y2="660.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="1340.0" y="572" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">T_CLIENTE</text>
+    <text x="1250" y="600" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_CLIENTE</text>
+    <text x="1250" y="616" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_USUARIO</text>
+    <text x="1250" y="632" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ CI</text>
+    <text x="1250" y="648" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ FECHA_REGISTRO</text>
+  </g>
+  <!-- Clase: T_VENTA -->
+  <g id="class_venta">
+    <rect x="1500" y="310" width="210" height="260" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="1500" y1="344" x2="1710" y2="344" stroke="#111827" stroke-width="1.4"/>
+    <line x1="1500" y1="548.0" x2="1710" y2="548.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="1605.0" y="332" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">T_VENTA</text>
+    <text x="1510" y="360" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_VENTA</text>
+    <text x="1510" y="376" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_CLIENTE</text>
+    <text x="1510" y="392" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_SUCURSAL</text>
+    <text x="1510" y="408" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_EMPLEADO</text>
+    <text x="1510" y="424" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ NUMERO_VENTA</text>
+    <text x="1510" y="440" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ TIPO_VENTA</text>
+    <text x="1510" y="456" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ FECHA_VENTA</text>
+    <text x="1510" y="472" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ SUBTOTAL</text>
+    <text x="1510" y="488" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ DESCUENTO</text>
+    <text x="1510" y="504" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ TOTAL</text>
+    <text x="1510" y="520" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ESTADO</text>
+    <text x="1510" y="536" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ TIPO_RECIBO</text>
+  </g>
+  <!-- Clase: T_SUCURSAL -->
+  <g id="class_sucursal">
+    <rect x="1760" y="340" width="210" height="196" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="1760" y1="374" x2="1970" y2="374" stroke="#111827" stroke-width="1.4"/>
+    <line x1="1760" y1="514.0" x2="1970" y2="514.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="1865.0" y="362" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">T_SUCURSAL</text>
+    <text x="1770" y="390" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_SUCURSAL</text>
+    <text x="1770" y="406" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_CIUDAD</text>
+    <text x="1770" y="422" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ NOMBRE</text>
+    <text x="1770" y="438" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ CODIGO_SUCURSAL</text>
+    <text x="1770" y="454" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ DIRECCION</text>
+    <text x="1770" y="470" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ TELEFONO</text>
+    <text x="1770" y="486" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ESTADO</text>
+    <text x="1770" y="502" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_EMPRESA</text>
+  </g>
+
+  <!-- Asociaciones y Multiplicidades -->
+  <g id="associations">
+    <polyline points="295,410 335,410" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <polyline points="575,410 615,410" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <polyline points="885,410 925,410" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <polyline points="1190,390 1215,390 1215,230 1240,230" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <polyline points="1190,410 1500,410" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <polyline points="1190,430 1215,430 1215,620 1240,620" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <polyline points="1440,620 1470,620 1470,460 1500,460" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <text x="1445" y="610" font-size="11" font-weight="bold" fill="#111827">1</text>
+    <text x="1475" y="450" font-size="11" font-weight="bold" fill="#111827">0..*</text>
+    <polyline points="1760,420 1710,420" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <text x="1740" y="410" font-size="11" font-weight="bold" fill="#111827">1</text>
+    <text x="1715" y="410" font-size="11" font-weight="bold" fill="#111827">0..*</text>
+  </g>
+</svg>

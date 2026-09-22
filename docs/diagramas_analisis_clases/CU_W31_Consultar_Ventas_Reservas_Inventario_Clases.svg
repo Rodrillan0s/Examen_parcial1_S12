@@ -1,0 +1,146 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2120 840" width="2120" height="840" style="background-color: #ffffff; font-family: 'Segoe UI', Arial, Helvetica, sans-serif;">
+  <!-- Encabezado del Diagrama -->
+  <text x="35" y="34" font-size="16" font-weight="bold" fill="#0f172a">CU/W31: Consultar ventas, reservas e inventario — Diagrama de Análisis de Clases</text>
+  <text x="35" y="54" font-size="12" font-weight="500" fill="#475569">Sistema Aura Store | Monitor Operativo Multicapa: Panel -&gt; Controller -&gt; Consolidador_Service -&gt; Repository -&gt; Entities</text>
+  <text x="35" y="72" font-size="11.5" font-weight="600" fill="#2563eb">Actor(es): Encargado de sucursal, Administrador</text>
+  <line x1="35" y1="82" x2="2085" y2="82" stroke="#cbd5e1" stroke-width="1.2"/>
+
+  <!-- Leyenda de Arquitectura Específica -->
+  <g transform="translate(1590, 24)">
+    <rect x="0" y="0" width="495" height="48" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="12" y="19" font-size="11" font-weight="bold" fill="#334155">Arquitectura Monitor de Operaciones:</text>
+    <text x="12" y="36" font-size="10" fill="#64748b">Boundary -&gt; Monitor_Controller -&gt; Consolidador_Service -&gt; Operaciones_Repo -&gt; Entities</text>
+  </g>
+  <!-- Clase: Form / Monitor_Operativo_View -->
+  <g id="class_panel_operativo">
+    <rect x="35" y="270" width="260" height="216" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="35" y1="318" x2="295" y2="318" stroke="#111827" stroke-width="1.4"/>
+    <line x1="35" y1="410.0" x2="295" y2="410.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="165.0" y="287" text-anchor="middle" font-size="11" font-weight="bold" fill="#475569">Form</text>
+    <text x="165.0" y="304" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">Monitor_Operativo_View</text>
+    <text x="45" y="334" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ id_sucursal_sel</text>
+    <text x="45" y="350" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ fecha_consulta</text>
+    <text x="45" y="366" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ total_ventas_dia</text>
+    <text x="45" y="382" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ reservas_activas</text>
+    <text x="45" y="398" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ alertas_stock_bajo</text>
+    <text x="45" y="426.0" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ filtrar_por_sucursal()</text>
+    <text x="45" y="442.0" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ actualizar_metricas_vivo()</text>
+    <text x="45" y="458.0" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ver_detalle_apartados()</text>
+    <text x="45" y="474.0" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ emitir_alerta_stock()</text>
+  </g>
+  <!-- Clase: Monitor_Operativo_Controller -->
+  <g id="class_ctrl_monitor">
+    <rect x="335" y="340" width="245" height="116" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="335" y1="374" x2="580" y2="374" stroke="#111827" stroke-width="1.4"/>
+    <line x1="335" y1="396" x2="580" y2="396" stroke="#111827" stroke-width="1.4"/>
+    <text x="457.5" y="362" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">Monitor_Operativo_Controller</text>
+    <text x="345" y="412" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ get_balance_diario(sucursal)</text>
+    <text x="345" y="428" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ get_reservas_vigentes(suc)</text>
+    <text x="345" y="444" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ get_stock_critico(suc)</text>
+  </g>
+  <!-- Clase: Monitor_Consolidador_Service -->
+  <g id="class_srv_monitor">
+    <rect x="620" y="325" width="270" height="116" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="620" y1="359" x2="890" y2="359" stroke="#111827" stroke-width="1.4"/>
+    <line x1="620" y1="381" x2="890" y2="381" stroke="#111827" stroke-width="1.4"/>
+    <text x="755.0" y="347" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">Monitor_Consolidador_Service</text>
+    <text x="630" y="397" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ consolidar_balance_sucursal()</text>
+    <text x="630" y="413" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ auditar_reservas_por_vencer()</text>
+    <text x="630" y="429" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ calcular_alertas_reposicion()</text>
+  </g>
+  <!-- Clase: Operaciones_Repository -->
+  <g id="class_repo_monitor">
+    <rect x="930" y="325" width="265" height="132" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="930" y1="359" x2="1195" y2="359" stroke="#111827" stroke-width="1.4"/>
+    <line x1="930" y1="381" x2="1195" y2="381" stroke="#111827" stroke-width="1.4"/>
+    <text x="1062.5" y="347" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">Operaciones_Repository</text>
+    <text x="940" y="397" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ query_ventas_del_dia(id_suc)</text>
+    <text x="940" y="413" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ query_reservas_pendientes(id_suc)</text>
+    <text x="940" y="429" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ query_inventario_stock(id_suc)</text>
+    <text x="940" y="445" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ find_sucursal_by_id(id_suc)</text>
+  </g>
+  <!-- Clase: T_VENTA -->
+  <g id="class_venta">
+    <rect x="1245" y="80" width="210" height="244" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="1245" y1="114" x2="1455" y2="114" stroke="#111827" stroke-width="1.4"/>
+    <line x1="1245" y1="302.0" x2="1455" y2="302.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="1350.0" y="102" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">T_VENTA</text>
+    <text x="1255" y="130" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_VENTA</text>
+    <text x="1255" y="146" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_CLIENTE</text>
+    <text x="1255" y="162" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_SUCURSAL</text>
+    <text x="1255" y="178" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_EMPLEADO</text>
+    <text x="1255" y="194" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ NUMERO_VENTA</text>
+    <text x="1255" y="210" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ TIPO_VENTA</text>
+    <text x="1255" y="226" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ FECHA_VENTA</text>
+    <text x="1255" y="242" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ SUBTOTAL</text>
+    <text x="1255" y="258" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ DESCUENTO</text>
+    <text x="1255" y="274" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ TOTAL</text>
+    <text x="1255" y="290" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ESTADO</text>
+  </g>
+  <!-- Clase: T_RESERVA -->
+  <g id="class_reserva">
+    <rect x="1245" y="480" width="210" height="212" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="1245" y1="514" x2="1455" y2="514" stroke="#111827" stroke-width="1.4"/>
+    <line x1="1245" y1="670.0" x2="1455" y2="670.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="1350.0" y="502" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">T_RESERVA</text>
+    <text x="1255" y="530" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_RESERVA</text>
+    <text x="1255" y="546" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_CLIENTE</text>
+    <text x="1255" y="562" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_SUCURSAL</text>
+    <text x="1255" y="578" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ CODIGO_RESERVA</text>
+    <text x="1255" y="594" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ FECHA_RESERVA</text>
+    <text x="1255" y="610" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ FECHA_EXPIRACION</text>
+    <text x="1255" y="626" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ FECHA_ESTIMADA_VISITA</text>
+    <text x="1255" y="642" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ESTADO</text>
+    <text x="1255" y="658" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ OBSERVACIONES</text>
+  </g>
+  <!-- Clase: T_SUCURSAL -->
+  <g id="class_sucursal">
+    <rect x="1515" y="320" width="205" height="196" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="1515" y1="354" x2="1720" y2="354" stroke="#111827" stroke-width="1.4"/>
+    <line x1="1515" y1="494.0" x2="1720" y2="494.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="1617.5" y="342" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">T_SUCURSAL</text>
+    <text x="1525" y="370" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_SUCURSAL</text>
+    <text x="1525" y="386" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_CIUDAD</text>
+    <text x="1525" y="402" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ NOMBRE</text>
+    <text x="1525" y="418" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ CODIGO_SUCURSAL</text>
+    <text x="1525" y="434" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ DIRECCION</text>
+    <text x="1525" y="450" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ TELEFONO</text>
+    <text x="1525" y="466" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ESTADO</text>
+    <text x="1525" y="482" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_EMPRESA</text>
+  </g>
+  <!-- Clase: T_INVENTARIO -->
+  <g id="class_inventario">
+    <rect x="1770" y="310" width="215" height="228" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <line x1="1770" y1="344" x2="1985" y2="344" stroke="#111827" stroke-width="1.4"/>
+    <line x1="1770" y1="516.0" x2="1985" y2="516.0" stroke="#111827" stroke-width="1.4"/>
+    <text x="1877.5" y="332" text-anchor="middle" font-size="12" font-weight="bold" fill="#111827">T_INVENTARIO</text>
+    <text x="1780" y="360" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_INVENTARIO</text>
+    <text x="1780" y="376" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_SUCURSAL</text>
+    <text x="1780" y="392" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ID_VARIANTE</text>
+    <text x="1780" y="408" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ TEMPORADA</text>
+    <text x="1780" y="424" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ STOCK_ACTUAL</text>
+    <text x="1780" y="440" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ STOCK_RESERVADO</text>
+    <text x="1780" y="456" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ STOCK_DISPONIBLE</text>
+    <text x="1780" y="472" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ STOCK_MINIMO</text>
+    <text x="1780" y="488" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ ESTADO</text>
+    <text x="1780" y="504" font-size="10.5" fill="#111827" font-family="monospace, sans-serif">+ FECHA_ACTUALIZACION</text>
+  </g>
+
+  <!-- Asociaciones y Multiplicidades -->
+  <g id="associations">
+    <polyline points="295,410 335,410" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <polyline points="580,410 620,410" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <polyline points="890,410 930,410" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <polyline points="1195,390 1220,390 1220,220 1245,220" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <polyline points="1195,430 1220,430 1220,580 1245,580" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <polyline points="1515,360 1485,360 1485,220 1455,220" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <text x="1495" y="350" font-size="11" font-weight="bold" fill="#111827">1</text>
+    <text x="1462" y="210" font-size="11" font-weight="bold" fill="#111827">0..*</text>
+    <polyline points="1515,420 1485,420 1485,580 1455,580" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <text x="1495" y="410" font-size="11" font-weight="bold" fill="#111827">1</text>
+    <text x="1462" y="570" font-size="11" font-weight="bold" fill="#111827">0..*</text>
+    <polyline points="1720,410 1770,410" fill="none" stroke="#111827" stroke-width="1.6" stroke-linejoin="round"/>
+    <text x="1725" y="400" font-size="11" font-weight="bold" fill="#111827">1</text>
+    <text x="1750" y="400" font-size="11" font-weight="bold" fill="#111827">0..*</text>
+  </g>
+</svg>

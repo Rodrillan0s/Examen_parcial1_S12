@@ -21,7 +21,7 @@ class Config:
     # CREDENCIALES CONFIGURACION APP
     SECRET_KEY = os.getenv("SECRET_KEY")
     TOKEN_KEY = os.getenv("TOKEN_KEY")
-    DEBUG = os.getenv("DEBUG", "True").lower() in ("true", "1", "yes")
+    DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "1", "yes")
 
     # CLOUDINARY MEDIA
     CLOUDINARY_CLOUD_NAME = os.getenv("CLOUDINARY_CLOUD_NAME")

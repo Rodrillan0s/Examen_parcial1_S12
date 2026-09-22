@@ -207,42 +207,18 @@ export class AuthService {
 
   hasPermission(codigo: string): boolean {
     if (!codigo) return true;
-    const u = this.obtenerUsuario();
-    if (u) {
-      const rol = (u.nombre_rol || '').toUpperCase();
-      const roles = (u.roles || []).map(r => r.toUpperCase());
-      if (u.id_rol === 1 || rol === 'ADMINISTRADOR' || roles.includes('ADMINISTRADOR')) {
-        return true;
-      }
-    }
     const perms = this.permissions();
     return perms.includes(codigo);
   }
 
   hasAnyPermission(codigos: string[]): boolean {
     if (!codigos || codigos.length === 0) return true;
-    const u = this.obtenerUsuario();
-    if (u) {
-      const rol = (u.nombre_rol || '').toUpperCase();
-      const roles = (u.roles || []).map(r => r.toUpperCase());
-      if (u.id_rol === 1 || rol === 'ADMINISTRADOR' || roles.includes('ADMINISTRADOR')) {
-        return true;
-      }
-    }
     const perms = this.permissions();
     return codigos.some(c => perms.includes(c));
   }
 
   hasAllPermissions(codigos: string[]): boolean {
     if (!codigos || codigos.length === 0) return true;
-    const u = this.obtenerUsuario();
-    if (u) {
-      const rol = (u.nombre_rol || '').toUpperCase();
-      const roles = (u.roles || []).map(r => r.toUpperCase());
-      if (u.id_rol === 1 || rol === 'ADMINISTRADOR' || roles.includes('ADMINISTRADOR')) {
-        return true;
-      }
-    }
     const perms = this.permissions();
     return codigos.every(c => perms.includes(c));
   }

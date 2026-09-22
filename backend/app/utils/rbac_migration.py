@@ -206,6 +206,12 @@ def ejecutar_migracion_rbac():
             # Roles y Permisos
             ('roles.ver', 'Ver roles', 'Permite consultar el catálogo de roles', 'roles'),
             ('roles.crear', 'Crear rol', 'Permite definir nuevos roles en el sistema', 'roles'),
+            ('roles.editar', 'Editar rol', 'Permite modificar roles existentes', 'roles'),
+            ('roles.eliminar', 'Eliminar rol', 'Permite desactivar roles existentes', 'roles'),
+            ('sucursales.ver', 'Ver sucursales', 'Permite consultar sucursales autorizadas', 'sucursales'),
+            ('sucursales.crear', 'Crear sucursal', 'Permite registrar nuevas sucursales', 'sucursales'),
+            ('sucursales.editar', 'Editar sucursal', 'Permite modificar sucursales existentes', 'sucursales'),
+            ('sucursales.desactivar', 'Desactivar sucursal', 'Permite desactivar sucursales existentes', 'sucursales'),
             # Acceso General
             ('tienda.acceder', 'Acceso a tienda e-commerce', 'Permite navegar y comprar en la tienda', 'acceso'),
             ('admin.acceder', 'Acceso al panel administrativo', 'Permite ingresar al dashboard administrativo', 'acceso'),

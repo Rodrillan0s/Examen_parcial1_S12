@@ -1,0 +1,169 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1760 920" width="1760" height="920" style="background-color: #ffffff; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;">
+  <defs>
+    <marker id="nav_arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto">
+      <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#0f172a"/>
+    </marker>
+  </defs>
+
+  <!-- Marco Exterior -->
+  <rect x="15" y="15" width="1730" height="890" rx="4" ry="4" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+  
+  <!-- Pestaña de Identificación -->
+  <path d="M 15 15 L 750 15 L 765 38 L 765 48 L 15 48 Z" fill="#f8fafc" stroke="#0f172a" stroke-width="1.5"/>
+  <text x="32" y="32" font-size="11.5" font-weight="bold" fill="#0f172a">nav [DN-00] Diagrama General de Navegación</text>
+  <text x="32" y="44" font-size="9" font-style="italic" fill="#475569">Estructura de Menús y Vistas de Alto Nivel — Cliente Web &amp; Mobile</text>
+
+  <g id="screen_inicio">
+    <rect x="60" y="420" width="200" height="136" rx="6" ry="6" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+    <path d="M 60 426 Q 60 420 66 420 L 254 420 Q 260 420 260 426 L 260 450 L 60 450 Z" fill="#f8fafc"/>
+    <line x1="60" y1="450" x2="260" y2="450" stroke="#0f172a" stroke-width="1.2"/>
+    <text x="160.0" y="432" font-size="8.5" font-style="italic" fill="#475569" text-anchor="middle">«pantalla principal»</text>
+    <text x="160.0" y="445" font-size="10.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Inicio (Home)</text>
+    <text x="70" y="465" font-size="9" fill="#334155">• Catálogo de moda</text>
+    <text x="70" y="481" font-size="9" fill="#334155">• Carrito de compras</text>
+    <text x="70" y="497" font-size="9" fill="#334155">• Mis reservas</text>
+    <text x="70" y="513" font-size="9" fill="#334155">• Mis pedidos</text>
+    <text x="70" y="529" font-size="9" fill="#334155">• Mi perfil</text>
+    <text x="70" y="545" font-size="9" fill="#334155">• Asistente flotante</text>
+  </g>
+  <g id="screen_cat">
+    <rect x="400" y="70" width="220" height="72" rx="6" ry="6" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+    <path d="M 400 76 Q 400 70 406 70 L 614 70 Q 620 70 620 76 L 620 100 L 400 100 Z" fill="#f8fafc"/>
+    <line x1="400" y1="100" x2="620" y2="100" stroke="#0f172a" stroke-width="1.2"/>
+    <text x="510.0" y="82" font-size="8.5" font-style="italic" fill="#475569" text-anchor="middle">«pantalla»</text>
+    <text x="510.0" y="95" font-size="10.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Catálogo</text>
+    <text x="410" y="115" font-size="9" fill="#334155">• Grilla de prendas</text>
+    <text x="410" y="131" font-size="9" fill="#334155">• Menú categorías</text>
+  </g>
+  <g id="screen_busq">
+    <rect x="700" y="70" width="220" height="72" rx="6" ry="6" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+    <path d="M 700 76 Q 700 70 706 70 L 914 70 Q 920 70 920 76 L 920 100 L 700 100 Z" fill="#f8fafc"/>
+    <line x1="700" y1="100" x2="920" y2="100" stroke="#0f172a" stroke-width="1.2"/>
+    <text x="810.0" y="82" font-size="8.5" font-style="italic" fill="#475569" text-anchor="middle">«vista filtros»</text>
+    <text x="810.0" y="95" font-size="10.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Buscar / Filtrar</text>
+    <text x="710" y="115" font-size="9" fill="#334155">• Talla, color, precio</text>
+    <text x="710" y="131" font-size="9" fill="#334155">• Resultados</text>
+  </g>
+  <g id="screen_det">
+    <rect x="1000" y="70" width="240" height="104" rx="6" ry="6" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+    <path d="M 1000 76 Q 1000 70 1006 70 L 1234 70 Q 1240 70 1240 76 L 1240 100 L 1000 100 Z" fill="#f8fafc"/>
+    <line x1="1000" y1="100" x2="1240" y2="100" stroke="#0f172a" stroke-width="1.2"/>
+    <text x="1120.0" y="82" font-size="8.5" font-style="italic" fill="#475569" text-anchor="middle">«pantalla»</text>
+    <text x="1120.0" y="95" font-size="10.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Detalle de Producto</text>
+    <text x="1010" y="115" font-size="9" fill="#334155">• Fotos y tallas</text>
+    <text x="1010" y="131" font-size="9" fill="#334155">• Disponibilidad por sucursal</text>
+    <text x="1010" y="147" font-size="9" fill="#334155">• Añadir al carrito</text>
+    <text x="1010" y="163" font-size="9" fill="#334155">• Reservar</text>
+  </g>
+  <g id="screen_car">
+    <rect x="400" y="220" width="220" height="88" rx="6" ry="6" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+    <path d="M 400 226 Q 400 220 406 220 L 614 220 Q 620 220 620 226 L 620 250 L 400 250 Z" fill="#f8fafc"/>
+    <line x1="400" y1="250" x2="620" y2="250" stroke="#0f172a" stroke-width="1.2"/>
+    <text x="510.0" y="232" font-size="8.5" font-style="italic" fill="#475569" text-anchor="middle">«pantalla»</text>
+    <text x="510.0" y="245" font-size="10.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Carrito</text>
+    <text x="410" y="265" font-size="9" fill="#334155">• Lista de prendas</text>
+    <text x="410" y="281" font-size="9" fill="#334155">• Subtotal</text>
+    <text x="410" y="297" font-size="9" fill="#334155">• Proceder</text>
+  </g>
+  <g id="screen_chk">
+    <rect x="700" y="220" width="220" height="72" rx="6" ry="6" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+    <path d="M 700 226 Q 700 220 706 220 L 914 220 Q 920 220 920 226 L 920 250 L 700 250 Z" fill="#f8fafc"/>
+    <line x1="700" y1="250" x2="920" y2="250" stroke="#0f172a" stroke-width="1.2"/>
+    <text x="810.0" y="232" font-size="8.5" font-style="italic" fill="#475569" text-anchor="middle">«pantalla»</text>
+    <text x="810.0" y="245" font-size="10.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Checkout</text>
+    <text x="710" y="265" font-size="9" fill="#334155">• Datos de compra</text>
+    <text x="710" y="281" font-size="9" fill="#334155">• Dirección / Retiro</text>
+  </g>
+  <g id="screen_pago">
+    <rect x="1000" y="220" width="240" height="72" rx="6" ry="6" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+    <path d="M 1000 226 Q 1000 220 1006 220 L 1234 220 Q 1240 220 1240 226 L 1240 250 L 1000 250 Z" fill="#f8fafc"/>
+    <line x1="1000" y1="250" x2="1240" y2="250" stroke="#0f172a" stroke-width="1.2"/>
+    <text x="1120.0" y="232" font-size="8.5" font-style="italic" fill="#475569" text-anchor="middle">«pantalla»</text>
+    <text x="1120.0" y="245" font-size="10.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Pago</text>
+    <text x="1010" y="265" font-size="9" fill="#334155">• Pago electrónico / QR</text>
+    <text x="1010" y="281" font-size="9" fill="#334155">• Confirmación</text>
+  </g>
+  <g id="screen_res">
+    <rect x="400" y="370" width="220" height="72" rx="6" ry="6" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+    <path d="M 400 376 Q 400 370 406 370 L 614 370 Q 620 370 620 376 L 620 400 L 400 400 Z" fill="#f8fafc"/>
+    <line x1="400" y1="400" x2="620" y2="400" stroke="#0f172a" stroke-width="1.2"/>
+    <text x="510.0" y="382" font-size="8.5" font-style="italic" fill="#475569" text-anchor="middle">«pantalla»</text>
+    <text x="510.0" y="395" font-size="10.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Reservas</text>
+    <text x="410" y="415" font-size="9" fill="#334155">• Lista de apartados</text>
+    <text x="410" y="431" font-size="9" fill="#334155">• Vigencia 48h</text>
+  </g>
+  <g id="screen_det_res">
+    <rect x="700" y="370" width="220" height="72" rx="6" ry="6" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+    <path d="M 700 376 Q 700 370 706 370 L 914 370 Q 920 370 920 376 L 920 400 L 700 400 Z" fill="#f8fafc"/>
+    <line x1="700" y1="400" x2="920" y2="400" stroke="#0f172a" stroke-width="1.2"/>
+    <text x="810.0" y="382" font-size="8.5" font-style="italic" fill="#475569" text-anchor="middle">«pantalla»</text>
+    <text x="810.0" y="395" font-size="10.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Detalle de Reserva</text>
+    <text x="710" y="415" font-size="9" fill="#334155">• Código QR de retiro</text>
+    <text x="710" y="431" font-size="9" fill="#334155">• Sucursal</text>
+  </g>
+  <g id="screen_ped">
+    <rect x="400" y="510" width="220" height="72" rx="6" ry="6" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+    <path d="M 400 516 Q 400 510 406 510 L 614 510 Q 620 510 620 516 L 620 540 L 400 540 Z" fill="#f8fafc"/>
+    <line x1="400" y1="540" x2="620" y2="540" stroke="#0f172a" stroke-width="1.2"/>
+    <text x="510.0" y="522" font-size="8.5" font-style="italic" fill="#475569" text-anchor="middle">«pantalla»</text>
+    <text x="510.0" y="535" font-size="10.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Pedidos</text>
+    <text x="410" y="555" font-size="9" fill="#334155">• Historial de compras</text>
+    <text x="410" y="571" font-size="9" fill="#334155">• Estado</text>
+  </g>
+  <g id="screen_det_ped">
+    <rect x="700" y="510" width="220" height="72" rx="6" ry="6" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+    <path d="M 700 516 Q 700 510 706 510 L 914 510 Q 920 510 920 516 L 920 540 L 700 540 Z" fill="#f8fafc"/>
+    <line x1="700" y1="540" x2="920" y2="540" stroke="#0f172a" stroke-width="1.2"/>
+    <text x="810.0" y="522" font-size="8.5" font-style="italic" fill="#475569" text-anchor="middle">«pantalla»</text>
+    <text x="810.0" y="535" font-size="10.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Detalle de Pedido</text>
+    <text x="710" y="555" font-size="9" fill="#334155">• Prendas y comprobante</text>
+    <text x="710" y="571" font-size="9" fill="#334155">• Tracking</text>
+  </g>
+  <g id="screen_perfil">
+    <rect x="400" y="660" width="220" height="88" rx="6" ry="6" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+    <path d="M 400 666 Q 400 660 406 660 L 614 660 Q 620 660 620 666 L 620 690 L 400 690 Z" fill="#f8fafc"/>
+    <line x1="400" y1="690" x2="620" y2="690" stroke="#0f172a" stroke-width="1.2"/>
+    <text x="510.0" y="672" font-size="8.5" font-style="italic" fill="#475569" text-anchor="middle">«pantalla»</text>
+    <text x="510.0" y="685" font-size="10.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Perfil</text>
+    <text x="410" y="705" font-size="9" fill="#334155">• Ver perfil</text>
+    <text x="410" y="721" font-size="9" fill="#334155">• Editar datos</text>
+    <text x="410" y="737" font-size="9" fill="#334155">• Contraseña</text>
+  </g>
+  <g id="screen_asist">
+    <rect x="400" y="790" width="220" height="72" rx="6" ry="6" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+    <path d="M 400 796 Q 400 790 406 790 L 614 790 Q 620 790 620 796 L 620 820 L 400 820 Z" fill="#f8fafc"/>
+    <line x1="400" y1="820" x2="620" y2="820" stroke="#0f172a" stroke-width="1.2"/>
+    <text x="510.0" y="802" font-size="8.5" font-style="italic" fill="#475569" text-anchor="middle">«interfaz chat»</text>
+    <text x="510.0" y="815" font-size="10.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Asistente Inteligente</text>
+    <text x="410" y="835" font-size="9" fill="#334155">• Preguntas sobre moda</text>
+    <text x="410" y="851" font-size="9" fill="#334155">• Sugerencias</text>
+  </g>
+  <path d="M 260.0 488.0 L 320.0 480.0" fill="none" stroke="#0f172a" stroke-width="1.3" marker-end="url(#nav_arrow)"/>
+  <text x="290.0" y="478.0" font-size="8.5" font-weight="600" fill="#0f172a" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[Menús]</text>
+  <path d="M 320.0 480.0 L 320.0 110.0 L 400.0 106.0" fill="none" stroke="#0f172a" stroke-width="1.3" marker-end="url(#nav_arrow)"/>
+  <text x="320.0" y="289.0" font-size="8.5" font-weight="600" fill="#0f172a" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[Catálogo]</text>
+  <path d="M 320.0 480.0 L 320.0 260.0 L 400.0 264.0" fill="none" stroke="#0f172a" stroke-width="1.3" marker-end="url(#nav_arrow)"/>
+  <text x="320.0" y="364.0" font-size="8.5" font-weight="600" fill="#0f172a" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[Carrito]</text>
+  <path d="M 320.0 480.0 L 320.0 410.0 L 400.0 406.0" fill="none" stroke="#0f172a" stroke-width="1.3" marker-end="url(#nav_arrow)"/>
+  <text x="320.0" y="439.0" font-size="8.5" font-weight="600" fill="#0f172a" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[Reservas]</text>
+  <path d="M 320.0 480.0 L 320.0 550.0 L 400.0 546.0" fill="none" stroke="#0f172a" stroke-width="1.3" marker-end="url(#nav_arrow)"/>
+  <text x="320.0" y="509.0" font-size="8.5" font-weight="600" fill="#0f172a" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[Pedidos]</text>
+  <path d="M 320.0 480.0 L 320.0 700.0 L 400.0 704.0" fill="none" stroke="#0f172a" stroke-width="1.3" marker-end="url(#nav_arrow)"/>
+  <text x="320.0" y="584.0" font-size="8.5" font-weight="600" fill="#0f172a" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[Perfil]</text>
+  <path d="M 320.0 480.0 L 320.0 830.0 L 400.0 826.0" fill="none" stroke="#0f172a" stroke-width="1.3" marker-end="url(#nav_arrow)"/>
+  <text x="320.0" y="649.0" font-size="8.5" font-weight="600" fill="#0f172a" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[Asistente]</text>
+  <path d="M 620.0 98.8 L 700.0 106.0" fill="none" stroke="#0f172a" stroke-width="1.3" marker-end="url(#nav_arrow)"/>
+  <text x="660.0" y="96.4" font-size="8.5" font-weight="600" fill="#0f172a" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[Buscar / Filtrar]</text>
+  <path d="M 920.0 106.0 L 1000.0 111.6" fill="none" stroke="#0f172a" stroke-width="1.3" marker-end="url(#nav_arrow)"/>
+  <text x="960.0" y="102.8" font-size="8.5" font-weight="600" fill="#0f172a" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[Ver Prenda]</text>
+  <path d="M 620.0 127.6 L 660.0 140.0 L 660.0 160.0 L 960.0 160.0 L 1000.0 142.8" fill="none" stroke="#0f172a" stroke-width="1.3" marker-end="url(#nav_arrow)"/>
+  <text x="660.0" y="144.0" font-size="8.5" font-weight="600" fill="#0f172a" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[Click Prenda]</text>
+  <path d="M 620.0 264.0 L 700.0 256.0" fill="none" stroke="#0f172a" stroke-width="1.3" marker-end="url(#nav_arrow)"/>
+  <text x="660.0" y="254.0" font-size="8.5" font-weight="600" fill="#0f172a" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[Checkout]</text>
+  <path d="M 920.0 256.0 L 1000.0 256.0" fill="none" stroke="#0f172a" stroke-width="1.3" marker-end="url(#nav_arrow)"/>
+  <text x="960.0" y="250.0" font-size="8.5" font-weight="600" fill="#0f172a" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[Continuar al Pago]</text>
+  <path d="M 620.0 406.0 L 700.0 406.0" fill="none" stroke="#0f172a" stroke-width="1.3" marker-end="url(#nav_arrow)"/>
+  <text x="660.0" y="400.0" font-size="8.5" font-weight="600" fill="#0f172a" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[Ver Detalle]</text>
+  <path d="M 620.0 546.0 L 700.0 546.0" fill="none" stroke="#0f172a" stroke-width="1.3" marker-end="url(#nav_arrow)"/>
+  <text x="660.0" y="540.0" font-size="8.5" font-weight="600" fill="#0f172a" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[Ver Detalle]</text>
+</svg>

@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2320 960" width="2320" height="960" style="background-color: #ffffff; font-family: 'Segoe UI', Arial, Helvetica, sans-serif;">
+  <defs>
+    <!-- Marcador de flecha de transición UML estándar -->
+    <marker id="uml_arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto">
+      <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#111827"/>
+    </marker>
+    <!-- Marcador de flecha abierta para retornos -->
+    <marker id="uml_return_arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto">
+      <path d="M 2 1.5 L 8 5 L 2 8.5" fill="none" stroke="#111827" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <!-- Marco Estándar UML -->
+  <rect x="15" y="15" width="2290" height="930" fill="#ffffff" stroke="#111827" stroke-width="1.5"/>
+  <path d="M 15 15 L 640 15 L 655 35 L 655 45 L 15 45 Z" fill="#f8fafc" stroke="#111827" stroke-width="1.5"/>
+  <text x="30" y="34" font-size="12" font-weight="bold" fill="#0f172a">stm [Módulo 03] DN05: Navegación de Sucursales, Inventario, Proveedores y Abastecimiento (CU07WM, CU20W-CU23W, CU31W)</text>
+
+  <g id="actor_ADMINISTRADOR">
+    <circle cx="100" cy="190" r="12" fill="#ffffff" stroke="#111827" stroke-width="1.8"/>
+    <line x1="100" y1="202" x2="100" y2="235" stroke="#111827" stroke-width="1.8"/>
+    <line x1="82" y1="213" x2="118" y2="213" stroke="#111827" stroke-width="1.8"/>
+    <line x1="100" y1="235" x2="86" y2="262" stroke="#111827" stroke-width="1.8"/>
+    <line x1="100" y1="235" x2="114" y2="262" stroke="#111827" stroke-width="1.8"/>
+    <text x="100" y="280" font-size="11" font-weight="bold" fill="#111827" text-anchor="middle">ADMINISTRADOR</text>
+    <text x="100" y="293" font-size="9" font-style="italic" fill="#64748b" text-anchor="middle">Supervisión Global</text>
+  </g>
+  <g id="actor_ADMINISTRADOR_TIENDA">
+    <circle cx="100" cy="430" r="12" fill="#ffffff" stroke="#111827" stroke-width="1.8"/>
+    <line x1="100" y1="442" x2="100" y2="475" stroke="#111827" stroke-width="1.8"/>
+    <line x1="82" y1="453" x2="118" y2="453" stroke="#111827" stroke-width="1.8"/>
+    <line x1="100" y1="475" x2="86" y2="502" stroke="#111827" stroke-width="1.8"/>
+    <line x1="100" y1="475" x2="114" y2="502" stroke="#111827" stroke-width="1.8"/>
+    <text x="100" y="518" font-size="10.5" font-weight="bold" fill="#111827" text-anchor="middle">ADMINISTRADOR</text>
+    <text x="100" y="531" font-size="10.5" font-weight="bold" fill="#111827" text-anchor="middle">TIENDA</text>
+    <text x="100" y="544" font-size="9" font-style="italic" fill="#64748b" text-anchor="middle">Gestión Tienda Física</text>
+  </g>
+  <g id="actor_PROVEEDOR">
+    <circle cx="100" cy="670" r="12" fill="#ffffff" stroke="#111827" stroke-width="1.8"/>
+    <line x1="100" y1="682" x2="100" y2="715" stroke="#111827" stroke-width="1.8"/>
+    <line x1="82" y1="693" x2="118" y2="693" stroke="#111827" stroke-width="1.8"/>
+    <line x1="100" y1="715" x2="86" y2="742" stroke="#111827" stroke-width="1.8"/>
+    <line x1="100" y1="715" x2="114" y2="742" stroke="#111827" stroke-width="1.8"/>
+    <text x="100" y="760" font-size="11" font-weight="bold" fill="#111827" text-anchor="middle">PROVEEDOR</text>
+    <text x="100" y="773" font-size="9" font-style="italic" fill="#64748b" text-anchor="middle">Distribuidor Mayorista</text>
+  </g>
+  <g id="screen_panel">
+    <rect x="280" y="360" width="280" height="126" rx="6" ry="6" fill="#ffffff" stroke="#111827" stroke-width="1.5"/>
+    <line x1="280" y1="394" x2="560" y2="394" stroke="#111827" stroke-width="1.2"/>
+    <text x="420.0" y="373" font-size="9" font-style="italic" fill="#374151" text-anchor="middle">«screen»</text>
+    <text x="420.0" y="387" font-size="11" font-weight="bold" fill="#111827" text-anchor="middle">Panel_Control_Logistico_Screen</text>
+    <text x="290" y="410" font-size="9.5" fill="#1f2937">entry / verificar_rol_y_sucursal()</text>
+    <text x="290" y="426" font-size="9.5" fill="#1f2937">[gestion_sucursales] -&gt; Cadenas_Tiendas</text>
+    <text x="290" y="442" font-size="9.5" fill="#1f2937">[control_kardex] -&gt; Gestion_Inventario</text>
+    <text x="290" y="458" font-size="9.5" fill="#1f2937">[abastecimiento] -&gt; Portal_Proveedores</text>
+    <text x="290" y="474" font-size="9.5" fill="#1f2937">[recepcion_stock] -&gt; Recepcion_Mercaderia</text>
+  </g>
+  <g id="screen_tiendas">
+    <rect x="700" y="180" width="340" height="126" rx="6" ry="6" fill="#ffffff" stroke="#111827" stroke-width="1.5"/>
+    <line x1="700" y1="214" x2="1040" y2="214" stroke="#111827" stroke-width="1.2"/>
+    <text x="870.0" y="193" font-size="9" font-style="italic" fill="#374151" text-anchor="middle">«screen»</text>
+    <text x="870.0" y="207" font-size="11" font-weight="bold" fill="#111827" text-anchor="middle">Gestion_Cadenas_Tiendas_Screen</text>
+    <text x="710" y="230" font-size="9.5" fill="#1f2937">«CU20W: Gestionar Cadena de Tiendas»</text>
+    <text x="710" y="246" font-size="9.5" fill="#1f2937">entry / listar_sucursales_y_almacenes()</text>
+    <text x="710" y="262" font-size="9.5" fill="#1f2937">[crear_sucursal] -&gt; Form_Nueva_Tienda</text>
+    <text x="710" y="278" font-size="9.5" fill="#1f2937">[asignar_encargado] / actualizar_personal()</text>
+    <text x="710" y="294" font-size="9.5" fill="#1f2937">[auditar_capacidad] / ver_aforo_m2()</text>
+  </g>
+  <g id="screen_inventario">
+    <rect x="700" y="540" width="340" height="126" rx="6" ry="6" fill="#ffffff" stroke="#111827" stroke-width="1.5"/>
+    <line x1="700" y1="574" x2="1040" y2="574" stroke="#111827" stroke-width="1.2"/>
+    <text x="870.0" y="553" font-size="9" font-style="italic" fill="#374151" text-anchor="middle">«screen»</text>
+    <text x="870.0" y="567" font-size="11" font-weight="bold" fill="#111827" text-anchor="middle">Gestion_Inventario_Kardex_Screen</text>
+    <text x="710" y="590" font-size="9.5" fill="#1f2937">«CU22W &amp; CU23W: Inventario y Prendas»</text>
+    <text x="710" y="606" font-size="9.5" fill="#1f2937">entry / listar_stock_por_talla_color()</text>
+    <text x="710" y="622" font-size="9.5" fill="#1f2937">[ajustar_stock_minimo] / emitir_alerta()</text>
+    <text x="710" y="638" font-size="9.5" fill="#1f2937">[bloquear_prenda_averiada] / dar_de_baja()</text>
+    <text x="710" y="654" font-size="9.5" fill="#1f2937">[traslado_entre_tiendas] -&gt; Modal_Traslado</text>
+  </g>
+  <g id="screen_proveedores">
+    <rect x="1180" y="180" width="340" height="126" rx="6" ry="6" fill="#ffffff" stroke="#111827" stroke-width="1.5"/>
+    <line x1="1180" y1="214" x2="1520" y2="214" stroke="#111827" stroke-width="1.2"/>
+    <text x="1350.0" y="193" font-size="9" font-style="italic" fill="#374151" text-anchor="middle">«screen»</text>
+    <text x="1350.0" y="207" font-size="11" font-weight="bold" fill="#111827" text-anchor="middle">Portal_Gestion_Proveedores_Screen</text>
+    <text x="1190" y="230" font-size="9.5" fill="#1f2937">«CU21W: Gestionar Proveedores»</text>
+    <text x="1190" y="246" font-size="9.5" fill="#1f2937">entry / listar_contratos_y_ordenes()</text>
+    <text x="1190" y="262" font-size="9.5" fill="#1f2937">[crear_orden_compra] -&gt; Nueva_Orden_Modal</text>
+    <text x="1190" y="278" font-size="9.5" fill="#1f2937">[aprobar_presupuesto] / enviar_notificacion()</text>
+    <text x="1190" y="294" font-size="9.5" fill="#1f2937">[evaluar_desempeno] / registrar_scoring()</text>
+  </g>
+  <g id="screen_recepcion">
+    <rect x="1180" y="540" width="340" height="126" rx="6" ry="6" fill="#ffffff" stroke="#111827" stroke-width="1.5"/>
+    <line x1="1180" y1="574" x2="1520" y2="574" stroke="#111827" stroke-width="1.2"/>
+    <text x="1350.0" y="553" font-size="9" font-style="italic" fill="#374151" text-anchor="middle">«screen»</text>
+    <text x="1350.0" y="567" font-size="11" font-weight="bold" fill="#111827" text-anchor="middle">Recepcion_Mercaderia_Screen</text>
+    <text x="1190" y="590" font-size="9.5" fill="#1f2937">«CU31W: Registro de Recepción Mercadería»</text>
+    <text x="1190" y="606" font-size="9.5" fill="#1f2937">entry / escanear_guia_despacho_remision()</text>
+    <text x="1190" y="622" font-size="9.5" fill="#1f2937">[cotejar_cantidades] / validar_lote_prendas()</text>
+    <text x="1190" y="638" font-size="9.5" fill="#1f2937">[asentar_ingreso_kardex] / sumar_stock()</text>
+    <text x="1190" y="654" font-size="9.5" fill="#1f2937">[reportar_discrepancia] / abrir_reclamo()</text>
+  </g>
+  <g id="screen_traslado">
+    <rect x="1660" y="360" width="320" height="94" rx="6" ry="6" fill="#ffffff" stroke="#111827" stroke-width="1.5" stroke-dasharray="4,3"/>
+    <line x1="1660" y1="394" x2="1980" y2="394" stroke="#111827" stroke-width="1.2"/>
+    <text x="1820.0" y="373" font-size="9" font-style="italic" fill="#374151" text-anchor="middle">«modal»</text>
+    <text x="1820.0" y="387" font-size="11" font-weight="bold" fill="#111827" text-anchor="middle">Modal_Traslado_Inter_Sucursal</text>
+    <text x="1670" y="410" font-size="9.5" fill="#1f2937">entry / seleccionar_tienda_origen_destino()</text>
+    <text x="1670" y="426" font-size="9.5" fill="#1f2937">[despachar_bulto] / generar_guia_transito()</text>
+    <text x="1670" y="442" font-size="9.5" fill="#1f2937">[confirmar_recepcion_destino] / asentar()</text>
+  </g>
+  <path d="M 140 220 L 280 380" fill="none" stroke="#111827" stroke-width="1.4" marker-end="url(#uml_arrow)"/>
+  <text x="210.0" y="294.0" font-size="9" font-weight="500" fill="#111827" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[login_admin]</text>
+  <path d="M 140 460 L 280 410" fill="none" stroke="#111827" stroke-width="1.4" marker-end="url(#uml_arrow)"/>
+  <text x="210.0" y="429.0" font-size="9" font-weight="500" fill="#111827" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[login_tienda]</text>
+  <path d="M 140 700 L 280 440" fill="none" stroke="#111827" stroke-width="1.4" marker-end="url(#uml_arrow)"/>
+  <text x="210.0" y="564.0" font-size="9" font-weight="500" fill="#111827" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[portal_b2b]</text>
+  <path d="M 560 385.2 L 620 390 L 620 240 L 700 230.4" fill="none" stroke="#111827" stroke-width="1.4" marker-end="url(#uml_arrow)"/>
+  <text x="590.0" y="381.6" font-size="9" font-weight="500" fill="#111827" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[admin_sucursales]</text>
+  <path d="M 560 460.8 L 620 450 L 620 600 L 700 590.4" fill="none" stroke="#111827" stroke-width="1.4" marker-end="url(#uml_arrow)"/>
+  <text x="590.0" y="449.4" font-size="9" font-weight="500" fill="#111827" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[control_kardex]</text>
+  <path d="M 1040 243.0 L 1180 243.0" fill="none" stroke="#111827" stroke-width="1.4" marker-end="url(#uml_arrow)"/>
+  <text x="1110.0" y="237.0" font-size="9" font-weight="500" fill="#111827" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[vincular_proveedores]</text>
+  <path d="M 1040 603.0 L 1180 603.0" fill="none" stroke="#111827" stroke-width="1.4" marker-end="url(#uml_arrow)"/>
+  <text x="1110.0" y="597.0" font-size="9" font-weight="500" fill="#111827" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[recibir_lote_nuevo]</text>
+  <path d="M 1350.0 306 L 1350.0 540" fill="none" stroke="#111827" stroke-width="1.4" marker-end="url(#uml_arrow)"/>
+  <text x="1350.0" y="417.0" font-size="9" font-weight="500" fill="#111827" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[orden_aprobada -&gt; esperar_guia]</text>
+  <path d="M 1040 640.8 L 1580 640 L 1580 440 L 1660 407.0" fill="none" stroke="#111827" stroke-width="1.4" marker-end="url(#uml_arrow)"/>
+  <text x="1310.0" y="634.4" font-size="9" font-weight="500" fill="#111827" text-anchor="middle" paint-order="stroke fill" stroke="#ffffff" stroke-width="5" stroke-linejoin="round">[transferir_prendas]</text>
+</svg>

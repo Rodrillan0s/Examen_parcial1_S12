@@ -36,6 +36,11 @@ def create_app() -> FastAPI:
     except Exception as e:
         print(f"Advertencia al migrar tablas de compras y lotes: {e}")
 
+    try:
+        ejecutar_migracion_rbac()
+    except Exception as e:
+        print(f"Advertencia al migrar RBAC: {e}")
+
     # Configuración CORS
     app.add_middleware(
         CORSMiddleware,
@@ -82,12 +87,12 @@ def create_app() -> FastAPI:
     app.include_router(inventario_routes.router)
     app.include_router(pago_routes.router, prefix='/api/pagos')     
     app.include_router(comprobante_routes.router, prefix='/api/comprobantes')
-    app.include_router(caja_routes.router, prefix='/api/caja')
-    app.include_router(pos_routes.router, prefix='/api/pos')
-    app.include_router(caja_pago_routes.router, prefix='/api/caja-pagos')
-    app.include_router(compras_lotes_routes.router, prefix='/api/compras-lotes')
-    app.include_router(asistente_routes.router, prefix='/api/asistente')
-    app.include_router(motor_reportes_routes.router, prefix='/api/reportes')
+    app.include_router(caja_routes.router)
+    app.include_router(pos_routes.router)
+    app.include_router(caja_pago_routes.router)
+    app.include_router(compras_lotes_routes.router)
+    app.include_router(asistente_routes.router)
+    app.include_router(motor_reportes_routes.router)
 
 
     return app
