@@ -9,7 +9,8 @@ from app.routes import (
     productos_routes, catalogo_routes, carrito_routes, pedido_routes,
     reserva_routes, inventario_routes, pago_routes, comprobante_routes,
     caja_routes, pos_routes, caja_pago_routes, reportes_routes,
-    compras_lotes_routes, asistente_routes,proveedores_routes
+    compras_lotes_routes, asistente_routes,proveedores_routes,
+    atender_reserva_routes
 )
 from app.reports import routes as motor_reportes_routes
 from app.reports.engine.views_manager import asegurar_vistas_sql
@@ -94,6 +95,8 @@ def create_app() -> FastAPI:
     app.include_router(compras_lotes_routes.router)
     app.include_router(asistente_routes.router)
     app.include_router(motor_reportes_routes.router)
+    app.include_router(atender_reserva_routes.router)
+
 
 
     return app

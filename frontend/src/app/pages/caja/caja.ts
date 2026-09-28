@@ -127,6 +127,12 @@ export class CajaComponent implements OnInit {
   descuento: number = 0;
   observacionesVenta: string = '';
 
+  // --- CONTEXTO DE RESERVA ---
+  idReservaActual: number | null = null;
+  reservaEnAtencion: boolean = false;
+  reservaContexto: any = null;  
+  
+
   // --- GESTIÓN DE CLIENTE ---
   tipoCliente: 'SIN_CLIENTE' | 'CON_CLIENTE' = 'SIN_CLIENTE';
   clienteSeleccionado: ClientePos | null = null;
@@ -206,6 +212,14 @@ export class CajaComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    const navigation = this.router.getCurrentNavigation();
+const state = navigation?.extras?.state || history.state;
+
+if (state?.reserva) {
+  this.reservaContexto = state.reserva;
+  this.idReservaActual = Number(state.reserva.id_reserva);
+  this.reservaEnAtencion = true;
+}
     if (this.esSuperAdmin) {
       this.cargarEmpresas();
     }
@@ -278,7 +292,7 @@ export class CajaComponent implements OnInit {
       });
     }
   }
-
+ 
   cargarDatosIniciales(): void {
     this.cargando = true;
     this.cajaService.obtenerDenominaciones().subscribe({
@@ -795,15 +809,18 @@ export class CajaComponent implements OnInit {
     }));
 
     this.procesando = true;
-    this.cajaService.registrarVentaPos({
-      id_sesion_caja: this.estadoCaja.sesion_activa.id_sesion_caja,
-      id_cliente: this.clienteSeleccionado ? this.clienteSeleccionado.id_cliente : null,
-      id_empresa: this.empresaActivaId || undefined,
-      id_sucursal: this.sucursalActiva?.id,
-      items: payloadItems,
-      descuento: this.descuento || 0.00,
-      observaciones: this.observacionesVenta.trim() || undefined
-    }).subscribe({
+this.cajaService.registrarVentaPos({
+  id_sesion_caja: this.estadoCaja.sesion_activa.id_sesion_caja,
+  id_cliente: this.clienteSeleccionado
+    ? this.clienteSeleccionado.id_cliente
+    : null,
+  id_empresa: this.empresaActivaId || undefined,
+  id_sucursal: this.sucursalActiva?.id,
+  id_reserva: this.idReservaActual,
+  items: payloadItems,
+  descuento: this.descuento || 0.00,
+  observaciones: this.observacionesVenta.trim() || undefined
+}).subscribe({
       next: (res) => {
         this.procesando = false;
         this.modalConfirmarVentaAbierto = false;

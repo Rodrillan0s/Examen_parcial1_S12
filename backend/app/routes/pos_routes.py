@@ -17,14 +17,43 @@ class ItemVentaPosDTO(BaseModel):
     cantidad: int = Field(..., gt=0, description="Cantidad a vender")
 
 class CrearVentaPosDTO(BaseModel):
-    id_cliente: Optional[int] = Field(None, description="Cliente opcional o null para venta sin cliente")
-    id_sucursal: Optional[int] = Field(None, gt=0, description="Sucursal de la venta")
-    id_empresa: Optional[int] = Field(None, gt=0, description="Empresa de la venta")
-    descuento: float = Field(0.00, ge=0.0, description="Descuento en Bs (requiere permiso pos.descuento)")
-    observacion: Optional[str] = Field(None, max_length=300)
-    observaciones: Optional[str] = Field(None, max_length=300)
-    items: List[ItemVentaPosDTO] = Field(..., min_items=1, description="Prendas seleccionadas")
-
+    id_cliente: Optional[int] = Field(
+        None,
+        description="Cliente opcional o null para venta sin cliente"
+    )
+    id_sucursal: Optional[int] = Field(
+        None,
+        gt=0,
+        description="Sucursal de la venta"
+    )
+    id_empresa: Optional[int] = Field(
+        None,
+        gt=0,
+        description="Empresa de la venta"
+    )
+    id_reserva: Optional[int] = Field(
+        None,
+        gt=0,
+        description="Reserva asociada a la venta, si corresponde"
+    )
+    descuento: float = Field(
+        0.00,
+        ge=0.0,
+        description="Descuento en Bs (requiere permiso pos.descuento)"
+    )
+    observacion: Optional[str] = Field(
+        None,
+        max_length=300
+    )
+    observaciones: Optional[str] = Field(
+        None,
+        max_length=300
+    )
+    items: List[ItemVentaPosDTO] = Field(
+        ...,
+        min_items=1,
+        description="Prendas seleccionadas"
+    )
 
 def _verificar_acceso_pos(token_data: dict) -> None:
     """
@@ -217,15 +246,16 @@ def registrar_venta_presencial(
         items_dict = [it.dict() for it in body.items]
         obs = body.observacion or body.observaciones
         resultado = pos_repos.ejecutar_registro_venta_pos(
-            id_sesion_caja=id_sesion_caja,
-            id_usuario=id_usuario,
-            id_sucursal=id_suc,
-            id_empresa=id_emp,
-            id_cliente=body.id_cliente,
-            items=items_dict,
-            descuento=body.descuento,
-            observacion=obs
-        )
+    id_sesion_caja=id_sesion_caja,
+    id_usuario=id_usuario,
+    id_sucursal=id_suc,
+    id_empresa=id_emp,
+    id_cliente=body.id_cliente,
+    items=items_dict,
+    descuento=body.descuento,
+    observacion=obs,
+    id_reserva=body.id_reserva
+)
 
         return {
             "success": True,

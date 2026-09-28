@@ -141,6 +141,7 @@ export interface RegistrarVentaPayload {
   id_cliente?: number | null;
   id_empresa?: number;
   id_sucursal?: number;
+  id_reserva?: number | null;
   items: ItemVentaPayload[];
   descuento: number;
   observaciones?: string;

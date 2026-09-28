@@ -1,0 +1,229 @@
+<div class="atender-reserva-container">
+
+  <div class="header">
+    <div>
+      <h2>Atender reservas</h2>
+      <p>Gestiona las reservas pendientes de atención de la sucursal.</p>
+    </div>
+
+    <div class="sucursal" *ngIf="sucursalActiva">
+      <span>Sucursal</span>
+      <strong>{{ sucursalActiva.nombre }}</strong>
+    </div>
+  </div>
+
+  <div class="acciones-superiores">
+    <button
+      type="button"
+      class="btn-recargar"
+      (click)="recargar()"
+      [disabled]="cargando"
+    >
+      {{ cargando ? 'Cargando...' : 'Actualizar' }}
+    </button>
+  </div>
+
+  <div class="mensaje success" *ngIf="mensaje">
+    {{ mensaje }}
+  </div>
+
+  <div class="mensaje error" *ngIf="error">
+    {{ error }}
+  </div>
+
+  <div class="cargando" *ngIf="cargando">
+    Cargando reservas...
+  </div>
+
+  <div
+    class="sin-reservas"
+    *ngIf="!cargando && reservas.length === 0"
+  >
+    <h3>No hay reservas pendientes</h3>
+    <p>
+      No existen reservas pendientes de atención para esta sucursal.
+    </p>
+  </div>
+
+  <div
+    class="reservas-lista"
+    *ngIf="!cargando && reservas.length > 0"
+  >
+
+    <div
+      class="reserva-card"
+      *ngFor="let reserva of reservas"
+    >
+
+      <div class="reserva-header">
+
+        <div>
+          <span class="codigo-label">
+            Código de reserva
+          </span>
+
+          <h3>
+            {{ reserva.codigo_reserva }}
+          </h3>
+        </div>
+
+        <span
+          class="estado"
+          [class.pagada]="reserva.venta_pagada"
+          [class.pendiente]="!reserva.venta_pagada"
+        >
+          {{ reserva.venta_pagada ? 'PAGADA' : 'PENDIENTE DE PAGO' }}
+        </span>
+
+      </div>
+
+      <div class="informacion-grid">
+
+        <div class="informacion-item">
+          <span>Cliente</span>
+
+          <strong>
+            {{ reserva.cliente?.nombre }}
+            {{ reserva.cliente?.apellido }}
+          </strong>
+        </div>
+
+        <div class="informacion-item">
+          <span>CI</span>
+
+          <strong>
+            {{ reserva.cliente?.ci || 'Sin CI' }}
+          </strong>
+        </div>
+
+        <div class="informacion-item">
+          <span>Fecha de visita</span>
+
+          <strong>
+            {{ reserva.fecha_hora_visita | date:'dd/MM/yyyy HH:mm' }}
+          </strong>
+        </div>
+
+        <div class="informacion-item">
+          <span>Estado</span>
+
+          <strong>
+            {{ reserva.estado }}
+          </strong>
+        </div>
+
+      </div>
+
+      <div class="prendas-section">
+
+        <div class="section-title">
+          <h4>Prendas reservadas</h4>
+
+          <span>
+            {{ reserva.prendas?.length || 0 }}
+            prendas
+          </span>
+        </div>
+
+        <div
+          class="prendas-list"
+          *ngIf="reserva.prendas?.length"
+        >
+
+          <div
+            class="prenda"
+            *ngFor="let item of reserva.prendas"
+          >
+
+            <div class="prenda-info">
+
+              <div
+                class="prenda-imagen"
+                *ngIf="item.imagen_url"
+              >
+                <img
+                  [src]="item.imagen_url"
+                  [alt]="item.nombre || 'Prenda'"
+                >
+              </div>
+
+              <div class="prenda-datos">
+
+                <strong>
+                  {{ item.nombre }}
+                </strong>
+
+                <span *ngIf="item.talla">
+                  Talla: {{ item.talla }}
+                </span>
+
+                <span *ngIf="item.color">
+                  Color: {{ item.color }}
+                </span>
+
+              </div>
+
+            </div>
+
+            <div class="prenda-cantidad">
+              <span>Cantidad</span>
+
+              <strong>
+                {{ item.cantidad }}
+              </strong>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <div
+        class="pos-aviso"
+        *ngIf="!reserva.venta_pagada"
+      >
+        <div class="pos-icono">!</div>
+
+        <div>
+          <strong>Reserva pendiente de pago</strong>
+
+          <p>
+            Al atender esta reserva se abrirá el POS con
+            el cliente, sucursal y prendas reservadas.
+          </p>
+        </div>
+      </div>
+
+      <div
+        class="entregada-aviso"
+        *ngIf="reserva.venta_pagada"
+      >
+        La venta ya fue pagada. Al atender se realizará
+        directamente la entrega de las prendas.
+      </div>
+
+      <div class="acciones">
+
+        <button
+          type="button"
+          class="btn-atender"
+          (click)="atenderReserva(reserva)"
+          [disabled]="procesando"
+        >
+          {{
+            procesando
+              ? 'Procesando...'
+              : (reserva.venta_pagada
+                  ? 'Atender y entregar'
+                  : 'Atender en POS')
+          }}
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>

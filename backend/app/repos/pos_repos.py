@@ -206,7 +206,6 @@ def buscar_clientes_pos(id_empresa: int, query: str) -> List[Dict[str, Any]]:
         return resultado
     finally:
         db.close_connection()
-
 def ejecutar_registro_venta_pos(
     id_sesion_caja: int,
     id_usuario: int,
@@ -215,23 +214,27 @@ def ejecutar_registro_venta_pos(
     id_cliente: Optional[int],
     items: List[Dict[str, Any]],
     descuento: float = 0.0,
-    observacion: Optional[str] = None
+    observacion: Optional[str] = None,
+    id_reserva: Optional[int] = None
 ) -> Dict[str, Any]:
     """
     Invoca la función transaccional fn_registrar_venta_pos en PostgreSQL.
-    Asegura stock con FOR UPDATE, crea t_venta en PENDIENTE_PAGO y t_detalle_venta.
+    Para ventas normales, id_reserva puede ser None.
+    Para ventas provenientes de una reserva, se envía el id_reserva.
     """
     db = PostgreSQL()
     db.create_connection()
+
     try:
         schema = _get_schema()
         items_json = json.dumps(items)
 
         sql = f"""
             SELECT {schema}.fn_registrar_venta_pos(
-                %s, %s, %s, %s, %s, %s::json, %s, %s
+                %s, %s, %s, %s, %s, %s::json, %s, %s, %s
             );
         """
+
         params = (
             id_sesion_caja,
             id_usuario,
@@ -240,26 +243,46 @@ def ejecutar_registro_venta_pos(
             id_cliente,
             items_json,
             descuento,
-            observacion
+            observacion,
+            id_reserva
         )
 
-        res = db.execute_query(sql, params, fetchone=True, commit=True)
+        res = db.execute_query(
+            sql,
+            params,
+            fetchone=True,
+            commit=True
+        )
+
         if not res or not res[0]:
-            raise ValueError("No se recibió respuesta de la función transaccional del POS.")
+            raise ValueError(
+                "No se recibió respuesta de la función transaccional del POS."
+            )
 
         data = res[0]
+
         if isinstance(data, str):
             data = json.loads(data)
 
         if not data.get("success"):
-            err_code = data.get("error", "ERROR_VENTA_POS")
-            msg = data.get("message", "Error al procesar la venta en el POS.")
-            raise ValueError(f"[{err_code}] {msg}")
+            err_code = data.get(
+                "error",
+                "ERROR_VENTA_POS"
+            )
+
+            msg = data.get(
+                "message",
+                "Error al procesar la venta en el POS."
+            )
+
+            raise ValueError(
+                f"[{err_code}] {msg}"
+            )
 
         return data
+
     finally:
         db.close_connection()
-
 def obtener_historial_ventas_sesion(id_sesion_caja: int) -> List[Dict[str, Any]]:
     """
     Retorna el listado de ventas generadas durante la sesión de caja activa.

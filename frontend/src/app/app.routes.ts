@@ -26,7 +26,7 @@ import { CajaComprobanteComponent } from './pages/caja/comprobante/caja-comproba
 import { ReportesComponent } from './pages/reportes/reportes';
 import { authGuard } from './guards/auth-guard';
 import { ProveedoresComponent } from './pages/proveedores/proveedores';
-
+import { AtenderReservaComponent } from './pages/atender-reserva/atender-reserva';
 import { permissionGuard } from './guards/permission-guard';
 import { scopeGuard } from './guards/scope-guard';
 
@@ -98,7 +98,8 @@ export const routes: Routes = [
       { path: 'bi-dashboard', component: BiDashboardComponent, canActivate: [permissionGuard('reportes.ver')] },
       { path: 'triaje-chat', component: TriajeChatComponent, canActivate: [permissionGuard('admin.acceder')] },
       { path: 'catalogo', component: CatalogoComponent, canActivate: [permissionGuard('productos.ver')] },
-      { path: 'proveedores', component: ProveedoresComponent, canActivate: [permissionGuard('compras.ver')] }
+      { path: 'proveedores', component: ProveedoresComponent, canActivate: [permissionGuard('compras.ver')] },
+      { path: 'atender-reserva', component: AtenderReservaComponent, canActivate: [permissionGuard('ventas.ver')] }   
     ]
   },
 
