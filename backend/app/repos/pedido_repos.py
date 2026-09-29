@@ -24,7 +24,7 @@ def obtener_sucursales_tenant(id_empresa: int, id_usuario: Optional[int] = None)
         if id_usuario:
             q_cart = f"""
                 SELECT it.id_variante, it.cantidad
-                FROM {schema}.t_item_carrito it
+                FROM {schema}.t_detalle_Carrito it
                 JOIN {schema}.t_carrito c ON c.id_carrito = it.id_carrito
                 JOIN {schema}.t_cliente cli ON cli.id_cliente = c.id_cliente
                 WHERE cli.id_usuario = %s AND c.id_empresa = %s AND c.estado = 'ACTIVO';
