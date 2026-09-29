@@ -705,6 +705,196 @@ def listar_ordenes_compra_db(
         db.close_connection()
 
 
+def crear_orden_compra_db(datos: Dict[str, Any], token_data: dict) -> Dict[str, Any]:
+    """
+    Crea una nueva Orden de Compra asignada a una sucursal específica con estado 'PENDIENTE_APROBACION'.
+    Inserta la cabecera en t_orden_compra y las líneas de detalle en t_detalle_orden_compra.
+    """
+    id_empresa = int(datos["id_empresa"])
+    id_sucursal = int(datos["id_sucursal"])
+    id_proveedor = datos.get("id_proveedor")
+    if id_proveedor:
+        id_proveedor = int(id_proveedor)
+    fecha_entrega_esperada = datos.get("fecha_entrega_esperada") or None
+    observaciones = datos.get("observaciones") or ""
+    items = datos.get("items") or []
+
+    if not items:
+        raise ValueError("La orden de compra debe contener al menos un ítem o prenda solicitada.")
+
+    id_usuario = int(token_data.get("nro_usuario") or token_data.get("id_usuario") or 1)
+
+    schema = _get_schema()
+    db = PostgreSQL()
+    db.create_connection()
+    try:
+        # Validar que la sucursal exista y pertenezca a la empresa
+        q_suc = f"SELECT id_sucursal, nombre FROM {schema}.t_sucursal WHERE id_sucursal = %s AND id_empresa = %s AND activo = TRUE;"
+        suc = db.execute_query(q_suc, (id_sucursal, id_empresa), fetchone=True)
+        if not suc:
+            raise ValueError(f"La sucursal ID {id_sucursal} no existe o no pertenece a la empresa {id_empresa}.")
+        nombre_sucursal = suc[1]
+
+        # Resolver id_usuario seguro
+        q_u = f"SELECT id_usuario FROM {schema}.t_usuario WHERE id_usuario = %s;"
+        u_chk = db.execute_query(q_u, (id_usuario,), fetchone=True)
+        if not u_chk:
+            q_u_alt = f"SELECT id_usuario FROM {schema}.t_usuario WHERE id_empresa = %s LIMIT 1;"
+            u_alt = db.execute_query(q_u_alt, (id_empresa,), fetchone=True)
+            id_usuario = u_alt[0] if u_alt else None
+
+        # Si id_proveedor viene, validar que exista
+        nombre_proveedor = "Sin Proveedor"
+        if id_proveedor:
+            q_prv = f"SELECT id_proveedor, razon_social FROM {schema}.t_proveedor WHERE id_proveedor = %s;"
+            prv_row = db.execute_query(q_prv, (id_proveedor,), fetchone=True)
+            if prv_row:
+                nombre_proveedor = prv_row[1]
+            else:
+                id_proveedor = None
+
+        total_prendas = 0
+        total_estimado = Decimal("0.00")
+        items_procesados = []
+
+        for it in items:
+            cod_prod = str(it.get("codigo_producto", "")).strip().upper()
+            nom_prod = str(it.get("nombre_producto", "")).strip()
+            if not cod_prod or not nom_prod:
+                raise ValueError("Cada ítem debe tener un código de producto y nombre válidos.")
+            talla = str(it.get("talla") or "Única").strip()
+            color = str(it.get("color") or "Estándar").strip()
+            sku = str(it.get("sku") or f"{cod_prod}-{talla[:3].upper()}-{color[:3].upper()}".replace(" ", "")).strip()
+            cant = int(it.get("cantidad_solicitada", 0))
+            if cant <= 0:
+                raise ValueError(f"La cantidad solicitada para '{nom_prod}' debe ser mayor a 0.")
+            costo_unit = Decimal(str(it.get("costo_unitario", 0.0)))
+            if costo_unit < 0:
+                raise ValueError(f"El costo unitario para '{nom_prod}' no puede ser negativo.")
+            subtotal = Decimal(str(cant)) * costo_unit
+            total_prendas += cant
+            total_estimado += subtotal
+
+            # Resolver id_producto o id_variante si existen
+            id_prod = it.get("id_producto")
+            id_var = it.get("id_variante")
+            if not id_prod:
+                q_p = f"SELECT id_producto FROM {schema}.t_producto WHERE codigo_producto = %s AND id_empresa = %s LIMIT 1;"
+                p_r = db.execute_query(q_p, (cod_prod, id_empresa), fetchone=True)
+                if p_r:
+                    id_prod = p_r[0]
+            if not id_var and id_prod:
+                q_v = f"""
+                SELECT id_variante FROM {schema}.t_producto_talla_color ptc
+                JOIN {schema}.t_talla t ON t.id_talla = ptc.id_talla
+                JOIN {schema}.t_color c ON c.id_color = ptc.id_color
+                WHERE ptc.id_producto = %s AND LOWER(t.nombre) = LOWER(%s) AND LOWER(c.nombre) = LOWER(%s) LIMIT 1;
+                """
+                v_r = db.execute_query(q_v, (id_prod, talla, color), fetchone=True)
+                if v_r:
+                    id_var = v_r[0]
+
+            items_procesados.append({
+                "id_producto": id_prod,
+                "id_variante": id_var,
+                "codigo_producto": cod_prod,
+                "nombre_producto": nom_prod,
+                "talla": talla,
+                "color": color,
+                "sku": sku,
+                "cantidad_solicitada": cant,
+                "costo_unitario": float(costo_unit),
+                "subtotal": float(subtotal)
+            })
+
+        numero_orden = f"OC-{datetime.datetime.now().strftime('%Y%m')}-{random.randint(1000, 9999)}"
+
+        q_oc = f"""
+        INSERT INTO {schema}.t_orden_compra (
+            id_empresa, id_sucursal, id_proveedor, numero_orden,
+            fecha_entrega_esperada, estado, total_estimado, observaciones,
+            id_usuario_creador
+        ) VALUES (%s, %s, %s, %s, %s, 'PENDIENTE_APROBACION', %s, %s, %s)
+        RETURNING id_orden_compra, fecha_emision;
+        """
+        oc_res = db.execute_query(
+            q_oc,
+            (id_empresa, id_sucursal, id_proveedor, numero_orden, fecha_entrega_esperada, float(total_estimado), observaciones, id_usuario),
+            fetchone=True, commit=False
+        )
+        if not oc_res:
+            raise ValueError("No se pudo insertar la cabecera de la orden de compra.")
+        id_orden_compra = oc_res[0]
+        fecha_emision = oc_res[1]
+
+        q_doc = f"""
+        INSERT INTO {schema}.t_detalle_orden_compra (
+            id_orden_compra, id_producto, id_variante, codigo_producto,
+            nombre_producto, talla, color, sku, cantidad_solicitada,
+            cantidad_recibida, costo_unitario, subtotal
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 0, %s, %s);
+        """
+        for it in items_procesados:
+            db.execute_query(
+                q_doc,
+                (
+                    id_orden_compra, it["id_producto"], it["id_variante"],
+                    it["codigo_producto"], it["nombre_producto"], it["talla"],
+                    it["color"], it["sku"], it["cantidad_solicitada"],
+                    it["costo_unitario"], it["subtotal"]
+                ),
+                commit=False
+            )
+
+        db.conn.commit()
+
+        try:
+            registrar_evento_db(
+                id_usuario=id_usuario,
+                usuario_nombre=token_data.get("nombre"),
+                usuario_email=token_data.get("email") or token_data.get("sub"),
+                id_empresa=id_empresa,
+                id_sucursal=id_sucursal,
+                modulo="COMPRAS",
+                accion="CREAR_ORDEN_COMPRA",
+                entidad="t_orden_compra",
+                id_entidad=str(id_orden_compra),
+                descripcion=f"Creación de Orden de Compra {numero_orden} para sucursal {nombre_sucursal} con {len(items_procesados)} prendas solicitadas.",
+                resultado="EXITO",
+                nivel="INFO",
+                ip=None,
+                user_agent=None,
+                datos_anteriores=None,
+                datos_nuevos={"numero_orden": numero_orden, "sucursal": nombre_sucursal, "total": float(total_estimado)},
+                metadatos={"id_orden_compra": id_orden_compra, "id_sucursal": id_sucursal, "id_empresa": id_empresa},
+                request_id=None
+            )
+        except Exception as bit_err:
+            print(f"[AUDITORIA] Advertencia al registrar bitacora de creación de OC: {bit_err}")
+
+        return {
+            "id_orden_compra": id_orden_compra,
+            "numero_orden": numero_orden,
+            "id_sucursal": id_sucursal,
+            "sucursal": nombre_sucursal,
+            "id_proveedor": id_proveedor,
+            "proveedor": nombre_proveedor,
+            "fecha_emision": fecha_emision.isoformat() if fecha_emision else None,
+            "fecha_entrega_esperada": fecha_entrega_esperada,
+            "estado": "PENDIENTE_APROBACION",
+            "total_estimado": float(total_estimado),
+            "total_items": len(items_procesados),
+            "total_prendas": total_prendas,
+            "items": items_procesados
+        }
+    except Exception as e:
+        if db.conn:
+            db.conn.rollback()
+        raise e
+    finally:
+        db.close_connection()
+
+
 def obtener_detalle_orden_compra_db(id_orden: int, id_empresa: int) -> Dict[str, Any]:
     """Obtiene la cabecera y el detalle de ítems de una orden de compra."""
     schema = _get_schema()

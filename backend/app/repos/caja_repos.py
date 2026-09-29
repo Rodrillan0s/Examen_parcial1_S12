@@ -205,15 +205,25 @@ def abrir_caja_sesion(
     try:
         schema = _get_schema()
 
-        # Verificar que el usuario no tenga OTRA caja abierta
+        # Verificar que el usuario no tenga OTRA caja abierta en esta sucursal
         q_check_user = f"""
             SELECT id_sesion_caja FROM {schema}.t_caja_sesion
-            WHERE id_usuario = %s AND estado = 'ABIERTA'
+            WHERE id_usuario = %s AND id_sucursal = %s AND estado = 'ABIERTA'
             LIMIT 1;
         """
-        user_open = db.execute_query(q_check_user, (id_usuario,), fetchone=True)
+        user_open = db.execute_query(q_check_user, (id_usuario, id_sucursal), fetchone=True)
         if user_open:
-            raise ValueError("El usuario ya tiene una sesión de caja abierta activa.")
+            raise ValueError("El usuario ya tiene una sesión de caja abierta activa en esta sucursal.")
+
+        # Si el usuario tenía sesiones abiertas en otras sucursales, cerrarlas ordenadamente por cambio de sucursal
+        q_close_other = f"""
+            UPDATE {schema}.t_caja_sesion
+            SET estado = 'CERRADA',
+                fecha_cierre = CURRENT_TIMESTAMP,
+                observacion_cierre = COALESCE(observacion_cierre, '') || ' [Cierre automático por cambio de sucursal]'
+            WHERE id_usuario = %s AND id_sucursal != %s AND estado = 'ABIERTA';
+        """
+        db.execute_query(q_close_other, (id_usuario, id_sucursal))
 
         # Verificar que la caja física no esté abierta por otro usuario
         q_check_caja = f"""
@@ -566,3 +576,276 @@ def cerrar_caja_sesion(
         raise e
     finally:
         db.close_connection()
+
+
+def monitorear_cajas_tienda_sucursal(
+    id_empresa: Optional[int] = None,
+    id_sucursal: Optional[int] = None,
+    estado_filtro: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Retorna la lista de todas las cajas registradoras físicas con su estado en vivo,
+    turno activo actual (si está abierta) o último cierre registrado.
+    Permite a Administradores Globales, Administradores de Tienda y Encargados
+    supervisar todas las cajas de sus tiendas y sucursales.
+    """
+    db = PostgreSQL()
+    db.create_connection()
+    try:
+        schema = _get_schema()
+        filtros = []
+        params = []
+
+        if id_empresa:
+            filtros.append("c.id_empresa = %s")
+            params.append(id_empresa)
+        if id_sucursal:
+            filtros.append("c.id_sucursal = %s")
+            params.append(id_sucursal)
+
+        where_clause = f"WHERE {' AND '.join(filtros)}" if filtros else ""
+
+        q = f"""
+            SELECT 
+                c.id_caja,
+                c.codigo_caja,
+                c.nombre AS nombre_caja,
+                c.estado AS estado_caja,
+                c.id_sucursal,
+                s.nombre AS nombre_sucursal,
+                COALESCE(ciu.nombre, '') AS ciudad_sucursal,
+                c.id_empresa,
+                COALESCE(e.nombre_empresa, 'Aurora Store') AS nombre_empresa,
+                sa.id_sesion_caja AS sesion_activa_id,
+                sa.fecha_apertura AS sesion_activa_fecha_apertura,
+                sa.monto_inicial AS sesion_activa_monto_inicial,
+                sa.id_usuario AS sesion_activa_id_usuario,
+                u.nombre AS sesion_activa_usuario_nombre,
+                u.apellido AS sesion_activa_usuario_apellido,
+                sa.observacion_apertura AS sesion_activa_observacion
+            FROM {schema}.t_caja c
+            INNER JOIN {schema}.t_sucursal s ON s.id_sucursal = c.id_sucursal
+            LEFT JOIN {schema}.t_ciudad ciu ON ciu.id_ciudad = s.id_ciudad
+            LEFT JOIN {schema}.empresa e ON e.id_empresa = c.id_empresa
+            LEFT JOIN {schema}.t_caja_sesion sa ON sa.id_caja = c.id_caja AND sa.estado = 'ABIERTA'
+            LEFT JOIN {schema}.t_usuario u ON u.id_usuario = sa.id_usuario
+            {where_clause}
+            ORDER BY c.id_empresa, s.nombre, c.id_caja ASC;
+        """
+        rows = db.execute_query(q, tuple(params), fetchall=True) or []
+
+        cajas = []
+        total_abiertas = 0
+        total_cerradas = 0
+        efectivo_total_en_cajas = 0.0
+
+        for r in rows:
+            id_caja = r[0]
+            sesion_activa_id = r[9]
+            estado_turno = "ABIERTA" if sesion_activa_id else "CERRADA"
+
+            if estado_filtro and estado_filtro.upper() in ('ABIERTA', 'CERRADA') and estado_turno != estado_filtro.upper():
+                continue
+
+            sesion_activa_info = None
+            if sesion_activa_id:
+                total_abiertas += 1
+                monto_ini = float(r[11] or 0.0)
+                # Resumen financiero en vivo
+                resumen_vivo = calcular_resumen_caja(sesion_activa_id)
+                efectivo_caja = resumen_vivo.get("efectivo_esperado", monto_ini)
+                efectivo_total_en_cajas += efectivo_caja
+                cajero_nom = f"{r[13] or ''} {r[14] or ''}".strip() or "Cajero Asignado"
+
+                sesion_activa_info = {
+                    "id_sesion_caja": sesion_activa_id,
+                    "id_usuario": r[12],
+                    "cajero_nombre": cajero_nom,
+                    "fecha_apertura": r[10].isoformat() if r[10] else None,
+                    "monto_inicial": monto_ini,
+                    "observacion": r[15],
+                    "total_ventas": resumen_vivo.get("total_ventas", 0.0),
+                    "cant_ventas": resumen_vivo.get("cant_ventas", 0),
+                    "ventas_efectivo": resumen_vivo.get("ventas_efectivo", 0.0),
+                    "ventas_tarjeta": resumen_vivo.get("ventas_tarjeta", 0.0),
+                    "ventas_qr": resumen_vivo.get("ventas_qr", 0.0),
+                    "efectivo_esperado": efectivo_caja,
+                    "resumen": resumen_vivo
+                }
+            else:
+                total_cerradas += 1
+
+            # Obtener última sesión cerrada para contexto
+            q_ult = f"""
+                SELECT 
+                    cs.id_sesion_caja, cs.fecha_cierre, cs.monto_inicial,
+                    cs.efectivo_esperado, cs.efectivo_contado, cs.diferencia,
+                    u.nombre, u.apellido
+                FROM {schema}.t_caja_sesion cs
+                LEFT JOIN {schema}.t_usuario u ON u.id_usuario = cs.id_usuario
+                WHERE cs.id_caja = %s AND cs.estado = 'CERRADA'
+                ORDER BY cs.id_sesion_caja DESC
+                LIMIT 1;
+            """
+            ult_row = db.execute_query(q_ult, (id_caja,), fetchone=True)
+            ult_info = None
+            if ult_row:
+                ult_cajero = f"{ult_row[6] or ''} {ult_row[7] or ''}".strip()
+                ult_info = {
+                    "id_sesion_caja": ult_row[0],
+                    "fecha_cierre": ult_row[1].isoformat() if ult_row[1] else None,
+                    "monto_inicial": float(ult_row[2] or 0.0),
+                    "efectivo_esperado": float(ult_row[3] or 0.0),
+                    "efectivo_contado": float(ult_row[4] or 0.0),
+                    "diferencia": float(ult_row[5] or 0.0),
+                    "cajero_nombre": ult_cajero or "Anterior"
+                }
+
+            cajas.append({
+                "id_caja": id_caja,
+                "codigo_caja": r[1],
+                "nombre": r[2],
+                "estado_caja": r[3],
+                "id_sucursal": r[4],
+                "sucursal_nombre": r[5],
+                "sucursal_ciudad": r[6],
+                "id_empresa": r[7],
+                "empresa_nombre": r[8],
+                "estado_turno": estado_turno,
+                "sesion_activa": sesion_activa_info,
+                "ultima_sesion_cerrada": ult_info
+            })
+
+        return {
+            "success": True,
+            "cajas": cajas,
+            "total_cajas": len(cajas),
+            "total_abiertas": total_abiertas,
+            "total_cerradas": total_cerradas,
+            "efectivo_total_en_cajas": round(efectivo_total_en_cajas, 2)
+        }
+    finally:
+        db.close_connection()
+
+
+def listar_todas_sesiones_caja(
+    id_empresa: Optional[int] = None,
+    id_sucursal: Optional[int] = None,
+    id_caja: Optional[int] = None,
+    limite: int = 50
+) -> List[Dict[str, Any]]:
+    """
+    Retorna el historial cronológico de sesiones de caja (turnos y arqueos).
+    """
+    db = PostgreSQL()
+    db.create_connection()
+    try:
+        schema = _get_schema()
+        filtros = []
+        params = []
+        if id_empresa:
+            filtros.append("cs.id_empresa = %s")
+            params.append(id_empresa)
+        if id_sucursal:
+            filtros.append("cs.id_sucursal = %s")
+            params.append(id_sucursal)
+        if id_caja:
+            filtros.append("cs.id_caja = %s")
+            params.append(id_caja)
+
+        where_clause = f"WHERE {' AND '.join(filtros)}" if filtros else ""
+        params.append(limite)
+
+        q = f"""
+            SELECT 
+                cs.id_sesion_caja,
+                cs.id_caja,
+                c.codigo_caja,
+                c.nombre AS nombre_caja,
+                cs.id_sucursal,
+                s.nombre AS nombre_sucursal,
+                cs.id_empresa,
+                COALESCE(e.nombre_empresa, 'Aurora Store') AS nombre_empresa,
+                cs.id_usuario,
+                u.nombre AS cajero_nombre,
+                u.apellido AS cajero_apellido,
+                cs.fecha_apertura,
+                cs.fecha_cierre,
+                cs.monto_inicial,
+                cs.efectivo_esperado,
+                cs.efectivo_contado,
+                cs.diferencia,
+                cs.estado,
+                cs.observacion_apertura,
+                cs.observacion_cierre
+            FROM {schema}.t_caja_sesion cs
+            JOIN {schema}.t_caja c ON c.id_caja = cs.id_caja
+            JOIN {schema}.t_sucursal s ON s.id_sucursal = cs.id_sucursal
+            LEFT JOIN {schema}.empresa e ON e.id_empresa = cs.id_empresa
+            JOIN {schema}.t_usuario u ON u.id_usuario = cs.id_usuario
+            {where_clause}
+            ORDER BY cs.id_sesion_caja DESC
+            LIMIT %s;
+        """
+        rows = db.execute_query(q, tuple(params), fetchall=True) or []
+        sesiones = []
+        for r in rows:
+            caj = f"{r[9] or ''} {r[10] or ''}".strip()
+            sesiones.append({
+                "id_sesion_caja": r[0],
+                "id_caja": r[1],
+                "codigo_caja": r[2],
+                "nombre_caja": r[3],
+                "id_sucursal": r[4],
+                "sucursal_nombre": r[5],
+                "id_empresa": r[6],
+                "empresa_nombre": r[7],
+                "id_usuario": r[8],
+                "cajero_nombre": caj or "Cajero",
+                "fecha_apertura": r[11].isoformat() if r[11] else None,
+                "fecha_cierre": r[12].isoformat() if r[12] else None,
+                "monto_inicial": float(r[13] or 0.0),
+                "efectivo_esperado": float(r[14]) if r[14] is not None else None,
+                "efectivo_contado": float(r[15]) if r[15] is not None else None,
+                "diferencia": float(r[16]) if r[16] is not None else None,
+                "estado": r[17],
+                "observacion_apertura": r[18],
+                "observacion_cierre": r[19]
+            })
+        return sesiones
+    finally:
+        db.close_connection()
+
+
+def crear_nueva_caja(id_sucursal: int, id_empresa: int, nombre: str, codigo_caja: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Registra una nueva caja física para una sucursal y empresa.
+    """
+    db = PostgreSQL()
+    db.create_connection()
+    try:
+        schema = _get_schema()
+        if not codigo_caja or not codigo_caja.strip():
+            # Contar cajas existentes en la sucursal para generar código secuencial
+            q_cnt = f"SELECT COUNT(*) FROM {schema}.t_caja WHERE id_sucursal = %s;"
+            cnt = db.execute_query(q_cnt, (id_sucursal,), fetchone=True)[0] or 0
+            codigo_caja = f"CAJA-SUC-{id_sucursal}-{(cnt + 1):02d}"
+
+        q_insert = f"""
+            INSERT INTO {schema}.t_caja (id_sucursal, id_empresa, codigo_caja, nombre, estado)
+            VALUES (%s, %s, %s, %s, 'ACTIVA')
+            RETURNING id_caja, codigo_caja, nombre, estado, id_sucursal, id_empresa, created_at;
+        """
+        row = db.execute_query(q_insert, (id_sucursal, id_empresa, codigo_caja.strip().upper(), nombre.strip()), fetchone=True, commit=True)
+        return {
+            "id_caja": row[0],
+            "codigo_caja": row[1],
+            "nombre": row[2],
+            "estado": row[3],
+            "id_sucursal": row[4],
+            "id_empresa": row[5],
+            "created_at": row[6].isoformat() if row[6] else None
+        }
+    finally:
+        db.close_connection()
+

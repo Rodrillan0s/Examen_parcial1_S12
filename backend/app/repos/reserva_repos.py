@@ -126,6 +126,10 @@ def crear_reserva(id_usuario: int, id_empresa: int, datos: Dict[str, Any]) -> Di
                 "stock_info": fn_res
             })
 
+        con_pago = bool(datos.get('con_pago', False))
+        monto_pagado = float(datos.get('monto_pagado', 0.0) or 0.0)
+        estado_pago = 'PAGADO' if (con_pago and monto_pagado > 0) else 'SIN_PAGO'
+
         # 4. Crear cabecera de la reserva en t_reserva
         codigo_reserva = _generar_codigo_reserva()
         cur.execute(f"""
@@ -136,10 +140,13 @@ def crear_reserva(id_usuario: int, id_empresa: int, datos: Dict[str, Any]) -> Di
                 fecha_reserva,
                 fecha_hora_visita,
                 estado,
-                observaciones
-            ) VALUES (%s, %s, %s, NOW(), %s, 'PENDIENTE', %s)
+                observaciones,
+                con_pago,
+                estado_pago,
+                monto_pagado
+            ) VALUES (%s, %s, %s, NOW(), %s, 'PENDIENTE', %s, %s, %s, %s)
             RETURNING id_reserva, fecha_reserva;
-        """, (id_cliente, id_sucursal, codigo_reserva, fecha_hora_dt, observaciones))
+        """, (id_cliente, id_sucursal, codigo_reserva, fecha_hora_dt, observaciones, con_pago, estado_pago, monto_pagado))
         reserva_creada = cur.fetchone()
         id_reserva = reserva_creada[0]
         fecha_reserva_db = reserva_creada[1]
@@ -179,7 +186,7 @@ def crear_reserva(id_usuario: int, id_empresa: int, datos: Dict[str, Any]) -> Di
                 accion="CREAR_RESERVA",
                 entidad="t_reserva",
                 id_entidad=str(id_reserva),
-                descripcion=f"Reserva {codigo_reserva} creada con {len(detalles_guardados)} prenda(s) para visita el {fecha_hora_dt}.",
+                descripcion=f"Reserva {codigo_reserva} ({'CON PAGO' if con_pago else 'SIN PAGO'}) creada con {len(detalles_guardados)} prenda(s) para visita el {fecha_hora_dt}.",
                 resultado="EXITO",
                 nivel="INFO",
                 ip=None,
@@ -189,6 +196,8 @@ def crear_reserva(id_usuario: int, id_empresa: int, datos: Dict[str, Any]) -> Di
                     "codigo_reserva": codigo_reserva,
                     "id_sucursal": id_sucursal,
                     "fecha_hora_visita": str(fecha_hora_dt),
+                    "con_pago": con_pago,
+                    "monto_pagado": monto_pagado,
                     "items": detalles_guardados
                 },
                 metadatos={"id_cliente": id_cliente},
@@ -205,6 +214,9 @@ def crear_reserva(id_usuario: int, id_empresa: int, datos: Dict[str, Any]) -> Di
             "fecha_reserva": fecha_reserva_db.isoformat() if fecha_reserva_db else None,
             "fecha_hora_visita": fecha_hora_dt.isoformat() if isinstance(fecha_hora_dt, datetime) else str(fecha_hora_dt),
             "estado": "PENDIENTE",
+            "con_pago": con_pago,
+            "estado_pago": estado_pago,
+            "monto_pagado": monto_pagado,
             "observaciones": observaciones,
             "detalles": detalles_guardados
         }
@@ -244,7 +256,10 @@ def obtener_mis_reservas(id_usuario: int, id_empresa: Optional[int] = None) -> L
                 s.nombre AS sucursal_nombre,
                 s.direccion AS sucursal_direccion,
                 s.telefono AS sucursal_telefono,
-                ci.nombre AS ciudad_nombre
+                ci.nombre AS ciudad_nombre,
+                COALESCE(r.con_pago, false) AS con_pago,
+                COALESCE(r.estado_pago, 'SIN_PAGO') AS estado_pago,
+                COALESCE(r.monto_pagado, 0.0) AS monto_pagado
             FROM {schema}.t_reserva r
             JOIN {schema}.t_sucursal s ON s.id_sucursal = r.id_sucursal
             LEFT JOIN {schema}.t_ciudad ci ON ci.id_ciudad = s.id_ciudad
@@ -319,6 +334,9 @@ def obtener_mis_reservas(id_usuario: int, id_empresa: Optional[int] = None) -> L
                 "observaciones": r[5] or "",
                 "fecha_cancelacion": r[6].isoformat() if r[6] else None,
                 "motivo_cancelacion": r[7] or "",
+                "con_pago": bool(r[13]),
+                "estado_pago": r[14],
+                "monto_pagado": float(r[15] or 0.0),
                 "sucursal": {
                     "id_sucursal": r[8],
                     "nombre": r[9],
@@ -367,7 +385,10 @@ def obtener_detalle_reserva(id_reserva: int, id_usuario: int, id_empresa: int, e
                 u.nombre AS cliente_nombre,
                 u.apellido AS cliente_apellido,
                 u.correo AS cliente_correo,
-                u.telefono AS cliente_telefono
+                u.telefono AS cliente_telefono,
+                COALESCE(r.con_pago, false) AS con_pago,
+                COALESCE(r.estado_pago, 'SIN_PAGO') AS estado_pago,
+                COALESCE(r.monto_pagado, 0.0) AS monto_pagado
             FROM {schema}.t_reserva r
             JOIN {schema}.t_sucursal s ON s.id_sucursal = r.id_sucursal
             LEFT JOIN {schema}.t_ciudad ci ON ci.id_ciudad = s.id_ciudad
@@ -440,6 +461,9 @@ def obtener_detalle_reserva(id_reserva: int, id_usuario: int, id_empresa: int, e
             "observaciones": r[6] or "",
             "fecha_cancelacion": r[7].isoformat() if r[7] else None,
             "motivo_cancelacion": r[8] or "",
+            "con_pago": bool(r[19]),
+            "estado_pago": r[20],
+            "monto_pagado": float(r[21] or 0.0),
             "sucursal": {
                 "id_sucursal": r[9],
                 "nombre": r[11],

@@ -168,15 +168,12 @@ def capturar_orden_paypal(paypal_order_id: str) -> Dict[str, Any]:
                 if detail.get("issue") == "ORDER_NOT_APPROVED":
                     is_not_approved = True
 
-            # Si estamos en entorno Sandbox y la orden no fue aprobada por popup web (ej. móvil o pruebas),
-            # autorizar automáticamente en sandbox para permitir la confirmación atómica y emisión de comprobante
-            if is_not_approved and ("sandbox" in base_url.lower()):
-                logger.info(f"[PAYPAL SANDBOX SIMULATION] Orden {paypal_order_id} auto-aprobada en entorno Sandbox.")
+            if is_not_approved:
+                logger.warning(f"[PAYPAL ORDER NOT APPROVED] Orden {paypal_order_id} no ha sido autorizada en PayPal.")
                 return {
-                    "success": True,
-                    "status": "COMPLETED",
-                    "order_id": paypal_order_id,
-                    "capture_id": f"SANDBOX-CAP-{paypal_order_id[-8:]}",
+                    "success": False,
+                    "status": "ORDER_NOT_APPROVED",
+                    "message": "La orden no ha sido aprobada en PayPal. Debes autorizar el pago en la ventana de PayPal antes de confirmar.",
                     "data": res_data
                 }
 

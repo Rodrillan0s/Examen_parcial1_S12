@@ -87,6 +87,8 @@ export class AdminLayoutComponent implements OnInit {
     return act ? [act] : [];
   }
 
+  cargandoContexto: boolean = false;
+
   cargarSucursalesHeader(autoSelectFirst: boolean = false) {
     const scope = this.authService.getScopeLevel();
     if (scope === 'SUCURSAL') {
@@ -95,6 +97,24 @@ export class AdminLayoutComponent implements OnInit {
       this.sucursalActiva = br;
       return;
     }
+
+    // 1. Comprobar si la tienda activa ya tiene sus sucursales en memoria
+    if (this.tiendaActiva && Array.isArray(this.tiendaActiva.sucursales) && this.tiendaActiva.sucursales.length > 0) {
+      this.sucursalesDeEmpresa = this.tiendaActiva.sucursales.map((s: any) => ({
+        id: s.id || s.id_sucursal,
+        nombre: s.nombre,
+        ciudad: s.ciudad || ''
+      }));
+      const act = this.authService.activeBranch();
+      if (autoSelectFirst || !act || !this.sucursalesDeEmpresa.some(s => s.id === act.id)) {
+        this.seleccionarSucursal(this.sucursalesDeEmpresa[0], true);
+      } else {
+        this.sucursalActiva = act;
+      }
+      this.cdr.detectChanges();
+      return;
+    }
+
     const empId = scope === 'EMPRESA' 
       ? (this.usuarioActual?.id_empresa || undefined) 
       : (this.tiendaActiva?.id_empresa || this.authService.selectedCompany()?.id_empresa || undefined);
@@ -305,16 +325,23 @@ export class AdminLayoutComponent implements OnInit {
 
   seleccionarTiendaGlobal(tienda: TenantDashboardItem | null) {
     if (!this.scopeContext.canSelectCompany) return;
+    this.cargandoContexto = true;
+    this.tiendaActiva = tienda;
+    this.mostrarTenantDropdown = false;
+    this.sucursalActiva = null;
+
     this.authService.setSelectedCompany(tienda ? {
       id_empresa: tienda.id_empresa,
       nombre_empresa: tienda.nombre_empresa,
       sucursales: tienda.sucursales
     } : null);
     this.kpisService.establecerTiendaSeleccionada(tienda);
-    this.tiendaActiva = tienda;
-    this.mostrarTenantDropdown = false;
-    this.sucursalActiva = null;
+
     this.cargarSucursalesHeader(true);
+    setTimeout(() => {
+      this.cargandoContexto = false;
+      this.cdr.detectChanges();
+    }, 250);
     this.cdr.detectChanges();
   }
 
@@ -360,6 +387,7 @@ export class AdminLayoutComponent implements OnInit {
   expandido: true,
   submenus: [
     { nombre: 'Punto de Venta / Caja', ruta: '/admin/caja', permiso: 'ventas.crear' },
+    { nombre: 'Cajas de Tienda y Sucursales', ruta: '/admin/cajas-monitoreo', maxAuthorityLevel: 4 },
     { nombre: 'Atender Reservas', ruta: '/admin/atender-reserva', permiso: 'ventas.ver' }
   ]
 },
@@ -441,7 +469,11 @@ export class AdminLayoutComponent implements OnInit {
     // Filtrar opciones según permisos y alcances del usuario actual
     this.menuFiltrado = menuMaster
       .map(modulo => {
-        const submenusAutorizados = modulo.submenus.filter(sub => {
+        const submenusAutorizados = modulo.submenus.filter((sub: any) => {
+          // Filtro por nivel de autoridad máxima (1: Superadmin, 2: Admin, 3: Admin Tienda, 4: Encargado Sucursal)
+          if (sub.maxAuthorityLevel !== undefined && this.authService.getAuthorityLevel() > sub.maxAuthorityLevel) {
+            return false;
+          }
           // Filtro por alcance permitido si se especificó
           if (sub.alcances && !sub.alcances.includes(scope as any)) {
             return false;

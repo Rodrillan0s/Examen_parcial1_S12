@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
+import { tap } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth';
 
@@ -34,6 +35,7 @@ export class SucursalService {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
   private apiUrl = `${environment.apiUrl}/api/sucursales`;
+  private cache = new Map<string, RespuestaApiSucursales>();
 
   private getHeaders(): HttpHeaders {
     const token = this.authService.obtenerToken();
@@ -42,7 +44,16 @@ export class SucursalService {
       : new HttpHeaders();
   }
 
-  listarSucursales(id_empresa?: number): Observable<RespuestaApiSucursales> {
+  limpiarCache(): void {
+    this.cache.clear();
+  }
+
+  listarSucursales(id_empresa?: number, forceRefresh: boolean = false): Observable<RespuestaApiSucursales> {
+    const key = id_empresa ? `emp_${id_empresa}` : 'all';
+    if (!forceRefresh && this.cache.has(key)) {
+      return of(this.cache.get(key)!);
+    }
+
     const url = id_empresa
       ? `${this.apiUrl}/?id_empresa=${id_empresa}`
       : `${this.apiUrl}/`;
@@ -50,6 +61,12 @@ export class SucursalService {
     return this.http.get<RespuestaApiSucursales>(
       url,
       { headers: this.getHeaders() }
+    ).pipe(
+      tap(res => {
+        if (res && res.success) {
+          this.cache.set(key, res);
+        }
+      })
     );
   }
 
@@ -58,7 +75,7 @@ export class SucursalService {
       `${this.apiUrl}/`,
       sucursal,
       { headers: this.getHeaders() }
-    );
+    ).pipe(tap(() => this.limpiarCache()));
   }
 
   actualizarSucursal(id_sucursal: number, sucursal: Sucursal): Observable<any> {
@@ -66,7 +83,7 @@ export class SucursalService {
       `${this.apiUrl}/${id_sucursal}`,
       sucursal,
       { headers: this.getHeaders() }
-    );
+    ).pipe(tap(() => this.limpiarCache()));
   }
 
   cambiarEstadoSucursal(id_sucursal: number, activo: boolean): Observable<any> {
@@ -74,13 +91,13 @@ export class SucursalService {
       `${this.apiUrl}/${id_sucursal}/estado`,
       { activo },
       { headers: this.getHeaders() }
-    );
+    ).pipe(tap(() => this.limpiarCache()));
   }
 
   eliminarSucursal(id_sucursal: number): Observable<any> {
     return this.http.delete(
       `${this.apiUrl}/${id_sucursal}`,
       { headers: this.getHeaders() }
-    );
+    ).pipe(tap(() => this.limpiarCache()));
   }
 }

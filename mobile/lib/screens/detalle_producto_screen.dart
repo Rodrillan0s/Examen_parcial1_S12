@@ -461,14 +461,37 @@ class _DetalleProductoScreenState extends State<DetalleProductoScreen> {
                                   ),
                                   const SizedBox(height: 8),
 
-                                  // Precio
-                                  Text(
-                                    currencyFormatter.format(_prenda!.precio),
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w800,
-                                      color: AppTheme.textPrimary,
-                                    ),
+                                  // Precio y Estado de Disponibilidad
+                                  Row(
+                                    children: [
+                                      Text(
+                                        currencyFormatter.format(_prenda!.precio),
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w800,
+                                          color: AppTheme.textPrimary,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      AuroraBadge(
+                                        text: _prenda!.stockTotalGeneral <= 0
+                                            ? 'Agotado'
+                                            : _prenda!.stockTotalGeneral <= 3
+                                                ? '⚠ Últimas unidades'
+                                                : '✓ Disponible',
+                                        backgroundColor: _prenda!.stockTotalGeneral <= 0
+                                            ? AppTheme.errorLight
+                                            : _prenda!.stockTotalGeneral <= 3
+                                                ? AppTheme.goldLight
+                                                : AppTheme.successLight,
+                                        textColor: _prenda!.stockTotalGeneral <= 0
+                                            ? AppTheme.error
+                                            : _prenda!.stockTotalGeneral <= 3
+                                                ? AppTheme.primaryGold
+                                                : AppTheme.success,
+                                        isSmall: true,
+                                      ),
+                                    ],
                                   ),
 
                                   // Botón de Realidad Aumentada (M14)
@@ -818,19 +841,21 @@ class _DetalleProductoScreenState extends State<DetalleProductoScreen> {
                                                         ),
                                                       ),
                                                       AuroraBadge(
-                                                        text: suc.disponible
-                                                            ? '${suc.stockDisponible} en stock'
-                                                            : 'Agotado',
-                                                        backgroundColor: suc
-                                                                .disponible
-                                                            ? AppTheme
-                                                                .successLight
-                                                            : AppTheme
-                                                                .errorLight,
-                                                        textColor: suc
-                                                                .disponible
-                                                            ? AppTheme.success
-                                                            : AppTheme.error,
+                                                        text: suc.stockDisponible <= 0
+                                                            ? 'Agotado'
+                                                            : suc.stockDisponible <= 3
+                                                                ? '⚠ Últimas unidades'
+                                                                : '✓ Disponible',
+                                                        backgroundColor: suc.stockDisponible <= 0
+                                                            ? AppTheme.errorLight
+                                                            : suc.stockDisponible <= 3
+                                                                ? AppTheme.goldLight
+                                                                : AppTheme.successLight,
+                                                        textColor: suc.stockDisponible <= 0
+                                                            ? AppTheme.error
+                                                            : suc.stockDisponible <= 3
+                                                                ? AppTheme.primaryGold
+                                                                : AppTheme.success,
                                                         isSmall: true,
                                                       ),
                                                     ],
@@ -891,11 +916,11 @@ class _DetalleProductoScreenState extends State<DetalleProductoScreen> {
                         top: false,
                         child: Row(
                           children: [
-                            // Botón Reservar Visita
+                            // Botón Probar en Tienda / Agendar Cita
                             Expanded(
                               flex: 1,
                               child: AuroraButton(
-                                text: 'Reservar cita',
+                                text: 'Probar en tienda',
                                 fontSize: 12,
                                 variant: AuroraButtonVariant.outline,
                                 icon: Icons.calendar_month_outlined,
@@ -907,12 +932,18 @@ class _DetalleProductoScreenState extends State<DetalleProductoScreen> {
                             Expanded(
                               flex: 1,
                               child: AuroraButton(
-                                text: 'Agregar a la bolsa',
+                                text: _prenda!.stockTotalGeneral <= 0
+                                    ? 'Agotado'
+                                    : 'Añadir a la bolsa',
                                 fontSize: 12,
                                 variant: AuroraButtonVariant.primary,
-                                icon: Icons.shopping_bag_outlined,
+                                icon: _prenda!.stockTotalGeneral <= 0
+                                    ? Icons.remove_shopping_cart_outlined
+                                    : Icons.shopping_bag_outlined,
                                 isLoading: _agregandoAlCarrito,
-                                onPressed: _agregarAlCarrito,
+                                onPressed: _prenda!.stockTotalGeneral <= 0
+                                    ? null
+                                    : _agregarAlCarrito,
                               ),
                             ),
                           ],

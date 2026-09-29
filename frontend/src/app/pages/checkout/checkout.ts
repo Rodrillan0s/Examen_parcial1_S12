@@ -24,6 +24,10 @@ export class CheckoutComponent implements OnInit {
   carrito: CarritoData | null = null;
   cargandoCarrito: boolean = true;
 
+  // Filtros de búsqueda de sucursales
+  filtroCiudad: string = 'TODAS';
+  busquedaSucursal: string = '';
+
   // Sucursales del Tenant
   sucursales: SucursalCheckout[] = [];
   sucursalSeleccionadaId: number | null = null;
@@ -105,9 +109,8 @@ export class CheckoutComponent implements OnInit {
       next: (res) => {
         this.sucursales = res.data || [];
         this.cargandoSucursales = false;
-        if (this.sucursales.length > 0) {
-          this.sucursalSeleccionadaId = this.sucursales[0].id_sucursal;
-        }
+        const conStock = this.sucursales.find(s => s.tiene_stock_completo !== false);
+        this.sucursalSeleccionadaId = conStock ? conStock.id_sucursal : (this.sucursales.length > 0 ? this.sucursales[0].id_sucursal : null);
       },
       error: () => {
         this.cargandoSucursales = false;
@@ -115,12 +118,46 @@ export class CheckoutComponent implements OnInit {
     });
   }
 
-  seleccionarSucursal(id: number): void {
-    this.sucursalSeleccionadaId = id;
+  get ciudadesDisponibles(): string[] {
+    const set = new Set(this.sucursales.map(s => s.ciudad).filter(c => !!c));
+    return ['TODAS', ...Array.from(set).sort()];
+  }
+
+  get sucursalesFiltradas(): SucursalCheckout[] {
+    return this.sucursales.filter(s => {
+      const coincideCiudad = this.filtroCiudad === 'TODAS' || 
+        s.ciudad.toLowerCase() === this.filtroCiudad.toLowerCase();
+      const query = this.busquedaSucursal.toLowerCase().trim();
+      const coincideBusqueda = !query || 
+        s.nombre.toLowerCase().includes(query) || 
+        s.direccion.toLowerCase().includes(query) || 
+        s.ciudad.toLowerCase().includes(query);
+      return coincideCiudad && coincideBusqueda;
+    });
+  }
+
+  get haySucursalConStockCompleto(): boolean {
+    return this.sucursales.some(s => s.tiene_stock_completo !== false);
+  }
+
+  seleccionarSucursal(s: SucursalCheckout): void {
+    if (this.modalidadCompra === 'RETIRO_SUCURSAL' && s.tiene_stock_completo === false) {
+      this.errorMensaje = `La sucursal ${s.nombre} no cuenta con todas las prendas de tu bolsa en stock. Elige otra sucursal para el retiro.`;
+      return;
+    }
+    this.sucursalSeleccionadaId = s.id_sucursal;
+    this.errorMensaje = null;
   }
 
   seleccionarModalidad(m: 'RETIRO_SUCURSAL' | 'ENTREGA_DOMICILIO'): void {
     this.modalidadCompra = m;
+    this.errorMensaje = null;
+    if (m === 'RETIRO_SUCURSAL' && this.sucursalSeleccionada?.tiene_stock_completo === false) {
+      const conStock = this.sucursales.find(s => s.tiene_stock_completo !== false);
+      if (conStock) {
+        this.sucursalSeleccionadaId = conStock.id_sucursal;
+      }
+    }
   }
 
   get sucursalSeleccionada(): SucursalCheckout | null {
@@ -130,6 +167,10 @@ export class CheckoutComponent implements OnInit {
   formularioValido(): boolean {
     if (!this.carrito || this.carrito.items.length === 0) return false;
     if (!this.sucursalSeleccionadaId) return false;
+    if (this.modalidadCompra === 'RETIRO_SUCURSAL') {
+      const suc = this.sucursalSeleccionada;
+      if (!suc || suc.tiene_stock_completo === false) return false;
+    }
     if (!this.nombreContacto.trim()) return false;
     if (!this.telefonoContacto.trim()) return false;
 

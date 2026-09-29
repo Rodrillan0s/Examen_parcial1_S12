@@ -147,7 +147,25 @@ def registrar_sucursal(
         permitir_global=False
     )
 
+    # Coordenadas por defecto según departamento / ciudad
+    DEPARTAMENTO_COORDS = {
+        'santa cruz': (-17.7833, -63.1821),
+        'la paz': (-16.5000, -68.1500),
+        'cochabamba': (-17.3895, -66.1568),
+        'chuquisaca': (-19.0333, -65.2627),
+        'sucre': (-19.0333, -65.2627),
+        'oruro': (-17.9833, -67.1500),
+        'potosí': (-19.5836, -65.7531),
+        'potosi': (-19.5836, -65.7531),
+        'tarija': (-21.5355, -64.7296),
+        'beni': (-14.8333, -64.9000),
+        'trinidad': (-14.8333, -64.9000),
+        'pando': (-11.0267, -68.7692),
+        'cobija': (-11.0267, -68.7692),
+    }
+
     # Resolución de Ciudad
+    ciudad_existente = None
     if not id_ciudad:
 
         if (
@@ -173,6 +191,17 @@ def registrar_sucursal(
         if not ciudad_existente:
             raise ValueError("La ciudad seleccionada no es válida.")
 
+    # Si no se suministraron coordenadas o son None, asignar por defecto
+    if latitud is None or longitud is None:
+        dep_key = (departamento or '').strip().lower()
+        if not dep_key and ciudad_existente and isinstance(ciudad_existente, dict):
+            dep_key = (ciudad_existente.get('departamento') or '').strip().lower()
+        coords_def = DEPARTAMENTO_COORDS.get(dep_key, (-17.7833, -63.1821))
+        if latitud is None:
+            latitud = coords_def[0]
+        if longitud is None:
+            longitud = coords_def[1]
+
     nuevo_id = sucursales_repos.crear_sucursal_db(
         nombre=str(nombre).strip(),
         direccion=str(direccion).strip(),
@@ -181,7 +210,8 @@ def registrar_sucursal(
         id_empresa=id_empresa,
         activo=bool(activo),
         latitud=latitud,
-        longitud=longitud
+        longitud=longitud,
+        codigo_sucursal=data.get('codigo_sucursal')
     )
 
     # Auditoría

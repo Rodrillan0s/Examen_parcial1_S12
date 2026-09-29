@@ -59,6 +59,9 @@ export class ProductDetailModalComponent implements OnChanges, OnDestroy {
   toastEsError: boolean = false;
   toastMessage: string = '';
 
+  // Vista actual del modal: 'PRODUCTO' (limpio, compra online) | 'AGENDAR_CITA' (probar en tienda)
+  vistaModal: 'PRODUCTO' | 'AGENDAR_CITA' = 'PRODUCTO';
+
   // Estados del flujo de Reserva en Sucursal
   sucursalReservaSeleccionada: number | null = null;
   fechaReserva: string = '';
@@ -68,6 +71,8 @@ export class ProductDetailModalComponent implements OnChanges, OnDestroy {
   errorReserva: string = '';
   reservaExitosa: boolean = false;
   codigoReservaGenerado: string = '';
+  modalidadReserva: 'SIN_PAGO' | 'CON_PAGO' = 'SIN_PAGO';
+  montoReservaPagado: number = 0;
 
   // Vista RA (Opcional)
   mostrarVistaRA: boolean = false;
@@ -85,6 +90,7 @@ export class ProductDetailModalComponent implements OnChanges, OnDestroy {
       this.quantity = 1;
       this.mostrarVistaRA = false;
       this.reservaExitosa = false;
+      this.vistaModal = 'PRODUCTO';
       this.errorReserva = '';
       this.codigoReservaGenerado = '';
 
@@ -143,13 +149,13 @@ export class ProductDetailModalComponent implements OnChanges, OnDestroy {
     this.errorReserva = '';
     this.reservaExitosa = false;
     this.cargandoReserva = false;
+    this.modalidadReserva = 'SIN_PAGO';
+    this.montoReservaPagado = 0;
 
     // Seleccionar por defecto la primera sucursal con existencias
     const sucs = this.getSucursalesStock();
     const sucConStock = sucs.find(s => this.getStockVarianteEnSucursal(s) > 0);
-    this.sucursalReservaSeleccionada = sucConStock 
-      ? sucConStock.id_sucursal 
-      : (sucs.length > 0 ? sucs[0].id_sucursal : null);
+    this.sucursalReservaSeleccionada = sucConStock ? sucConStock.id_sucursal : null;
   }
 
   // Detectar si el producto recibido es del catálogo real (DetallePrendaCatalogo)
@@ -243,6 +249,97 @@ export class ProductDetailModalComponent implements OnChanges, OnDestroy {
     return this.getSucursalesStock().find(s => s.id_sucursal === Number(this.sucursalReservaSeleccionada));
   }
 
+  /**
+   * REGLAS DE STOCK DE BOUTIQUE (Sin números crudos):
+   * stock > 3   → ✓ Disponible
+   * stock 1–3   → ⚠ Últimas unidades
+   * stock = 0   → Agotado
+   */
+  getEstadoDisponibilidad(stock: number): {
+    texto: string;
+    clase: string;
+    badgeClase: string;
+    icono: string;
+    esAgotado: boolean;
+    esUltimas: boolean;
+  } {
+    if (stock > 3) {
+      return {
+        texto: 'Disponible',
+        clase: 'text-emerald-700 dark:text-emerald-400',
+        badgeClase: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/25',
+        icono: '✓',
+        esAgotado: false,
+        esUltimas: false
+      };
+    }
+    if (stock >= 1 && stock <= 3) {
+      return {
+        texto: 'Últimas unidades',
+        clase: 'text-amber-800 dark:text-amber-300 font-semibold',
+        badgeClase: 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/40 font-bold',
+        icono: '⚠',
+        esAgotado: false,
+        esUltimas: true
+      };
+    }
+    return {
+      texto: 'Agotado',
+      clase: 'text-zinc-500 dark:text-zinc-400',
+      badgeClase: 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border-zinc-300 dark:border-zinc-700',
+      icono: '✕',
+      esAgotado: true,
+      esUltimas: false
+    };
+  }
+
+  getEstadoVarianteActual() {
+    return this.getEstadoDisponibilidad(this.getStockTotalVarianteSeleccionada());
+  }
+
+  getEstadoSucursal(suc: SucursalStockDetalle): string {
+    const st = this.getStockVarianteEnSucursal(suc);
+    if (st > 3) return '✓ Disponible';
+    if (st >= 1 && st <= 3) return '⚠ Últimas unidades';
+    return '✕ Agotado en esta sucursal';
+  }
+
+  getStockTallaEnColorActual(tallaNombre: string): number {
+    if (!this.producto || !this.esDetalleReal(this.producto)) return 99;
+    const v = (this.producto.variantes || []).find(varItem => 
+      varItem.talla_nombre === tallaNombre && 
+      varItem.codigo_hex.toLowerCase() === this.selectedColorHex.toLowerCase()
+    );
+    if (!v) return 0;
+    const sucs = this.getSucursalesStock();
+    const keyStr = v.id_variante.toString();
+    return sucs.reduce((acc, s) => acc + (s.stock_por_variante?.[keyStr] ?? s.stock_por_variante?.[v.id_variante as any] ?? 0), 0);
+  }
+
+  isTallaAgotada(tallaNombre: string): boolean {
+    return this.getStockTallaEnColorActual(tallaNombre) <= 0;
+  }
+
+  isTallaUltimas(tallaNombre: string): boolean {
+    const st = this.getStockTallaEnColorActual(tallaNombre);
+    return st >= 1 && st <= 3;
+  }
+
+  abrirAgendarCita(): void {
+    if (!this.authService.estaAutenticado()) {
+      this.authService.openAuthModal('login');
+      return;
+    }
+    this.errorReserva = '';
+    this.vistaModal = 'AGENDAR_CITA';
+    this.cdr.markForCheck();
+  }
+
+  volverAProducto(): void {
+    this.vistaModal = 'PRODUCTO';
+    this.cdr.markForCheck();
+  }
+
   selectImage(idx: number): void {
     this.selectedImageIndex = idx;
   }
@@ -286,10 +383,12 @@ export class ProductDetailModalComponent implements OnChanges, OnDestroy {
     if (this.getStockSucursalSeleccionada() <= 0) {
       const sucs = this.getSucursalesStock();
       const sucConStock = sucs.find(s => this.getStockVarianteEnSucursal(s) > 0);
-      if (sucConStock) {
-        this.sucursalReservaSeleccionada = sucConStock.id_sucursal;
-      }
+      this.sucursalReservaSeleccionada = sucConStock ? sucConStock.id_sucursal : null;
     }
+  }
+
+  haySucursalConStock(): boolean {
+    return this.getSucursalesStock().some(s => this.getStockVarianteEnSucursal(s) > 0);
   }
 
   onSucursalChange(id: any): void {
@@ -328,8 +427,8 @@ export class ProductDetailModalComponent implements OnChanges, OnDestroy {
     }
 
     // 2. Validar sucursal seleccionada
-    if (!this.sucursalReservaSeleccionada) {
-      this.errorReserva = 'Por favor selecciona la sucursal física donde nos visitarás.';
+    if (!this.sucursalReservaSeleccionada || this.getStockSucursalSeleccionada() <= 0) {
+      this.errorReserva = 'Por favor selecciona una sucursal con disponibilidad de stock.';
       this.cdr.markForCheck();
       return;
     }
@@ -371,6 +470,8 @@ export class ProductDetailModalComponent implements OnChanges, OnDestroy {
     // 6. Preparar payload y ejecutar la reserva en backend
     const fechaHora = `${this.fechaReserva} ${this.horaReserva || '15:00'}`;
     const empresaId = this.esDetalleReal(this.producto) ? this.producto.id_empresa : undefined;
+    const esConPago = this.modalidadReserva === 'CON_PAGO';
+    const totalPagar = this.getPrecioActual() * this.quantity;
 
     this.cargandoReserva = true;
     this.cdr.markForCheck();
@@ -383,12 +484,15 @@ export class ProductDetailModalComponent implements OnChanges, OnDestroy {
         id_variante: v.id_variante,
         cantidad: this.quantity
       }],
-      id_empresa: empresaId
+      id_empresa: empresaId,
+      con_pago: esConPago,
+      monto_pagado: esConPago ? totalPagar : 0.0
     }).subscribe({
       next: (res) => {
         this.cargandoReserva = false;
         this.reservaExitosa = true;
         this.codigoReservaGenerado = res.data.codigo_reserva;
+        this.montoReservaPagado = esConPago ? totalPagar : 0.0;
         this.cdr.markForCheck();
       },
       error: (err) => {
@@ -517,6 +621,7 @@ export class ProductDetailModalComponent implements OnChanges, OnDestroy {
   closeModal(): void {
     this.mostrarVistaRA = false;
     this.reservaExitosa = false;
+    this.vistaModal = 'PRODUCTO';
     this.errorReserva = '';
     this.desbloquearBodyScroll();
     this.close.emit();

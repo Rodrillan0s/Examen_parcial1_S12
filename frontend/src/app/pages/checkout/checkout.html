@@ -194,11 +194,16 @@
             </button>
           </div>
 
-          <!-- Sucursal Selection Grid -->
+          <!-- Sucursal Selection Grid con Búsqueda, Filtros y Control de Stock -->
           <div class="space-y-3">
-            <label class="block text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-zinc-300 font-mono">
-              Sucursal del Tenant Responsable:
-            </label>
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-zinc-300 font-mono">
+                {{ modalidadCompra === 'RETIRO_SUCURSAL' ? 'Sucursal de Retiro:' : 'Sucursal de Origen / Despacho:' }}
+              </label>
+              <span *ngIf="modalidadCompra === 'RETIRO_SUCURSAL'" class="text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+                Solo sucursales con stock completo
+              </span>
+            </div>
 
             <div *ngIf="cargandoSucursales" class="py-4 text-center text-xs text-stone-400 dark:text-zinc-500">
               Cargando sucursales de {{ carrito.nombre_empresa }}...
@@ -208,18 +213,69 @@
               No hay sucursales activas registradas para esta tienda.
             </div>
 
+            <!-- Alerta si ninguna sucursal tiene stock completo para retiro -->
+            <div *ngIf="modalidadCompra === 'RETIRO_SUCURSAL' && !cargandoSucursales && !haySucursalConStockCompleto && sucursales.length > 0"
+                 class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs flex items-center space-x-2">
+              <span class="text-sm shrink-0">⚠️</span>
+              <span class="text-[11px] leading-tight">
+                Ninguna sucursal física cuenta con el stock completo de todas tus prendas. Te recomendamos cambiar a <strong>Entrega a Domicilio</strong>.
+              </span>
+            </div>
+
+            <!-- Buscador y Filtros por Ciudad -->
+            <div *ngIf="sucursales.length > 1" class="space-y-2">
+              <div class="relative">
+                <input type="text"
+                       [(ngModel)]="busquedaSucursal"
+                       placeholder="Buscar sucursal por nombre o dirección..."
+                       class="w-full bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-xl pl-8 pr-8 py-2 text-xs text-stone-900 dark:text-white placeholder-stone-400 focus:outline-none focus:border-amber-500 transition-colors shadow-2xs" />
+                <span class="absolute left-2.5 top-2 text-stone-400 text-xs">🔍</span>
+                <button *ngIf="busquedaSucursal" 
+                        (click)="busquedaSucursal = ''" 
+                        type="button" 
+                        class="absolute right-2.5 top-2 text-stone-400 hover:text-stone-600 text-xs cursor-pointer">
+                  ✕
+                </button>
+              </div>
+
+              <!-- Filtro por Ciudad Chips -->
+              <div class="flex items-center space-x-1.5 overflow-x-auto pb-1 text-xs">
+                <button *ngFor="let c of ciudadesDisponibles"
+                        type="button"
+                        (click)="filtroCiudad = c"
+                        [class.bg-amber-500]="filtroCiudad === c"
+                        [class.text-stone-950]="filtroCiudad === c"
+                        [class.font-bold]="filtroCiudad === c"
+                        [class.bg-stone-100]="filtroCiudad !== c"
+                        [class.dark:bg-zinc-800]="filtroCiudad !== c"
+                        [class.text-stone-600]="filtroCiudad !== c"
+                        [class.dark:text-zinc-400]="filtroCiudad !== c"
+                        class="px-3 py-1 rounded-full text-[11px] border border-stone-200 dark:border-zinc-700 shrink-0 transition-all cursor-pointer">
+                  {{ c }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Grid de Sucursales -->
+            <div *ngIf="!cargandoSucursales && sucursalesFiltradas.length === 0" class="p-4 rounded-xl bg-stone-100 dark:bg-zinc-800/60 text-xs text-stone-500 dark:text-zinc-400 text-center">
+              No se encontraron sucursales con los filtros aplicados.
+            </div>
+
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div *ngFor="let suc of sucursales" 
-                   (click)="seleccionarSucursal(suc.id_sucursal)"
+              <div *ngFor="let suc of sucursalesFiltradas" 
+                   (click)="seleccionarSucursal(suc)"
                    [class.border-amber-500]="sucursalSeleccionadaId === suc.id_sucursal"
                    [class.ring-2]="sucursalSeleccionadaId === suc.id_sucursal"
                    [class.ring-amber-500/20]="sucursalSeleccionadaId === suc.id_sucursal"
                    [class.bg-amber-500/5]="sucursalSeleccionadaId === suc.id_sucursal"
+                   [class.opacity-50]="modalidadCompra === 'RETIRO_SUCURSAL' && suc.tiene_stock_completo === false"
+                   [class.cursor-not-allowed]="modalidadCompra === 'RETIRO_SUCURSAL' && suc.tiene_stock_completo === false"
                    class="p-4 rounded-2xl border border-stone-200 dark:border-zinc-800 transition-all hover:border-amber-500/40 cursor-pointer relative flex flex-col justify-between">
                 
                 <div>
                   <div class="flex items-center justify-between gap-2">
-                    <h4 class="text-xs font-bold text-stone-900 dark:text-zinc-100 truncate">
+                    <h4 class="text-xs font-bold text-stone-900 dark:text-zinc-100 truncate"
+                        [class.text-stone-400]="modalidadCompra === 'RETIRO_SUCURSAL' && suc.tiene_stock_completo === false">
                       {{ suc.nombre }}
                     </h4>
                     <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-stone-100 dark:bg-zinc-800 text-stone-600 dark:text-zinc-400 border border-stone-200 dark:border-zinc-700 shrink-0">
@@ -235,13 +291,32 @@
                   <div *ngIf="suc.telefono" class="text-[10px] text-stone-400 dark:text-zinc-500 font-mono">
                     Tel: {{ suc.telefono }}
                   </div>
+
+                  <!-- Badge de disponibilidad -->
+                  <div class="mt-2.5 flex items-center">
+                    <span [class.bg-emerald-500/10]="suc.tiene_stock_completo !== false"
+                          [class.text-emerald-700]="suc.tiene_stock_completo !== false"
+                          [class.dark:text-emerald-400]="suc.tiene_stock_completo !== false"
+                          [class.border-emerald-500/25]="suc.tiene_stock_completo !== false"
+                          [class.bg-amber-500/15]="suc.stock_estado === 'PARCIAL'"
+                          [class.text-amber-800]="suc.stock_estado === 'PARCIAL'"
+                          [class.dark:text-amber-300]="suc.stock_estado === 'PARCIAL'"
+                          [class.border-amber-500/40]="suc.stock_estado === 'PARCIAL'"
+                          [class.bg-rose-500/10]="suc.stock_estado === 'SIN_STOCK'"
+                          [class.text-rose-700]="suc.stock_estado === 'SIN_STOCK'"
+                          [class.dark:text-rose-400]="suc.stock_estado === 'SIN_STOCK'"
+                          [class.border-rose-500/30]="suc.stock_estado === 'SIN_STOCK'"
+                          class="text-[10px] font-semibold px-2 py-0.5 rounded-full border">
+                      {{ suc.stock_label || (suc.tiene_stock_completo !== false ? '✓ Stock completo' : '✕ Agotado en esta sucursal') }}
+                    </span>
+                  </div>
                 </div>
 
                 <div class="mt-3 pt-2 border-t border-stone-100 dark:border-zinc-800/80 flex items-center justify-between">
                   <span class="text-[10px] font-semibold" 
                         [class.text-amber-600]="sucursalSeleccionadaId === suc.id_sucursal"
                         [class.text-stone-400]="sucursalSeleccionadaId !== suc.id_sucursal">
-                    {{ sucursalSeleccionadaId === suc.id_sucursal ? '✓ Sucursal Seleccionada' : 'Hacer clic para elegir' }}
+                    {{ sucursalSeleccionadaId === suc.id_sucursal ? '✓ Sucursal Seleccionada' : (modalidadCompra === 'RETIRO_SUCURSAL' && suc.tiene_stock_completo === false ? 'No disponible para retiro' : 'Hacer clic para elegir') }}
                   </span>
                   <div class="w-4 h-4 rounded-full border flex items-center justify-center"
                        [class.border-amber-500]="sucursalSeleccionadaId === suc.id_sucursal"

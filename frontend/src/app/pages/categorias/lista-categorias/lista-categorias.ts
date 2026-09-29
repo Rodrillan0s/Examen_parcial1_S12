@@ -55,8 +55,23 @@ export class ListaCategoriasComponent implements OnInit {
   categoriaAeliminar: Categoria | null = null;
 
   ngOnInit(): void {
-    this.cargarEmpresasSiEsAdmin();
+    if (this.esSuperAdmin) {
+      this.filtroEmpresaId = this.authService.getEffectiveCompanyId() || 0;
+      this.cargarEmpresasSiEsAdmin();
+    }
     this.cargarCategorias();
+
+    this.authService.companyChanged$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((emp) => {
+        if (this.esSuperAdmin) {
+          const newId = emp ? emp.id_empresa : 0;
+          if (this.filtroEmpresaId !== newId) {
+            this.filtroEmpresaId = newId;
+            this.cargarCategorias();
+          }
+        }
+      });
   }
 
   get esSuperAdmin(): boolean {

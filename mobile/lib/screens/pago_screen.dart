@@ -132,6 +132,7 @@ class _PagoScreenState extends State<PagoScreen> {
     }
   }
 
+
   Future<void> _iniciarPagoPayPal(ResumenPedidoPagoModel resumen) async {
     if (_deseaFactura) {
       if (_nitCiController.text.trim().isEmpty ||
@@ -526,13 +527,13 @@ class _PagoScreenState extends State<PagoScreen> {
 
           Row(
             children: [
-              // Opción Tarjeta
+              // Opción 1: Tarjeta (Débito / Crédito)
               Expanded(
                 child: InkWell(
                   onTap: () => setState(() => _metodoSeleccionado = 'TARJETA'),
                   borderRadius: BorderRadius.circular(16),
                   child: Container(
-                    padding: const EdgeInsets.all(14),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                     decoration: BoxDecoration(
                       color: _metodoSeleccionado == 'TARJETA'
                           ? AppTheme.goldLight
@@ -555,10 +556,10 @@ class _PagoScreenState extends State<PagoScreen> {
                                 color: AppTheme.primaryGold, size: 24),
                             if (_metodoSeleccionado == 'TARJETA')
                               const Icon(Icons.check_circle,
-                                  color: AppTheme.primaryGold, size: 18),
+                                  color: AppTheme.primaryGold, size: 16),
                           ],
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 8),
                         Text(
                           'Tarjeta',
                           style: GoogleFonts.plusJakartaSans(
@@ -580,13 +581,13 @@ class _PagoScreenState extends State<PagoScreen> {
               ),
               const SizedBox(width: 12),
 
-              // Opción PayPal
+              // Opción 2: PayPal (Internacional)
               Expanded(
                 child: InkWell(
                   onTap: () => setState(() => _metodoSeleccionado = 'PAYPAL'),
                   borderRadius: BorderRadius.circular(16),
                   child: Container(
-                    padding: const EdgeInsets.all(14),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                     decoration: BoxDecoration(
                       color: _metodoSeleccionado == 'PAYPAL'
                           ? const Color(0xFF0070BA).withValues(alpha: 0.08)
@@ -609,10 +610,10 @@ class _PagoScreenState extends State<PagoScreen> {
                                 color: Color(0xFF0070BA), size: 24),
                             if (_metodoSeleccionado == 'PAYPAL')
                               const Icon(Icons.check_circle,
-                                  color: Color(0xFF0070BA), size: 18),
+                                  color: Color(0xFF0070BA), size: 16),
                           ],
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 8),
                         Text(
                           'PayPal',
                           style: GoogleFonts.plusJakartaSans(
@@ -621,7 +622,7 @@ class _PagoScreenState extends State<PagoScreen> {
                           ),
                         ),
                         Text(
-                          'Cuenta Oficial',
+                          'Internacional',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 11,
                             color: AppTheme.textSecondary,

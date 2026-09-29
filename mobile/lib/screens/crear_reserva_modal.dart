@@ -4,9 +4,9 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_provider.dart';
 import '../services/catalogo_service.dart';
-import '../services/pedido_service.dart';
 import '../services/reserva_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/aurora_badge.dart';
 import '../widgets/aurora_button.dart';
 import 'auth_screens.dart';
 
@@ -26,10 +26,11 @@ class CrearReservaModal extends StatefulWidget {
 
 class _CrearReservaModalState extends State<CrearReservaModal> {
   final TextEditingController _observacionesController = TextEditingController();
-  List<SucursalCheckoutModel> _sucursales = [];
-  SucursalCheckoutModel? _sucursalSeleccionada;
+  List<DisponibilidadSucursalModel> _sucursales = [];
+  DisponibilidadSucursalModel? _sucursalSeleccionada;
   DateTime _fechaSeleccionada = DateTime.now().add(const Duration(days: 1));
   TimeOfDay _horaSeleccionada = const TimeOfDay(hour: 15, minute: 0);
+  bool _conPago = false;
 
   bool _cargandoSucursales = true;
   bool _enviando = false;
@@ -48,16 +49,19 @@ class _CrearReservaModalState extends State<CrearReservaModal> {
   }
 
   Future<void> _cargarSucursales() async {
-    final pedidoService = context.read<PedidoService>();
-    final sucursales = await pedidoService.obtenerSucursalesCheckout(
-      idEmpresa: widget.prenda.idEmpresa,
+    final catalogo = context.read<CatalogoService>();
+    final sucursales = await catalogo.consultarDisponibilidadVariante(
+      widget.varianteSeleccionada.idVariante,
     );
 
     if (mounted) {
       setState(() {
         _sucursales = sucursales;
-        if (sucursales.isNotEmpty) {
-          _sucursalSeleccionada = sucursales.first;
+        final conStock = sucursales.where((s) => s.stockDisponible > 0).toList();
+        if (conStock.isNotEmpty) {
+          _sucursalSeleccionada = conStock.first;
+        } else {
+          _sucursalSeleccionada = null;
         }
         _cargandoSucursales = false;
       });
@@ -127,8 +131,8 @@ class _CrearReservaModalState extends State<CrearReservaModal> {
       return;
     }
 
-    if (_sucursalSeleccionada == null) {
-      setState(() => _error = 'Por favor selecciona una sucursal.');
+    if (_sucursalSeleccionada == null || _sucursalSeleccionada!.stockDisponible <= 0) {
+      setState(() => _error = 'Por favor selecciona una sucursal con disponibilidad.');
       return;
     }
 
@@ -161,6 +165,8 @@ class _CrearReservaModalState extends State<CrearReservaModal> {
         ],
         observaciones: _observacionesController.text.trim(),
         idEmpresa: widget.prenda.idEmpresa,
+        conPago: _conPago,
+        montoPagado: _conPago ? widget.prenda.precio : 0.0,
       );
 
       if (mounted) {
@@ -169,16 +175,30 @@ class _CrearReservaModalState extends State<CrearReservaModal> {
           context: context,
           builder: (ctx) => AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: Text(
-              '¡Reserva Confirmada!',
-              style: GoogleFonts.playfairDisplay(fontSize: 20, fontWeight: FontWeight.w700),
+            title: Row(
+              children: [
+                Icon(
+                  _conPago ? Icons.verified : Icons.event_available,
+                  color: AppTheme.primaryGold,
+                  size: 26,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _conPago ? '¡Prenda Asegurada!' : '¡Cita Confirmada!',
+                    style: GoogleFonts.playfairDisplay(fontSize: 19, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
             ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Tu reserva ha sido registrada con el código:',
+                  _conPago
+                      ? 'Tu reserva ha sido pagada y asegurada con éxito:'
+                      : 'Tu reserva ha sido agendada exitosamente:',
                   style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textSecondary),
                 ),
                 const SizedBox(height: 8),
@@ -188,6 +208,7 @@ class _CrearReservaModalState extends State<CrearReservaModal> {
                     decoration: BoxDecoration(
                       color: AppTheme.goldLight,
                       borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.3)),
                     ),
                     child: Text(
                       reserva.codigoReserva,
@@ -204,6 +225,36 @@ class _CrearReservaModalState extends State<CrearReservaModal> {
                 Text(
                   'Te esperamos en ${_sucursalSeleccionada!.nombre} el día ${DateFormat("dd/MM/yyyy 'a las' HH:mm").format(fechaHora)}.',
                   style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textPrimary),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: _conPago ? AppTheme.successLight : AppTheme.surfaceVariant,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _conPago ? Icons.check_circle_outline : Icons.info_outline,
+                        size: 16,
+                        color: _conPago ? AppTheme.success : AppTheme.primaryGold,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _conPago
+                              ? 'Prenda pre-pagada. Lista en probador VIP para retiro prioritario.'
+                              : 'Sin costo previo. Pruébatela en tienda y abona solo si decides comprarla.',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: _conPago ? AppTheme.success : AppTheme.textPrimary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -350,7 +401,7 @@ class _CrearReservaModalState extends State<CrearReservaModal> {
 
                       // Selector de Sucursal
                       Text(
-                        'Sucursal para tu visita',
+                        '1. Selecciona la sucursal para tu cita',
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
@@ -358,31 +409,181 @@ class _CrearReservaModalState extends State<CrearReservaModal> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                        decoration: BoxDecoration(
-                          color: AppTheme.surface,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppTheme.border),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<SucursalCheckoutModel>(
-                            value: _sucursalSeleccionada,
-                            isExpanded: true,
-                            items: _sucursales.map((s) {
-                              return DropdownMenuItem(
-                                value: s,
-                                child: Text('${s.nombre} (${s.ciudad})'),
-                              );
-                            }).toList(),
-                            onChanged: (val) {
-                              setState(() {
-                                _sucursalSeleccionada = val;
-                              });
-                            },
+
+                      if (_sucursales.isEmpty)
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppTheme.surfaceVariant,
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                        ),
-                      ),
+                          child: Text(
+                            'No hay sucursales registradas para esta tienda.',
+                            style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12, color: AppTheme.textSecondary),
+                          ),
+                        )
+                      else ...[
+                        if (_sucursales.every((s) => s.stockDisponible <= 0))
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppTheme.goldLight,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                  color: AppTheme.primaryGold
+                                      .withValues(alpha: 0.3)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.info_outline,
+                                    color: AppTheme.primaryGold, size: 20),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    'Esta prenda se encuentra agotada en todas las sucursales físicas para cita presencial.',
+                                    style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppTheme.textPrimary),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                        ..._sucursales.map((s) {
+                          final tieneStock = s.stockDisponible > 0;
+                          final isSelected =
+                              _sucursalSeleccionada?.idSucursal == s.idSucursal;
+                          final stockLabel = s.stockDisponible <= 0
+                              ? 'Agotado en esta sucursal'
+                              : s.stockDisponible <= 3
+                                  ? '⚠ Últimas unidades'
+                                  : '✓ Disponible';
+                          final badgeColor = s.stockDisponible <= 0
+                              ? AppTheme.errorLight
+                              : s.stockDisponible <= 3
+                                  ? AppTheme.goldLight
+                                  : AppTheme.successLight;
+                          final textColor = s.stockDisponible <= 0
+                              ? AppTheme.error
+                              : s.stockDisponible <= 3
+                                  ? AppTheme.primaryGold
+                                  : AppTheme.success;
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: InkWell(
+                              onTap: tieneStock
+                                  ? () =>
+                                      setState(() => _sucursalSeleccionada = s)
+                                  : () {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            '${s.nombre} no cuenta con existencias para esta talla/color.',
+                                          ),
+                                          duration:
+                                              const Duration(seconds: 2),
+                                          backgroundColor: AppTheme.error,
+                                        ),
+                                      );
+                                    },
+                              borderRadius: BorderRadius.circular(14),
+                              child: AnimatedOpacity(
+                                duration: const Duration(milliseconds: 200),
+                                opacity: tieneStock ? 1.0 : 0.55,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? AppTheme.goldLight
+                                        : tieneStock
+                                            ? AppTheme.surface
+                                            : AppTheme.surfaceVariant
+                                                .withValues(alpha: 0.6),
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? AppTheme.primaryGold
+                                          : tieneStock
+                                              ? AppTheme.border
+                                              : AppTheme.border
+                                                  .withValues(alpha: 0.5),
+                                      width: isSelected ? 1.5 : 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        tieneStock
+                                            ? (isSelected
+                                                ? Icons.radio_button_checked
+                                                : Icons.radio_button_off)
+                                            : Icons.block,
+                                        color: isSelected
+                                            ? AppTheme.primaryGold
+                                            : tieneStock
+                                                ? AppTheme.textMuted
+                                                : AppTheme.error,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              '${s.nombre}${s.ciudad != null ? ' (${s.ciudad})' : ''}',
+                                              style:
+                                                  GoogleFonts.plusJakartaSans(
+                                                fontSize: 13,
+                                                fontWeight: isSelected
+                                                    ? FontWeight.w700
+                                                    : FontWeight.w600,
+                                                color: tieneStock
+                                                    ? AppTheme.textPrimary
+                                                    : AppTheme.textMuted,
+                                              ),
+                                            ),
+                                            if (s.direccion.isNotEmpty) ...[
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                s.direccion,
+                                                style: GoogleFonts
+                                                    .plusJakartaSans(
+                                                  fontSize: 11,
+                                                  color:
+                                                      AppTheme.textSecondary,
+                                                ),
+                                                maxLines: 1,
+                                                overflow:
+                                                    TextOverflow.ellipsis,
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      AuroraBadge(
+                                        text: stockLabel,
+                                        backgroundColor: badgeColor,
+                                        textColor: textColor,
+                                        isSmall: true,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                      ],
 
                       const SizedBox(height: 20),
 
@@ -467,6 +668,143 @@ class _CrearReservaModalState extends State<CrearReservaModal> {
 
                       const SizedBox(height: 20),
 
+                      // Modalidad de Reserva: Sin Pago previo vs Pago Anticipado Online
+                      Text(
+                        'Modalidad de Reserva',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          // Opción 1: Sin Pago Previo
+                          Expanded(
+                            child: InkWell(
+                              onTap: () => setState(() => _conPago = false),
+                              borderRadius: BorderRadius.circular(14),
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: !_conPago
+                                      ? AppTheme.goldLight
+                                      : AppTheme.surface,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: !_conPago
+                                        ? AppTheme.primaryGold
+                                        : AppTheme.border,
+                                    width: !_conPago ? 1.5 : 1,
+                                  ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        const Icon(
+                                          Icons.storefront_outlined,
+                                          size: 20,
+                                          color: AppTheme.primaryGold,
+                                        ),
+                                        if (!_conPago)
+                                          const Icon(
+                                            Icons.check_circle,
+                                            size: 16,
+                                            color: AppTheme.primaryGold,
+                                          ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Cita Gratuita',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Pruébatela y abona en tienda',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 10,
+                                        color: AppTheme.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          // Opción 2: Pago Anticipado Online
+                          Expanded(
+                            child: InkWell(
+                              onTap: () => setState(() => _conPago = true),
+                              borderRadius: BorderRadius.circular(14),
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: _conPago
+                                      ? AppTheme.goldLight
+                                      : AppTheme.surface,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: _conPago
+                                        ? AppTheme.primaryGold
+                                        : AppTheme.border,
+                                    width: _conPago ? 1.5 : 1,
+                                  ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        const Icon(
+                                          Icons.verified_outlined,
+                                          size: 20,
+                                          color: AppTheme.primaryGold,
+                                        ),
+                                        if (_conPago)
+                                          const Icon(
+                                            Icons.check_circle,
+                                            size: 16,
+                                            color: AppTheme.primaryGold,
+                                          ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Pago Anticipado',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Asegura la prenda (Bs. ${widget.prenda.precio.toStringAsFixed(2)})',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 10,
+                                        color: AppTheme.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+
                       // Observaciones
                       Text(
                         'Observaciones o solicitudes especiales',
@@ -493,7 +831,10 @@ class _CrearReservaModalState extends State<CrearReservaModal> {
             child: AuroraButton(
               text: 'Confirmar reserva',
               isLoading: _enviando,
-              onPressed: _confirmarReserva,
+              onPressed: (_sucursalSeleccionada == null ||
+                      _sucursalSeleccionada!.stockDisponible <= 0)
+                  ? null
+                  : _confirmarReserva,
               variant: AuroraButtonVariant.primary,
             ),
           ),

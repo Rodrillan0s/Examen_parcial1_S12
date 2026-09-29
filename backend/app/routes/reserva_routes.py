@@ -1,10 +1,14 @@
 from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from datetime import datetime
+import logging
+from fastapi import APIRouter, Depends, HTTPException, Query, status, BackgroundTasks
 from pydantic import BaseModel, Field
 from app.utils.security import verificar_token
 from app.repos import reserva_repos, catalogo_repos
 from app.classes.postgres import PostgreSQL
 from app.config import Config
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/reservas", tags=["Reservas y Citas en Sucursal"])
 
@@ -18,9 +22,80 @@ class CrearReservaDTO(BaseModel):
     observaciones: Optional[str] = Field(None, max_length=500, description="Observaciones o notas para el asesor de tienda")
     items: List[ItemReservaDTO] = Field(..., min_length=1, description="Listado de prendas y variantes a reservar")
     id_empresa: Optional[int] = Field(None, description="Parámetro opcional; el backend valida y resuelve el Tenant real")
+    con_pago: Optional[bool] = Field(False, description="True si el cliente decidió pagar online anticipadamente")
+    monto_pagado: Optional[float] = Field(0.0, ge=0.0, description="Monto abonado online")
 
 class CancelarReservaDTO(BaseModel):
     motivo: Optional[str] = Field("Cancelación solicitada por el cliente.", max_length=300, description="Motivo de la cancelación")
+
+def _enviar_correo_reserva_background(id_reserva: int):
+    """
+    Tarea en background para generar el PDF de reserva y enviarlo al correo del cliente.
+    """
+    try:
+        from app.services import comprobante_service
+        from app.utils.email_service import enviar_correo_reserva
+
+        db = PostgreSQL()
+        db.create_connection()
+        schema = Config.SCHEMA or 'comercio'
+        try:
+            q_res = f"""
+                SELECT 
+                    r.codigo_reserva,
+                    s.nombre AS sucursal_nombre,
+                    s.direccion AS sucursal_direccion,
+                    r.fecha_hora_visita,
+                    COALESCE(emp.nombre_empresa, 'Tienda Oficial') AS empresa_nombre,
+                    COALESCE(u.nombre, 'Cliente') AS cliente_nombre,
+                    COALESCE(u.apellido, '') AS cliente_apellido,
+                    COALESCE(u.correo, '') AS cliente_correo,
+                    COALESCE(r.con_pago, false) AS con_pago,
+                    COALESCE(r.monto_pagado, 0.0) AS monto_pagado
+                FROM {schema}.t_reserva r
+                JOIN {schema}.t_sucursal s ON s.id_sucursal = r.id_sucursal
+                LEFT JOIN {schema}.empresa emp ON emp.id_empresa = s.id_empresa
+                JOIN {schema}.t_cliente c ON c.id_cliente = r.id_cliente
+                LEFT JOIN {schema}.t_usuario u ON u.id_usuario = c.id_usuario
+                WHERE r.id_reserva = %s;
+            """
+            row = db.execute_query(q_res, (id_reserva,), fetchone=True)
+            if not row or not row[7] or '@' not in row[7]:
+                return
+
+            q_items = f"""
+                SELECT p.nombre, t.nombre, col.nombre, dr.cantidad
+                FROM {schema}.t_detalle_reserva dr
+                JOIN {schema}.t_producto_talla_color v ON v.id_variante = dr.id_variante
+                JOIN {schema}.t_producto p ON p.id_producto = v.id_producto
+                JOIN {schema}.t_talla t ON t.id_talla = v.id_talla
+                JOIN {schema}.t_color col ON col.id_color = v.id_color
+                WHERE dr.id_reserva = %s;
+            """
+            items_raw = db.execute_query(q_items, (id_reserva,), fetchall=True) or []
+            prendas = [{"producto_nombre": it[0], "talla_nombre": it[1], "color_nombre": it[2], "cantidad": it[3]} for it in items_raw]
+
+            fecha_str = row[3].strftime('%d/%m/%Y %H:%M') if isinstance(row[3], datetime) else str(row[3])
+            pdf_bytes = comprobante_service.generar_pdf_reserva(id_reserva)
+
+            enviar_correo_reserva(
+                destinatario_email=row[7],
+                destinatario_nombre=f"{row[5]} {row[6]}".strip(),
+                codigo_reserva=row[0],
+                nombre_tienda=row[4],
+                nombre_sucursal=row[1],
+                direccion_sucursal=row[2],
+                fecha_hora_visita=fecha_str,
+                con_pago=bool(row[8]),
+                monto_pagado=float(row[9]),
+                prendas=prendas,
+                pdf_bytes=pdf_bytes,
+                nombre_archivo=f"Reserva_{row[0]}.pdf"
+            )
+        finally:
+            db.close_connection()
+    except Exception as e:
+        logger.error(f"[RESERVA BACKGROUND EMAIL ERROR] {e}")
 
 def _resolver_empresa_de_sucursal(id_sucursal: int) -> Optional[int]:
     """Obtiene el ID de la empresa dueña de la sucursal física."""
@@ -75,6 +150,7 @@ def _resolver_id_empresa_segura(token_data: dict, id_empresa_param: Optional[int
 @router.post('/', status_code=status.HTTP_201_CREATED, summary="Crear una reserva de prendas para visita en sucursal")
 def crear_reserva(
     body: CrearReservaDTO,
+    background_tasks: BackgroundTasks,
     token_data: dict = Depends(verificar_token)
 ):
     try:
@@ -90,6 +166,10 @@ def crear_reserva(
             id_empresa=empresa_id,
             datos=datos
         )
+
+        # Enviar correo de confirmación de cita en background
+        if reserva.get("id_reserva"):
+            background_tasks.add_task(_enviar_correo_reserva_background, reserva["id_reserva"])
 
         return {
             "success": True,

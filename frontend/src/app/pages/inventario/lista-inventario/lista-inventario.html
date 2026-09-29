@@ -675,6 +675,14 @@
           class="px-3 py-2 bg-stone-100 dark:bg-slate-800 hover:bg-stone-200 rounded-xl text-xs font-bold cursor-pointer">
           Refrescar
         </button>
+
+        <button *ngIf="puedeGestionar" (click)="abrirModalCrearOrden()"
+          class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+          Nueva Orden de Compra
+        </button>
       </div>
     </div>
 
@@ -946,6 +954,173 @@
           Confirmar Recepción e Ingreso a Stock
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal Crear Nueva Orden de Compra (Asignación por Sucursal) -->
+  <div *ngIf="mostrarModalCrearOrden"
+    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+    <div
+      class="bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-800 rounded-3xl p-6 w-full max-w-4xl space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between border-b border-stone-200 dark:border-slate-800 pb-3">
+        <div>
+          <span class="text-[10px] font-mono uppercase font-bold text-indigo-600">Procurement & Compras</span>
+          <h3 class="text-lg font-black text-zinc-900 dark:text-white">Emitir Nueva Orden de Compra</h3>
+          <p class="text-xs text-zinc-500">Solicitud formal de mercadería asignada a una sucursal para reposición o abastecimiento</p>
+        </div>
+        <button (click)="mostrarModalCrearOrden = false"
+          class="text-zinc-400 hover:text-zinc-600 text-2xl font-bold leading-none cursor-pointer">&times;</button>
+      </div>
+
+      <!-- Cabecera de la Orden: Sucursal, Proveedor, Fecha, Observaciones -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-stone-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-stone-200 dark:border-slate-800 text-xs">
+        <div>
+          <label class="block font-bold text-zinc-700 dark:text-slate-300 uppercase tracking-wider text-[11px] mb-1">
+            Sucursal Destino <span class="text-rose-500">*</span>
+          </label>
+          <select [(ngModel)]="nuevaOrdenSucursal"
+            class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-stone-300 dark:border-slate-700 rounded-xl font-bold">
+            <option [ngValue]="null" disabled>Seleccionar Sucursal...</option>
+            <option *ngFor="let s of sucursales" [ngValue]="s.id_sucursal">{{ s.nombre }}</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-bold text-zinc-700 dark:text-slate-300 uppercase tracking-wider text-[11px] mb-1">
+            Proveedor
+          </label>
+          <select [(ngModel)]="nuevaOrdenProveedor"
+            class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-stone-300 dark:border-slate-700 rounded-xl">
+            <option [ngValue]="null">Sin Proveedor / Compra Directa</option>
+            <option *ngFor="let p of proveedores" [ngValue]="p.id_proveedor">{{ p.razon_social }}</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-bold text-zinc-700 dark:text-slate-300 uppercase tracking-wider text-[11px] mb-1">
+            Fecha de Entrega Esperada
+          </label>
+          <input type="date" [(ngModel)]="nuevaOrdenFechaEntrega"
+            class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-stone-300 dark:border-slate-700 rounded-xl">
+        </div>
+
+        <div class="sm:col-span-3">
+          <label class="block font-bold text-zinc-700 dark:text-slate-300 uppercase tracking-wider text-[11px] mb-1">
+            Observaciones / Justificación
+          </label>
+          <input type="text" [(ngModel)]="nuevaOrdenObservaciones"
+            placeholder="Ej: Pedido de reposición para campaña de temporada..."
+            class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-stone-300 dark:border-slate-700 rounded-xl">
+        </div>
+      </div>
+
+      <!-- Detalle de Prendas Solicitadas -->
+      <div class="space-y-3">
+        <div class="flex items-center justify-between">
+          <h4 class="text-xs font-black uppercase text-zinc-800 dark:text-slate-200">Prendas Solicitadas</h4>
+          <button (click)="agregarItemNuevaOrden()" type="button"
+            class="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 text-xs font-bold rounded-xl flex items-center gap-1 cursor-pointer transition-colors">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            + Agregar Prenda
+          </button>
+        </div>
+
+        <div class="border border-stone-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-stone-50 dark:bg-slate-800/60 text-zinc-500 font-semibold border-b border-stone-200 dark:border-slate-800">
+                <tr>
+                  <th class="py-2.5 px-3">Código Prenda</th>
+                  <th class="py-2.5 px-3">Nombre del Producto</th>
+                  <th class="py-2.5 px-3">Talla</th>
+                  <th class="py-2.5 px-3">Color</th>
+                  <th class="py-2.5 px-3 text-center w-24">Cant.</th>
+                  <th class="py-2.5 px-3 text-right w-28">Costo Est. (Bs.)</th>
+                  <th class="py-2.5 px-3 text-right w-28">Subtotal (Bs.)</th>
+                  <th class="py-2.5 px-3 text-center w-12"></th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-stone-100 dark:divide-slate-800 font-medium">
+                <tr *ngFor="let it of nuevaOrdenItems; let i = index" class="hover:bg-stone-50/50 dark:hover:bg-slate-800/30">
+                  <td class="py-2 px-3">
+                    <input type="text" [(ngModel)]="it.codigo_producto" (change)="seleccionarProductoParaItem(i, $event.target)"
+                      placeholder="Ej: CAM-001"
+                      class="w-full px-2 py-1.5 font-mono font-bold bg-white dark:bg-slate-800 border border-stone-300 dark:border-slate-700 rounded-lg text-xs uppercase">
+                  </td>
+                  <td class="py-2 px-3">
+                    <input type="text" [(ngModel)]="it.nombre_producto"
+                      placeholder="Ej: Camisa Slim Fit"
+                      class="w-full px-2 py-1.5 bg-white dark:bg-slate-800 border border-stone-300 dark:border-slate-700 rounded-lg text-xs">
+                  </td>
+                  <td class="py-2 px-3">
+                    <input type="text" [(ngModel)]="it.talla" placeholder="M"
+                      class="w-16 px-2 py-1.5 bg-white dark:bg-slate-800 border border-stone-300 dark:border-slate-700 rounded-lg text-xs uppercase text-center font-bold">
+                  </td>
+                  <td class="py-2 px-3">
+                    <input type="text" [(ngModel)]="it.color" placeholder="Blanco"
+                      class="w-24 px-2 py-1.5 bg-white dark:bg-slate-800 border border-stone-300 dark:border-slate-700 rounded-lg text-xs text-center font-medium">
+                  </td>
+                  <td class="py-2 px-3 text-center">
+                    <input type="number" [(ngModel)]="it.cantidad_solicitada" (input)="recalcularSubtotalItem(i)" min="1"
+                      class="w-20 px-2 py-1.5 bg-white dark:bg-slate-800 border border-stone-300 dark:border-slate-700 rounded-lg text-xs text-center font-mono font-bold">
+                  </td>
+                  <td class="py-2 px-3 text-right">
+                    <input type="number" [(ngModel)]="it.costo_unitario" (input)="recalcularSubtotalItem(i)" min="0" step="0.5"
+                      class="w-24 px-2 py-1.5 bg-white dark:bg-slate-800 border border-stone-300 dark:border-slate-700 rounded-lg text-xs text-right font-mono font-bold">
+                  </td>
+                  <td class="py-2 px-3 text-right font-mono font-bold text-zinc-900 dark:text-white">
+                    Bs. {{ it.subtotal | number:'1.2-2' }}
+                  </td>
+                  <td class="py-2 px-3 text-center">
+                    <button (click)="eliminarItemNuevaOrden(i)" type="button"
+                      class="text-rose-500 hover:text-rose-700 p-1 font-bold rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer"
+                      title="Quitar prenda">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Resumen y Acciones Finales -->
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-3 border-t border-stone-200 dark:border-slate-800">
+        <div class="flex items-center gap-6 text-xs">
+          <div>
+            <span class="text-zinc-400">Total Prendas:</span>
+            <div class="text-sm font-bold font-mono text-zinc-800 dark:text-slate-200">
+              {{ calcularTotalPrendasNuevaOrden() }} unidades
+            </div>
+          </div>
+          <div>
+            <span class="text-zinc-400">Total Estimado Orden:</span>
+            <div class="text-base font-black font-mono text-indigo-600 dark:text-indigo-400">
+              Bs. {{ calcularTotalNuevaOrden() | number:'1.2-2' }}
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <button (click)="mostrarModalCrearOrden = false" type="button"
+            class="px-4 py-2 text-xs font-bold bg-stone-100 dark:bg-slate-800 hover:bg-stone-200 rounded-xl cursor-pointer">
+            Cancelar
+          </button>
+          <button (click)="confirmarCrearOrden()" [disabled]="guardandoNuevaOrden" type="button"
+            class="px-5 py-2 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-md cursor-pointer disabled:opacity-50 flex items-center gap-2">
+            <span *ngIf="guardandoNuevaOrden" class="inline-block animate-spin">&#9696;</span>
+            Emitir Orden de Compra
+          </button>
+        </div>
+      </div>
+
     </div>
   </div>
 

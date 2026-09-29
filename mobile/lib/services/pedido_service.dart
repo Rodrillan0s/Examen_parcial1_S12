@@ -9,6 +9,9 @@ class SucursalCheckoutModel {
   final String direccion;
   final String? telefono;
   final String ciudad;
+  final bool tieneStockCompleto;
+  final String stockEstado;
+  final String stockLabel;
 
   SucursalCheckoutModel({
     required this.idSucursal,
@@ -17,6 +20,9 @@ class SucursalCheckoutModel {
     required this.direccion,
     this.telefono,
     required this.ciudad,
+    this.tieneStockCompleto = true,
+    this.stockEstado = 'DISPONIBLE',
+    this.stockLabel = '✓ Disponible',
   });
 
   factory SucursalCheckoutModel.fromJson(Map<String, dynamic> json) {
@@ -27,6 +33,9 @@ class SucursalCheckoutModel {
       direccion: json['direccion'] ?? '',
       telefono: json['telefono']?.toString(),
       ciudad: json['ciudad'] ?? '',
+      tieneStockCompleto: json['tiene_stock_completo'] ?? true,
+      stockEstado: json['stock_estado'] ?? 'DISPONIBLE',
+      stockLabel: json['stock_label'] ?? '✓ Disponible',
     );
   }
 }

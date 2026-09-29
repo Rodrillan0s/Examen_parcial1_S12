@@ -83,6 +83,18 @@ tabActiva: 'SUCURSALES' | 'CIUDADES' | 'MAPA' = 'SUCURSALES';
     'Pando'
   ];
 
+  readonly DEPARTAMENTO_COORDS_MAP: Record<string, { lat: number; lng: number }> = {
+    'Santa Cruz': { lat: -17.7833, lng: -63.1821 },
+    'La Paz': { lat: -16.5000, lng: -68.1500 },
+    'Cochabamba': { lat: -17.3895, lng: -66.1568 },
+    'Chuquisaca': { lat: -19.0333, lng: -65.2627 },
+    'Oruro': { lat: -17.9833, lng: -67.1500 },
+    'Potosí': { lat: -19.5836, lng: -65.7531 },
+    'Tarija': { lat: -21.5355, lng: -64.7296 },
+    'Beni': { lat: -14.8333, lng: -64.9000 },
+    'Pando': { lat: -11.0267, lng: -68.7692 },
+  };
+
   // Metrics
   totalSucursales: number = 0;
   sucursalesActivas: number = 0;
@@ -133,10 +145,23 @@ get sucursalesParaMapa(): Sucursal[] {
 
       if (this.isGlobalAdmin) {
         this.cargarEmpresas();
+        const effId = this.authService.getEffectiveCompanyId();
+        if (effId) {
+          this.filtroEmpresaId = Number(effId);
+        }
       }
 
       this.cargarCiudades();
       this.cargarSucursales();
+
+      this.authService.companyChanged$
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe((emp) => {
+          if (this.isGlobalAdmin) {
+            this.filtroEmpresaId = emp && emp.id_empresa ? Number(emp.id_empresa) : 0;
+            this.aplicarFiltrosSucursales();
+          }
+        });
 
     } else {
       this.cargando = false;
@@ -238,8 +263,19 @@ cambiarTab(tab: 'SUCURSALES' | 'CIUDADES' | 'MAPA') {
   // ============================================================
 
   inicializarSucursal(): Sucursal {
-    const idEmpresaDefault =
-      this.isGlobalAdmin ? 0 : this.idEmpresaSesion;
+    const empresaSeleccionada = this.authService.selectedCompany()?.id_empresa;
+    let idEmpresaDefault = 0;
+    if (this.isGlobalAdmin) {
+      if (this.filtroEmpresaId > 0) {
+        idEmpresaDefault = this.filtroEmpresaId;
+      } else if (empresaSeleccionada) {
+        idEmpresaDefault = empresaSeleccionada;
+      } else if (this.empresas.length > 0 && this.empresas[0].id_empresa) {
+        idEmpresaDefault = this.empresas[0].id_empresa;
+      }
+    } else {
+      idEmpresaDefault = this.idEmpresaSesion || 0;
+    }
 
     return {
       nombre: '',
@@ -249,8 +285,8 @@ cambiarTab(tab: 'SUCURSALES' | 'CIUDADES' | 'MAPA') {
       ciudad: '',
       departamento: 'Santa Cruz',
       id_empresa: idEmpresaDefault,
-      latitud: null,
-      longitud: null,
+      latitud: -17.7833,
+      longitud: -63.1821,
       activo: true
     };
   }
@@ -407,9 +443,23 @@ cambiarTab(tab: 'SUCURSALES' | 'CIUDADES' | 'MAPA') {
     this.sucursalForm.ciudad = c.nombre;
     this.sucursalForm.departamento = c.departamento;
 
+    if (this.DEPARTAMENTO_COORDS_MAP[c.departamento]) {
+      const coords = this.DEPARTAMENTO_COORDS_MAP[c.departamento];
+      this.sucursalForm.latitud = coords.lat;
+      this.sucursalForm.longitud = coords.lng;
+    }
+
     this.inputCiudadTexto = c.nombre;
     this.mostrarMenuCiudades = false;
 
+    this.cdr.detectChanges();
+  }
+
+  onDepartamentoChange() {
+    const depto = this.sucursalForm.departamento || 'Santa Cruz';
+    const coords = this.DEPARTAMENTO_COORDS_MAP[depto] || { lat: -17.7833, lng: -63.1821 };
+    this.sucursalForm.latitud = coords.lat;
+    this.sucursalForm.longitud = coords.lng;
     this.cdr.detectChanges();
   }
 
@@ -561,9 +611,10 @@ cambiarTab(tab: 'SUCURSALES' | 'CIUDADES' | 'MAPA') {
       this.sucursalForm.longitud === null ||
       this.sucursalForm.longitud === undefined
     ) {
-      this.mensajeModalError =
-        'Debe seleccionar la ubicación de la sucursal en el mapa.';
-      return;
+      const depto = this.sucursalForm.departamento || 'Santa Cruz';
+      const fallbackCoords = this.DEPARTAMENTO_COORDS_MAP[depto] || { lat: -17.7833, lng: -63.1821 };
+      this.sucursalForm.latitud = fallbackCoords.lat;
+      this.sucursalForm.longitud = fallbackCoords.lng;
     }
 
     this.guardando = true;

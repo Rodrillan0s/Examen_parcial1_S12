@@ -35,6 +35,13 @@ class ProcesarTarjetaDTO(BaseModel):
     razon_social: Optional[str] = Field(None, max_length=150)
     id_empresa: Optional[int] = None
 
+class ProcesarQRDTO(BaseModel):
+    id_pedido: int = Field(..., gt=0, description="ID del pedido a pagar")
+    codigo_transaccion: Optional[str] = Field(None, max_length=100, description="Código de referencia QR o comprobante bancario")
+    nit_ci: Optional[str] = Field(None, max_length=50)
+    razon_social: Optional[str] = Field(None, max_length=150)
+    id_empresa: Optional[int] = None
+
 class CancelarPagoDTO(BaseModel):
     id_pedido: int = Field(..., gt=0)
     motivo: Optional[str] = Field("Cancelado por el usuario", max_length=200)
@@ -55,7 +62,8 @@ def _enviar_comprobante_background(id_venta: int):
             numero_documento=datos["numero_venta"],
             total_bs=datos["total"],
             pdf_bytes=pdf_bytes,
-            nombre_archivo=f"{datos['tipo_documento']}_{datos['numero_venta']}.pdf"
+            nombre_archivo=f"{datos['tipo_documento']}_{datos['numero_venta']}.pdf",
+            nombre_tienda=datos.get("empresa_nombre", "Tienda Oficial")
         )
     except Exception as e:
         logger.error(f"[W29 BACKGROUND EMAIL ERROR] {e}")
@@ -258,6 +266,57 @@ def procesar_tarjeta_endpoint(
                 "total": pedido["total"],
                 "metodo_pago": f"Tarjeta (terminada en {ultimos_cuatro})",
                 "codigo_transaccion": codigo_auth,
+                "url_descarga_pdf": f"/api/comprobantes/venta/{id_venta}/pdf"
+            }
+        }
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+@router.post('/qr/confirmar', summary="W27 + W29: Confirmar pago por QR Simple interoperable")
+def confirmar_qr_endpoint(
+    body: ProcesarQRDTO,
+    background_tasks: BackgroundTasks,
+    token_data: dict = Depends(verificar_token)
+):
+    try:
+        id_usuario = token_data.get('nro_usuario') or token_data.get('id_usuario')
+        pedido = pago_repos.validar_pedido_para_pago(body.id_pedido, id_usuario, body.id_empresa)
+
+        import uuid
+        codigo_transaccion = body.codigo_transaccion or f"QR-BCB-{uuid.uuid4().hex[:8].upper()}"
+
+        # Confirmación atómica en PostgreSQL mediante fn_confirmar_pago_pedido con tipo_metodo="QR"
+        res_db = pago_repos.ejecutar_confirmacion_pago(
+            id_pedido=pedido["id_pedido"],
+            tipo_metodo="QR",
+            codigo_transaccion=codigo_transaccion,
+            monto=pedido["total"],
+            id_usuario=id_usuario,
+            nit_ci=body.nit_ci,
+            razon_social=body.razon_social,
+            tipo_documento="FACTURA" if (body.nit_ci and body.nit_ci.strip()) else "COMPROBANTE"
+        )
+
+        id_venta = res_db.get("id_venta")
+        if id_venta:
+            background_tasks.add_task(_enviar_comprobante_background, id_venta)
+
+        return {
+            "success": True,
+            "message": "Pago por QR Simple acreditado y venta confirmada exitosamente.",
+            "data": {
+                "id_pedido": pedido["id_pedido"],
+                "codigo_pedido": pedido["codigo_pedido"],
+                "id_venta": id_venta,
+                "numero_venta": res_db.get("numero_venta"),
+                "tipo_documento": res_db.get("tipo_documento"),
+                "total": pedido["total"],
+                "metodo_pago": "QR Simple Interoperable",
+                "codigo_transaccion": codigo_transaccion,
                 "url_descarga_pdf": f"/api/comprobantes/venta/{id_venta}/pdf"
             }
         }

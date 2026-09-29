@@ -14,6 +14,9 @@ export interface SucursalCheckout {
   horario?: string;
   ciudad: string;
   activo: boolean;
+  tiene_stock_completo?: boolean;
+  stock_estado?: string;
+  stock_label?: string;
 }
 
 export interface CrearPedidoPayload {

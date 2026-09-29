@@ -93,6 +93,27 @@ export interface LoteIngresoItem {
   observaciones?: string;
 }
 
+export interface CrearItemOrdenPayload {
+  id_producto?: number;
+  id_variante?: number;
+  codigo_producto: string;
+  nombre_producto: string;
+  talla?: string;
+  color?: string;
+  sku?: string;
+  cantidad_solicitada: number;
+  costo_unitario: number;
+}
+
+export interface CrearOrdenCompraPayload {
+  id_sucursal: number;
+  id_empresa?: number;
+  id_proveedor?: number | null;
+  fecha_entrega_esperada?: string;
+  observaciones?: string;
+  items: CrearItemOrdenPayload[];
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -151,19 +172,26 @@ export class ComprasLotesService {
     guia_remision?: string;
     observaciones?: string;
   }): Observable<any> {
+    const effectiveCompany = payload.id_empresa ?? this.authService.getEffectiveCompanyId();
+    const body = {
+      ...payload,
+      id_empresa: effectiveCompany
+    };
     return this.http.post(
       `${this.apiUrl}/api/inventario/importacion/confirmar`,
-      payload,
+      body,
       { headers: this.getHeaders() }
     );
   }
 
   // ============================================================================
-  // 2. ÓRDENES DE COMPRA & LOTES
+  // 2. ÓRDENES DE COMPRA & LOTES (POR SUCURSAL Y TENANT)
   // ============================================================================
 
-  listarOrdenesCompra(filtros?: { id_sucursal?: number; estado?: string }): Observable<{ success: boolean; ordenes: OrdenCompraItem[]; total: number }> {
+  listarOrdenesCompra(filtros?: { id_sucursal?: number; estado?: string; id_empresa?: number }): Observable<{ success: boolean; ordenes: OrdenCompraItem[]; total: number }> {
     let params = new HttpParams();
+    const effectiveCompany = filtros?.id_empresa ?? this.authService.getEffectiveCompanyId();
+    if (effectiveCompany) params = params.set('id_empresa', effectiveCompany.toString());
     if (filtros?.id_sucursal) params = params.set('id_sucursal', filtros.id_sucursal.toString());
     if (filtros?.estado && filtros.estado !== 'TODOS') params = params.set('estado', filtros.estado);
 
@@ -173,10 +201,27 @@ export class ComprasLotesService {
     );
   }
 
-  obtenerDetalleOrden(idOrden: number): Observable<{ success: boolean; orden: OrdenCompraItem }> {
+  crearOrdenCompra(payload: CrearOrdenCompraPayload): Observable<{ success: boolean; mensaje: string; orden: OrdenCompraItem }> {
+    const effectiveCompany = payload.id_empresa ?? this.authService.getEffectiveCompanyId();
+    const body = {
+      ...payload,
+      id_empresa: effectiveCompany
+    };
+    return this.http.post<{ success: boolean; mensaje: string; orden: OrdenCompraItem }>(
+      `${this.apiUrl}/api/compras/ordenes`,
+      body,
+      { headers: this.getHeaders() }
+    );
+  }
+
+  obtenerDetalleOrden(idOrden: number, idEmpresa?: number): Observable<{ success: boolean; orden: OrdenCompraItem }> {
+    let params = new HttpParams();
+    const effectiveCompany = idEmpresa ?? this.authService.getEffectiveCompanyId();
+    if (effectiveCompany) params = params.set('id_empresa', effectiveCompany.toString());
+
     return this.http.get<{ success: boolean; orden: OrdenCompraItem }>(
       `${this.apiUrl}/api/compras/ordenes/${idOrden}`,
-      { headers: this.getHeaders() }
+      { headers: this.getHeaders(), params }
     );
   }
 
@@ -204,8 +249,14 @@ export class ComprasLotesService {
     );
   }
 
-  listarLotes(idSucursal?: number): Observable<{ success: boolean; lotes: LoteIngresoItem[]; total: number }> {
+  listarLotes(filtros?: { id_sucursal?: number; id_empresa?: number } | number): Observable<{ success: boolean; lotes: LoteIngresoItem[]; total: number }> {
     let params = new HttpParams();
+    const effectiveCompany = typeof filtros === 'object' && filtros?.id_empresa 
+      ? filtros.id_empresa 
+      : this.authService.getEffectiveCompanyId();
+    if (effectiveCompany) params = params.set('id_empresa', effectiveCompany.toString());
+
+    const idSucursal = typeof filtros === 'number' ? filtros : filtros?.id_sucursal;
     if (idSucursal) params = params.set('id_sucursal', idSucursal.toString());
 
     return this.http.get<{ success: boolean; lotes: LoteIngresoItem[]; total: number }>(

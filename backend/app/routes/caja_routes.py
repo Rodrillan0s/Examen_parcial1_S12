@@ -32,6 +32,12 @@ class CerrarCajaDTO(BaseModel):
     observacion: Optional[str] = Field(None, max_length=300)
     observaciones: Optional[str] = Field(None, max_length=300)
 
+class CrearCajaDTO(BaseModel):
+    id_sucursal: int = Field(..., gt=0, description="Sucursal donde se ubica la caja")
+    id_empresa: Optional[int] = Field(None, gt=0, description="Empresa de la caja")
+    nombre: str = Field(..., min_length=2, max_length=150, description="Nombre descriptivo de la caja")
+    codigo_caja: Optional[str] = Field(None, max_length=50, description="Código de caja opcional")
+
 
 def _verificar_permiso_cajero(token_data: dict) -> None:
     """
@@ -45,6 +51,29 @@ def _verificar_permiso_cajero(token_data: dict) -> None:
         status_code=status.HTTP_403_FORBIDDEN,
         detail="Acceso restringido. No tienes permisos para operar la caja registradora."
     )
+
+
+def _verificar_permiso_supervisor(token_data: dict) -> None:
+    """
+    Verifica que el usuario sea Administrador General, Administrador de Tienda,
+    Encargado de Sucursal o cuente con permisos de monitoreo/reportes.
+    """
+    id_rol = token_data.get("id_rol")
+    roles = [str(r).upper() for r in token_data.get("roles", [])]
+    alcance = token_data.get("alcance")
+
+    es_supervisor = (
+        id_rol in (1, 2, 3, 4) or
+        any(r in ('ADMINISTRADOR', 'SUPERADMIN', 'ADMINISTRADOR_TIENDA', 'ENCARGADO', 'ENCARGADO_SUCURSAL') for r in roles) or
+        alcance in ('PLATAFORMA', 'EMPRESA') or
+        any(tiene_permiso(token_data, codigo) for codigo in ('caja.ver', 'reportes.ver', 'ventas.ver', 'admin.acceder'))
+    )
+
+    if not es_supervisor:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acceso restringido. Solo Administradores y Encargados pueden supervisar las cajas."
+        )
 
 
 def _obtener_empresa_efectiva(token_data: dict, id_empresa_solicitada: Optional[int] = None) -> int:
@@ -312,4 +341,105 @@ def cerrar_caja(
         raise
     except Exception as e:
         logger.error(f"[CERRAR CAJA ERROR] {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.get('/monitoreo', summary="Supervisión en vivo de cajas registradoras por tienda y sucursales")
+def monitorear_cajas(
+    id_empresa: Optional[int] = Query(None, description="Filtrar por empresa"),
+    id_sucursal: Optional[int] = Query(None, description="Filtrar por sucursal"),
+    estado: Optional[str] = Query(None, description="Filtrar por estado: TODAS, ABIERTA, CERRADA"),
+    token_data: dict = Depends(verificar_token)
+):
+    _verificar_permiso_supervisor(token_data)
+    try:
+        alcance = token_data.get("alcance")
+        id_rol = token_data.get("id_rol")
+        roles = [str(r).upper() for r in token_data.get("roles", [])]
+        es_global = (id_rol == 1 or "ADMINISTRADOR" in roles or "SUPERADMIN" in roles or alcance == "PLATAFORMA")
+
+        empresa_efectiva = id_empresa if (es_global and id_empresa) else (token_data.get("id_empresa") or id_empresa)
+        
+        sucursal_efectiva = id_sucursal
+        if not es_global and alcance != "EMPRESA" and id_rol not in (1, 3):
+            # Encargado de sucursal se restringe a sus sucursales autorizadas
+            sucursales_usuario = token_data.get("sucursales", [])
+            if sucursales_usuario:
+                sucursal_efectiva = sucursales_usuario[0]
+
+        data = caja_repos.monitorear_cajas_tienda_sucursal(
+            id_empresa=empresa_efectiva,
+            id_sucursal=sucursal_efectiva,
+            estado_filtro=estado
+        )
+        return data
+    except Exception as e:
+        logger.error(f"[MONITOREO CAJAS ERROR] {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.get('/sesiones-historial', summary="Historial de turnos y arqueos de caja")
+def listar_historial_sesiones(
+    id_empresa: Optional[int] = Query(None),
+    id_sucursal: Optional[int] = Query(None),
+    id_caja: Optional[int] = Query(None),
+    limite: int = Query(50, ge=1, le=200),
+    token_data: dict = Depends(verificar_token)
+):
+    _verificar_permiso_supervisor(token_data)
+    try:
+        alcance = token_data.get("alcance")
+        id_rol = token_data.get("id_rol")
+        roles = [str(r).upper() for r in token_data.get("roles", [])]
+        es_global = (id_rol == 1 or "ADMINISTRADOR" in roles or "SUPERADMIN" in roles or alcance == "PLATAFORMA")
+
+        empresa_efectiva = id_empresa if (es_global and id_empresa) else (token_data.get("id_empresa") or id_empresa)
+        sucursal_efectiva = id_sucursal
+        if not es_global and alcance != "EMPRESA" and id_rol not in (1, 3):
+            sucursales_usuario = token_data.get("sucursales", [])
+            if sucursales_usuario:
+                sucursal_efectiva = sucursales_usuario[0]
+
+        sesiones = caja_repos.listar_todas_sesiones_caja(
+            id_empresa=empresa_efectiva,
+            id_sucursal=sucursal_efectiva,
+            id_caja=id_caja,
+            limite=limite
+        )
+        return {
+            "success": True,
+            "sesiones": sesiones,
+            "total": len(sesiones)
+        }
+    except Exception as e:
+        logger.error(f"[HISTORIAL SESIONES ERROR] {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.post('/crear', summary="Registrar una nueva caja física para una sucursal")
+def registrar_caja(
+    body: CrearCajaDTO,
+    token_data: dict = Depends(verificar_token)
+):
+    _verificar_permiso_supervisor(token_data)
+    try:
+        id_emp = _obtener_empresa_efectiva(token_data, body.id_empresa)
+        id_suc = _obtener_sucursal_efectiva(token_data, body.id_sucursal, id_emp)
+
+        nueva_caja = caja_repos.crear_nueva_caja(
+            id_sucursal=id_suc,
+            id_empresa=id_emp,
+            nombre=body.nombre,
+            codigo_caja=body.codigo_caja
+        )
+        return {
+            "success": True,
+            "message": f"Caja '{nueva_caja['nombre']}' registrada exitosamente con código {nueva_caja['codigo_caja']}.",
+            "caja": nueva_caja,
+            "data": nueva_caja
+        }
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        logger.error(f"[CREAR CAJA ERROR] {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

@@ -1,6 +1,6 @@
 from app.classes.postgres import PostgreSQL
 from app.config import Config
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 def ejecutar_extraccion_y_carga_etl_db():
     """
@@ -556,12 +556,15 @@ def obtener_tenants_dashboard_db():
     """
     Retorna todas las empresas / tiendas activas con su resumen de sucursales,
     productos, inventario total disponible y ventas acumuladas para el panel administrativo.
+    Optimizado en 2 consultas batch indexadas (eliminando N+1 y subconsultas correlacionadas).
     """
     db = PostgreSQL()
     db.create_connection()
     try:
         schema = Config.SCHEMA or 'comercio'
-        query = f"""
+
+        # 1. Consulta consolidada de empresas y agregaciones principales
+        query_empresas = f"""
             SELECT 
                 e.id_empresa,
                 e.nombre_empresa,
@@ -573,34 +576,68 @@ def obtener_tenants_dashboard_db():
                 COALESCE(e.correo, '') as correo,
                 COALESCE(e.logo, '') as logo,
                 COALESCE(e.estado, 'ACTIVO') as estado,
-                (SELECT COUNT(*) FROM {schema}.t_sucursal s WHERE s.id_empresa = e.id_empresa AND (s.activo = TRUE OR s.estado = TRUE)) as total_sucursales,
-                (SELECT COUNT(*) FROM {schema}.t_producto p WHERE p.id_empresa = e.id_empresa) as total_productos,
-                (SELECT COALESCE(SUM(i.stock_disponible), 0) FROM {schema}.t_inventario i JOIN {schema}.t_sucursal s ON i.id_sucursal = s.id_sucursal WHERE s.id_empresa = e.id_empresa) as total_stock_disponible,
-                (SELECT COUNT(*) FROM {schema}.t_venta v WHERE v.id_empresa = e.id_empresa) as total_ventas_cantidad,
-                (SELECT COALESCE(SUM(v.total), 0) FROM {schema}.t_venta v WHERE v.id_empresa = e.id_empresa) as total_ingresos_historico
+                COALESCE(suc.total_sucursales, 0) as total_sucursales,
+                COALESCE(prod.total_productos, 0) as total_productos,
+                COALESCE(inv.total_stock_disponible, 0) as total_stock_disponible,
+                COALESCE(ven.total_ventas_cantidad, 0) as total_ventas_cantidad,
+                COALESCE(ven.total_ingresos_historico, 0) as total_ingresos_historico
             FROM {schema}.empresa e
+            LEFT JOIN (
+                SELECT id_empresa, COUNT(*) as total_sucursales
+                FROM {schema}.t_sucursal
+                WHERE activo = TRUE OR estado = TRUE
+                GROUP BY id_empresa
+            ) suc ON suc.id_empresa = e.id_empresa
+            LEFT JOIN (
+                SELECT id_empresa, COUNT(*) as total_productos
+                FROM {schema}.t_producto
+                GROUP BY id_empresa
+            ) prod ON prod.id_empresa = e.id_empresa
+            LEFT JOIN (
+                SELECT s.id_empresa, COALESCE(SUM(i.stock_disponible), 0) as total_stock_disponible
+                FROM {schema}.t_inventario i
+                JOIN {schema}.t_sucursal s ON s.id_sucursal = i.id_sucursal
+                GROUP BY s.id_empresa
+            ) inv ON inv.id_empresa = e.id_empresa
+            LEFT JOIN (
+                SELECT id_empresa, COUNT(*) as total_ventas_cantidad, COALESCE(SUM(total), 0) as total_ingresos_historico
+                FROM {schema}.t_venta
+                GROUP BY id_empresa
+            ) ven ON ven.id_empresa = e.id_empresa
             WHERE UPPER(e.estado) = 'ACTIVO'
             ORDER BY e.id_empresa ASC;
         """
-        rows = db.execute_query(query, fetchall=True) or []
+        rows = db.execute_query(query_empresas, fetchall=True) or []
+        if not rows:
+            return []
+
+        # 2. Consulta batch de todas las sucursales activas en una sola llamada
+        query_sucursales = f"""
+            SELECT s.id_empresa, s.id_sucursal, s.nombre, COALESCE(c.nombre, '') as ciudad, COALESCE(s.direccion, '') as direccion
+            FROM {schema}.t_sucursal s
+            LEFT JOIN {schema}.t_ciudad c ON s.id_ciudad = c.id_ciudad
+            WHERE (s.activo = TRUE OR s.estado = TRUE)
+            ORDER BY s.id_empresa ASC, s.id_sucursal ASC;
+        """
+        sucs_rows = db.execute_query(query_sucursales, fetchall=True) or []
+
+        # Agrupar sucursales por id_empresa en memoria O(N)
+        sucursales_por_empresa: Dict[int, List[Dict[str, Any]]] = {}
+        for s in sucs_rows:
+            id_emp = s[0]
+            if id_emp not in sucursales_por_empresa:
+                sucursales_por_empresa[id_emp] = []
+            sucursales_por_empresa[id_emp].append({
+                "id": s[1],
+                "nombre": s[2],
+                "ciudad": s[3],
+                "direccion": s[4]
+            })
+
+        # Mapear resultado final consolidado
         tenants = []
         for r in rows:
             id_emp = r[0]
-            sucs_raw = db.execute_query(f"""
-                SELECT s.id_sucursal, s.nombre, COALESCE(c.nombre, '') as ciudad, COALESCE(s.direccion, '') as direccion
-                FROM {schema}.t_sucursal s
-                LEFT JOIN {schema}.t_ciudad c ON s.id_ciudad = c.id_ciudad
-                WHERE s.id_empresa = %s AND (s.activo = TRUE OR s.estado = TRUE)
-                ORDER BY s.id_sucursal ASC;
-            """, (id_emp,), fetchall=True) or []
-            
-            sucursales = [{
-                "id": s[0],
-                "nombre": s[1],
-                "ciudad": s[2],
-                "direccion": s[3]
-            } for s in sucs_raw]
-
             tenants.append({
                 "id_empresa": id_emp,
                 "nombre_empresa": r[1],
@@ -617,8 +654,9 @@ def obtener_tenants_dashboard_db():
                 "total_stock_disponible": int(r[12]),
                 "total_ventas_cantidad": int(r[13]),
                 "total_ingresos_historico": float(r[14]),
-                "sucursales": sucursales
+                "sucursales": sucursales_por_empresa.get(id_emp, [])
             })
+
         return tenants
     finally:
         db.close_connection()

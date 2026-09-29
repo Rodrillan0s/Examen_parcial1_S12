@@ -27,12 +27,12 @@ class AuroraProductCard extends StatelessWidget {
         hasPromotion ? double.tryParse(promotionPrice.toString()) : null;
     final stockLabel = switch (prenda.stockDisponibleCatalogo) {
       <= 0 => 'Agotado',
-      < 3 => 'Quedan pocas unidades',
-      _ => 'Disponible',
+      <= 3 => '⚠ Últimas unidades',
+      _ => '✓ Disponible',
     };
     final stockColor = prenda.stockDisponibleCatalogo <= 0
         ? AppTheme.error
-        : prenda.stockDisponibleCatalogo < 3
+        : prenda.stockDisponibleCatalogo <= 3
             ? AppTheme.primaryGold
             : AppTheme.success;
 

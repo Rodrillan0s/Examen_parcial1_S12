@@ -124,6 +124,16 @@ export class DashboardKpisComponent implements OnInit {
         }
       });
 
+      this.authService.companyChanged$.subscribe((empresa) => {
+        if (scope === 'PLATAFORMA') {
+          const match = empresa ? this.tenants.find(t => t.id_empresa === empresa.id_empresa) : null;
+          if (match !== this.tiendaSeleccionada) {
+            this.tiendaSeleccionada = match || null;
+            this.cargarTodosLosIndicadores();
+          }
+        }
+      });
+
       this.authService.branchChanged$.subscribe((branch) => {
         this.sucursalSeleccionada = branch ? branch.id : null;
         if (this.tiendaSeleccionada || scope === 'PLATAFORMA' || idEmpresaUsuario) {
@@ -154,12 +164,18 @@ export class DashboardKpisComponent implements OnInit {
               this.seleccionarTienda(miTienda, false);
             }
           } else if (scope === 'PLATAFORMA') {
-            const activaGlobal = this.kpisService.obtenerTiendaActual();
-            if (activaGlobal) {
-              const match = this.tenants.find(t => t.id_empresa === activaGlobal.id_empresa);
+            const effId = this.authService.getEffectiveCompanyId();
+            if (effId) {
+              const match = this.tenants.find(t => t.id_empresa === effId);
               this.tiendaSeleccionada = match || null;
             } else {
-              this.tiendaSeleccionada = null; // Vista global consolidada
+              const activaGlobal = this.kpisService.obtenerTiendaActual();
+              if (activaGlobal) {
+                const match = this.tenants.find(t => t.id_empresa === activaGlobal.id_empresa);
+                this.tiendaSeleccionada = match || null;
+              } else {
+                this.tiendaSeleccionada = null; // Vista global consolidada
+              }
             }
             this.cargarTodosLosIndicadores();
           }

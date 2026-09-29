@@ -7,12 +7,14 @@ import { InventarioService, ItemInventario, ResumenInventario, MovimientoInventa
 import { SucursalService, Sucursal } from '../../../services/sucursales';
 import { TallasColoresService, Talla, ColorPrenda } from '../../../services/tallas-colores';
 import { EmpresaService, Empresa } from '../../../services/empresa';
+import { ProveedoresService, Proveedor } from '../../../services/proveedores';
 import { 
   ComprasLotesService, 
   PreviewResultadoData, 
   FilaPreview, 
   OrdenCompraItem, 
-  LoteIngresoItem 
+  LoteIngresoItem,
+  CrearItemOrdenPayload
 } from '../../../services/compras-lotes';
 
 export type TabInventario = 'stock' | 'importacion' | 'ordenes' | 'lotes';
@@ -29,6 +31,7 @@ export class ListaInventarioComponent implements OnInit {
   private sucursalService = inject(SucursalService);
   private tallasColoresService = inject(TallasColoresService);
   private empresaService = inject(EmpresaService);
+  private proveedoresService = inject(ProveedoresService);
   public comprasLotesService = inject(ComprasLotesService);
   public authService = inject(AuthService);
   private cdr = inject(ChangeDetectorRef);
@@ -152,6 +155,25 @@ export class ListaInventarioComponent implements OnInit {
   guiaRecepcionInput: string = '';
   observacionesRecepcionInput: string = '';
   procesandoAccionOrden: boolean = false;
+
+  // Modal Nueva Orden de Compra (Asignación por Sucursal)
+  mostrarModalCrearOrden: boolean = false;
+  guardandoNuevaOrden: boolean = false;
+  nuevaOrdenSucursal: number | null = null;
+  nuevaOrdenProveedor: number | null = null;
+  nuevaOrdenFechaEntrega: string = '';
+  nuevaOrdenObservaciones: string = '';
+  nuevaOrdenItems: {
+    codigo_producto: string;
+    nombre_producto: string;
+    talla: string;
+    color: string;
+    cantidad_solicitada: number;
+    costo_unitario: number;
+    subtotal: number;
+  }[] = [];
+  proveedores: Proveedor[] = [];
+  cargandoProveedores: boolean = false;
 
   // ============================================================================
   // ESTADO: LOTES INGRESADOS
@@ -747,12 +769,36 @@ export class ListaInventarioComponent implements OnInit {
   }
 
   // ============================================================================
-  // MÓDULO 3: ÓRDENES DE COMPRA & PROCUREMENT
   // ============================================================================
+  // MÓDULO 3: ÓRDENES DE COMPRA & PROCUREMENT (POR SUCURSAL Y TENANT)
+  // ============================================================================
+
+  cargarProveedores(): void {
+    if (this.proveedores.length > 0) return;
+    this.cargandoProveedores = true;
+    this.proveedoresService.listarProveedores().subscribe({
+      next: (res) => {
+        this.cargandoProveedores = false;
+        this.proveedores = res.data || [];
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.cargandoProveedores = false;
+        this.proveedores = [];
+        this.cdr.detectChanges();
+      }
+    });
+  }
 
   cargarOrdenesCompra(): void {
     this.cargandoOrdenes = true;
+    const idSucursal = this.filtroSucursal 
+      ? Number(this.filtroSucursal) 
+      : (this.esNivelSucursal ? this.authService.activeBranch()?.id : undefined);
+
     this.comprasLotesService.listarOrdenesCompra({
+      id_empresa: this.authService.getEffectiveCompanyId() || undefined,
+      id_sucursal: idSucursal ? Number(idSucursal) : undefined,
       estado: this.filtroEstadoOrden !== 'TODOS' ? this.filtroEstadoOrden : undefined
     }).subscribe({
       next: (res) => {
@@ -763,6 +809,143 @@ export class ListaInventarioComponent implements OnInit {
       error: () => {
         this.cargandoOrdenes = false;
         this.ordenesCompra = [];
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  abrirModalCrearOrden(): void {
+    this.cargarProveedores();
+    const actBranch = this.authService.activeBranch();
+    const resolvedSucursal = this.filtroSucursal 
+      ? Number(this.filtroSucursal) 
+      : (actBranch?.id || (this.sucursales.length > 0 ? this.sucursales[0].id_sucursal : null));
+    this.nuevaOrdenSucursal = resolvedSucursal ?? null;
+    this.nuevaOrdenProveedor = null;
+    this.nuevaOrdenFechaEntrega = '';
+    this.nuevaOrdenObservaciones = '';
+    this.nuevaOrdenItems = [
+      {
+        codigo_producto: '',
+        nombre_producto: '',
+        talla: 'M',
+        color: 'Estándar',
+        cantidad_solicitada: 10,
+        costo_unitario: 0,
+        subtotal: 0
+      }
+    ];
+    this.mostrarModalCrearOrden = true;
+    this.cdr.detectChanges();
+  }
+
+  agregarItemNuevaOrden(): void {
+    this.nuevaOrdenItems.push({
+      codigo_producto: '',
+      nombre_producto: '',
+      talla: 'M',
+      color: 'Estándar',
+      cantidad_solicitada: 10,
+      costo_unitario: 0,
+      subtotal: 0
+    });
+  }
+
+  eliminarItemNuevaOrden(index: number): void {
+    if (this.nuevaOrdenItems.length <= 1) {
+      alert('La orden de compra debe contener al menos una prenda requerida.');
+      return;
+    }
+    this.nuevaOrdenItems.splice(index, 1);
+  }
+
+  recalcularSubtotalItem(index: number): void {
+    const it = this.nuevaOrdenItems[index];
+    if (it) {
+      const cant = Math.max(0, Number(it.cantidad_solicitada) || 0);
+      const costo = Math.max(0, Number(it.costo_unitario) || 0);
+      it.subtotal = Math.round(cant * costo * 100) / 100;
+    }
+  }
+
+  calcularTotalNuevaOrden(): number {
+    return this.nuevaOrdenItems.reduce((acc, it) => acc + (Number(it.subtotal) || 0), 0);
+  }
+
+  calcularTotalPrendasNuevaOrden(): number {
+    return this.nuevaOrdenItems.reduce((acc, it) => acc + (Number(it.cantidad_solicitada) || 0), 0);
+  }
+
+  seleccionarProductoParaItem(index: number, eventTarget: any): void {
+    const cod = (eventTarget?.value || '').trim();
+    if (!cod) return;
+    const prod = this.inventario.find(p => p.codigo_producto && p.codigo_producto.toUpperCase() === cod.toUpperCase());
+    if (prod && this.nuevaOrdenItems[index]) {
+      this.nuevaOrdenItems[index].nombre_producto = prod.producto_nombre;
+      if (prod.talla_nombre) this.nuevaOrdenItems[index].talla = prod.talla_nombre;
+      if (prod.color_nombre) this.nuevaOrdenItems[index].color = prod.color_nombre;
+      if (prod.precio) {
+        this.nuevaOrdenItems[index].costo_unitario = Math.round((prod.precio * 0.5) * 100) / 100;
+        this.recalcularSubtotalItem(index);
+      }
+    }
+  }
+
+  confirmarCrearOrden(): void {
+    if (!this.nuevaOrdenSucursal) {
+      alert('Debe asignar la sucursal de destino para la orden de compra.');
+      return;
+    }
+
+    if (!this.nuevaOrdenItems.length) {
+      alert('Debe agregar al menos una prenda a la orden.');
+      return;
+    }
+
+    for (let i = 0; i < this.nuevaOrdenItems.length; i++) {
+      const it = this.nuevaOrdenItems[i];
+      if (!it.codigo_producto.trim() || !it.nombre_producto.trim()) {
+        alert(`La fila #${i + 1} debe tener código y nombre de producto.`);
+        return;
+      }
+      if (Number(it.cantidad_solicitada) <= 0) {
+        alert(`La fila #${i + 1} ('${it.nombre_producto}') debe tener una cantidad mayor a 0.`);
+        return;
+      }
+      if (Number(it.costo_unitario) < 0) {
+        alert(`La fila #${i + 1} no puede tener costo unitario negativo.`);
+        return;
+      }
+    }
+
+    this.guardandoNuevaOrden = true;
+    const payload = {
+      id_sucursal: Number(this.nuevaOrdenSucursal),
+      id_empresa: this.authService.getEffectiveCompanyId() || undefined,
+      id_proveedor: this.nuevaOrdenProveedor ? Number(this.nuevaOrdenProveedor) : null,
+      fecha_entrega_esperada: this.nuevaOrdenFechaEntrega || undefined,
+      observaciones: this.nuevaOrdenObservaciones.trim() || undefined,
+      items: this.nuevaOrdenItems.map(it => ({
+        codigo_producto: it.codigo_producto.trim().toUpperCase(),
+        nombre_producto: it.nombre_producto.trim(),
+        talla: it.talla.trim() || 'Única',
+        color: it.color.trim() || 'Estándar',
+        cantidad_solicitada: Number(it.cantidad_solicitada),
+        costo_unitario: Number(it.costo_unitario)
+      }))
+    };
+
+    this.comprasLotesService.crearOrdenCompra(payload).subscribe({
+      next: (res) => {
+        this.guardandoNuevaOrden = false;
+        this.mostrarModalCrearOrden = false;
+        this.mensajeExito = res.mensaje || 'Orden de compra emitida con éxito.';
+        this.cargarOrdenesCompra();
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.guardandoNuevaOrden = false;
+        this.mensajeError = err.error?.detail || err.error?.message || 'Error al emitir la orden de compra.';
         this.cdr.detectChanges();
       }
     });
@@ -871,12 +1054,19 @@ export class ListaInventarioComponent implements OnInit {
   }
 
   // ============================================================================
-  // MÓDULO 4: LOTES DE MERCADERÍA
+  // MÓDULO 4: LOTES DE MERCADERÍA (POR SUCURSAL Y TENANT)
   // ============================================================================
 
   cargarLotes(): void {
     this.cargandoLotes = true;
-    this.comprasLotesService.listarLotes().subscribe({
+    const idSucursal = this.filtroSucursal 
+      ? Number(this.filtroSucursal) 
+      : (this.esNivelSucursal ? this.authService.activeBranch()?.id : undefined);
+
+    this.comprasLotesService.listarLotes({
+      id_empresa: this.authService.getEffectiveCompanyId() || undefined,
+      id_sucursal: idSucursal ? Number(idSucursal) : undefined
+    }).subscribe({
       next: (res) => {
         this.cargandoLotes = false;
         this.lotes = res?.lotes || [];

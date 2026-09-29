@@ -224,7 +224,25 @@ class _MisReservasScreenState extends State<MisReservasScreen> {
                                   ),
                                 ),
                                 const SizedBox(width: 8),
-                                AuroraBadge.status(r.estado),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    AuroraBadge(
+                                      text: r.conPago
+                                          ? '✓ Pre-pagada'
+                                          : 'Pago en Tienda',
+                                      backgroundColor: r.conPago
+                                          ? AppTheme.successLight
+                                          : AppTheme.goldLight,
+                                      textColor: r.conPago
+                                          ? AppTheme.success
+                                          : AppTheme.primaryGold,
+                                      isSmall: true,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    AuroraBadge.status(r.estado),
+                                  ],
+                                ),
                               ],
                             ),
 

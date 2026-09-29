@@ -1,7 +1,8 @@
-import { Component, OnInit, inject, PLATFORM_ID, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, inject, PLATFORM_ID, ChangeDetectorRef, DestroyRef } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, ActivatedRoute } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { 
   ReportesService, 
   ReporteVentaItem, 
@@ -39,6 +40,7 @@ export class ReportesComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private platformId = inject(PLATFORM_ID);
   private cdr = inject(ChangeDetectorRef);
+  private destroyRef = inject(DestroyRef);
 
   // ---- MULTI-TENANT: SELECCIÓN DE TIENDA / TENANT ----
   tenants: any[] = [];
@@ -115,7 +117,36 @@ export class ReportesComponent implements OnInit {
       this.soportaVoz = this.motorService.isSpeechRecognitionSupported();
       this.cargarCatalogoMotor();
       this.establecerRangoMesActual();
+
+      // Inicializar con la empresa y sucursal activas del Header
+      this.empresaSeleccionada = this.authService.getEffectiveCompanyId();
+      this.sucursalSeleccionada = this.authService.activeBranch()?.id || null;
+
       this.cargarTenants();
+
+      // Suscribirse reactivamente al cambio de Empresa en el Header
+      this.authService.companyChanged$
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe(empresa => {
+          const newId = empresa ? empresa.id_empresa : this.authService.getEffectiveCompanyId();
+          if (this.empresaSeleccionada !== newId) {
+            this.empresaSeleccionada = newId;
+            const t = this.tenants.find(x => x.id_empresa === this.empresaSeleccionada);
+            this.tiendaNombre = t?.nombre_empresa || empresa?.nombre_empresa || '';
+            this.consultarReporte();
+          }
+        });
+
+      // Suscribirse reactivamente al cambio de Sucursal en el Header
+      this.authService.branchChanged$
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe(branch => {
+          const newBranchId = branch ? branch.id : null;
+          if (this.sucursalSeleccionada !== newBranchId) {
+            this.sucursalSeleccionada = newBranchId;
+            this.consultarReporte();
+          }
+        });
 
       // Leer queryParams opcionales enviados desde el Dashboard de KPIs
       this.route.queryParams.subscribe(params => {
@@ -151,12 +182,14 @@ export class ReportesComponent implements OnInit {
       next: (res) => {
         if (res.success && res.data) {
           this.tenants = res.data;
-          if (!this.empresaSeleccionada && this.tenants.length > 0) {
-            const userEmpresa = this.authService.obtenerUsuario()?.id_empresa;
-            this.empresaSeleccionada = userEmpresa || this.tenants[0].id_empresa;
-            const t = this.tenants.find(x => x.id_empresa === this.empresaSeleccionada);
-            if (t) this.tiendaNombre = t.nombre_empresa;
+          const currentEffective = this.authService.getEffectiveCompanyId();
+          if (currentEffective) {
+            this.empresaSeleccionada = currentEffective;
+          } else if (!this.empresaSeleccionada && this.tenants.length > 0) {
+            this.empresaSeleccionada = this.tenants[0].id_empresa;
           }
+          const t = this.tenants.find(x => x.id_empresa === this.empresaSeleccionada);
+          if (t) this.tiendaNombre = t.nombre_empresa;
           this.cdr.detectChanges();
         }
       },

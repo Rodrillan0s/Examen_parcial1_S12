@@ -67,6 +67,78 @@ export interface DenominacionEsperada {
   diferencia_unidades?: number;
 }
 
+export interface SesionActivaMonitoreo {
+  id_sesion_caja: number;
+  id_usuario: number;
+  cajero_nombre: string;
+  fecha_apertura: string;
+  monto_inicial: number;
+  observacion?: string;
+  total_ventas: number;
+  cant_ventas: number;
+  ventas_efectivo: number;
+  ventas_tarjeta: number;
+  ventas_qr: number;
+  efectivo_esperado: number;
+  resumen?: any;
+}
+
+export interface UltimaSesionCerradaMonitoreo {
+  id_sesion_caja: number;
+  fecha_cierre: string;
+  cajero_nombre: string;
+  monto_inicial: number;
+  efectivo_esperado: number;
+  efectivo_contado: number;
+  diferencia: number;
+}
+
+export interface CajaMonitoreoItem {
+  id_caja: number;
+  codigo_caja: string;
+  nombre: string;
+  estado_caja: string;
+  id_sucursal: number;
+  sucursal_nombre: string;
+  sucursal_ciudad: string;
+  id_empresa: number;
+  empresa_nombre: string;
+  estado_turno: 'ABIERTA' | 'CERRADA';
+  sesion_activa?: SesionActivaMonitoreo | null;
+  ultima_sesion_cerrada?: UltimaSesionCerradaMonitoreo | null;
+}
+
+export interface MonitoreoCajasResponse {
+  success: boolean;
+  cajas: CajaMonitoreoItem[];
+  total_cajas: number;
+  total_abiertas: number;
+  total_cerradas: number;
+  efectivo_total_en_cajas: number;
+}
+
+export interface SesionCajaHistorialItem {
+  id_sesion_caja: number;
+  id_caja: number;
+  codigo_caja: string;
+  nombre_caja: string;
+  id_sucursal: number;
+  sucursal_nombre: string;
+  id_empresa: number;
+  empresa_nombre: string;
+  id_usuario: number;
+  cajero_nombre: string;
+  fecha_apertura: string;
+  fecha_cierre?: string;
+  monto_inicial: number;
+  efectivo_esperado?: number;
+  efectivo_contado?: number;
+  diferencia?: number;
+  estado: string;
+  observacion_apertura?: string;
+  observacion_cierre?: string;
+}
+
 export interface ResumenCajaResponse {
   success: boolean;
   resumen: {
@@ -363,4 +435,26 @@ export class CajaService {
   descargarComprobantePdf(idVenta: number): Observable<Blob> {
     return this.http.get(`${this.comprobantesApiUrl}/venta/${idVenta}/pdf`, { responseType: 'blob' });
   }
+
+  // --- MÓDULO SUPERVISIÓN DE CAJAS (TIENDAS Y SUCURSALES) ---
+  monitorearCajas(idEmpresa?: number, idSucursal?: number, estado?: string): Observable<MonitoreoCajasResponse> {
+    let params = new HttpParams();
+    if (idEmpresa) params = params.set('id_empresa', idEmpresa.toString());
+    if (idSucursal) params = params.set('id_sucursal', idSucursal.toString());
+    if (estado && estado !== 'TODAS') params = params.set('estado', estado);
+    return this.http.get<MonitoreoCajasResponse>(`${this.cajaApiUrl}/monitoreo`, { params });
+  }
+
+  obtenerHistorialSesiones(idEmpresa?: number, idSucursal?: number, idCaja?: number, limite: number = 50): Observable<{ success: boolean; sesiones: SesionCajaHistorialItem[]; total: number }> {
+    let params = new HttpParams().set('limite', limite.toString());
+    if (idEmpresa) params = params.set('id_empresa', idEmpresa.toString());
+    if (idSucursal) params = params.set('id_sucursal', idSucursal.toString());
+    if (idCaja) params = params.set('id_caja', idCaja.toString());
+    return this.http.get<{ success: boolean; sesiones: SesionCajaHistorialItem[]; total: number }>(`${this.cajaApiUrl}/sesiones-historial`, { params });
+  }
+
+  crearCaja(payload: { id_sucursal: number; id_empresa?: number; nombre: string; codigo_caja?: string }): Observable<any> {
+    return this.http.post<any>(`${this.cajaApiUrl}/crear`, payload);
+  }
 }
+

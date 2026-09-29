@@ -28,6 +28,25 @@ class RecepcionOrdenIn(BaseModel):
     guia_remision: Optional[str] = Field(None, description="Guía de remisión del despacho")
     observaciones: Optional[str] = Field(None, description="Notas adicionales del ingreso")
 
+class ItemOrdenCompraIn(BaseModel):
+    id_producto: Optional[int] = Field(None, description="ID del producto existente si aplica")
+    id_variante: Optional[int] = Field(None, description="ID de la variante si aplica")
+    codigo_producto: str = Field(..., description="Código o SKU de referencia")
+    nombre_producto: str = Field(..., description="Nombre del producto o prenda")
+    talla: Optional[str] = Field("Única", description="Talla de la prenda")
+    color: Optional[str] = Field("Estándar", description="Color de la prenda")
+    sku: Optional[str] = Field(None, description="SKU específico")
+    cantidad_solicitada: int = Field(..., gt=0, description="Cantidad solicitada")
+    costo_unitario: float = Field(..., ge=0, description="Costo unitario estimado de compra")
+
+class CrearOrdenCompraIn(BaseModel):
+    id_sucursal: int = Field(..., description="ID de la sucursal de destino asignada a la orden")
+    id_empresa: Optional[int] = Field(None, description="Empresa seleccionada para administradores globales")
+    id_proveedor: Optional[int] = Field(None, description="ID del proveedor seleccionado")
+    fecha_entrega_esperada: Optional[str] = Field(None, description="Fecha esperada de entrega (YYYY-MM-DD)")
+    observaciones: Optional[str] = Field(None, description="Observaciones o términos de la orden")
+    items: List[ItemOrdenCompraIn] = Field(..., min_length=1, description="Listado de prendas requeridas")
+
 
 # ==============================================================================
 # 1. PLANTILLA Y CARGA MASIVA DE PRENDAS
@@ -138,7 +157,7 @@ def listar_ordenes_compra(
     id_empresa: Optional[int] = Query(None, description="Empresa seleccionada para administradores globales"),
     token_data: dict = Depends(require_permission('compras.ver'))
 ):
-    """Retorna las órdenes de compra activas para la empresa."""
+    """Retorna las órdenes de compra activas para la empresa y opcionalmente por sucursal."""
     try:
         empresa_efectiva = resolver_tenant_operacion(token_data, id_empresa, permitir_global=False)
         id_sucursal = resolver_sucursal_autorizada(token_data, id_sucursal)
@@ -152,6 +171,37 @@ def listar_ordenes_compra(
         raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.post("/api/compras/ordenes", status_code=status.HTTP_201_CREATED)
+def crear_orden_compra(
+    payload: CrearOrdenCompraIn,
+    token_data: dict = Depends(require_permission('compras.crear'))
+):
+    """
+    Crea una nueva orden de compra asignada a una sucursal específica
+    con estado inicial PENDIENTE_APROBACION.
+    """
+    try:
+        datos = payload.model_dump()
+        datos['id_empresa'] = resolver_tenant_operacion(
+            token_data,
+            datos.get('id_empresa'),
+            permitir_global=False
+        )
+        datos['id_sucursal'] = resolver_sucursal_autorizada(token_data, datos.get('id_sucursal'))
+        nueva_oc = compras_lotes_services.crear_orden_compra_db(datos, token_data)
+        return {
+            "success": True,
+            "mensaje": f"Orden de compra {nueva_oc['numero_orden']} emitida con éxito para la sucursal {nueva_oc['sucursal']}.",
+            "orden": nueva_oc
+        }
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error creando orden de compra: {str(e)}")
 
 
 @router.get("/api/compras/ordenes/{id_orden}")

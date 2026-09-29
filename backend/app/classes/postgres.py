@@ -44,17 +44,21 @@ class PostgreSQL:
                 self.conn = p.getconn()
                 self._from_pool = True
                 
-                # Validar que la conexión esté realmente viva antes de usarla
-                is_alive = False
-                if self.conn and self.conn.closed == 0:
+                # Verificar si la conexión del pool está activa sin sobrecosto de red
+                if not self.conn or self.conn.closed != 0:
                     try:
-                        with self.conn.cursor() as test_cur:
-                            test_cur.execute("SELECT 1;")
-                        is_alive = True
+                        p.putconn(self.conn, close=True)
                     except Exception:
-                        is_alive = False
-                
-                if not is_alive:
+                        pass
+                    self.conn = psycopg2.connect(
+                        host=self.db_host,
+                        port=self.db_port,
+                        dbname=self.db_name,
+                        user=self.db_user,
+                        password=self.db_password,
+                        connect_timeout=10
+                    )
+                    self._from_pool = False
                     try:
                         p.putconn(self.conn, close=True)
                     except Exception:

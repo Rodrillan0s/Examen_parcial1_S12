@@ -341,4 +341,51 @@ class PagoService extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  Future<ResultadoPagoModel?> procesarQR({
+    required int idPedido,
+    String? codigoTransaccion,
+    String? nitCi,
+    String? razonSocial,
+    int? idEmpresa,
+  }) async {
+    _cargando = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final payload = <String, dynamic>{
+        'id_pedido': idPedido,
+        if (codigoTransaccion != null && codigoTransaccion.trim().isNotEmpty)
+          'codigo_transaccion': codigoTransaccion.trim(),
+        if (nitCi != null && nitCi.trim().isNotEmpty) 'nit_ci': nitCi.trim(),
+        if (razonSocial != null && razonSocial.trim().isNotEmpty)
+          'razon_social': razonSocial.trim(),
+        if (idEmpresa != null) 'id_empresa': idEmpresa,
+      };
+
+      final res = await _dio.post('/api/pagos/qr/confirmar', data: payload);
+      if (res.data['success'] == true && res.data['data'] != null) {
+        _resultado = ResultadoPagoModel.fromJson(res.data['data']);
+        return _resultado;
+      } else {
+        _error = res.data['message'] ?? 'Error al procesar el pago QR.';
+        return null;
+      }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        _error = 'Tu sesión ha expirado. Por favor inicia sesión nuevamente.';
+      } else {
+        _error = e.response?.data?['detail'] ?? 'Error al procesar el pago QR.';
+      }
+      return null;
+    } catch (e) {
+      _error = 'Error de conexión al procesar el pago QR.';
+      return null;
+    } finally {
+      _cargando = false;
+      notifyListeners();
+    }
+  }
 }
+

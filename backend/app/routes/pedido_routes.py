@@ -42,7 +42,8 @@ def listar_sucursales_checkout(
 ):
     try:
         empresa_id = _resolver_id_empresa(id_empresa, token_data)
-        sucursales = pedido_repos.obtener_sucursales_tenant(empresa_id)
+        id_usuario = token_data.get('nro_usuario') or token_data.get('id_usuario')
+        sucursales = pedido_repos.obtener_sucursales_tenant(empresa_id, id_usuario=id_usuario)
         return {
             "success": True,
             "data": sucursales

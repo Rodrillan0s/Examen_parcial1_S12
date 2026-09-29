@@ -6,6 +6,7 @@ import '../services/carrito_service.dart';
 import '../services/pedido_service.dart';
 import '../services/profile_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/aurora_badge.dart';
 import '../widgets/aurora_button.dart';
 import '../widgets/aurora_text_field.dart';
 import 'pago_screen.dart';
@@ -26,6 +27,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   SucursalCheckoutModel? _sucursalSeleccionada;
   String _modalidad = 'ENTREGA_DOMICILIO'; // 'ENTREGA_DOMICILIO' o 'RETIRO_SUCURSAL'
 
+  String _filtroCiudad = 'TODAS';
+  String _busquedaSucursal = '';
+  final _busquedaSucursalCtrl = TextEditingController();
+
   final _nombreCtrl = TextEditingController();
   final _telefonoCtrl = TextEditingController();
   final _correoCtrl = TextEditingController();
@@ -45,6 +50,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   @override
   void dispose() {
+    _busquedaSucursalCtrl.dispose();
     _nombreCtrl.dispose();
     _telefonoCtrl.dispose();
     _correoCtrl.dispose();
@@ -68,9 +74,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       if (mounted) {
         setState(() {
           _sucursales = sucursales;
-          if (sucursales.isNotEmpty) {
-            _sucursalSeleccionada = sucursales.first;
-          }
+          final conStock = sucursales.where((s) => s.tieneStockCompleto).toList();
+          _sucursalSeleccionada = conStock.isNotEmpty
+              ? conStock.first
+              : (sucursales.isNotEmpty ? sucursales.first : null);
           _nombreCtrl.text = '${perfil.nombre} ${perfil.apellido}'.trim();
           _correoCtrl.text = perfil.correo;
           _telefonoCtrl.text = perfil.telefono ?? '';
@@ -88,12 +95,43 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
 
+  List<SucursalCheckoutModel> get _sucursalesFiltradas {
+    return _sucursales.where((s) {
+      final coincideCiudad = _filtroCiudad == 'TODAS' ||
+          s.ciudad.toLowerCase() == _filtroCiudad.toLowerCase();
+      final query = _busquedaSucursal.toLowerCase().trim();
+      final coincideBusqueda = query.isEmpty ||
+          s.nombre.toLowerCase().contains(query) ||
+          s.direccion.toLowerCase().contains(query) ||
+          s.ciudad.toLowerCase().contains(query);
+      return coincideCiudad && coincideBusqueda;
+    }).toList();
+  }
+
+  List<String> get _ciudadesDisponibles {
+    final setCiudades =
+        _sucursales.map((s) => s.ciudad).where((c) => c.isNotEmpty).toSet().toList();
+    setCiudades.sort();
+    return ['TODAS', ...setCiudades];
+  }
+
+  bool get _haySucursalConStockCompleto {
+    return _sucursales.any((s) => s.tieneStockCompleto);
+  }
+
   Future<void> _confirmarPedido() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_modalidad == 'RETIRO_SUCURSAL' && _sucursalSeleccionada == null) {
-      setState(() => _error = 'Por favor selecciona una sucursal para el retiro.');
-      return;
+    if (_modalidad == 'RETIRO_SUCURSAL') {
+      if (_sucursalSeleccionada == null) {
+        setState(() => _error = 'Por favor selecciona una sucursal para el retiro.');
+        return;
+      }
+      if (!_sucursalSeleccionada!.tieneStockCompleto) {
+        setState(() => _error =
+            'La sucursal seleccionada no cuenta con inventario suficiente para todas tus prendas.');
+        return;
+      }
     }
 
     setState(() {
@@ -413,40 +451,308 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
                   const SizedBox(height: 20),
 
-                  // Selector de Sucursal (siempre relevante para el stock o para el retiro)
-                  Text(
-                    _modalidad == 'RETIRO_SUCURSAL' ? 'Sucursal de Retiro' : 'Sucursal de Origen / Despacho',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  // Selector de Sucursal con Filtros y Badges de Stock
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        _modalidad == 'RETIRO_SUCURSAL'
+                            ? 'Sucursal de Retiro'
+                            : 'Sucursal de Origen / Despacho',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      if (_modalidad == 'RETIRO_SUCURSAL')
+                        Text(
+                          'Solo con stock completo',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            color: AppTheme.primaryGold,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    decoration: BoxDecoration(
-                      color: AppTheme.surface,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppTheme.border),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<SucursalCheckoutModel>(
-                        value: _sucursalSeleccionada,
-                        isExpanded: true,
-                        items: _sucursales.map((s) {
-                          return DropdownMenuItem(
-                            value: s,
-                            child: Text('${s.nombre} (${s.ciudad})'),
-                          );
-                        }).toList(),
-                        onChanged: (val) {
-                          setState(() {
-                            _sucursalSeleccionada = val;
-                          });
-                        },
+
+                  // Alerta si ninguna sucursal tiene stock completo para retiro
+                  if (_modalidad == 'RETIRO_SUCURSAL' &&
+                      !_cargandoSucursales &&
+                      !_haySucursalConStockCompleto &&
+                      _sucursales.isNotEmpty) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.goldLight,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: AppTheme.primaryGold.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.info_outline,
+                              color: AppTheme.primaryGold, size: 20),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Ninguna sucursal física cuenta con el stock completo de todas tus prendas. Te recomendamos entrega a domicilio.',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.textPrimary,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
+                  ],
+
+                  // Barra de Búsqueda y Filtros de Ciudad
+                  if (_sucursales.length > 1) ...[
+                    TextField(
+                      controller: _busquedaSucursalCtrl,
+                      onChanged: (val) => setState(() => _busquedaSucursal = val),
+                      decoration: InputDecoration(
+                        hintText: 'Buscar sucursal por nombre o dirección...',
+                        hintStyle: GoogleFonts.plusJakartaSans(fontSize: 12),
+                        prefixIcon: const Icon(Icons.search, size: 18),
+                        suffixIcon: _busquedaSucursal.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear, size: 16),
+                                onPressed: () {
+                                  _busquedaSucursalCtrl.clear();
+                                  setState(() => _busquedaSucursal = '');
+                                },
+                              )
+                            : null,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Chips de Ciudades
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: _ciudadesDisponibles.map((ciudad) {
+                          final isSelected = _filtroCiudad == ciudad;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: FilterChip(
+                              label: Text(
+                                ciudad,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11,
+                                  fontWeight: isSelected
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                  color: isSelected
+                                      ? Colors.white
+                                      : AppTheme.textPrimary,
+                                ),
+                              ),
+                              selected: isSelected,
+                              showCheckmark: false,
+                              selectedColor: AppTheme.primaryGold,
+                              backgroundColor: AppTheme.surfaceVariant,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 4, vertical: 2),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                side: BorderSide(
+                                  color: isSelected
+                                      ? AppTheme.primaryGold
+                                      : AppTheme.border,
+                                ),
+                              ),
+                              onSelected: (_) {
+                                setState(() => _filtroCiudad = ciudad);
+                              },
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
+                  // Listado de Tarjetas de Sucursal
+                  if (_sucursalesFiltradas.isEmpty && !_cargandoSucursales) ...[
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppTheme.surfaceVariant,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Center(
+                        child: Text(
+                          'No se encontraron sucursales con los filtros aplicados.',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12,
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ] else ...[
+                    ..._sucursalesFiltradas.map((s) {
+                      final isSelected =
+                          _sucursalSeleccionada?.idSucursal == s.idSucursal;
+                      final bloqueada = _modalidad == 'RETIRO_SUCURSAL' &&
+                          !s.tieneStockCompleto;
+
+                      final badgeColor = s.tieneStockCompleto
+                          ? AppTheme.successLight
+                          : s.stockEstado == 'PARCIAL'
+                              ? AppTheme.goldLight
+                              : AppTheme.errorLight;
+                      final textColor = s.tieneStockCompleto
+                          ? AppTheme.success
+                          : s.stockEstado == 'PARCIAL'
+                              ? AppTheme.primaryGold
+                              : AppTheme.error;
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: InkWell(
+                          onTap: bloqueada
+                              ? () {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        '${s.nombre} no cuenta con todas las prendas de tu bolsa en stock.',
+                                      ),
+                                      duration: const Duration(seconds: 2),
+                                      backgroundColor: AppTheme.error,
+                                    ),
+                                  );
+                                }
+                              : () =>
+                                  setState(() => _sucursalSeleccionada = s),
+                          borderRadius: BorderRadius.circular(14),
+                          child: AnimatedOpacity(
+                            duration: const Duration(milliseconds: 200),
+                            opacity: bloqueada ? 0.55 : 1.0,
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? AppTheme.goldLight
+                                    : !bloqueada
+                                        ? AppTheme.surface
+                                        : AppTheme.surfaceVariant
+                                            .withValues(alpha: 0.6),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? AppTheme.primaryGold
+                                      : !bloqueada
+                                          ? AppTheme.border
+                                          : AppTheme.border
+                                              .withValues(alpha: 0.5),
+                                  width: isSelected ? 1.5 : 1,
+                                ),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 2),
+                                    child: Icon(
+                                      bloqueada
+                                          ? Icons.block
+                                          : isSelected
+                                              ? Icons.radio_button_checked
+                                              : Icons.radio_button_off,
+                                      color: isSelected
+                                          ? AppTheme.primaryGold
+                                          : bloqueada
+                                              ? AppTheme.error
+                                              : AppTheme.textMuted,
+                                      size: 20,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                s.nombre,
+                                                style: GoogleFonts
+                                                    .plusJakartaSans(
+                                                  fontSize: 13,
+                                                  fontWeight: isSelected
+                                                      ? FontWeight.w700
+                                                      : FontWeight.w600,
+                                                  color: !bloqueada
+                                                      ? AppTheme.textPrimary
+                                                      : AppTheme.textMuted,
+                                                ),
+                                              ),
+                                            ),
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 6,
+                                                      vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: AppTheme.surfaceVariant,
+                                                borderRadius:
+                                                    BorderRadius.circular(6),
+                                              ),
+                                              child: Text(
+                                                s.ciudad,
+                                                style: GoogleFonts
+                                                    .plusJakartaSans(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.w600,
+                                                  color:
+                                                      AppTheme.textSecondary,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        if (s.direccion.isNotEmpty) ...[
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            s.direccion,
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 11,
+                                              color: AppTheme.textSecondary,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                        const SizedBox(height: 6),
+                                        AuroraBadge(
+                                          text: s.stockLabel,
+                                          backgroundColor: badgeColor,
+                                          textColor: textColor,
+                                          isSmall: true,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                  ],
 
                   const SizedBox(height: 20),
 
@@ -526,7 +832,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   AuroraButton(
                     text: 'Confirmar pedido',
                     isLoading: _procesando,
-                    onPressed: _confirmarPedido,
+                    onPressed: _procesando ||
+                            (_modalidad == 'RETIRO_SUCURSAL' &&
+                                (_sucursalSeleccionada == null ||
+                                    !_sucursalSeleccionada!.tieneStockCompleto))
+                        ? null
+                        : _confirmarPedido,
                     variant: AuroraButtonVariant.primary,
                   ),
                 ],

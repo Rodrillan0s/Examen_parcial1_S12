@@ -14,6 +14,8 @@ export interface CrearReservaPayload {
   observaciones?: string;
   items: ItemReservaPayload[];
   id_empresa?: number;
+  con_pago?: boolean;
+  monto_pagado?: number;
 }
 
 export interface SucursalReserva {
@@ -47,6 +49,9 @@ export interface ReservaData {
   observaciones?: string;
   fecha_cancelacion?: string | null;
   motivo_cancelacion?: string | null;
+  con_pago?: boolean;
+  estado_pago?: string;
+  monto_pagado?: number;
   sucursal: SucursalReserva;
   items: ItemReservaDetalle[];
   total_prendas: number;

@@ -79,6 +79,9 @@ class ReservaModel {
   final SucursalReservaModel? sucursal;
   final List<ItemReservaModel> items;
   final int totalPrendas;
+  final bool conPago;
+  final String estadoPago;
+  final double montoPagado;
 
   ReservaModel({
     required this.idReserva,
@@ -91,6 +94,9 @@ class ReservaModel {
     this.sucursal,
     this.items = const [],
     required this.totalPrendas,
+    this.conPago = false,
+    this.estadoPago = 'SIN_PAGO',
+    this.montoPagado = 0.0,
   });
 
   factory ReservaModel.fromJson(Map<String, dynamic> json) {
@@ -110,6 +116,11 @@ class ReservaModel {
           .map((e) => ItemReservaModel.fromJson(Map<String, dynamic>.from(e)))
           .toList(),
       totalPrendas: json['total_prendas'] ?? rawItems.length,
+      conPago: json['con_pago'] == true,
+      estadoPago: json['estado_pago'] ?? 'SIN_PAGO',
+      montoPagado: (json['monto_pagado'] != null)
+          ? double.tryParse(json['monto_pagado'].toString()) ?? 0.0
+          : 0.0,
     );
   }
 }
@@ -163,6 +174,8 @@ class ReservaService extends ChangeNotifier {
     required List<Map<String, dynamic>> items, // [{'id_variante': 1, 'cantidad': 1}]
     String? observaciones,
     int? idEmpresa,
+    bool conPago = false,
+    double montoPagado = 0.0,
   }) async {
     try {
       final body = <String, dynamic>{
@@ -171,6 +184,8 @@ class ReservaService extends ChangeNotifier {
         'items': items,
         if (observaciones != null && observaciones.isNotEmpty) 'observaciones': observaciones.trim(),
         if (idEmpresa != null) 'id_empresa': idEmpresa,
+        'con_pago': conPago,
+        'monto_pagado': montoPagado,
       };
 
       final res = await _dio.post('/api/reservas', data: body);

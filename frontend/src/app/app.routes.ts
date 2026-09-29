@@ -27,6 +27,7 @@ import { ReportesComponent } from './pages/reportes/reportes';
 import { authGuard } from './guards/auth-guard';
 import { ProveedoresComponent } from './pages/proveedores/proveedores';
 import { AtenderReservaComponent } from './pages/atender-reserva/atender-reserva';
+import { CajasMonitoreoComponent } from './pages/cajas-monitoreo/cajas-monitoreo';
 import { permissionGuard } from './guards/permission-guard';
 import { scopeGuard } from './guards/scope-guard';
 
@@ -54,6 +55,8 @@ export const routes: Routes = [
   { path: 'productos', redirectTo: 'admin/productos', pathMatch: 'full' },
   { path: 'inventario', redirectTo: 'admin/inventario', pathMatch: 'full' },
   { path: 'caja', redirectTo: 'admin/caja', pathMatch: 'full' },
+  { path: 'cajas-monitoreo', redirectTo: 'admin/cajas-monitoreo', pathMatch: 'full' },
+  { path: 'cajas', redirectTo: 'admin/cajas-monitoreo', pathMatch: 'full' },
   { path: 'pos', redirectTo: 'admin/caja', pathMatch: 'full' },
   { path: 'caja/pago/:id', redirectTo: 'admin/caja/pago/:id', pathMatch: 'full' },
   { path: 'caja/comprobante/:id', redirectTo: 'admin/caja/comprobante/:id', pathMatch: 'full' },
@@ -86,6 +89,7 @@ export const routes: Routes = [
       { path: 'productos', component: ProductosComponent, canActivate: [permissionGuard('productos.ver')] },
       { path: 'inventario', component: ListaInventarioComponent, canActivate: [permissionGuard('inventario.ver')] },
       { path: 'caja', component: CajaComponent, canActivate: [permissionGuard(['ventas.crear', 'ventas.ver', 'admin.acceder'])] },
+      { path: 'cajas-monitoreo', component: CajasMonitoreoComponent, canActivate: [permissionGuard(['ventas.ver', 'reportes.ver', 'caja.ver', 'admin.acceder'])] },
       { path: 'caja/pago/:id', component: CajaPagoComponent, canActivate: [permissionGuard(['ventas.crear', 'admin.acceder'])] },
       { path: 'caja/comprobante/:id', component: CajaComprobanteComponent, canActivate: [permissionGuard(['ventas.crear', 'ventas.ver', 'admin.acceder'])] },
       { path: 'bitacora', component: ListaBitacoraComponent, canActivate: [permissionGuard('bitacora.ver')] },

@@ -231,8 +231,8 @@ def generar_pdf_venta(id_venta: int) -> bytes:
     fecha_str = datos["fecha_venta"].strftime('%d/%m/%Y %H:%M') if isinstance(datos["fecha_venta"], datetime) else str(datos["fecha_venta"])
 
     header_left = [
-        Paragraph(f"<b>{datos['empresa_nombre'].upper()}</b>", style_brand),
-        Paragraph("Colecciones Exclusivas & Alta Costura", style_sub),
+        Paragraph(f"<b>AURORA — {datos['empresa_nombre'].upper()}</b>", style_brand),
+        Paragraph("Boutique Oficial & Alta Costura", style_sub),
         Paragraph(f"NIT: {datos['empresa_nit']} · Sucursal: {datos['sucursal_nombre']}", style_sub),
         Paragraph(f"{datos['sucursal_direccion']}", style_sub),
         Paragraph(f"Tel: {datos['sucursal_telefono']}", style_sub)
@@ -381,7 +381,10 @@ def generar_pdf_reserva(id_reserva: int) -> bytes:
                 COALESCE(u.nombre, 'Cliente') AS cliente_nombre,
                 COALESCE(u.apellido, '') AS cliente_apellido,
                 COALESCE(u.correo, '') AS cliente_correo,
-                COALESCE(u.telefono, '') AS cliente_telefono
+                COALESCE(u.telefono, '') AS cliente_telefono,
+                COALESCE(r.con_pago, false) AS con_pago,
+                COALESCE(r.monto_pagado, 0.0) AS monto_pagado,
+                COALESCE(r.estado_pago, 'SIN_PAGO') AS estado_pago
             FROM {schema}.t_reserva r
             JOIN {schema}.t_sucursal s ON s.id_sucursal = r.id_sucursal
             LEFT JOIN {schema}.empresa emp ON emp.id_empresa = s.id_empresa
@@ -417,10 +420,16 @@ def generar_pdf_reserva(id_reserva: int) -> bytes:
     doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
     styles = getSampleStyleSheet()
 
+    empresa_label = (row[9] or 'Tienda').strip()
+    brand_title = f"AURORA — {empresa_label.upper()}"
+    es_pagado = bool(row[14])
+    monto_p = float(row[15] or 0.0)
+    modalidad_txt = f"PAGADA ONLINE (Abonado: Bs. {monto_p:.2f})" if es_pagado else "RESERVA GRATUITA (Pago en Tienda al Probarse)"
+
     story = [
-        Paragraph(f"<b>{row[9] or 'AURA ATELIER'}</b>", ParagraphStyle('B1', fontName='Helvetica-Bold', fontSize=18, textColor=colors.HexColor('#1E1B4B'))),
+        Paragraph(f"<b>{brand_title}</b>", ParagraphStyle('B1', fontName='Helvetica-Bold', fontSize=18, textColor=colors.HexColor('#1E1B4B'))),
         Paragraph("COMPROBANTE OFICIAL DE RESERVA EN TIENDA", ParagraphStyle('B2', fontName='Helvetica-Bold', fontSize=12, textColor=colors.HexColor('#D97706'))),
-        Paragraph(f"Código: <b>{row[1]}</b> | Fecha: {row[2].strftime('%d/%m/%Y') if row[2] else 'Hoy'}", ParagraphStyle('B3', fontSize=9, textColor=colors.HexColor('#4B5563'))),
+        Paragraph(f"Código: <b>{row[1]}</b> | Fecha: {row[2].strftime('%d/%m/%Y') if row[2] else 'Hoy'} | Modalidad: <b>{modalidad_txt}</b>", ParagraphStyle('B3', fontSize=9, textColor=colors.HexColor('#4B5563'))),
         HRFlowable(width="100%", thickness=1, color=colors.HexColor('#E5E7EB'), spaceBefore=6, spaceAfter=8),
         Paragraph(f"<b>Cliente:</b> {row[10]} {row[11]} ({row[12]})", ParagraphStyle('C1', fontSize=9)),
         Paragraph(f"<b>Sucursal de Visita:</b> {row[6]} — {row[7]}", ParagraphStyle('C2', fontSize=9)),

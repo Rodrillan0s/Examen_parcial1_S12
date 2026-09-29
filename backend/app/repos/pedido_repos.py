@@ -8,15 +8,30 @@ from app.repos.carrito_repos import obtener_o_crear_cliente
 def _get_schema() -> str:
     return Config.SCHEMA or 'comercio'
 
-def obtener_sucursales_tenant(id_empresa: int) -> List[Dict[str, Any]]:
+def obtener_sucursales_tenant(id_empresa: int, id_usuario: Optional[int] = None) -> List[Dict[str, Any]]:
     """
     Obtiene las sucursales activas pertenecientes exclusivamente al Tenant actual.
-    Incluye datos de ubicación geográfica, contacto y horarios de atención.
+    Incluye datos de ubicación geográfica, contacto, horarios y disponibilidad de stock
+    para el carrito actual del cliente si id_usuario es provisto.
     """
     db = PostgreSQL()
     db.create_connection()
     try:
         schema = _get_schema()
+
+        # 1. Obtener prendas del carrito activo del usuario si está autenticado
+        items_carrito: List[tuple] = []
+        if id_usuario:
+            q_cart = f"""
+                SELECT it.id_variante, it.cantidad
+                FROM {schema}.t_item_carrito it
+                JOIN {schema}.t_carrito c ON c.id_carrito = it.id_carrito
+                JOIN {schema}.t_cliente cli ON cli.id_cliente = c.id_cliente
+                WHERE cli.id_usuario = %s AND c.id_empresa = %s AND c.estado = 'ACTIVO';
+            """
+            items_cart_rows = db.execute_query(q_cart, (id_usuario, id_empresa), fetchall=True) or []
+            items_carrito = [(int(r[0]), int(r[1])) for r in items_cart_rows]
+
         q = f"""
             SELECT 
                 s.id_sucursal,
@@ -38,8 +53,41 @@ def obtener_sucursales_tenant(id_empresa: int) -> List[Dict[str, Any]]:
         rows = db.execute_query(q, (id_empresa,), fetchall=True) or []
         resultado = []
         for r in rows:
+            id_suc = r[0]
+            tiene_stock_completo = True
+            stock_estado = "DISPONIBLE"
+            stock_label = "✓ Disponible"
+
+            if items_carrito:
+                var_ids = [it[0] for it in items_carrito]
+                q_inv = f"""
+                    SELECT id_variante, COALESCE(stock_disponible, 0)
+                    FROM {schema}.t_inventario
+                    WHERE id_sucursal = %s AND id_variante = ANY(%s) AND estado = TRUE;
+                """
+                inv_rows = db.execute_query(q_inv, (id_suc, var_ids), fetchall=True) or []
+                stk_map = {int(row[0]): int(row[1]) for row in inv_rows}
+
+                items_cumplidos = 0
+                for vid, cant in items_carrito:
+                    if stk_map.get(vid, 0) >= cant:
+                        items_cumplidos += 1
+
+                if items_cumplidos == len(items_carrito):
+                    tiene_stock_completo = True
+                    stock_estado = "DISPONIBLE"
+                    stock_label = "✓ Stock completo para tu pedido"
+                elif items_cumplidos > 0:
+                    tiene_stock_completo = False
+                    stock_estado = "PARCIAL"
+                    stock_label = f"⚠ Stock incompleto ({items_cumplidos}/{len(items_carrito)} prendas)"
+                else:
+                    tiene_stock_completo = False
+                    stock_estado = "SIN_STOCK"
+                    stock_label = "✕ Agotado en esta sucursal"
+
             resultado.append({
-                "id_sucursal": r[0],
+                "id_sucursal": id_suc,
                 "id_empresa": r[1],
                 "nombre": r[2],
                 "codigo_sucursal": r[3],
@@ -48,7 +96,10 @@ def obtener_sucursales_tenant(id_empresa: int) -> List[Dict[str, Any]]:
                 "correo": r[6] or "",
                 "horario": f"{r[7] or '09:00'} - {r[8] or '20:00'}",
                 "ciudad": r[9] or "Santa Cruz",
-                "activo": bool(r[10])
+                "activo": bool(r[10]),
+                "tiene_stock_completo": tiene_stock_completo,
+                "stock_estado": stock_estado,
+                "stock_label": stock_label
             })
         return resultado
     finally:
@@ -180,21 +231,36 @@ def validar_y_crear_pedido(id_usuario: int, id_empresa: int, datos: Dict[str, An
             if not prod_activo or not var_activa or not talla_activa or not col_activa:
                 raise ValueError(f"La prenda '{p_nombre}' ({t_nombre} / {c_nombre}) ha sido descontinuada o inactivada.")
 
-            # Consultar stock disponible actual en las sucursales activas del Tenant
-            q_stk = f"""
-                SELECT COALESCE(SUM(GREATEST(0, inv.stock_disponible)), 0)
-                FROM {schema}.t_inventario inv
-                JOIN {schema}.t_sucursal s ON s.id_sucursal = inv.id_sucursal
-                WHERE inv.id_variante = %s AND s.id_empresa = %s AND s.activo = TRUE AND inv.estado = TRUE;
-            """
-            stk_res = db.execute_query(q_stk, (id_var, id_empresa), fetchone=True)
-            stock_disp = int(stk_res[0]) if stk_res else 0
-
-            if stock_disp < cant:
-                raise ValueError(
-                    f"Stock insuficiente para '{p_nombre}' ({t_nombre} / {c_nombre}). "
-                    f"Solicitaste {cant} unidad(es), pero solo quedan {stock_disp} disponible(s) en tienda."
-                )
+            # Consultar stock disponible según modalidad (en la sucursal específica si es retiro, o global de la empresa si es delivery)
+            if modalidad == 'RETIRO_SUCURSAL':
+                q_stk = f"""
+                    SELECT COALESCE(SUM(GREATEST(0, inv.stock_disponible)), 0)
+                    FROM {schema}.t_inventario inv
+                    WHERE inv.id_variante = %s AND inv.id_sucursal = %s AND inv.estado = TRUE;
+                """
+                stk_res = db.execute_query(q_stk, (id_var, id_sucursal), fetchone=True)
+                stock_disp = int(stk_res[0]) if stk_res else 0
+                if stock_disp < cant:
+                    suc_nom = suc_row[1] if suc_row else "la sucursal"
+                    raise ValueError(
+                        f"Stock insuficiente en '{suc_nom}' para '{p_nombre}' ({t_nombre} / {c_nombre}). "
+                        f"Solicitaste {cant} unidad(es), pero solo quedan {stock_disp} disponible(s) en esta tienda. "
+                        f"Por favor selecciona otra sucursal de retiro."
+                    )
+            else:
+                q_stk = f"""
+                    SELECT COALESCE(SUM(GREATEST(0, inv.stock_disponible)), 0)
+                    FROM {schema}.t_inventario inv
+                    JOIN {schema}.t_sucursal s ON s.id_sucursal = inv.id_sucursal
+                    WHERE inv.id_variante = %s AND s.id_empresa = %s AND s.activo = TRUE AND inv.estado = TRUE;
+                """
+                stk_res = db.execute_query(q_stk, (id_var, id_empresa), fetchone=True)
+                stock_disp = int(stk_res[0]) if stk_res else 0
+                if stock_disp < cant:
+                    raise ValueError(
+                        f"Stock insuficiente para '{p_nombre}' ({t_nombre} / {c_nombre}). "
+                        f"Solicitaste {cant} unidad(es), pero solo quedan {stock_disp} disponible(s) en tienda."
+                    )
 
             line_subtotal = round(cant * precio_vigente, 2)
             subtotal_acumulado += line_subtotal

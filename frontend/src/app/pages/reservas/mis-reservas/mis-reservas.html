@@ -109,12 +109,22 @@
               </div>
             </div>
 
-            <!-- Status Badge -->
-            <span [class]="obtenerClaseEstado(r.estado)"
-                  class="px-3 py-1 rounded-full text-[10px] font-mono font-bold tracking-widest uppercase border flex items-center space-x-1.5">
-              <i [class]="'ph ' + obtenerIconoEstado(r.estado)"></i>
-              <span>{{ r.estado }}</span>
-            </span>
+            <!-- Badges -->
+            <div class="flex items-center space-x-2">
+              <span *ngIf="r.con_pago && r.estado_pago === 'PAGADO'"
+                    class="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold tracking-wider uppercase border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                💳 PAGADA (Bs. {{ r.monto_pagado | number:'1.2-2' }})
+              </span>
+              <span *ngIf="!r.con_pago || r.estado_pago !== 'PAGADO'"
+                    class="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold tracking-wider uppercase border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400">
+                🛍️ EN TIENDA
+              </span>
+              <span [class]="obtenerClaseEstado(r.estado)"
+                    class="px-3 py-1 rounded-full text-[10px] font-mono font-bold tracking-widest uppercase border flex items-center space-x-1.5">
+                <i [class]="'ph ' + obtenerIconoEstado(r.estado)"></i>
+                <span>{{ r.estado }}</span>
+              </span>
+            </div>
           </div>
 
           <!-- Date & Branch Info -->

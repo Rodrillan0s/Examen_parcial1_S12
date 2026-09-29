@@ -37,6 +37,13 @@
         -{{ prenda.promocion.porcentaje_descuento | number:'1.0-2' }}%
       </span>
 
+      <!-- Estado de Disponibilidad -->
+      <span
+        *ngIf="!prenda.tallas_disponibles || prenda.tallas_disponibles.length === 0"
+        class="px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-zinc-900/90 dark:bg-black/90 text-zinc-300 border border-zinc-700/60 backdrop-blur-sm shadow-sm">
+        Agotado
+      </span>
+
     </div>
 
     <!-- Indicador de Cantidad de Fotos -->
@@ -61,13 +68,13 @@
       <span>{{ prenda.total_imagenes }}</span>
     </div>
 
-    <!-- Overlay "Ver Detalle & Disponibilidad" -->
+    <!-- Overlay "Ver Prenda" -->
     <div
       class="absolute inset-0 bg-gradient-to-t from-zinc-950/80 via-zinc-950/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
 
       <span
         class="w-full py-2.5 rounded-xl bg-amber-500 text-zinc-950 font-bold text-xs uppercase tracking-wider text-center shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-transform">
-        Ver Detalle & Stock
+        Ver Prenda
       </span>
 
     </div>
