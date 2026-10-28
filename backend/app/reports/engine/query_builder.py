@@ -26,6 +26,8 @@ def construir_consulta_reporte(
     params = [id_empresa]
 
     # Restricción de sucursal por usuario de Nivel 4/5 (Encargado/Cajero)
+    if sucursales_permitidas == []:
+        where_clauses.append('FALSE')
     if sucursales_permitidas and len(sucursales_permitidas) > 0:
         placeholders = ', '.join(['%s'] * len(sucursales_permitidas))
         where_clauses.append(f"id_sucursal IN ({placeholders})")

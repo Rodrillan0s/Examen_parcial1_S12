@@ -165,20 +165,8 @@ def iniciar_sesion(data: dict, request: Request = None) -> dict:
     nombre_rol_final = usuario_db.get('nombre_rol') or (nombres_roles[0] if nombres_roles else 'CLIENTE')
 
     # Determinar alcance RBAC de forma rigurosa
-    id_rol_val = usuario_db.get('id_rol')
-    roles_upper = [str(r).upper() for r in nombres_roles]
-    es_global = (id_rol_val == 1 or 'ADMINISTRADOR' in roles_upper or 'SUPERADMIN' in roles_upper) and not usuario_db.get('id_empresa')
-
-    if es_global:
-        alcance_final = 'PLATAFORMA'
-    elif id_rol_val in (1, 3) or 'ADMINISTRADOR' in roles_upper or 'ADMINISTRADOR_TIENDA' in roles_upper:
-        alcance_final = 'EMPRESA'
-    elif id_rol_val in (4, 5) or any(r in ('CAJERO', 'EMPLEADO', 'ENCARGADO', 'ENCARGADO_SUCURSAL') for r in roles_upper):
-        alcance_final = 'SUCURSAL'
-    elif usuario_db.get('id_empresa'):
-        alcance_final = 'SUCURSAL'
-    else:
-        alcance_final = 'PLATAFORMA'
+    from app.utils.tenant_guard import obtener_alcance_usuario
+    alcance_final = obtener_alcance_usuario({'roles': nombres_roles, 'id_empresa': usuario_db.get('id_empresa')})
 
     # 5.1 Enriquecer detalle de sucursales autorizadas
     sucursales_detalle = []

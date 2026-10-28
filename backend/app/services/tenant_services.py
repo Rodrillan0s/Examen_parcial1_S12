@@ -139,6 +139,9 @@ def actualizar_empresa(id_empresa: int, data: dict, payload: dict, request: Requ
     if correo and not re.match(r'^[\w\.-]+@[\w\.-]+\.\w+$', str(correo).strip()):
         raise ValueError("El formato del correo electrónico empresarial no es válido.")
 
+    if str(estado).strip().upper() not in ('ACTIVO', 'INACTIVO'):
+        raise ValueError('Estado de empresa invalido.')
+
     datos_actualizados = {
         "nombre_empresa": str(nombre_comercial).strip().upper(),
         "razon_social": str(razon_social or nombre_comercial).strip().upper(),
@@ -200,7 +203,7 @@ def borrar_empresa(id_empresa: int, payload: dict, request: Request = None):
             payload_jwt=payload,
             entidad="empresa",
             id_entidad=str(id_empresa),
-            descripcion=f"Tenant eliminado permanentemente: {empresa_anterior.get('nombre_empresa')} (ID: {id_empresa})",
+            descripcion=f"Tenant desactivado: {empresa_anterior.get('nombre_empresa')} (ID: {id_empresa})",
             datos_anteriores=empresa_anterior,
             request=request
         )
@@ -209,5 +212,5 @@ def borrar_empresa(id_empresa: int, payload: dict, request: Request = None):
 
     return {
         "success": True,
-        "message": "Empresa eliminada exitosamente"
+        "message": "Empresa desactivada exitosamente"
     }

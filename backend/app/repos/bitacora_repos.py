@@ -76,6 +76,10 @@ def obtener_eventos_db(
             where_clauses.append("id_sucursal = %s")
             params.append(id_sucursal_filtro)
             
+        if '_sucursales_autorizadas' in filtros:
+            where_clauses.append('id_sucursal = ANY(%s)')
+            params.append(filtros['_sucursales_autorizadas'])
+
         # Optional filters
         if filtros.get('modulo'):
             where_clauses.append("modulo = %s")

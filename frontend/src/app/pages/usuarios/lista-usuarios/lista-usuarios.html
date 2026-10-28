@@ -238,6 +238,9 @@
                 <button (click)="abrirModalPermisos(u)" title="Asignar Permisos Directos" class="p-2 text-zinc-400 hover:text-amber-300 hover:bg-zinc-900 border border-transparent hover:border-zinc-800 rounded-xl transition-all cursor-pointer">
                   <i class="ph ph-shield-star text-base"></i>
                 </button>
+                <button (click)="abrirModalSucursales(u)" title="Asignar Sucursales Autorizadas" class="p-2 text-zinc-400 hover:text-emerald-300 hover:bg-zinc-900 border border-transparent hover:border-zinc-800 rounded-xl transition-all cursor-pointer">
+                  <i class="ph ph-storefront text-base"></i>
+                </button>
                 <button *ngIf="authService.hasPermission('usuarios.editar')" (click)="abrirModalEditar(u)" title="Editar Usuario" class="p-2 text-zinc-400 hover:text-amber-300 hover:bg-zinc-900 border border-transparent hover:border-zinc-800 rounded-xl transition-all cursor-pointer">
                   <i class="ph ph-pencil-simple text-base"></i>
                 </button>
@@ -768,6 +771,106 @@
                 class="px-4 py-2.5 text-xs font-bold text-zinc-200 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer">
           <i class="ph ph-pencil-simple text-sm"></i>
           <span>Editar Datos</span>
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ==================================================== -->
+<!-- MODAL: ASIGNACIÓN DE SUCURSALES AUTORIZADAS          -->
+<!-- ==================================================== -->
+<div *ngIf="mostrarModalSucursales" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/85 backdrop-blur-md transition-all overflow-y-auto">
+  <div class="bg-zinc-950 border border-zinc-800 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden ring-1 ring-emerald-500/20 my-8">
+
+    <div class="flex justify-between items-center px-8 py-6 border-b border-zinc-800 bg-zinc-900/60">
+      <div class="space-y-1">
+        <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-widest">
+          Asignación de Sucursales
+        </div>
+        <h3 class="text-lg font-black text-white">
+          Sucursales de <span class="text-emerald-400">{{ usuarioSeleccionadoSucursales?.nombre_completo }}</span>
+        </h3>
+        <p class="text-[11px] text-zinc-400 font-mono">&#64;{{ usuarioSeleccionadoSucursales?.nombre_usuario }} · Rol: {{ usuarioSeleccionadoSucursales?.nombre_rol }}</p>
+      </div>
+      <button (click)="cerrarModalSucursales()" class="p-2 text-zinc-400 hover:text-white rounded-xl hover:bg-zinc-900 transition-colors cursor-pointer">
+        <i class="ph ph-x text-lg"></i>
+      </button>
+    </div>
+
+    <!-- Error message inside modal -->
+    <div *ngIf="mensajeModalSucursalesError" class="mx-8 mt-4 p-3 rounded-2xl bg-rose-950/40 border border-rose-800/60 text-rose-300 text-xs">
+      {{ mensajeModalSucursalesError }}
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="cargandoSucursalesModal" class="p-8 text-center text-xs text-zinc-400 space-y-2">
+      <i class="ph ph-spinner animate-spin text-2xl text-emerald-400"></i>
+      <p>Consultando sucursales de la empresa...</p>
+    </div>
+
+    <!-- Branches List -->
+    <div *ngIf="!cargandoSucursalesModal" class="p-8 max-h-[60vh] overflow-y-auto space-y-4">
+      <p class="text-xs text-zinc-400 leading-relaxed">
+        Seleccione las sucursales donde el colaborador está autorizado para operar ventas, caja y reservas. Una lista vacía revoca el acceso a tiendas específicas.
+      </p>
+
+      <div class="space-y-2">
+        <div *ngFor="let suc of sucursalesModalDisponibles"
+             (click)="toggleSucursalModal(suc.id_sucursal!)"
+             class="p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between"
+             [ngClass]="idsSucursalesSeleccionadas.has(suc.id_sucursal!)
+               ? 'bg-emerald-950/20 border-emerald-500/40 ring-1 ring-emerald-500/20 text-white'
+               : 'bg-zinc-900/40 border-zinc-800/80 hover:border-zinc-700 text-zinc-400'">
+          <div class="flex items-center gap-3">
+            <div class="w-5 h-5 rounded-lg border flex items-center justify-center transition-colors"
+                 [ngClass]="idsSucursalesSeleccionadas.has(suc.id_sucursal!)
+                   ? 'bg-emerald-500 border-emerald-500 text-black'
+                   : 'border-zinc-700 bg-zinc-900'">
+              <i *ngIf="idsSucursalesSeleccionadas.has(suc.id_sucursal!)" class="ph ph-check text-xs font-bold"></i>
+            </div>
+            <div>
+              <p class="text-xs font-bold" [ngClass]="idsSucursalesSeleccionadas.has(suc.id_sucursal!) ? 'text-white' : 'text-zinc-300'">
+                {{ suc.nombre }}
+              </p>
+              <p class="text-[11px] text-zinc-500 mt-0.5">
+                {{ suc.ciudad || 'Sin ciudad' }} · {{ suc.direccion || 'Sin dirección' }}
+              </p>
+            </div>
+          </div>
+
+          <span class="text-[10px] font-mono px-2 py-0.5 rounded-full"
+                [ngClass]="idsSucursalesSeleccionadas.has(suc.id_sucursal!)
+                  ? 'bg-emerald-500/20 text-emerald-300'
+                  : 'bg-zinc-800 text-zinc-500'">
+            ID #{{ suc.id_sucursal }}
+          </span>
+        </div>
+
+        <div *ngIf="sucursalesModalDisponibles.length === 0" class="p-6 text-center text-xs text-zinc-500 border border-zinc-800/60 rounded-2xl">
+          No hay sucursales activas registradas para esta empresa.
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer Modal -->
+    <div class="p-6 border-t border-zinc-900 bg-zinc-900/50 flex items-center justify-between">
+      <span class="text-xs font-bold text-zinc-400">
+        {{ idsSucursalesSeleccionadas.size }} sucursal(es) seleccionada(s)
+      </span>
+
+      <div class="flex items-center gap-3">
+        <button type="button" (click)="cerrarModalSucursales()"
+                [disabled]="guardando"
+                class="px-4 py-2 text-xs font-bold text-zinc-400 hover:text-white rounded-xl transition-colors">
+          Cancelar
+        </button>
+        <button type="button" (click)="guardarAsignacionSucursales()"
+                [disabled]="guardando || cargandoSucursalesModal"
+                class="px-5 py-2 text-xs font-bold text-black bg-emerald-400 hover:bg-emerald-300 rounded-xl transition-all shadow-md shadow-emerald-400/20 flex items-center gap-1.5 disabled:opacity-50 cursor-pointer">
+          <i *ngIf="guardando" class="ph ph-spinner animate-spin text-sm"></i>
+          <span>{{ guardando ? 'Guardando...' : 'Guardar Asignaciones' }}</span>
         </button>
       </div>
     </div>

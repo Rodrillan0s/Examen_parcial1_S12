@@ -33,6 +33,8 @@ def create_user(request: Request, data: dict = Body(...), payload: dict = Depend
     
     try:
         return users_services.registrar_usuario(data, payload, request)
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -48,6 +50,8 @@ def update_user(id_usuario: int, request: Request, data: dict = Body(...), paylo
         
     try:
         return users_services.actualizar_usuario(id_usuario, data, payload, request)
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -60,6 +64,8 @@ def update_user(id_usuario: int, request: Request, data: dict = Body(...), paylo
 def toggle_estado_user(id_usuario: int, request: Request, data: dict = Body(...), payload: dict = Depends(require_permission('usuarios.editar'))):
     try:
         return users_services.cambiar_estado_usuario(id_usuario, data, payload, request)
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -69,6 +75,8 @@ def toggle_estado_user(id_usuario: int, request: Request, data: dict = Body(...)
 def delete_user(id_usuario: int, request: Request, payload: dict = Depends(require_permission('usuarios.desactivar'))):
     try:
         return users_services.eliminar_usuario(id_usuario, payload, request)
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

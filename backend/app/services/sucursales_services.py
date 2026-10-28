@@ -7,7 +7,7 @@ from app.utils.tenant_guard import (
     es_administrador_global,
     resolver_tenant_operacion,
     validar_acceso_recurso_tenant,
-    validar_relaciones_tenant
+    validar_relaciones_tenant, obtener_sucursales_autorizadas, obtener_alcance_usuario, resolver_sucursal_autorizada
 )
 
 
@@ -29,6 +29,10 @@ def listar_sucursales(
     sucursales = sucursales_repos.obtener_sucursales_por_empresa(
         empresa_efectiva
     )
+
+    if obtener_alcance_usuario(payload) == 'SUCURSAL':
+        permitidas = set(obtener_sucursales_autorizadas(payload))
+        sucursales = [s for s in sucursales if s['id_sucursal'] in permitidas]
 
     return {
         "success": True,
@@ -56,6 +60,7 @@ def obtener_sucursal_detalle(
             detail="Sucursal no encontrada."
         )
 
+    resolver_sucursal_autorizada(payload, id_sucursal)
     validar_acceso_recurso_tenant(
         payload,
         sucursal.get('id_empresa'),
@@ -74,6 +79,8 @@ def registrar_sucursal(
     request: Optional[Request] = None
 ) -> Dict[str, Any]:
 
+    if obtener_alcance_usuario(payload) not in ('PLATAFORMA', 'EMPRESA'):
+        raise HTTPException(403, detail='Solo administracion de empresa puede crear sucursales.')
     nombre = data.get('nombre') or data.get('nombre_sucursal')
     direccion = data.get('direccion') or data.get('direccion_sucursal')
     telefono = data.get('telefono') or data.get('telefono_sucursal')
@@ -312,6 +319,7 @@ def actualizar_sucursal(
             detail="Sucursal no encontrada."
         )
 
+    resolver_sucursal_autorizada(payload, id_sucursal)
     validar_acceso_recurso_tenant(
         payload,
         sucursal_db.get('id_empresa'),
@@ -326,6 +334,9 @@ def actualizar_sucursal(
 
         if not id_empresa or not isinstance(id_empresa, int):
             id_empresa = sucursal_db.get('id_empresa')
+
+    if id_empresa != sucursal_db.get('id_empresa'):
+        raise HTTPException(409, detail='No se permite trasladar sucursales entre empresas.')
 
     # Resolución de Ciudad
     if not id_ciudad:
@@ -414,6 +425,7 @@ def cambiar_estado_sucursal(
             detail="Sucursal no encontrada."
         )
 
+    resolver_sucursal_autorizada(payload, id_sucursal)
     validar_acceso_recurso_tenant(
         payload,
         sucursal_db.get('id_empresa'),

@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 980" width="1440" height="980" style="background-color: #ffffff; font-family: Arial, Helvetica, sans-serif;">
+  <!-- Encabezado del Diagrama -->
+  <text x="35" y="34" font-size="16" font-weight="bold" fill="#0f172a">CU18 W: Gestionar categorías — Diagrama de Análisis de Clases (UML / ICONIX)</text>
+  <text x="35" y="54" font-size="12" font-weight="500" fill="#475569">Estructura Jerárquica de Categorías | Estereotipos: Boundary (Form) ── Control ── Entity</text>
+  <text x="35" y="72" font-size="11.5" font-weight="bold" fill="#1e293b">Actor(es): <tspan font-weight="normal" fill="#334155">Administrador de Tienda</tspan></text>
+  <line x1="35" y1="82" x2="1405" y2="82" stroke="#94a3b8" stroke-width="1.2"/>
+
+  <!-- Leyenda de Estructura ICONIX -->
+  <g transform="translate(1010, 24)">
+    <rect x="0" y="0" width="395" height="48" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+    <text x="12" y="19" font-size="11" font-weight="bold" fill="#1e293b">Estructura del Análisis de Clases (ICONIX):</text>
+    <text x="12" y="36" font-size="10.5" fill="#475569">Boundary (Form) ── Control (Lógica) ── Entity (Persistencia)</text>
+  </g>
+  <!-- Clase: Form / Categorias -->
+  <g id="class_form_categorias">
+    <rect x="50" y="350" width="270" height="232" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="50" y1="398" x2="320" y2="398" stroke="#000000" stroke-width="1.2"/>
+    <line x1="50" y1="490.0" x2="320" y2="490.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="185.0" y="367" text-anchor="middle" font-size="11" font-weight="bold" fill="#334155" font-family="Arial, Helvetica, sans-serif">Form</text>
+    <text x="185.0" y="384" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">Categorias</text>
+    <text x="60" y="414" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ id_categoria: int</text>
+    <text x="60" y="430" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ nombre: string</text>
+    <text x="60" y="446" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ descripcion: string</text>
+    <text x="60" y="462" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ id_categoria_padre: int</text>
+    <text x="60" y="478" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ estado: string</text>
+    <text x="60" y="506.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ capturar_categoria()</text>
+    <text x="60" y="522.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ guardar_categoria()</text>
+    <text x="60" y="538.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ asignar_jerarquia()</text>
+    <text x="60" y="554.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ eliminar_categoria()</text>
+    <text x="60" y="570.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ mostrar_error_asociaciones()</text>
+  </g>
+  <!-- Clase: Control / Categorias -->
+  <g id="class_ctrl_categorias">
+    <rect x="380" y="350" width="330" height="184" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="380" y1="398" x2="710" y2="398" stroke="#000000" stroke-width="1.2"/>
+    <line x1="380" y1="426.0" x2="710" y2="426.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="545.0" y="367" text-anchor="middle" font-size="11" font-weight="bold" fill="#334155" font-family="Arial, Helvetica, sans-serif">Control</text>
+    <text x="545.0" y="384" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">Categorias</text>
+    <text x="390" y="414" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">- category_service: CategoryService</text>
+    <text x="390" y="442.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ crear_categoria(dto_categoria)</text>
+    <text x="390" y="458.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ validar_nombre_categoria(nombre)</text>
+    <text x="390" y="474.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ verificar_no_circular(id, id_padre)</text>
+    <text x="390" y="490.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ verificar_productos_asociados(id)</text>
+    <text x="390" y="506.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ insertar_categoria(datos)</text>
+    <text x="390" y="522.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ actualizar_categoria(id, datos)</text>
+  </g>
+  <!-- Clase: T_CATEGORIA -->
+  <g id="class_ent_categoria">
+    <rect x="770" y="350" width="270" height="186" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="770" y1="384" x2="1040" y2="384" stroke="#000000" stroke-width="1.2"/>
+    <line x1="770" y1="476.0" x2="1040" y2="476.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="905.0" y="372.0" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">T_CATEGORIA</text>
+    <text x="780" y="400" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_CATEGORIA: int [PK]</text>
+    <text x="780" y="416" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_CATEGORIA_PADRE: int [FK]</text>
+    <text x="780" y="432" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ NOMBRE: string [UQ]</text>
+    <text x="780" y="448" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ DESCRIPCION: string</text>
+    <text x="780" y="464" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ESTADO: string = &apos;ACTIVO&apos;</text>
+    <text x="780" y="492.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ buscar_por_nombre(nombre)</text>
+    <text x="780" y="508.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ insertar(datos)</text>
+    <text x="780" y="524.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ eliminar(id)</text>
+  </g>
+  <!-- Clase: T_PRODUCTO -->
+  <g id="class_ent_producto">
+    <rect x="1100" y="350" width="280" height="138" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="1100" y1="384" x2="1380" y2="384" stroke="#000000" stroke-width="1.2"/>
+    <line x1="1100" y1="460.0" x2="1380" y2="460.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="1240.0" y="372.0" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">T_PRODUCTO</text>
+    <text x="1110" y="400" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_PRODUCTO: int [PK]</text>
+    <text x="1110" y="416" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_CATEGORIA: int [FK]</text>
+    <text x="1110" y="432" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ NOMBRE: string</text>
+    <text x="1110" y="448" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ESTADO: string</text>
+    <text x="1110" y="476.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ contar_por_categoria(id_cat)</text>
+  </g>
+  <!-- Clase: T_BITACORA -->
+  <g id="class_ent_bitacora">
+    <rect x="770" y="700" width="270" height="154" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="770" y1="734" x2="1040" y2="734" stroke="#000000" stroke-width="1.2"/>
+    <line x1="770" y1="826.0" x2="1040" y2="826.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="905.0" y="722.0" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">T_BITACORA</text>
+    <text x="780" y="750" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_BITACORA: bigint [PK]</text>
+    <text x="780" y="766" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ FECHA_HORA: timestamp</text>
+    <text x="780" y="782" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_USUARIO: int [FK]</text>
+    <text x="780" y="798" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ MODULO: string = &apos;CATEGORIA&apos;</text>
+    <text x="780" y="814" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ACCION: string = &apos;GEST_CATEGORIA&apos;</text>
+    <text x="780" y="842.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ registrar_evento(accion, id_cat)</text>
+  </g>
+
+  <!-- Asociaciones y Multiplicidades -->
+  <g id="associations">
+    <polyline points="320,466.0 350,466.0 350,442.0 380,442.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="335" y="436.0" font-size="10" font-style="italic" fill="#334155">solicita</text>
+    <polyline points="710,442.0 770,443.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="755" y="437.0" font-size="10" font-style="italic" fill="#334155">persiste</text>
+    <polyline points="950,350 950,280 860,280 860,350" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="955" y="305" font-size="11" font-weight="bold" fill="#000000">0..1</text>
+    <text x="830" y="305" font-size="11" font-weight="bold" fill="#000000">0..*</text>
+    <polyline points="1040,443.0 1070,443.0 1070,419.0 1100,419.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="1048" y="437.0" font-size="11" font-weight="bold" fill="#000000">1</text>
+    <text x="1075" y="413.0" font-size="11" font-weight="bold" fill="#000000">0..*</text>
+    <polyline points="905.0,536 905.0,700" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="913.0" y="552" font-size="11" font-weight="bold" fill="#000000">1</text>
+    <text x="913.0" y="692" font-size="11" font-weight="bold" fill="#000000">0..*</text>
+  </g>
+</svg>

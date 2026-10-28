@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 980" width="1440" height="980" style="background-color: #ffffff; font-family: Arial, Helvetica, sans-serif;">
+  <!-- Encabezado del Diagrama -->
+  <text x="35" y="34" font-size="16" font-weight="bold" fill="#0f172a">CU41 W: Gestionar respaldos y restauraciones — Diagrama de Análisis de Clases (UML / ICONIX)</text>
+  <text x="35" y="54" font-size="12" font-weight="500" fill="#475569">Infraestructura Crítica y Recuperación de Datos | Estereotipos: Boundary (Form) ── Control ── Entity</text>
+  <text x="35" y="72" font-size="11.5" font-weight="bold" fill="#1e293b">Actor(es): <tspan font-weight="normal" fill="#334155">Superadministrador del Sistema</tspan></text>
+  <line x1="35" y1="82" x2="1405" y2="82" stroke="#94a3b8" stroke-width="1.2"/>
+
+  <!-- Leyenda de Estructura ICONIX -->
+  <g transform="translate(1010, 24)">
+    <rect x="0" y="0" width="395" height="48" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+    <text x="12" y="19" font-size="11" font-weight="bold" fill="#1e293b">Estructura del Análisis de Clases (ICONIX):</text>
+    <text x="12" y="36" font-size="10.5" fill="#475569">Boundary (Form) ── Control (Lógica) ── Entity (Persistencia)</text>
+  </g>
+  <!-- Clase: Form / Respaldos_Restauracion -->
+  <g id="class_form_respaldos">
+    <rect x="50" y="350" width="270" height="248" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="50" y1="398" x2="320" y2="398" stroke="#000000" stroke-width="1.2"/>
+    <line x1="50" y1="506.0" x2="320" y2="506.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="185.0" y="367" text-anchor="middle" font-size="11" font-weight="bold" fill="#334155" font-family="Arial, Helvetica, sans-serif">Form</text>
+    <text x="185.0" y="384" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">Respaldos_Restauracion</text>
+    <text x="60" y="414" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ id_respaldo: int</text>
+    <text x="60" y="430" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ nombre_archivo: string</text>
+    <text x="60" y="446" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ tipo_respaldo: string</text>
+    <text x="60" y="462" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ checksum_sha256: string</text>
+    <text x="60" y="478" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ tamanio_bytes: bigint</text>
+    <text x="60" y="494" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ motivo: string</text>
+    <text x="60" y="522.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ solicitar_respaldo()</text>
+    <text x="60" y="538.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ solicitar_restauracion()</text>
+    <text x="60" y="554.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ confirmar_doble_factor()</text>
+    <text x="60" y="570.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ mostrar_confirmacion()</text>
+    <text x="60" y="586.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ mostrar_error_motor()</text>
+  </g>
+  <!-- Clase: Control / Respaldos -->
+  <g id="class_ctrl_respaldos">
+    <rect x="370" y="350" width="340" height="184" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="370" y1="398" x2="710" y2="398" stroke="#000000" stroke-width="1.2"/>
+    <line x1="370" y1="426.0" x2="710" y2="426.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="540.0" y="367" text-anchor="middle" font-size="11" font-weight="bold" fill="#334155" font-family="Arial, Helvetica, sans-serif">Control</text>
+    <text x="540.0" y="384" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">Respaldos</text>
+    <text x="380" y="414" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">- security: SuperadminSecurityService</text>
+    <text x="380" y="442.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ejecutar_respaldo(dto)</text>
+    <text x="380" y="458.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ validar_privilegios_superadmin(token)</text>
+    <text x="380" y="474.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ejecutar_pg_dump(esquemas_db)</text>
+    <text x="380" y="490.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ calcular_checksum_sha256(archivo)</text>
+    <text x="380" y="506.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ guardar_metadatos_respaldo(datos)</text>
+    <text x="380" y="522.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ejecutar_pg_restore(id_respaldo)</text>
+  </g>
+  <!-- Clase: T_RESPALDO_SISTEMA -->
+  <g id="class_ent_respaldo">
+    <rect x="770" y="350" width="270" height="234" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="770" y1="384" x2="1040" y2="384" stroke="#000000" stroke-width="1.2"/>
+    <line x1="770" y1="524.0" x2="1040" y2="524.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="905.0" y="372.0" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">T_RESPALDO_SISTEMA</text>
+    <text x="780" y="400" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_RESPALDO: int [PK]</text>
+    <text x="780" y="416" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ NOMBRE_ARCHIVO: string</text>
+    <text x="780" y="432" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ TIPO_RESPALDO: string</text>
+    <text x="780" y="448" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ CHECKSUM_SHA256: string</text>
+    <text x="780" y="464" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ TAMANIO_BYTES: bigint</text>
+    <text x="780" y="480" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ MOTIVO: text</text>
+    <text x="780" y="496" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ CREADO_POR: int [FK]</text>
+    <text x="780" y="512" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ FECHA_CREACION: timestamp</text>
+    <text x="780" y="540.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ insertar(datos)</text>
+    <text x="780" y="556.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ buscar_por_id(id)</text>
+    <text x="780" y="572.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ listar_historial()</text>
+  </g>
+  <!-- Clase: T_SEGURIDAD_USUARIO -->
+  <g id="class_ent_seguridad">
+    <rect x="770" y="115" width="270" height="122" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="770" y1="149" x2="1040" y2="149" stroke="#000000" stroke-width="1.2"/>
+    <line x1="770" y1="209.0" x2="1040" y2="209.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="905.0" y="137.0" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">T_SEGURIDAD_USUARIO</text>
+    <text x="780" y="165" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_SEGURIDAD: int [PK]</text>
+    <text x="780" y="181" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_USUARIO: int [FK/UQ]</text>
+    <text x="780" y="197" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ CODIGO_VERIFICACION: string</text>
+    <text x="780" y="225.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ validar_mfa(id_usr, codigo)</text>
+  </g>
+  <!-- Clase: T_USUARIO -->
+  <g id="class_ent_usuario">
+    <rect x="1100" y="350" width="270" height="116" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="1100" y1="384" x2="1370" y2="384" stroke="#000000" stroke-width="1.2"/>
+    <line x1="1100" y1="444.0" x2="1370" y2="444.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="1235.0" y="372.0" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">T_USUARIO</text>
+    <text x="1110" y="400" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_USUARIO: int [PK]</text>
+    <text x="1110" y="416" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ USERNAME: string</text>
+    <text x="1110" y="432" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_ROL: int [FK]</text>
+  </g>
+  <!-- Clase: T_BITACORA -->
+  <g id="class_ent_bitacora">
+    <rect x="770" y="700" width="270" height="170" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="770" y1="734" x2="1040" y2="734" stroke="#000000" stroke-width="1.2"/>
+    <line x1="770" y1="842.0" x2="1040" y2="842.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="905.0" y="722.0" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">T_BITACORA</text>
+    <text x="780" y="750" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_BITACORA: bigint [PK]</text>
+    <text x="780" y="766" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ FECHA_HORA: timestamp</text>
+    <text x="780" y="782" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_USUARIO: int [FK]</text>
+    <text x="780" y="798" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ MODULO: string = &apos;BACKUP&apos;</text>
+    <text x="780" y="814" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ACCION: string = &apos;RESPALDO_SISTEMA&apos;</text>
+    <text x="780" y="830" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ RESULTADO: string</text>
+    <text x="780" y="858.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ registrar_evento(accion, id_resp)</text>
+  </g>
+
+  <!-- Asociaciones y Multiplicidades -->
+  <g id="associations">
+    <polyline points="320,474.0 345,474.0 345,442.0 370,442.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="330" y="436.0" font-size="10" font-style="italic" fill="#334155">solicita</text>
+    <polyline points="710,442.0 740,442.0 740,467.0 770,467.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="725" y="461.0" font-size="10" font-style="italic" fill="#334155">ejecuta</text>
+    <polyline points="905.0,237 905.0,350" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="913.0" y="253" font-size="11" font-weight="bold" fill="#000000">1</text>
+    <text x="913.0" y="342" font-size="11" font-weight="bold" fill="#000000">1</text>
+    <polyline points="1040,467.0 1070,467.0 1070,408.0 1100,408.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="1048" y="461.0" font-size="11" font-weight="bold" fill="#000000">0..*</text>
+    <text x="1075" y="402.0" font-size="11" font-weight="bold" fill="#000000">1</text>
+    <polyline points="905.0,584 905.0,700" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="913.0" y="600" font-size="11" font-weight="bold" fill="#000000">1</text>
+    <text x="913.0" y="692" font-size="11" font-weight="bold" fill="#000000">0..*</text>
+  </g>
+</svg>

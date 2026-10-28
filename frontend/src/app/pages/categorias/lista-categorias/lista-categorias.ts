@@ -2,6 +2,7 @@ import { Component, OnInit, inject, ChangeDetectorRef, NgZone, DestroyRef } from
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { distinctUntilChanged } from 'rxjs';
 import { AuthService } from '../../../services/auth';
 import { Categoria, CategoriasService } from '../../../services/categorias';
 import { Empresa, EmpresaService } from '../../../services/empresa';
@@ -62,7 +63,10 @@ export class ListaCategoriasComponent implements OnInit {
     this.cargarCategorias();
 
     this.authService.companyChanged$
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        distinctUntilChanged((p, c) => p?.id_empresa === c?.id_empresa),
+        takeUntilDestroyed(this.destroyRef)
+      )
       .subscribe((emp) => {
         if (this.esSuperAdmin) {
           const newId = emp ? emp.id_empresa : 0;

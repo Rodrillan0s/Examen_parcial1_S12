@@ -40,6 +40,8 @@ def get_bitacora(
         filtros = {k: v for k, v in filtros.items() if v is not None}
         
         return bitacora_services.obtener_eventos(payload, filtros, page, limit)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
@@ -52,5 +54,7 @@ def get_detalle_bitacora(
         return bitacora_services.obtener_detalle_evento(id_bitacora, payload)
     except ValueError as e:
         raise HTTPException(status_code=403, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")

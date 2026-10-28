@@ -7,6 +7,7 @@ import { Sucursal, SucursalService } from '../../../services/sucursales';
 import { Ciudad, CiudadService } from '../../../services/ciudades';
 import { Empresa, EmpresaService } from '../../../services/empresa';
 import { MapaSucursalComponent } from '../mapa-sucursal/mapa-sucursal';
+import { extraerMensajeError } from '../../../utils/error-helper';
 
 @Component({
   selector: 'app-lista-sucursales',
@@ -247,10 +248,7 @@ cambiarTab(tab: 'SUCURSALES' | 'CIUDADES' | 'MAPA') {
 
         error: (err) => {
           this.ngZone.run(() => {
-            this.mensajeError =
-              err?.error?.detail ||
-              'Error de conexión al cargar sucursales.';
-
+            this.mensajeError = extraerMensajeError(err, 'Error de conexión al cargar sucursales.');
             this.cargando = false;
             this.cdr.detectChanges();
           });
@@ -674,12 +672,7 @@ cambiarTab(tab: 'SUCURSALES' | 'CIUDADES' | 'MAPA') {
 
           error: (err) => {
             this.ngZone.run(() => {
-
-              this.mensajeModalError =
-                err?.error?.detail ||
-                err?.message ||
-                'Error al actualizar la sucursal.';
-
+              this.mensajeModalError = extraerMensajeError(err, 'Error al actualizar la sucursal.');
               this.guardando = false;
               this.cdr.detectChanges();
             });
@@ -711,12 +704,7 @@ cambiarTab(tab: 'SUCURSALES' | 'CIUDADES' | 'MAPA') {
 
           error: (err) => {
             this.ngZone.run(() => {
-
-              this.mensajeModalError =
-                err?.error?.detail ||
-                err?.message ||
-                'Error al registrar la sucursal.';
-
+              this.mensajeModalError = extraerMensajeError(err, 'Error al registrar la sucursal.');
               this.guardando = false;
               this.cdr.detectChanges();
             });
@@ -771,12 +759,7 @@ cambiarTab(tab: 'SUCURSALES' | 'CIUDADES' | 'MAPA') {
 
         error: (err) => {
           this.ngZone.run(() => {
-
-            alert(
-              err?.error?.detail ||
-              'Error al cambiar el estado de la sucursal.'
-            );
-
+            alert(extraerMensajeError(err, 'Error al cambiar el estado de la sucursal.'));
             this.cargando = false;
             this.cdr.detectChanges();
           });

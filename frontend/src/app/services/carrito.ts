@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap, catchError, of } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { AuthService } from './auth';
 
 export interface ItemCarrito {
   id_detalle_carrito: number;
@@ -39,6 +40,7 @@ export interface CarritoData {
 })
 export class CarritoService {
   private http = inject(HttpClient);
+  private authService = inject(AuthService);
   private apiUrl = `${environment.apiUrl}/api/carrito`;
 
   private carritoSubject = new BehaviorSubject<CarritoData | null>(null);
@@ -59,6 +61,19 @@ export class CarritoService {
   // Tenant activo actualmente en el cliente
   private currentEmpresaId: number | null = null;
 
+  public resolverEmpresaId(idEmpresa?: number): number | undefined {
+    if (idEmpresa && idEmpresa > 0) return idEmpresa;
+    if (this.currentEmpresaId && this.currentEmpresaId > 0) return this.currentEmpresaId;
+    const effective = this.authService.getEffectiveCompanyId();
+    if (effective && effective > 0) return effective;
+    const user = this.authService.obtenerUsuario();
+    if (user?.id_empresa && user.id_empresa > 0) return user.id_empresa;
+    if (this.authService.getScopeLevel() === 'PLATAFORMA') {
+      return 1; // Tienda predeterminada para operaciones retail del administrador global
+    }
+    return undefined;
+  }
+
   setEmpresaId(idEmpresa: number): void {
     if (this.currentEmpresaId !== idEmpresa) {
       this.currentEmpresaId = idEmpresa;
@@ -67,7 +82,7 @@ export class CarritoService {
   }
 
   getEmpresaId(): number | null {
-    return this.currentEmpresaId;
+    return this.currentEmpresaId || this.resolverEmpresaId() || null;
   }
 
   abrirDrawer(): void {
@@ -94,7 +109,7 @@ export class CarritoService {
   }
 
   cargarCarrito(idEmpresa?: number): Observable<{ success: boolean; data: CarritoData } | null> {
-    const empId = idEmpresa || this.currentEmpresaId;
+    const empId = this.resolverEmpresaId(idEmpresa);
     let params = new HttpParams();
     if (empId) params = params.set('id_empresa', empId.toString());
 
@@ -115,7 +130,7 @@ export class CarritoService {
   }
 
   agregarItem(idVariante: number, cantidad: number, idEmpresa?: number): Observable<{ success: boolean; message: string; data: CarritoData }> {
-    const empId = idEmpresa || this.currentEmpresaId;
+    const empId = this.resolverEmpresaId(idEmpresa);
     const body: any = {
       id_variante: idVariante,
       cantidad: cantidad
@@ -138,7 +153,7 @@ export class CarritoService {
   }
 
   actualizarCantidad(idDetalle: number, cantidad: number, idEmpresa?: number): Observable<{ success: boolean; message: string; data: CarritoData }> {
-    const empId = idEmpresa || this.currentEmpresaId;
+    const empId = this.resolverEmpresaId(idEmpresa);
     const body: any = { cantidad };
     if (empId) body.id_empresa = empId;
 
@@ -158,7 +173,7 @@ export class CarritoService {
   }
 
   eliminarItem(idDetalle: number, idEmpresa?: number): Observable<{ success: boolean; message: string; data: CarritoData }> {
-    const empId = idEmpresa || this.currentEmpresaId;
+    const empId = this.resolverEmpresaId(idEmpresa);
     let params = new HttpParams();
     if (empId) params = params.set('id_empresa', empId.toString());
 
@@ -178,7 +193,7 @@ export class CarritoService {
   }
 
   vaciarCarrito(idEmpresa?: number): Observable<{ success: boolean; message: string; data: CarritoData }> {
-    const empId = idEmpresa || this.currentEmpresaId;
+    const empId = this.resolverEmpresaId(idEmpresa);
     let params = new HttpParams();
     if (empId) params = params.set('id_empresa', empId.toString());
 

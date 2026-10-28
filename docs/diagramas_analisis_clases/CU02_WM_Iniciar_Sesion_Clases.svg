@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 980" width="1440" height="980" style="background-color: #ffffff; font-family: Arial, Helvetica, sans-serif;">
+  <!-- Encabezado del Diagrama -->
+  <text x="35" y="34" font-size="16" font-weight="bold" fill="#0f172a">CU02 W/M: Iniciar sesión — Diagrama de Análisis de Clases (UML / ICONIX)</text>
+  <text x="35" y="54" font-size="12" font-weight="500" fill="#475569">Unificación Web (CU02W) y Móvil (CU02M) | Estereotipos: Boundary (Form) ── Control ── Entity</text>
+  <text x="35" y="72" font-size="11.5" font-weight="bold" fill="#1e293b">Actor(es): <tspan font-weight="normal" fill="#334155">Usuario (Cliente, Personal, Administrador)</tspan></text>
+  <line x1="35" y1="82" x2="1405" y2="82" stroke="#94a3b8" stroke-width="1.2"/>
+
+  <!-- Leyenda de Estructura ICONIX -->
+  <g transform="translate(1010, 24)">
+    <rect x="0" y="0" width="395" height="48" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+    <text x="12" y="19" font-size="11" font-weight="bold" fill="#1e293b">Estructura del Análisis de Clases (ICONIX):</text>
+    <text x="12" y="36" font-size="10.5" fill="#475569">Boundary (Form) ── Control (Lógica) ── Entity (Persistencia)</text>
+  </g>
+  <!-- Clase: Form / Login_Autenticacion -->
+  <g id="class_form_login">
+    <rect x="50" y="350" width="270" height="200" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="50" y1="398" x2="320" y2="398" stroke="#000000" stroke-width="1.2"/>
+    <line x1="50" y1="458.0" x2="320" y2="458.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="185.0" y="367" text-anchor="middle" font-size="11" font-weight="bold" fill="#334155" font-family="Arial, Helvetica, sans-serif">Form</text>
+    <text x="185.0" y="384" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">Login_Autenticacion</text>
+    <text x="60" y="414" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ correo: string</text>
+    <text x="60" y="430" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ password: string</text>
+    <text x="60" y="446" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ huella_dispositivo: string</text>
+    <text x="60" y="474.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ capturar_credenciales()</text>
+    <text x="60" y="490.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ solicitar_login()</text>
+    <text x="60" y="506.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ renderizar_dashboard()</text>
+    <text x="60" y="522.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ mostrar_error_credenciales()</text>
+    <text x="60" y="538.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ mostrar_alerta_bloqueo()</text>
+  </g>
+  <!-- Clase: Control / Autenticacion -->
+  <g id="class_ctrl_login">
+    <rect x="380" y="350" width="330" height="216" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="380" y1="398" x2="710" y2="398" stroke="#000000" stroke-width="1.2"/>
+    <line x1="380" y1="442.0" x2="710" y2="442.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="545.0" y="367" text-anchor="middle" font-size="11" font-weight="bold" fill="#334155" font-family="Arial, Helvetica, sans-serif">Control</text>
+    <text x="545.0" y="384" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">Autenticacion</text>
+    <text x="390" y="414" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">- max_intentos: int = 5</text>
+    <text x="390" y="430" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">- minutos_bloqueo: int = 15</text>
+    <text x="390" y="458.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ autenticar_usuario(correo, pass)</text>
+    <text x="390" y="474.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ verificar_intentos_bloqueo(id_usr)</text>
+    <text x="390" y="490.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ verificar_password_hash(pass, hash)</text>
+    <text x="390" y="506.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ registrar_intento_fallido(id_usr)</text>
+    <text x="390" y="522.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ resetear_intentos(id_usr)</text>
+    <text x="390" y="538.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ verificar_hardware_confiable(id, fprint)</text>
+    <text x="390" y="554.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ generar_token_jwt(id_usr, rol)</text>
+  </g>
+  <!-- Clase: T_USUARIO -->
+  <g id="class_ent_usuario">
+    <rect x="770" y="350" width="270" height="202" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="770" y1="384" x2="1040" y2="384" stroke="#000000" stroke-width="1.2"/>
+    <line x1="770" y1="508.0" x2="1040" y2="508.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="905.0" y="372.0" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">T_USUARIO</text>
+    <text x="780" y="400" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_USUARIO: int [PK]</text>
+    <text x="780" y="416" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ USERNAME: string</text>
+    <text x="780" y="432" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ CORREO: string [UQ]</text>
+    <text x="780" y="448" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ PASSWORD_HASH: string</text>
+    <text x="780" y="464" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_EMPRESA: int [FK]</text>
+    <text x="780" y="480" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_ROL: int [FK]</text>
+    <text x="780" y="496" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ESTADO: string</text>
+    <text x="780" y="524.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ buscar_por_email(correo)</text>
+    <text x="780" y="540.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ actualizar_ultimo_acceso(id)</text>
+  </g>
+  <!-- Clase: T_SEGURIDAD_USUARIO -->
+  <g id="class_ent_seguridad">
+    <rect x="770" y="115" width="270" height="186" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="770" y1="149" x2="1040" y2="149" stroke="#000000" stroke-width="1.2"/>
+    <line x1="770" y1="241.0" x2="1040" y2="241.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="905.0" y="137.0" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">T_SEGURIDAD_USUARIO</text>
+    <text x="780" y="165" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_SEGURIDAD: int [PK]</text>
+    <text x="780" y="181" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_USUARIO: int [FK/UQ]</text>
+    <text x="780" y="197" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ INTENTOS_FALLIDOS: int = 0</text>
+    <text x="780" y="213" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ BLOQUEADO_HASTA: timestamp</text>
+    <text x="780" y="229" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ FECHA_ACTUALIZACION: timestamp</text>
+    <text x="780" y="257.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ incrementar_intentos(id_usr)</text>
+    <text x="780" y="273.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ bloquear_cuenta(id_usr, min)</text>
+    <text x="780" y="289.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ resetear_contador(id_usr)</text>
+  </g>
+  <!-- Clase: T_DISPOSITIVO_USUARIO -->
+  <g id="class_ent_dispositivo">
+    <rect x="1100" y="350" width="280" height="170" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="1100" y1="384" x2="1380" y2="384" stroke="#000000" stroke-width="1.2"/>
+    <line x1="1100" y1="476.0" x2="1380" y2="476.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="1240.0" y="372.0" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">T_DISPOSITIVO_USUARIO</text>
+    <text x="1110" y="400" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_DISPOSITIVO: int [PK]</text>
+    <text x="1110" y="416" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_USUARIO: int [FK]</text>
+    <text x="1110" y="432" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ DEVICE_FINGERPRINT: string</text>
+    <text x="1110" y="448" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ VERIFICADO: boolean</text>
+    <text x="1110" y="464" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ULTIMA_CONEXION: timestamp</text>
+    <text x="1110" y="492.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ es_reconocido(id_usr, fprint)</text>
+    <text x="1110" y="508.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ registrar_dispositivo(id, fprint)</text>
+  </g>
+  <!-- Clase: T_BITACORA -->
+  <g id="class_ent_bitacora">
+    <rect x="770" y="700" width="270" height="170" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="770" y1="734" x2="1040" y2="734" stroke="#000000" stroke-width="1.2"/>
+    <line x1="770" y1="842.0" x2="1040" y2="842.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="905.0" y="722.0" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">T_BITACORA</text>
+    <text x="780" y="750" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_BITACORA: bigint [PK]</text>
+    <text x="780" y="766" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ FECHA_HORA: timestamp</text>
+    <text x="780" y="782" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_USUARIO: int [FK]</text>
+    <text x="780" y="798" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ MODULO: string = &apos;AUTH&apos;</text>
+    <text x="780" y="814" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ACCION: string = &apos;LOGIN&apos;</text>
+    <text x="780" y="830" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ RESULTADO: string</text>
+    <text x="780" y="858.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ registrar_evento(accion, resultado)</text>
+  </g>
+
+  <!-- Asociaciones y Multiplicidades -->
+  <g id="associations">
+    <polyline points="320,450.0 350,450.0 350,458.0 380,458.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="335" y="452.0" font-size="10" font-style="italic" fill="#334155">envía</text>
+    <polyline points="710,458.0 740,458.0 740,451.0 770,451.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="725" y="445.0" font-size="10" font-style="italic" fill="#334155">consulta</text>
+    <polyline points="905.0,350 905.0,301" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="913.0" y="342" font-size="11" font-weight="bold" fill="#000000">1</text>
+    <text x="913.0" y="317" font-size="11" font-weight="bold" fill="#000000">1</text>
+    <polyline points="1040,451.0 1070,451.0 1070,435.0 1100,435.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="1048" y="445.0" font-size="11" font-weight="bold" fill="#000000">1</text>
+    <text x="1075" y="429.0" font-size="11" font-weight="bold" fill="#000000">0..*</text>
+    <polyline points="905.0,552 905.0,700" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="913.0" y="568" font-size="11" font-weight="bold" fill="#000000">1</text>
+    <text x="913.0" y="692" font-size="11" font-weight="bold" fill="#000000">0..*</text>
+  </g>
+</svg>

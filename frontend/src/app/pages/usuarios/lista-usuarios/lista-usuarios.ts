@@ -6,6 +6,7 @@ import { environment } from '../../../../environments/environment';
 import { AuthService } from '../../../services/auth';
 import { RbacService, Permiso, Rol } from '../../../services/rbac';
 import { SucursalService, Sucursal } from '../../../services/sucursales';
+import { extraerMensajeError } from '../../../utils/error-helper';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 export interface Empresa {
@@ -106,6 +107,14 @@ export class ListaUsuariosComponent implements OnInit {
   idsPermisosDirectosSeleccionados = new Set<number>();
   codigosPermisosHeredados = new Set<string>();
   codigosPermisosDelegables = new Set<string>();
+
+  // --- MODAL ASIGNACIÓN DE SUCURSALES AUTORIZADAS ---
+  mostrarModalSucursales: boolean = false;
+  cargandoSucursalesModal: boolean = false;
+  usuarioSeleccionadoSucursales: Usuario | null = null;
+  idsSucursalesSeleccionadas = new Set<number>();
+  sucursalesModalDisponibles: Sucursal[] = [];
+  mensajeModalSucursalesError: string = '';
 
   // --- MÉTRICAS ---
   totalUsuarios: number = 0;
@@ -488,7 +497,7 @@ export class ListaUsuariosComponent implements OnInit {
           },
           error: (err) => {
             this.ngZone.run(() => {
-              this.mensajeModalError = err?.error?.detail || 'Error al actualizar el usuario.';
+              this.mensajeModalError = extraerMensajeError(err, 'Error al actualizar el usuario.');
               this.guardando = false;
               this.cdr.detectChanges();
             });
@@ -514,7 +523,7 @@ export class ListaUsuariosComponent implements OnInit {
           },
           error: (err) => {
             this.ngZone.run(() => {
-              this.mensajeModalError = err?.error?.detail || 'Error al registrar el usuario. Verifique los datos.';
+              this.mensajeModalError = extraerMensajeError(err, 'Error al registrar el usuario. Verifique los datos.');
               this.guardando = false;
               this.cdr.detectChanges();
             });
@@ -544,7 +553,7 @@ export class ListaUsuariosComponent implements OnInit {
         },
         error: (err) => {
           this.ngZone.run(() => {
-            alert(err?.error?.detail || 'Error al cambiar estado del usuario.');
+            alert(extraerMensajeError(err, 'Error al cambiar estado del usuario.'));
             this.cargando = false;
             this.cdr.detectChanges();
           });
@@ -669,8 +678,109 @@ export class ListaUsuariosComponent implements OnInit {
         },
         error: (err) => {
           this.ngZone.run(() => {
-            this.mensajeModalError = err?.error?.detail || 'Error al guardar los permisos directos.';
+            this.mensajeModalError = extraerMensajeError(err, 'Error al guardar los permisos directos.');
             this.guardando = false;
+            this.cdr.detectChanges();
+          });
+        }
+      });
+  }
+
+  // --- ASIGNACIÓN DE SUCURSALES AUTORIZADAS ---
+
+  abrirModalSucursales(usuario: Usuario) {
+    const id = usuario.id_usuario || usuario.nro_usuario;
+    if (!id) return;
+
+    this.usuarioSeleccionadoSucursales = usuario;
+    this.mostrarModalSucursales = true;
+    this.cargandoSucursalesModal = true;
+    this.mensajeModalSucursalesError = '';
+    this.idsSucursalesSeleccionadas.clear();
+
+    const empId = usuario.id_empresa ? Number(usuario.id_empresa) : (this.idEmpresaSesion || undefined);
+
+    // 1. Cargar sucursales de la empresa
+    this.sucursalService.listarSucursales(empId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res) => {
+          this.ngZone.run(() => {
+            this.sucursalesModalDisponibles = (res?.data || []).filter((s: Sucursal) => s.activo !== false);
+            this.cdr.detectChanges();
+          });
+        },
+        error: () => {
+          this.sucursalesModalDisponibles = [];
+        }
+      });
+
+    // 2. Cargar sucursales actualmente asignadas
+    this.rbacService.obtenerSucursalesUsuario(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res) => {
+          this.ngZone.run(() => {
+            this.cargandoSucursalesModal = false;
+            if (res && res.sucursales) {
+              for (const sId of res.sucursales) {
+                this.idsSucursalesSeleccionadas.add(sId);
+              }
+            }
+            this.cdr.detectChanges();
+          });
+        },
+        error: (err) => {
+          this.ngZone.run(() => {
+            this.cargandoSucursalesModal = false;
+            this.mensajeModalSucursalesError = extraerMensajeError(err, 'Error al consultar las sucursales asignadas.');
+            this.cdr.detectChanges();
+          });
+        }
+      });
+  }
+
+  toggleSucursalModal(idSucursal: number) {
+    if (this.idsSucursalesSeleccionadas.has(idSucursal)) {
+      this.idsSucursalesSeleccionadas.delete(idSucursal);
+    } else {
+      this.idsSucursalesSeleccionadas.add(idSucursal);
+    }
+    this.cdr.detectChanges();
+  }
+
+  cerrarModalSucursales() {
+    this.mostrarModalSucursales = false;
+    this.usuarioSeleccionadoSucursales = null;
+    this.mensajeModalSucursalesError = '';
+    this.guardando = false;
+  }
+
+  guardarAsignacionSucursales() {
+    if (!this.usuarioSeleccionadoSucursales) return;
+    const id = this.usuarioSeleccionadoSucursales.id_usuario || this.usuarioSeleccionadoSucursales.nro_usuario;
+    if (!id) return;
+
+    this.guardando = true;
+    this.mensajeModalSucursalesError = '';
+
+    const ids = Array.from(this.idsSucursalesSeleccionadas);
+
+    this.rbacService.asignarSucursalesUsuario(id, ids)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.ngZone.run(() => {
+            this.guardando = false;
+            this.cerrarModalSucursales();
+            this.cargarUsuarios();
+            this.mostrarNotificacionExito(`Sucursales asignadas exitosamente a '${this.usuarioSeleccionadoSucursales?.nombre_completo}'.`);
+          });
+        },
+        error: (err) => {
+          this.ngZone.run(() => {
+            this.guardando = false;
+            this.mensajeModalSucursalesError = extraerMensajeError(err, 'Error al guardar las sucursales asignadas.');
             this.cdr.detectChanges();
           });
         }

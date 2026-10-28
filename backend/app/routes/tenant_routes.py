@@ -35,6 +35,8 @@ def create_empresa(request: Request, data: dict = Body(...), payload: dict = Dep
     
     try:
         return tenant_services.registrar_empresa(data, payload, request)
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -47,6 +49,8 @@ def update_empresa(id_empresa: int, request: Request, data: dict = Body(...), pa
         
     try:
         return tenant_services.actualizar_empresa(id_empresa, data, payload, request)
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -56,6 +60,8 @@ def update_empresa(id_empresa: int, request: Request, data: dict = Body(...), pa
 def delete_empresa(id_empresa: int, request: Request, payload: dict = Depends(require_superadmin)):
     try:
         return tenant_services.borrar_empresa(id_empresa, payload, request)
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

@@ -29,14 +29,9 @@ def sanitizar_dict(data: dict) -> dict:
     return sanitized
 
 def get_scope_level(payload: dict) -> str:
-    roles = [r.upper() for r in payload.get('roles', [])]
-    if 'ADMINISTRADOR' in roles or payload.get('id_rol') == 1:
-        return 'PLATAFORMA'
-    if 'ADMINISTRADOR_TIENDA' in roles:
-        return 'EMPRESA'
-    if 'ENCARGADO_SUCURSAL' in roles or 'CAJERO' in roles:
-        return 'SUCURSAL'
-    return 'PLATAFORMA' if not payload.get('id_empresa') else 'EMPRESA'
+    from app.utils.tenant_guard import obtener_alcance_usuario
+    return obtener_alcance_usuario(payload)
+
 
 def registrar_accion(
     modulo: str,
@@ -119,22 +114,24 @@ def obtener_eventos(
     id_empresa_filtro = None
     id_sucursal_filtro = None
     
-    if scope == 'PLATAFORMA':
-        # Admin can view all, or filter by requested empresa
-        id_empresa_filtro = filtros.get('id_empresa')
-        id_sucursal_filtro = filtros.get('id_sucursal')
-    elif scope == 'EMPRESA':
-        # Tienda Admin can only view their own empresa
-        id_empresa_filtro = payload.get('id_empresa')
-        id_sucursal_filtro = filtros.get('id_sucursal')
-    elif scope == 'SUCURSAL':
-        # Encargado can only view their own sucursal (assuming it's passed or known, but we don't have id_sucursal in token)
-        # We would need to verify the user's sucursales, but for MVP we restrict to empresa and if they pass sucursal
-        id_empresa_filtro = payload.get('id_empresa')
-        # If the user is Encargado, ideally they only see their assigned branch.
-        # But for now, since JWT doesn't store id_sucursal, we assume they can only see their empresa.
-        # In a real scenario we'd query their assigned branch.
-        
+    from app.utils.tenant_guard import resolver_tenant_operacion, obtener_sucursales_autorizadas
+    from fastapi import HTTPException
+    if scope == 'CLIENTE':
+        raise HTTPException(403, detail='Bitacora reservada al personal autorizado.')
+    id_empresa_filtro = resolver_tenant_operacion(payload, filtros.get('id_empresa'), permitir_global=True)
+    id_sucursal_filtro = filtros.get('id_sucursal')
+    if id_sucursal_filtro is not None:
+        from app.repos.sucursales_repos import obtener_sucursal_por_id
+        branch = obtener_sucursal_por_id(id_sucursal_filtro)
+        if not branch or (id_empresa_filtro is not None and branch['id_empresa'] != id_empresa_filtro):
+            raise HTTPException(403, detail='Sucursal fuera del contexto autorizado.')
+    filtros = dict(filtros)
+    if scope == 'SUCURSAL':
+        permitidas = obtener_sucursales_autorizadas(payload)
+        if id_sucursal_filtro is not None and id_sucursal_filtro not in permitidas:
+            raise HTTPException(403, detail='Sucursal no autorizada.')
+        filtros['_sucursales_autorizadas'] = permitidas
+
     offset = (page - 1) * limit
     
     res = bitacora_repos.obtener_eventos_db(
@@ -163,12 +160,12 @@ def obtener_detalle_evento(id_bitacora: int, payload: dict):
     if not evento:
         raise ValueError("Evento no encontrado.")
         
-    scope = get_scope_level(payload)
-    if scope != 'PLATAFORMA':
-        # User can only view events from their own empresa
-        if evento['id_empresa'] and evento['id_empresa'] != payload.get('id_empresa'):
-            raise ValueError("No tiene permisos para ver el detalle de este evento.")
-            
+    from app.utils.tenant_guard import validar_acceso_recurso_tenant, obtener_sucursales_autorizadas
+    from fastapi import HTTPException
+    validar_acceso_recurso_tenant(payload, evento['id_empresa'], 'evento')
+    if get_scope_level(payload) == 'SUCURSAL' and evento.get('id_sucursal') not in obtener_sucursales_autorizadas(payload):
+        raise HTTPException(403, detail='Evento fuera de las sucursales autorizadas.')
+
     return {
         "success": True,
         "data": evento

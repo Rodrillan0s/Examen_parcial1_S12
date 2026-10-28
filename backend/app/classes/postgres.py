@@ -2,6 +2,43 @@ from app.config import Config
 import psycopg2
 from psycopg2 import pool
 import logging
+from contextlib import contextmanager
+from contextvars import ContextVar
+from functools import wraps
+
+_transaction_db = ContextVar('transaction_db', default=None)
+
+
+@contextmanager
+def transaction():
+    """Share one connection across existing repositories; commit only at the boundary."""
+    if _transaction_db.get() is not None:
+        yield _transaction_db.get()
+        return
+    db = PostgreSQL()
+    db.create_connection()
+    if db.conn is None:
+        raise RuntimeError('No se pudo abrir la transacción.')
+    token = _transaction_db.set(db)
+    try:
+        yield db
+        if getattr(db, '_rollback_only', False):
+            raise RuntimeError('La transacción fue revertida por un error previo.')
+        db.conn.commit()
+    except BaseException:
+        db.conn.rollback()
+        raise
+    finally:
+        _transaction_db.reset(token)
+        db.close_connection()
+
+
+def atomic(fn):
+    @wraps(fn)
+    def wrapped(*args, **kwargs):
+        with transaction():
+            return fn(*args, **kwargs)
+    return wrapped
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +75,10 @@ class PostgreSQL:
         self._from_pool = False
 
     def create_connection(self):
+        shared = _transaction_db.get()
+        if shared is not None:
+            self.conn, self.cur = shared.conn, shared.cur
+            return
         try:
             p = self.get_pool()
             if p is not None:
@@ -101,6 +142,8 @@ class PostgreSQL:
                 print(f'ERROR DE CONEXION A LA DB: {ex}')
 
     def close_connection(self, commit=False):
+        if _transaction_db.get() is not None:
+            return
         try:
             if self.cur:
                 try:
@@ -154,7 +197,7 @@ class PostgreSQL:
         try:
             self.cur.execute(query,params)
 
-            if commit:
+            if commit and _transaction_db.get() is None:
                 self.conn.commit()
             
             if fetchone:
@@ -167,7 +210,15 @@ class PostgreSQL:
         except Exception as e:
             if self.conn:
                 self.conn.rollback()
+            if _transaction_db.get() is not None:
+                _transaction_db.get()._rollback_only = True
+            from app.utils.saas_errors import translate_database_error
+            translate_database_error(e)
             print(f'ERROR: {e}, EJECUTANDO ROLLBACK')
             raise
 
     #def insert_log():
+
+    def commit(self):
+        if self.conn and _transaction_db.get() is None:
+            self.conn.commit()

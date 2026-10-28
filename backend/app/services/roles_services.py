@@ -3,9 +3,9 @@ from fastapi import Request
 from app.services import bitacora_services
 
 def is_global_admin(payload: dict) -> bool:
-    roles = payload.get('roles', [])
-    id_rol = payload.get('id_rol')
-    return 'ADMINISTRADOR' in roles or id_rol == 1
+    from app.utils.tenant_guard import es_administrador_global
+    return es_administrador_global(payload)
+
 
 def listar_roles(payload: dict):
     roles = roles_repos.obtener_todos_los_roles()

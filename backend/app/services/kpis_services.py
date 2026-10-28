@@ -3,7 +3,7 @@ from app.services.rbac_services import obtener_nivel_actor
 
 def procesar_etl_diario(token_data: dict):
     nivel = obtener_nivel_actor(token_data)
-    if nivel > 2:
+    if nivel != 1:
         raise ValueError("Operación crítica restringida. Solo el SuperAdministrador puede disparar el recálculo analítico.")
     
     filas = kpis_repos.ejecutar_extraccion_y_carga_etl_db()
@@ -13,30 +13,19 @@ def procesar_etl_diario(token_data: dict):
     }
 
 def generar_dashboard(token_data: dict, id_empresa: int = None):
-    nivel = obtener_nivel_actor(token_data)
-    token_empresa = token_data.get('id_empresa')
-    id_sucursal = (token_data.get('sucursales') or [1])[0] if token_data.get('sucursales') else 1
-    id_usuario = token_data.get('nro_usuario') or token_data.get('id_usuario') or 1
-
-    # Nivel 6 o superior: CLIENTE / PROVEEDOR
-    if nivel >= 6:
-        raise ValueError("Acceso restringido: El panel analítico interno es exclusivo para el personal operativo y administrativo.")
-
-    # Si se especificó id_empresa y el usuario tiene permisos administrativos (nivel <= 3):
-    empresa_target = id_empresa if (id_empresa and nivel <= 3) else token_empresa
-
-    if empresa_target:
-        metricas = kpis_repos.obtener_metricas_empresa_db(empresa_target)
-        mensaje = f"KPIs operacionales de empresa calculados exitosamente."
-    elif nivel <= 2:
-        metricas = kpis_repos.obtener_metricas_globales_db()
-        mensaje = "KPIs operacionales GLOBALES del ecosistema Aurora Store calculados exitosamente."
-    elif nivel == 4:
-        metricas = kpis_repos.obtener_metricas_sucursal_db(id_sucursal, token_empresa)
-        mensaje = "KPIs de sucursal calculados exitosamente."
+    from app.utils.tenant_guard import resolver_tenant_operacion, resolver_sucursal_autorizada, obtener_alcance_usuario
+    alcance = obtener_alcance_usuario(token_data)
+    if alcance == 'CLIENTE':
+        raise ValueError('Panel reservado al personal autorizado.')
+    empresa = resolver_tenant_operacion(token_data, id_empresa, permitir_global=True)
+    if alcance == 'SUCURSAL':
+        sucursal = resolver_sucursal_autorizada(token_data)
+        metricas = kpis_repos.obtener_metricas_sucursal_db(sucursal, empresa)
+    elif empresa is not None:
+        metricas = kpis_repos.obtener_metricas_empresa_db(empresa)
     else:
-        metricas = kpis_repos.obtener_metricas_operativo_db(id_usuario)
-        mensaje = "Métricas de turno operativo calculadas exitosamente."
+        metricas = kpis_repos.obtener_metricas_globales_db()
+    mensaje = 'Indicadores del contexto autorizado calculados exitosamente.'
 
     return {
         "success": True,
@@ -56,32 +45,18 @@ def _resolver_contexto_tenant(token_data: dict, id_sucursal_param: int = None, i
     Determina de forma inviolable el id_empresa e id_sucursal permitidos según el JWT.
     Si el usuario tiene permisos administrativos (nivel <= 3), se permite filtrar por id_empresa_param.
     """
-    nivel = obtener_nivel_actor(token_data)
-    if nivel >= 6:
-        raise ValueError("Acceso denegado: El panel de indicadores es exclusivo para personal autorizado.")
-    
-    token_empresa = token_data.get('id_empresa')
-    sucursales_usuario = token_data.get('sucursales') or []
-    
-    # Nivel 1 y 2: SUPERADMIN Y PLATAFORMA (Acceso global o filtrado voluntario)
-    if nivel <= 2:
-        id_empresa = id_empresa_param or token_empresa or None
-        id_sucursal = id_sucursal_param if id_sucursal_param else None
-        
-    # Nivel 3: ADMINISTRADOR DE TIENDA
-    elif nivel == 3:
-        id_empresa = id_empresa_param if id_empresa_param and not token_empresa else (token_empresa or id_empresa_param)
-        id_sucursal = id_sucursal_param if id_sucursal_param else None
-        
-    # Nivel 4 y 5: ENCARGADO / EMPLEADO (Estrictamente sus sucursales asignadas)
-    else:
-        id_empresa = token_empresa
-        if id_sucursal_param and id_sucursal_param in sucursales_usuario:
-            id_sucursal = id_sucursal_param
-        else:
-            id_sucursal = sucursales_usuario[0] if sucursales_usuario else 1
-            
-    return id_empresa, id_sucursal
+    from app.utils.tenant_guard import resolver_tenant_operacion, resolver_sucursal_autorizada, obtener_alcance_usuario
+    from app.repos.sucursales_repos import obtener_sucursal_por_id
+    if obtener_alcance_usuario(token_data) == 'CLIENTE':
+        raise ValueError('Indicadores reservados al personal autorizado.')
+    empresa = resolver_tenant_operacion(token_data, id_empresa_param, permitir_global=True)
+    sucursal = resolver_sucursal_autorizada(token_data, id_sucursal_param)
+    if sucursal is not None:
+        branch = obtener_sucursal_por_id(sucursal)
+        if not branch or (empresa is not None and branch['id_empresa'] != empresa):
+            from fastapi import HTTPException
+            raise HTTPException(403, detail='Sucursal ajena al contexto autorizado.')
+    return empresa, sucursal
 
 
 def _normalizar_fechas(fecha_inicio: str = None, fecha_fin: str = None):

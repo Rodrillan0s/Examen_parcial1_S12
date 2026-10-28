@@ -2,6 +2,7 @@ import { CanActivateFn, Router } from '@angular/router';
 import { inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { AuthService } from '../services/auth';
+import { catchError, map, of } from 'rxjs';
 
 /**
  * permissionGuard: Valida que el usuario autenticado cuente con los permisos necesarios.
@@ -26,17 +27,20 @@ export function permissionGuard(requiredPermissions: string | string[]): CanActi
     }
 
     const permissionsToCheck = Array.isArray(requiredPermissions) ? requiredPermissions : [requiredPermissions];
-    const tieneAcceso = authService.hasAnyPermission(permissionsToCheck);
-
-    if (!tieneAcceso) {
-      console.warn(`[PermissionGuard] Acceso denegado a '${state.url}'. Permisos requeridos:`, permissionsToCheck);
-
-      // Redirección contextual inteligente según el rol/alcance del usuario
-      const destino = authService.getDefaultRouteForUser(usuario);
-      router.navigateByUrl(destino);
-      return false;
-    }
-
-    return true;
+    return authService.refrescarPermisos().pipe(
+      map(() => {
+        if (authService.hasAnyPermission(permissionsToCheck)) return true;
+        const destino = authService.getDefaultRouteForUser(authService.obtenerUsuario() || usuario);
+        return router.parseUrl(destino === state.url ? '/' : destino);
+      }),
+      catchError((err) => {
+        console.warn('[PermissionGuard] No se pudieron refrescar permisos en tiempo real, validando con sesión local:', err);
+        if (authService.hasAnyPermission(permissionsToCheck)) {
+          return of(true);
+        }
+        const destino = authService.getDefaultRouteForUser(usuario);
+        return of(router.parseUrl(destino === state.url ? '/' : destino));
+      })
+    );
   };
 }

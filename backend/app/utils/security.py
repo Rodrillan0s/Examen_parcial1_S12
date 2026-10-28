@@ -40,19 +40,8 @@ def _get_jwt_secret() -> str:
 # Genera el token JWT de acceso para la sesión del usuario con sus claims RBAC.
 def create_access_token(nro_usuario, username, id_rol, id_empresa, nombre, apellido, roles=None, permisos=None, sucursales=None, nombre_empresa=None, nombre_rol=None, minutes=120):
     roles_list = roles or []
-    roles_upper = [str(r).upper() for r in roles_list]
-    es_global = (id_rol == 1 or 'ADMINISTRADOR' in roles_upper or 'SUPERADMIN' in roles_upper) and (id_empresa is None or id_empresa == 0)
-
-    if es_global:
-        alcance = 'PLATAFORMA'
-    elif id_rol in (1, 3) or 'ADMINISTRADOR' in roles_upper or 'ADMINISTRADOR_TIENDA' in roles_upper:
-        alcance = 'EMPRESA'
-    elif id_rol in (4, 5) or any(r in ('CAJERO', 'EMPLEADO', 'ENCARGADO', 'ENCARGADO_SUCURSAL') for r in roles_upper):
-        alcance = 'SUCURSAL'
-    elif id_empresa and id_empresa > 0:
-        alcance = 'SUCURSAL'
-    else:
-        alcance = 'PLATAFORMA'
+    from app.utils.tenant_guard import obtener_alcance_usuario
+    alcance = obtener_alcance_usuario({'roles': roles_list, 'id_empresa': id_empresa})
 
     rol_final = nombre_rol or (roles_list[0] if roles_list else 'CLIENTE')
 
@@ -97,45 +86,46 @@ def decode_access_token(token: str):
             'message': 'Token de acceso inválido o corrupto.'
         }
 
-# Extrae y valida el token Bearer del header de la petición HTTP.
+def _contexto_vigente(payload):
+    from app.repos import session_repos, rbac_repos
+    from app.utils.tenant_guard import obtener_alcance_usuario
+    uid = payload.get('id_usuario') or payload.get('nro_usuario')
+    if not uid:
+        raise HTTPException(status_code=401, detail="Token sin identidad.")
+    actual = session_repos.obtener_contexto_actual(uid)
+    if not actual or not actual.pop('activo'):
+        raise HTTPException(status_code=401, detail="Usuario inexistente o desactivado.")
+    # Rebuild authoritative claims; never merge old permissions/company/roles.
+    actual['nro_usuario'] = actual['id_usuario']
+    actual['nombre_rol'] = (actual['roles'] or ['CLIENTE'])[0]
+    actual['rol'] = actual['nombre_rol']
+    actual['alcance'] = obtener_alcance_usuario(actual)
+    actual['id_sucursal'] = (actual['sucursales'] or [None])[0]
+    actual['permisos'] = rbac_repos.obtener_permisos_efectivos_usuario(uid)
+    actual['_permisos_vigentes'] = True
+    return actual
+
+
 def verificar_token(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)):
-    token = credentials.credentials
-    resultado = decode_access_token(token)
+    resultado = decode_access_token(credentials.credentials)
     if not resultado.get('success'):
         raise HTTPException(status_code=401, detail=resultado.get('message'))
-    payload = resultado.get('payload')
-    
-    # Garantizar consistencia de id_usuario y alcance
-    if 'id_usuario' not in payload and 'nro_usuario' in payload:
-        payload['id_usuario'] = payload['nro_usuario']
-    if 'alcance' not in payload:
-        roles_upper = [str(r).upper() for r in payload.get('roles', [])]
-        id_rol = payload.get('id_rol')
-        id_emp = payload.get('id_empresa')
-        es_glob = (id_rol == 1 or 'ADMINISTRADOR' in roles_upper or 'SUPERADMIN' in roles_upper) and (id_emp is None or id_emp == 0)
-        payload['alcance'] = 'PLATAFORMA' if es_glob else 'EMPRESA'
-        
-    return payload
+    return _contexto_vigente(resultado['payload'])
 
-# Extrae y valida el token Bearer opcionalmente (permite visitantes no autenticados)
+
 def verificar_token_opcional(credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_bearer_scheme)):
     if not credentials:
         return None
     resultado = decode_access_token(credentials.credentials)
     if not resultado.get('success'):
         return None
-    payload = resultado.get('payload')
-    if not payload:
-        return None
-    if 'id_usuario' not in payload and 'nro_usuario' in payload:
-        payload['id_usuario'] = payload['nro_usuario']
-    if 'alcance' not in payload:
-        roles_upper = [str(r).upper() for r in payload.get('roles', [])]
-        id_rol = payload.get('id_rol')
-        id_emp = payload.get('id_empresa')
-        es_glob = (id_rol == 1 or 'ADMINISTRADOR' in roles_upper or 'SUPERADMIN' in roles_upper) and (id_emp is None or id_emp == 0)
-        payload['alcance'] = 'PLATAFORMA' if es_glob else 'EMPRESA'
-    return payload
+    try:
+        return _contexto_vigente(resultado['payload'])
+    except HTTPException as exc:
+        if exc.status_code == 401:
+            return None
+        raise
+
 
 # Dependencia reutilizable FastAPI para autorizar según el permiso requerido (<recurso>.<accion>)
 def require_permission(codigo_permiso: str):
@@ -146,9 +136,8 @@ def require_permission(codigo_permiso: str):
     return dependency
 
 def tiene_permiso(payload: dict, codigo_permiso: str) -> bool:
-    permisos_jwt = payload.get('permisos', [])
-    if codigo_permiso in permisos_jwt:
-        return True
+    if payload.get('_permisos_vigentes'):
+        return codigo_permiso in payload.get('permisos', [])
 
     from app.repos import rbac_repos
     id_usuario = payload.get('nro_usuario') or payload.get('id_usuario')
@@ -158,23 +147,15 @@ def tiene_permiso(payload: dict, codigo_permiso: str) -> bool:
 
 # Valida acceso administrativo basándose exclusivamente en el permiso 'admin.acceder'
 def verificar_token_admin(payload: dict = Depends(verificar_token)):
-    permisos_jwt = payload.get('permisos', [])
-    if 'admin.acceder' in permisos_jwt:
+    if tiene_permiso(payload, 'admin.acceder'):
         return payload
-        
-    from app.repos import rbac_repos
-    id_usuario = payload.get('nro_usuario') or payload.get('id_usuario')
-    if id_usuario:
-        permisos_bd = rbac_repos.obtener_permisos_efectivos_usuario(id_usuario)
-        if 'admin.acceder' in permisos_bd:
-            return payload
-            
     raise HTTPException(status_code=403, detail="Acceso denegado. Se requiere el permiso 'admin.acceder'.")
+
 
 def require_platform_admin(payload: dict = Depends(verificar_token)):
     """Autoriza exclusivamente a un administrador con alcance global."""
     roles = {str(role).upper() for role in payload.get('roles', [])}
-    es_admin = payload.get('id_rol') == 1 or 'ADMINISTRADOR' in roles or str(payload.get('nombre_rol') or '').upper() == 'ADMINISTRADOR'
+    es_admin = bool(roles.intersection({'ADMINISTRADOR', 'SUPERADMIN'}))
     if not es_admin or payload.get('alcance') != 'PLATAFORMA' or payload.get('id_empresa'):
         raise HTTPException(status_code=403, detail="Se requiere una cuenta administradora con alcance PLATAFORMA.")
     return payload

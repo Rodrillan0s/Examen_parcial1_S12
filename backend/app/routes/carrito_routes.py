@@ -16,22 +16,8 @@ class ActualizarCantidadItemDTO(BaseModel):
     id_empresa: Optional[int] = Field(None, description="ID del Tenant")
 
 def _resolver_id_empresa(id_empresa_param: Optional[int], token_data: dict) -> int:
-    """
-    Resuelve el ID de la empresa del Tenant actual.
-    Prioriza el parámetro explícito, luego el claim del token y finalmente la primera tienda activa.
-    """
-    if id_empresa_param and id_empresa_param > 0:
-        return id_empresa_param
-    token_empresa = token_data.get('id_empresa')
-    if token_empresa and token_empresa > 0:
-        return token_empresa
-    tenants = catalogo_repos.obtener_tenants_publicos()
-    if tenants:
-        return tenants[0]["id_empresa"]
-    raise HTTPException(
-        status_code=status.HTTP_400_BAD_REQUEST,
-        detail="No se ha especificado una empresa (Tenant) válida para el carrito."
-    )
+    from app.utils.commerce_tenant import resolver_empresa_compra
+    return resolver_empresa_compra(token_data, id_empresa_param)
 
 @router.get('', summary="Consultar carrito activo del usuario para el Tenant actual")
 @router.get('/', summary="Consultar carrito activo del usuario para el Tenant actual")

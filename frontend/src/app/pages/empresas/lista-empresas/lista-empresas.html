@@ -199,11 +199,16 @@
             <!-- Acciones -->
             <td class="py-4 px-6 text-right">
               <div *ngIf="esSuperAdmin" class="flex items-center justify-end gap-1.5">
-                <button (click)="abrirModalEditar(e)" title="Editar Tenant" class="p-2 text-zinc-400 hover:text-amber-300 hover:bg-zinc-900 border border-transparent hover:border-zinc-800 rounded-xl transition-all cursor-pointer">
+                <a [routerLink]="['/admin/suscripciones']" [queryParams]="{ empresa: e.id_empresa }"
+                   title="Gestionar Suscripción y Límites SaaS"
+                   class="p-2 text-zinc-400 hover:text-indigo-400 hover:bg-indigo-950/40 border border-transparent hover:border-indigo-800/40 rounded-xl transition-all cursor-pointer">
+                  <i class="ph ph-shield-check text-base"></i>
+                </a>
+                <button (click)="abrirModalEditar(e)" title="Editar Empresa" class="p-2 text-zinc-400 hover:text-amber-300 hover:bg-zinc-900 border border-transparent hover:border-zinc-800 rounded-xl transition-all cursor-pointer">
                   <i class="ph ph-pencil-simple text-base"></i>
                 </button>
-                <button (click)="eliminarEmpresa(e.id_empresa)" title="Eliminar Tenant" class="p-2 text-zinc-400 hover:text-rose-400 hover:bg-rose-950/40 border border-transparent hover:border-rose-800/40 rounded-xl transition-all cursor-pointer">
-                  <i class="ph ph-trash text-base"></i>
+                <button (click)="eliminarEmpresa(e.id_empresa, e.nombre_empresa)" title="Desactivar Empresa" class="p-2 text-zinc-400 hover:text-rose-400 hover:bg-rose-950/40 border border-transparent hover:border-rose-800/40 rounded-xl transition-all cursor-pointer">
+                  <i class="ph ph-power text-base"></i>
                 </button>
               </div>
               <span *ngIf="!esSuperAdmin" class="text-[11px] text-zinc-600 italic">Solo lectura</span>

@@ -83,57 +83,26 @@ def _verificar_permiso_descuento(token_data: dict) -> None:
 
 
 def _obtener_empresa_contexto(token_data: dict, id_empresa_solicitada: Optional[int] = None) -> int:
-    alcance = token_data.get("alcance")
-    id_empresa_jwt = token_data.get("id_empresa")
-    if alcance != "PLATAFORMA" and id_empresa_jwt:
-        return id_empresa_jwt
-    if id_empresa_solicitada and id_empresa_solicitada > 0:
-        return id_empresa_solicitada
-    if id_empresa_jwt:
-        return id_empresa_jwt
-    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="El usuario no tiene una empresa autorizada.")
+    from app.utils.tenant_guard import resolver_tenant_operacion
+    return resolver_tenant_operacion(token_data, id_empresa_solicitada)
 
 
 def _obtener_sucursal_contexto(token_data: dict, id_sucursal_solicitada: Optional[int] = None, id_empresa: Optional[int] = None) -> int:
-    sucursales_usuario = token_data.get("sucursales", [])
-    id_rol = token_data.get("id_rol")
-    roles = [str(r).upper() for r in token_data.get("roles", [])]
-    es_admin = (id_rol == 1 or "ADMINISTRADOR" in roles or "SUPERADMIN" in roles or token_data.get("alcance") == "PLATAFORMA")
-
+    from app.utils.tenant_guard import obtener_sucursales_autorizadas
+    from app.repos.sucursales_repos import obtener_sucursal_por_id, obtener_sucursales_por_empresa
+    permitidas = obtener_sucursales_autorizadas(token_data)
     if id_sucursal_solicitada:
-        if es_admin or (id_sucursal_solicitada in sucursales_usuario):
-            return id_sucursal_solicitada
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="No estás autorizado para operar en la sucursal indicada."
-        )
-
-    if sucursales_usuario:
-        return sucursales_usuario[0]
-
-    if es_admin:
-        if id_empresa:
-            from app.classes.postgres import PostgreSQL
-            from app.config import Config
-            db = PostgreSQL()
-            db.create_connection()
-            try:
-                schema = Config.SCHEMA or 'comercio'
-                row = db.execute_query(
-                    f"SELECT id_sucursal FROM {schema}.t_sucursal WHERE id_empresa = %s AND activo = TRUE ORDER BY id_sucursal LIMIT 1;",
-                    (id_empresa,),
-                    fetchone=True
-                )
-                if row:
-                    return row[0]
-            finally:
-                db.close_connection()
-        return 1
-
-    raise HTTPException(
-        status_code=status.HTTP_400_BAD_REQUEST,
-        detail="No se pudo determinar la sucursal del usuario para el POS."
-    )
+        suc = obtener_sucursal_por_id(id_sucursal_solicitada)
+        if not suc or suc['id_empresa'] != id_empresa or not suc['activo']:
+            raise HTTPException(403, detail='Sucursal ajena o inactiva.')
+        if permitidas is not None and id_sucursal_solicitada not in permitidas:
+            raise HTTPException(403, detail='Sucursal fuera de su alcance.')
+        return id_sucursal_solicitada
+    candidatas = obtener_sucursales_por_empresa(id_empresa)
+    candidatas = [s for s in candidatas if s['activo'] and (permitidas is None or s['id_sucursal'] in permitidas)]
+    if not candidatas:
+        raise HTTPException(403, detail='No tiene sucursales activas autorizadas.')
+    return candidatas[0]['id_sucursal']
 
 
 # --- ENDPOINTS ---
@@ -227,6 +196,8 @@ def registrar_venta_presencial(
         id_usuario = token_data.get("nro_usuario") or token_data.get("id_usuario")
         id_emp = _obtener_empresa_contexto(token_data, body.id_empresa)
         id_suc = _obtener_sucursal_contexto(token_data, body.id_sucursal, id_emp)
+        from app.services.saas_services import exigir_vigencia
+        exigir_vigencia(id_emp)
 
         # 1. Validar que el cajero tenga una caja ABIERTA en esta sucursal (Regla RB03 y RB12)
         sesion_activa = caja_repos.obtener_sesion_activa_usuario(id_usuario, id_suc)

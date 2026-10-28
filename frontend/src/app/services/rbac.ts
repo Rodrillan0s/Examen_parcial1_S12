@@ -62,4 +62,20 @@ export class RbacService {
   asignarPermisosDirectosUsuario(id_usuario: number, ids_permisos: number[]): Observable<any> {
     return this.http.post(`${this.apiUrl}/usuarios/${id_usuario}/permisos`, { ids_permisos }, { headers: this.getHeaders() });
   }
+
+  obtenerSucursalesUsuario(id_usuario: number): Observable<{ success: boolean; id_usuario: number; sucursales: number[] }> {
+    return this.http.get<{ success: boolean; id_usuario: number; sucursales: number[] }>(
+      `${this.apiUrl}/usuarios/${id_usuario}/sucursales`,
+      { headers: this.getHeaders() }
+    );
+  }
+
+  asignarSucursalesUsuario(id_usuario: number, ids_sucursales: number[]): Observable<{ success: boolean; message: string; id_usuario: number; sucursales: number[] }> {
+    return this.http.post<{ success: boolean; message: string; id_usuario: number; sucursales: number[] }>(
+      `${this.apiUrl}/usuarios/${id_usuario}/sucursales`,
+      { ids_sucursales },
+      { headers: this.getHeaders() }
+    );
+  }
 }
+

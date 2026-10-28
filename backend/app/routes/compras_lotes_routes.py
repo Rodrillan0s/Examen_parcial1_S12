@@ -107,6 +107,8 @@ async def previsualizar_archivo_excel(
         }
     except ValueError as ve:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -139,6 +141,8 @@ def confirmar_importacion_lote(
         return resultado
     except ValueError as ve:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -222,6 +226,8 @@ def obtener_detalle_orden_compra(
         raise
     except ValueError as ve:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(ve))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
@@ -237,6 +243,8 @@ def aprobar_orden_compra(
         return resultado
     except ValueError as ve:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
@@ -253,6 +261,8 @@ def rechazar_orden_compra(
         return resultado
     except ValueError as ve:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
@@ -276,6 +286,8 @@ def recibir_orden_compra(
         return resultado
     except ValueError as ve:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 

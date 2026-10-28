@@ -10,10 +10,26 @@ from openpyxl.utils import get_column_letter
 
 from app.classes.postgres import PostgreSQL
 from app.config import Config
+from fastapi import HTTPException
+from app.utils.tenant_guard import resolver_tenant_operacion, resolver_sucursal_autorizada
 from app.repos.bitacora_repos import registrar_evento_db
 
 def _get_schema() -> str:
     return Config.SCHEMA or 'comercio'
+
+def _empresa_orden(id_orden, actor):
+    db = PostgreSQL()
+    db.create_connection()
+    try:
+        row = db.execute_query(f'SELECT id_empresa,id_sucursal FROM {_get_schema()}.t_orden_compra WHERE id_orden_compra=%s', (id_orden,), fetchone=True)
+        if not row:
+            raise HTTPException(404, detail='Orden de compra inexistente.')
+        empresa = resolver_tenant_operacion(actor, row[0])
+        resolver_sucursal_autorizada(actor, row[1])
+        return empresa
+    finally:
+        db.close_connection()
+
 
 # ==============================================================================
 # 1. GENERADOR DE PLANTILLA FIJA OFICIAL EXCEL (.XLSX)
@@ -333,18 +349,13 @@ def confirmar_e_importar_lote_db(
     4. Afecta t_inventario (stock_actual += cant, stock_disponible += cant) en la sucursal seleccionada.
     5. Registra auditoría en t_movimiento_inventario (tipo_movimiento='ENTRADA_COMPRA').
     """
-    id_empresa = int(
-        payload.get("id_empresa")
-        or token_data.get("id_empresa")
-        or token_data.get("empresa_id")
-        or 1
-    )
-    id_usuario = int(token_data.get("nro_usuario") or token_data.get("id_usuario") or 1)
+    id_empresa = resolver_tenant_operacion(token_data, payload.get('id_empresa'))
+    id_usuario = int(token_data['id_usuario'])
 
     id_sucursal = payload.get("id_sucursal")
     if not id_sucursal:
         raise ValueError("Debe especificar la sucursal de destino para el ingreso del inventario.")
-    id_sucursal = int(id_sucursal)
+    id_sucursal = resolver_sucursal_autorizada(token_data, int(id_sucursal))
 
     filas = payload.get("filas") or []
     if not filas:
@@ -376,9 +387,7 @@ def confirmar_e_importar_lote_db(
         q_u = f"SELECT id_usuario FROM {schema}.t_usuario WHERE id_usuario = %s;"
         u_chk = db.execute_query(q_u, (id_usuario,), fetchone=True)
         if not u_chk:
-            q_u_alt = f"SELECT id_usuario FROM {schema}.t_usuario WHERE id_empresa = %s LIMIT 1;"
-            u_alt = db.execute_query(q_u_alt, (id_empresa,), fetchone=True)
-            id_usuario = u_alt[0] if u_alt else None
+            raise HTTPException(401, detail='Usuario autenticado inexistente.')
 
         # 1. Resolver Proveedor si viene especificado
         id_proveedor = payload.get("id_proveedor")
@@ -710,8 +719,8 @@ def crear_orden_compra_db(datos: Dict[str, Any], token_data: dict) -> Dict[str, 
     Crea una nueva Orden de Compra asignada a una sucursal específica con estado 'PENDIENTE_APROBACION'.
     Inserta la cabecera en t_orden_compra y las líneas de detalle en t_detalle_orden_compra.
     """
-    id_empresa = int(datos["id_empresa"])
-    id_sucursal = int(datos["id_sucursal"])
+    id_empresa = resolver_tenant_operacion(token_data, datos["id_empresa"])
+    id_sucursal = resolver_sucursal_autorizada(token_data, int(datos["id_sucursal"]))
     id_proveedor = datos.get("id_proveedor")
     if id_proveedor:
         id_proveedor = int(id_proveedor)
@@ -722,7 +731,7 @@ def crear_orden_compra_db(datos: Dict[str, Any], token_data: dict) -> Dict[str, 
     if not items:
         raise ValueError("La orden de compra debe contener al menos un ítem o prenda solicitada.")
 
-    id_usuario = int(token_data.get("nro_usuario") or token_data.get("id_usuario") or 1)
+    id_usuario = int(token_data['id_usuario'])
 
     schema = _get_schema()
     db = PostgreSQL()
@@ -739,9 +748,7 @@ def crear_orden_compra_db(datos: Dict[str, Any], token_data: dict) -> Dict[str, 
         q_u = f"SELECT id_usuario FROM {schema}.t_usuario WHERE id_usuario = %s;"
         u_chk = db.execute_query(q_u, (id_usuario,), fetchone=True)
         if not u_chk:
-            q_u_alt = f"SELECT id_usuario FROM {schema}.t_usuario WHERE id_empresa = %s LIMIT 1;"
-            u_alt = db.execute_query(q_u_alt, (id_empresa,), fetchone=True)
-            id_usuario = u_alt[0] if u_alt else None
+            raise HTTPException(401, detail='Usuario autenticado inexistente.')
 
         # Si id_proveedor viene, validar que exista
         nombre_proveedor = "Sin Proveedor"
@@ -967,8 +974,8 @@ def obtener_detalle_orden_compra_db(id_orden: int, id_empresa: int) -> Dict[str,
 
 def aprobar_orden_compra_db(id_orden: int, token_data: Dict[str, Any]) -> Dict[str, Any]:
     """Aprueba una orden de compra pendiente para permitir su posterior recepción."""
-    id_empresa = int(token_data.get("id_empresa") or 1)
-    id_usuario = int(token_data.get("nro_usuario") or 1)
+    id_empresa = _empresa_orden(id_orden, token_data)
+    id_usuario = int(token_data['id_usuario'])
     schema = _get_schema()
 
     db = PostgreSQL()
@@ -978,9 +985,7 @@ def aprobar_orden_compra_db(id_orden: int, token_data: Dict[str, Any]) -> Dict[s
         q_u = f"SELECT id_usuario FROM {schema}.t_usuario WHERE id_usuario = %s;"
         u_chk = db.execute_query(q_u, (id_usuario,), fetchone=True)
         if not u_chk:
-            q_u_alt = f"SELECT id_usuario FROM {schema}.t_usuario WHERE id_empresa = %s LIMIT 1;"
-            u_alt = db.execute_query(q_u_alt, (id_empresa,), fetchone=True)
-            id_usuario = u_alt[0] if u_alt else None
+            raise HTTPException(401, detail='Usuario autenticado inexistente.')
 
         q_chk = f"SELECT id_orden_compra, estado, numero_orden FROM {schema}.t_orden_compra WHERE id_orden_compra = %s AND id_empresa = %s;"
         row = db.execute_query(q_chk, (id_orden, id_empresa), fetchone=True)
@@ -1004,7 +1009,7 @@ def aprobar_orden_compra_db(id_orden: int, token_data: Dict[str, Any]) -> Dict[s
 
 def rechazar_orden_compra_db(id_orden: int, motivo: str, token_data: Dict[str, Any]) -> Dict[str, Any]:
     """Rechaza una orden de compra justificando el motivo."""
-    id_empresa = int(token_data.get("id_empresa") or 1)
+    id_empresa = _empresa_orden(id_orden, token_data)
     schema = _get_schema()
 
     db = PostgreSQL()
@@ -1040,8 +1045,8 @@ def recibir_mercaderia_orden_db(
     4. Registra los movimientos de inventario en t_movimiento_inventario.
     5. Actualiza el estado de la orden a RECIBIDA_TOTAL.
     """
-    id_empresa = int(token_data.get("id_empresa") or 1)
-    id_usuario = int(token_data.get("nro_usuario") or 1)
+    id_empresa = _empresa_orden(id_orden, token_data)
+    id_usuario = int(token_data['id_usuario'])
     schema = _get_schema()
 
     db = PostgreSQL()
@@ -1051,9 +1056,7 @@ def recibir_mercaderia_orden_db(
         q_u = f"SELECT id_usuario FROM {schema}.t_usuario WHERE id_usuario = %s;"
         u_chk = db.execute_query(q_u, (id_usuario,), fetchone=True)
         if not u_chk:
-            q_u_alt = f"SELECT id_usuario FROM {schema}.t_usuario WHERE id_empresa = %s LIMIT 1;"
-            u_alt = db.execute_query(q_u_alt, (id_empresa,), fetchone=True)
-            id_usuario = u_alt[0] if u_alt else None
+            raise HTTPException(401, detail='Usuario autenticado inexistente.')
 
         # Validar orden
         q_oc = f"""
@@ -1067,7 +1070,7 @@ def recibir_mercaderia_orden_db(
         if oc[3] != 'APROBADA':
             raise ValueError(f"Solo se pueden recepcionar órdenes en estado 'APROBADA'. Estado actual: '{oc[3]}'.")
 
-        id_sucursal = oc[1]
+        id_sucursal = resolver_sucursal_autorizada(token_data, oc[1])
         id_proveedor = oc[2]
         numero_oc = oc[4]
 

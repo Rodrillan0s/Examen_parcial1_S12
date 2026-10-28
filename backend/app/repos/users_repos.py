@@ -190,8 +190,8 @@ def crear_usuario_db(ci: Optional[str], datos_usuario: dict) -> int:
             id_empresa = None
 
         query = f"""
-            INSERT INTO {schema}.t_usuario (username, correo, password, nombre, apellido, telefono, id_empresa, estado)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE)
+            INSERT INTO {schema}.t_usuario (username, correo, password_hash, nombre, apellido, telefono, id_empresa, estado, id_rol)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE, %s)
             RETURNING id_usuario;
         """
         params = (
@@ -201,7 +201,7 @@ def crear_usuario_db(ci: Optional[str], datos_usuario: dict) -> int:
             datos_usuario.get('nombre'),
             datos_usuario.get('apellido'),
             datos_usuario.get('telefono'),
-            id_empresa
+            id_empresa, datos_usuario.get('id_rol')
         )
         res = db.execute_query(query, params, fetchone=True, commit=True)
         nuevo_id = res[0] if res else None
@@ -231,7 +231,7 @@ def actualizar_usuario_db(id_usuario: int, ci: Optional[str], rol: Optional[int]
 
         set_clauses = [
             "username = %s", "correo = %s", "nombre = %s", "apellido = %s",
-            "telefono = %s", "id_empresa = %s"
+            "telefono = %s", "id_empresa = %s", "id_rol = %s"
         ]
         params = [
             datos_usuario.get('username'),
@@ -239,11 +239,11 @@ def actualizar_usuario_db(id_usuario: int, ci: Optional[str], rol: Optional[int]
             datos_usuario.get('nombre'),
             datos_usuario.get('apellido'),
             datos_usuario.get('telefono'),
-            id_empresa
+            id_empresa, datos_usuario.get('id_rol')
         ]
 
         if cambiar_password and datos_usuario.get('password_hash'):
-            set_clauses.append("password = %s")
+            set_clauses.append("password_hash = %s")
             params.append(datos_usuario.get('password_hash'))
 
         if 'estado' in datos_usuario:

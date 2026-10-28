@@ -8,7 +8,7 @@ def _get_schema() -> str:
 
 def obtener_sucursales_autorizadas(payload: dict) -> Optional[List[int]]:
     """Obtiene sucursales vigentes desde BD, no desde una lista stale del JWT."""
-    alcance = payload.get('alcance')
+    alcance = obtener_alcance_usuario(payload)
     if alcance == 'PLATAFORMA':
         return None
 
@@ -66,21 +66,14 @@ def obtener_alcance_usuario(payload: dict) -> str:
     - 'EMPRESA': Administrador de tienda o usuario acotado a un Tenant específico.
     - 'SUCURSAL': Encargado o cajero acotado a sucursal(es).
     """
-    id_rol = payload.get('id_rol')
-    roles = [str(r).upper() for r in payload.get('roles', [])]
-    nombre_rol = str(payload.get('nombre_rol', '')).upper()
-    id_empresa = payload.get('id_empresa')
-
-    if (id_rol == 1 or 'ADMINISTRADOR' in roles or nombre_rol == 'ADMINISTRADOR' or 'SUPERADMIN' in roles) and not id_empresa:
-        return 'PLATAFORMA'
-    
-    if id_rol == 3 or 'ADMINISTRADOR_TIENDA' in roles or nombre_rol == 'ADMINISTRADOR_TIENDA':
+    roles = {str(r).upper() for r in payload.get('roles', [])}
+    # Current role names from DB; legacy numeric IDs are not authority.
+    if not payload.get('id_empresa'):
+        return 'PLATAFORMA' if roles.intersection({'ADMINISTRADOR', 'SUPERADMIN'}) else 'CLIENTE'
+    if roles.intersection({'ADMINISTRADOR', 'ADMINISTRADOR_TIENDA', 'SUPERADMIN'}):
         return 'EMPRESA'
+    return 'SUCURSAL'
 
-    if id_empresa:
-        return 'EMPRESA'
-
-    return 'PLATAFORMA' if (id_rol == 1 or 'ADMINISTRADOR' in roles) else 'EMPRESA'
 
 def es_administrador_global(payload: dict) -> bool:
     """Retorna True solo si el usuario tiene alcance global/multitenant."""

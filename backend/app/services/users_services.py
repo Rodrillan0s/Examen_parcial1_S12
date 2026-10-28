@@ -2,12 +2,23 @@ from typing import Optional, Dict, Any
 from fastapi import Request, HTTPException, status
 from werkzeug.security import generate_password_hash
 from app.repos import users_repos, rbac_repos
+from app.classes.postgres import atomic, transaction
+from app.services import asignaciones_services
+from app.services.saas_services import auditar
 from app.services import bitacora_services, rbac_services
 from app.utils.tenant_guard import (
     es_administrador_global,
     resolver_tenant_operacion,
     validar_acceso_recurso_tenant
 )
+
+def _validar_ids_entrada(data):
+    for field in ('ids_permisos', 'ids_sucursales'):
+        if field in data:
+            asignaciones_services.validar_ids(data[field])
+    if 'id_sucursal' in data and data['id_sucursal'] is not None:
+        asignaciones_services.validar_ids([data['id_sucursal']])
+
 
 def is_global_admin(payload: dict) -> bool:
     return es_administrador_global(payload)
@@ -20,6 +31,10 @@ def listar_usuarios(payload: dict, id_empresa_filtro: Optional[int] = None) -> D
     else:
         usuarios = users_repos.obtener_todos_los_usuarios()
         
+    from app.utils.tenant_guard import obtener_alcance_usuario, obtener_sucursales_autorizadas
+    if obtener_alcance_usuario(payload) == 'SUCURSAL':
+        permitidas = set(obtener_sucursales_autorizadas(payload))
+        usuarios = [u for u in usuarios if u.get('ids_sucursales') and set(u['ids_sucursales']).issubset(permitidas)]
     return {
         "success": True,
         "message": "Usuarios recuperados exitosamente",
@@ -34,14 +49,17 @@ def obtener_usuario_detalle(id_usuario: int, payload: dict) -> Dict[str, Any]:
     if not user_db:
         raise HTTPException(status_code=404, detail="Usuario no encontrado.")
 
-    validar_acceso_recurso_tenant(payload, user_db.get('id_empresa'), "usuario")
+    with transaction() as db:
+        asignaciones_services.usuario_autorizado(db, id_usuario, payload)
 
     return {
         "success": True,
         "data": user_db
     }
 
+@atomic
 def registrar_usuario(data: dict, payload: dict, request: Optional[Request] = None) -> Dict[str, Any]:
+    _validar_ids_entrada(data)
     campos_requeridos = ['nombre_completo', 'nombre_usuario', 'password']
     for campo in campos_requeridos:
         if not data.get(campo) or not str(data[campo]).strip():
@@ -66,6 +84,8 @@ def registrar_usuario(data: dict, payload: dict, request: Optional[Request] = No
         id_empresa_solicitado = int(id_empresa_solicitado)
 
     id_empresa = resolver_tenant_operacion(payload, id_empresa_solicitado, permitir_global=True)
+    if id_empresa is None and rbac_services.obtener_nivel_rol_destino(id_rol) not in (2, 6):
+        raise HTTPException(422, detail='Un empleado debe pertenecer a una empresa.')
 
     password_hash = generate_password_hash(data['password'])
 
@@ -108,7 +128,10 @@ def registrar_usuario(data: dict, payload: dict, request: Optional[Request] = No
             for sid in ids_sucursales:
                 if sid not in sucs_validas:
                     raise HTTPException(status_code=403, detail="No puede asignar una sucursal ajena a su empresa.")
-        rbac_repos.asignar_sucursales_a_usuario(nuevo_id, ids_sucursales)
+        asignaciones_services.asignar(nuevo_id, ids_sucursales, payload, nuevo=True)
+
+    with transaction() as db:
+        auditar(db, payload, id_empresa, 'USUARIO_GUARDADO', {'id_usuario': locals().get('nuevo_id', locals().get('id_usuario'))})
 
     # Auditoría
     datos_log = {k: v for k, v in datos_usuario.items() if k != 'password_hash'}
@@ -135,10 +158,12 @@ def registrar_usuario(data: dict, payload: dict, request: Optional[Request] = No
         "id_usuario": nuevo_id
     }
 
+@atomic
 def actualizar_usuario(id_usuario: int, data: dict, payload: dict, request: Optional[Request] = None) -> Dict[str, Any]:
     if id_usuario <= 0:
         raise ValueError("ID de usuario no válido.")
         
+    _validar_ids_entrada(data)
     campos_requeridos = ['nombre_completo', 'nombre_usuario']
     for campo in campos_requeridos:
         if not data.get(campo) or not str(data[campo]).strip():
@@ -167,7 +192,9 @@ def actualizar_usuario(id_usuario: int, data: dict, payload: dict, request: Opti
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Violación de jerarquía: No puede modificar a un usuario con mayor autoridad que la suya.")
 
     # 2. Validación Multi-Tenant
-    validar_acceso_recurso_tenant(payload, user_db_before.get('id_empresa'), "usuario")
+    with transaction() as db:
+        asignaciones_services.usuario_autorizado(db, id_usuario, payload)
+        asignaciones_services.validar_jerarquia_usuario(id_usuario, payload)
 
     id_empresa_solicitado = data.get('id_empresa')
     if id_empresa_solicitado in (0, '0', '', None):
@@ -179,6 +206,10 @@ def actualizar_usuario(id_usuario: int, data: dict, payload: dict, request: Opti
         id_empresa = payload.get('id_empresa')
     else:
         id_empresa = id_empresa_solicitado
+
+    if id_empresa_solicitado is not None and id_empresa_solicitado != user_db_before.get('id_empresa'):
+        raise HTTPException(409, detail='Trasladar usuarios entre empresas requiere un proceso especifico.')
+    id_empresa = user_db_before.get('id_empresa')
 
     nombre_completo = data.get('nombre_completo')
     if nombre_completo:
@@ -230,7 +261,10 @@ def actualizar_usuario(id_usuario: int, data: dict, payload: dict, request: Opti
                 for sid in ids_sucursales:
                     if sid not in sucs_validas:
                         raise HTTPException(status_code=403, detail="No puede asignar una sucursal ajena a su empresa.")
-        rbac_repos.asignar_sucursales_a_usuario(id_usuario, ids_sucursales)
+        asignaciones_services.asignar(id_usuario, ids_sucursales, payload)
+
+    with transaction() as db:
+        auditar(db, payload, id_empresa, 'USUARIO_GUARDADO', {'id_usuario': locals().get('nuevo_id', locals().get('id_usuario'))})
 
     # Auditoría
     datos_log = {k: v for k, v in datos_usuario.items() if k != 'password_hash'}
@@ -257,6 +291,7 @@ def actualizar_usuario(id_usuario: int, data: dict, payload: dict, request: Opti
         "message": "Usuario actualizado exitosamente"
     }
 
+@atomic
 def eliminar_usuario(id_usuario: int, payload: dict, request: Optional[Request] = None) -> Dict[str, Any]:
     if id_usuario <= 0:
         raise HTTPException(status_code=400, detail="ID de usuario no válido.")
@@ -265,7 +300,9 @@ def eliminar_usuario(id_usuario: int, payload: dict, request: Optional[Request] 
     if not user_db:
         raise HTTPException(status_code=404, detail="Usuario no encontrado.")
 
-    validar_acceso_recurso_tenant(payload, user_db.get('id_empresa'), "usuario")
+    with transaction() as db:
+        asignaciones_services.usuario_autorizado(db, id_usuario, payload)
+        asignaciones_services.validar_jerarquia_usuario(id_usuario, payload)
 
     nivel_actor = rbac_services.obtener_nivel_actor(payload)
     rol_actual_id = user_db.get('id_rol')
@@ -298,6 +335,7 @@ def eliminar_usuario(id_usuario: int, payload: dict, request: Optional[Request] 
         "message": "Usuario desactivado correctamente."
     }
 
+@atomic
 def cambiar_estado_usuario(id_usuario: int, data: dict, payload: dict, request: Optional[Request] = None) -> Dict[str, Any]:
     if id_usuario <= 0:
         raise HTTPException(status_code=400, detail="ID de usuario no válido.")
@@ -306,7 +344,9 @@ def cambiar_estado_usuario(id_usuario: int, data: dict, payload: dict, request: 
     if not user_db:
         raise HTTPException(status_code=404, detail="Usuario no encontrado.")
 
-    validar_acceso_recurso_tenant(payload, user_db.get('id_empresa'), "usuario")
+    with transaction() as db:
+        asignaciones_services.usuario_autorizado(db, id_usuario, payload)
+        asignaciones_services.validar_jerarquia_usuario(id_usuario, payload)
 
     nivel_actor = rbac_services.obtener_nivel_actor(payload)
     rol_actual_id = user_db.get('id_rol')

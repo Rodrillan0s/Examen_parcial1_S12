@@ -27,9 +27,9 @@ export const authGuard: CanActivateFn = (route, state) => {
   // 2. Si la ruta requiere rol administrativo/empleado (ej. /admin y sus hijas)
   const esRutaAdmin = state.url.startsWith('/admin');
   if (esRutaAdmin) {
-    if (!authService.esEmpleadoOAdmin()) {
+    if (!authService.esEmpleadoOAdmin() || authService.getScopeLevel() === 'CLIENTE' || authService.esCliente()) {
       // Un cliente autenticado no tiene acceso al panel administrativo; redirigir a su perfil
-      if (authService.esCliente()) {
+      if (authService.esCliente() || authService.getScopeLevel() === 'CLIENTE') {
         router.navigate(['/perfil']);
       } else {
         router.navigate(['/']);

@@ -16,6 +16,7 @@ import {
   ResumenCajaResponse
 } from '../../services/caja';
 import { CategoriasService, Categoria } from '../../services/categorias';
+import { extraerMensajeError } from '../../utils/error-helper';
 
 export interface CartItem {
   variante: VariantePos;
@@ -944,11 +945,11 @@ this.cajaService.registrarVentaPos({
     }, 6000);
   }
 
-  mostrarError(msg: string): void {
-    this.mensajeError = msg;
+  mostrarError(msg: any): void {
+    this.mensajeError = typeof msg === 'string' ? msg : extraerMensajeError(msg);
     this.mensajeExito = '';
     setTimeout(() => {
-      if (this.mensajeError === msg) this.mensajeError = '';
+      this.mensajeError = '';
       this.cdr.detectChanges();
     }, 7000);
   }

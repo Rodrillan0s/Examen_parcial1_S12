@@ -2,6 +2,7 @@ from typing import List, Dict, Any, Optional
 from fastapi import Request
 from app.repos import rbac_repos, users_repos
 from app.services import bitacora_services
+from app.classes.postgres import atomic, transaction
 
 # Mapeo de Nivel de Autoridad por ID o Nombre de Rol
 # Nivel 1: SUPERADMIN
@@ -12,42 +13,27 @@ from app.services import bitacora_services
 # Nivel 6: CLIENTE
 # Nivel 7: PROVEEDOR
 
-JERARQUIA_ROLES = {
-    1: 2,  # Rol ID 1: ADMINISTRADOR (es Nivel 1 si id_empresa is None, Nivel 2 en general)
-    2: 6,  # CLIENTE
-    3: 3,  # ADMINISTRADOR_TIENDA
-    4: 4,  # ENCARGADO / ENCARGADO_SUCURSAL
-    5: 5,  # EMPLEADO / CAJERO
-    6: 7   # PROVEEDOR
-}
-
 def obtener_nivel_actor(actor_payload: dict) -> int:
-    roles = [str(r).upper() for r in actor_payload.get('roles', [])]
-    if actor_payload.get('rol'):
-        roles.append(str(actor_payload.get('rol')).upper())
-    id_rol = actor_payload.get('id_rol')
-    id_empresa = actor_payload.get('id_empresa')
+    niveles = [rbac_repos.obtener_nivel_autoridad(r, actor_payload.get('id_empresa')) for r in actor_payload.get('roles', [])]
+    return min(niveles) if niveles else 99
 
-    if (id_rol == 1 or 'ADMINISTRADOR' in roles or 'SUPERADMIN' in roles) and (id_empresa is None or id_empresa == 0):
-        return 1  # SUPERADMIN
-    if id_rol == 1 or 'ADMINISTRADOR' in roles or 'SUPERADMIN' in roles:
-        return 2  # ADMINISTRADOR
-    if id_rol == 3 or 'ADMINISTRADOR_TIENDA' in roles:
-        return 3  # ADMINISTRADOR_TIENDA
-    if id_rol == 4 or 'ENCARGADO' in roles or 'ENCARGADO_SUCURSAL' in roles:
-        return 4  # ENCARGADO
-    if id_rol == 5 or 'EMPLEADO' in roles or 'CAJERO' in roles:
-        return 5  # EMPLEADO
-    if id_rol == 2 or 'CLIENTE' in roles:
-        return 6  # CLIENTE
-    return 7      # PROVEEDOR
 
 def obtener_nivel_rol_destino(id_rol: int) -> int:
-    return JERARQUIA_ROLES.get(id_rol, 6)
+    roles = rbac_repos.obtener_todos_los_roles(solo_activos=True)
+    rol = next((r for r in roles if r['id_rol'] == id_rol), None)
+    if rol is None:
+        raise ValueError('Rol inexistente o inactivo.')
+    return rbac_repos.obtener_nivel_autoridad(rol['nombre'], 1)
+
 
 def validar_asignacion_rol(actor_payload: dict, id_rol_destino: int):
     nivel_actor = obtener_nivel_actor(actor_payload)
     nivel_destino = obtener_nivel_rol_destino(id_rol_destino)
+
+    from app.utils.security import tiene_permiso
+    permisos_rol = rbac_repos.obtener_permisos_de_rol(id_rol_destino)
+    if nivel_actor != 1 and any(not tiene_permiso(actor_payload, p['codigo']) for p in permisos_rol):
+        raise ValueError('No puede asignar un rol con permisos que usted no posee.')
 
     # Regla: Ningún usuario podrá asignar un rol superior a su propia autoridad
     if nivel_actor > nivel_destino:
@@ -57,6 +43,11 @@ def validar_asignacion_rol(actor_payload: dict, id_rol_destino: int):
         )
 
 def validar_delegacion_permisos(actor_payload: dict, ids_permisos: List[int]):
+    from app.services.asignaciones_services import validar_ids
+    ids_permisos = validar_ids(ids_permisos)
+    catalogo = {p['id_permiso']: p for p in rbac_repos.obtener_todos_los_permisos()}
+    if any(i not in catalogo or not catalogo[i].get('activo', True) for i in ids_permisos):
+        raise ValueError('Permiso inexistente o inactivo.')
     nivel_actor = obtener_nivel_actor(actor_payload)
     if nivel_actor == 1:
         # Superadmin puede delegar cualquier permiso activo
@@ -92,7 +83,10 @@ def obtener_permisos_completos_usuario(id_usuario: int, actor_payload: Optional[
 
     if actor_payload:
         from app.utils.tenant_guard import validar_acceso_recurso_tenant
-        validar_acceso_recurso_tenant(actor_payload, user_db.get('id_empresa'), "usuario")
+        validar_acceso_recurso_tenant(actor_payload, user_db.get('id_empresa'), 'usuario')
+        from app.services.asignaciones_services import usuario_autorizado
+        with transaction() as db:
+            usuario_autorizado(db, id_usuario, actor_payload)
 
     directos = rbac_repos.obtener_permisos_directos_usuario(id_usuario)
     heredados = rbac_repos.obtener_permisos_heredados_usuario(id_usuario)
@@ -107,6 +101,7 @@ def obtener_permisos_completos_usuario(id_usuario: int, actor_payload: Optional[
         "permisos_efectivos": efectivos
     }
 
+@atomic
 def asignar_permisos_directos(
     id_usuario: int, 
     ids_permisos: List[int], 
@@ -119,7 +114,14 @@ def asignar_permisos_directos(
 
     # Aislamiento Multi-Tenant
     from app.utils.tenant_guard import validar_acceso_recurso_tenant
-    validar_acceso_recurso_tenant(actor_payload, user_destino.get('id_empresa'), "usuario")
+    validar_acceso_recurso_tenant(actor_payload, user_destino.get('id_empresa'), 'usuario')
+    from app.services.asignaciones_services import usuario_autorizado
+    with transaction() as db:
+        usuario_autorizado(db, id_usuario, actor_payload)
+        from app.services.asignaciones_services import validar_jerarquia_usuario
+        validar_jerarquia_usuario(id_usuario, actor_payload)
+        from app.services.saas_services import auditar
+        auditar(db, actor_payload, user_destino.get('id_empresa'), 'PERMISOS_USUARIO_ASIGNADOS', {'id_usuario': id_usuario, 'ids_permisos': ids_permisos})
 
     # Validar delegación de permisos
     validar_delegacion_permisos(actor_payload, ids_permisos)

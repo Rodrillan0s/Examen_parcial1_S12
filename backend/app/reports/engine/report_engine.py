@@ -156,20 +156,10 @@ def _obtener_estilos_motor():
 
 def _resolver_contexto_tenant(token_data: Dict[str, Any]) -> Tuple[int, Optional[List[int]]]:
     """Extrae el id_empresa inviolable del token y calcula restricciones de sucursal."""
-    id_empresa = token_data.get("id_empresa")
-    if not id_empresa:
-        id_empresa = token_data.get("empresa_id") or 1
-    id_empresa = int(id_empresa)
-
-    rol = str(token_data.get("rol", "")).upper()
-    id_sucursal_usuario = token_data.get("id_sucursal")
-
-    sucursales_permitidas = None
-    # Si el usuario es cajero o encargado asignado a sucursal específica
-    if rol in ["CAJERO", "ENCARGADO", "VENDEDOR"] and id_sucursal_usuario:
-        sucursales_permitidas = [int(id_sucursal_usuario)]
-
-    return id_empresa, sucursales_permitidas
+    from app.utils.tenant_guard import resolver_tenant_operacion, obtener_alcance_usuario, obtener_sucursales_autorizadas
+    id_empresa = resolver_tenant_operacion(token_data, token_data.get('_empresa_reporte'))
+    sucursales = obtener_sucursales_autorizadas(token_data) if obtener_alcance_usuario(token_data) == 'SUCURSAL' else None
+    return id_empresa, sucursales
 
 
 def _serializar_valor(val: Any) -> Any:

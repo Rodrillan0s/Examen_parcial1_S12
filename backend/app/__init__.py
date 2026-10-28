@@ -13,12 +13,8 @@ from app.routes import (
     atender_reserva_routes
 )
 from app.reports import routes as motor_reportes_routes
-from app.reports.engine.views_manager import asegurar_vistas_sql
-from app.utils.migrate_compras_lotes import migrar_tablas_compras_lotes
-from app.utils.db_init import inicializar_tablas_seguridad
-from app.utils.rbac_migration import ejecutar_migracion_rbac
-from app.utils.migrate_caja_cu24 import migrar_caja_pos
-from app.utils.migrate_pago_caja_cu28_cu29 import migrar_pago_caja_cu28_cu29
+from app.routes import saas_routes
+from app.utils.saas_errors import install_handlers
 
 def create_app() -> FastAPI:
     app = FastAPI(
@@ -27,22 +23,10 @@ def create_app() -> FastAPI:
         description="Backend FastAPI para plataforma E-Commerce Multi-Tenant"
     )
 
-    try:
-        asegurar_vistas_sql()
-    except Exception as e:
-        print(f"Advertencia al asegurar vistas SQL del motor de reportes: {e}")
+    # Schema changes and RBAC seeds are explicit deployment operations.
+    install_handlers(app)
+    app.include_router(saas_routes.router)
 
-    try:
-        migrar_tablas_compras_lotes()
-    except Exception as e:
-        print(f"Advertencia al migrar tablas de compras y lotes: {e}")
-
-    try:
-        ejecutar_migracion_rbac()
-    except Exception as e:
-        print(f"Advertencia al migrar RBAC: {e}")
-
-    # Configuración CORS
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[

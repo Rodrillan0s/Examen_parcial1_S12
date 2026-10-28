@@ -28,6 +28,8 @@ import { authGuard } from './guards/auth-guard';
 import { ProveedoresComponent } from './pages/proveedores/proveedores';
 import { AtenderReservaComponent } from './pages/atender-reserva/atender-reserva';
 import { CajasMonitoreoComponent } from './pages/cajas-monitoreo/cajas-monitoreo';
+import { PlanesComponent } from './pages/planes/planes';
+import { SuscripcionesComponent } from './pages/suscripciones/suscripciones';
 import { permissionGuard } from './guards/permission-guard';
 import { scopeGuard } from './guards/scope-guard';
 
@@ -67,6 +69,8 @@ export const routes: Routes = [
   { path: 'bi_dashboard', redirectTo: 'admin/bi_dashboard', pathMatch: 'full' },
   { path: 'triaje-chat', redirectTo: 'admin/triaje-chat', pathMatch: 'full' },
   { path: 'proveedores', redirectTo: 'admin/proveedores', pathMatch: 'full' },
+  { path: 'planes', redirectTo: 'admin/planes', pathMatch: 'full' },
+  { path: 'suscripciones', redirectTo: 'admin/suscripciones', pathMatch: 'full' },
 
   // RUTAS DE ADMINISTRACIÓN INTERNA (REQUIEREN AUTENTICACIÓN, PERMISOS RBAC Y CONTROL DE ALCANCE)
   {
@@ -77,6 +81,8 @@ export const routes: Routes = [
       { path: '', redirectTo: 'kpis', pathMatch: 'full' },
       { path: 'kpis', component: DashboardKpisComponent, canActivate: [permissionGuard(['reportes.ver', 'admin.acceder'])] },
       { path: 'reportes', component: ReportesComponent, canActivate: [permissionGuard('reportes.ver')] },
+      { path: 'planes', component: PlanesComponent, canActivate: [permissionGuard('planes.ver')] },
+      { path: 'suscripciones', component: SuscripcionesComponent, canActivate: [permissionGuard('suscripciones.ver')] },
       { path: 'usuarios', component: ListaUsuariosComponent, canActivate: [permissionGuard('usuarios.ver')] },
       { 
         path: 'empresas', 

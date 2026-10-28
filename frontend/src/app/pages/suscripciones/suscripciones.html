@@ -1,0 +1,445 @@
+<div class="space-y-6 pb-12">
+
+  <!-- Header Section -->
+  <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-2.5">
+        <h1 class="text-2xl font-black tracking-tight text-zinc-900 dark:text-white">Suscripciones y Límites</h1>
+        <span class="px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+          Control Operativo
+        </span>
+      </div>
+      <p class="text-xs font-medium text-zinc-500 dark:text-slate-400 mt-1">
+        Consulta de periodo de vigencia, límites de sucursales activas, capacidades habilitadas e historial de renovaciones.
+      </p>
+    </div>
+
+    <!-- Company Selector (Platform Admin) & Action Buttons -->
+    <div class="flex flex-wrap items-center gap-3">
+      <!-- Selector de Empresa para Administrador Global -->
+      <div *ngIf="isGlobalAdmin && empresas.length > 0" class="flex items-center gap-2">
+        <label class="text-xs font-bold text-zinc-600 dark:text-slate-300">Empresa:</label>
+        <select [(ngModel)]="empresaSeleccionadaId"
+                (change)="onSeleccionarEmpresa()"
+                class="px-3 py-2 text-xs font-semibold bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-800 rounded-xl text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm max-w-xs">
+          <option *ngFor="let emp of empresas" [ngValue]="emp.id_empresa">
+            {{ emp.nombre_empresa }} (ID: {{ emp.id_empresa }})
+          </option>
+        </select>
+      </div>
+
+      <!-- Nueva Suscripción / Renovar Button (Platform Admin) -->
+      <button *ngIf="puedeGestionar"
+              (click)="abrirModalAsignar()"
+              [disabled]="cargandoPlan"
+              class="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 rounded-xl shadow-md shadow-indigo-600/25 transition-all disabled:opacity-50">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        <span>Asignar / Renovar</span>
+      </button>
+
+      <!-- Refresh Button -->
+      <button (click)="cargarDatosEmpresa()"
+              [disabled]="cargandoPlan || cargandoHistorial"
+              class="p-2 text-zinc-600 hover:text-zinc-900 dark:text-slate-300 dark:hover:text-white bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-800 rounded-xl hover:bg-stone-50 dark:hover:bg-slate-800/80 transition-all shadow-sm disabled:opacity-50"
+              title="Refrescar">
+        <svg [ngClass]="cargandoPlan || cargandoHistorial ? 'animate-spin' : ''" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Notification Banner -->
+  <div *ngIf="mensajeExito"
+       class="flex items-center justify-between p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300 text-xs font-medium transition-all animate-fadeIn">
+    <div class="flex items-center gap-2.5">
+      <svg class="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <span>{{ mensajeExito }}</span>
+    </div>
+    <button (click)="mensajeExito = ''" class="text-emerald-600 hover:text-emerald-800 dark:hover:text-emerald-200">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+    </button>
+  </div>
+
+  <!-- Error Banner -->
+  <div *ngIf="mensajeError"
+       class="flex items-center justify-between p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-rose-800 dark:text-rose-300 text-xs font-medium transition-all animate-fadeIn">
+    <div class="flex items-center gap-2.5">
+      <svg class="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <span>{{ mensajeError }}</span>
+    </div>
+    <button (click)="mensajeError = ''" class="text-rose-600 hover:text-rose-800 dark:hover:text-rose-200">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+    </button>
+  </div>
+
+  <!-- Current Plan & Validity Overview Cards -->
+  <div *ngIf="planVigencia" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+
+    <!-- Card 1: Plan & Estado -->
+    <div class="p-5 rounded-2xl bg-white dark:bg-slate-950 border border-stone-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-slate-400">Plan Actual</span>
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold" [ngClass]="obtenerBadgeEstadoClass(planVigencia.estado)">
+            {{ planVigencia.estado }}
+          </span>
+        </div>
+        <p class="text-xl font-black text-zinc-900 dark:text-white">
+          {{ planVigencia.codigo_plan || 'Sin Suscripción' }}
+        </p>
+        <p class="text-[11px] text-zinc-500 dark:text-slate-400 mt-1">
+          {{ planVigencia.vigente ? 'Servicios comerciales habilitados' : 'Operaciones nuevas bloqueadas' }}
+        </p>
+      </div>
+      <div class="mt-4 pt-3 border-t border-stone-100 dark:border-slate-800/80 flex items-center justify-between text-[11px]">
+        <span class="text-zinc-500 dark:text-slate-400">ID Suscripción:</span>
+        <span class="font-bold text-zinc-800 dark:text-slate-200">{{ planVigencia.id_suscripcion || '—' }}</span>
+      </div>
+    </div>
+
+    <!-- Card 2: Sucursales Activas y Límites -->
+    <div class="p-5 rounded-2xl bg-white dark:bg-slate-950 border border-stone-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-slate-400">Sucursales Activas</span>
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
+            {{ planVigencia.disponibles }} disponible(s)
+          </span>
+        </div>
+        <div class="flex items-baseline gap-1.5">
+          <span class="text-2xl font-black text-zinc-900 dark:text-white">{{ planVigencia.uso?.sucursales_activas ?? 0 }}</span>
+          <span class="text-xs font-bold text-zinc-400 dark:text-slate-500">/ {{ planVigencia.limites.sucursales_activas ?? '—' }} máx.</span>
+        </div>
+
+        <!-- Progress bar -->
+        <div class="w-full bg-stone-100 dark:bg-slate-900 rounded-full h-2 mt-3 overflow-hidden">
+          <div class="h-2 rounded-full transition-all duration-500"
+               [ngClass]="(planVigencia.uso?.sucursales_activas || 0) >= (planVigencia.limites.sucursales_activas || 1) ? 'bg-rose-500' : 'bg-indigo-600 dark:bg-indigo-500'"
+               [style.width.%]="porcentajeUsoSucursales">
+          </div>
+        </div>
+      </div>
+      <div class="mt-4 pt-3 border-t border-stone-100 dark:border-slate-800/80 text-[11px] text-zinc-500 dark:text-slate-400">
+        {{ (planVigencia.disponibles > 0) ? 'Puede crear o reactivar tiendas' : 'Capacidad máxima de tiendas alcanzada' }}
+      </div>
+    </div>
+
+    <!-- Card 3: Periodo de Vigencia -->
+    <div class="p-5 rounded-2xl bg-white dark:bg-slate-950 border border-stone-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+      <div>
+        <span class="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-slate-400">Periodo Vigente</span>
+        <div class="mt-2 space-y-1">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-zinc-500 dark:text-slate-400">Inicio:</span>
+            <span class="font-bold text-zinc-800 dark:text-slate-200">{{ formatearFechaDisplay(planVigencia.inicio) }}</span>
+          </div>
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-zinc-500 dark:text-slate-400">Fin:</span>
+            <span class="font-bold text-zinc-800 dark:text-slate-200">{{ formatearFechaDisplay(planVigencia.fin) }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="mt-4 pt-3 border-t border-stone-100 dark:border-slate-800/80 flex items-center gap-1.5 text-[11px]">
+        <span class="w-2 h-2 rounded-full" [ngClass]="planVigencia.vigente ? 'bg-emerald-500' : 'bg-rose-500'"></span>
+        <span class="text-zinc-600 dark:text-slate-300 font-semibold">{{ planVigencia.vigente ? 'Periodo en curso' : 'Sin periodo activo' }}</span>
+      </div>
+    </div>
+
+    <!-- Card 4: Capacidades Analíticas -->
+    <div class="p-5 rounded-2xl bg-white dark:bg-slate-950 border border-stone-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+      <div>
+        <span class="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-slate-400">Motor de Reportes</span>
+        <div class="mt-2 flex items-center gap-2">
+          <div class="p-1 rounded-lg"
+               [ngClass]="planVigencia.capacidades.reportes_generativos
+                 ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400'
+                 : 'bg-stone-100 dark:bg-slate-900 text-zinc-400'">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    [attr.d]="planVigencia.capacidades.reportes_generativos ? 'M5 13l4 4L19 7' : 'M6 18L18 6M6 6l12 12'" />
+            </svg>
+          </div>
+          <p class="text-sm font-bold text-zinc-900 dark:text-white">
+            {{ planVigencia.capacidades.reportes_generativos ? 'Habilitado' : 'No Habilitado' }}
+          </p>
+        </div>
+        <p class="text-[11px] text-zinc-500 dark:text-slate-400 mt-1">
+          {{ planVigencia.capacidades.reportes_generativos
+            ? 'Incluye motor dinámico avanzado con exportación PDF'
+            : 'Requiere plan Profesional para habilitar el motor dinámico' }}
+        </p>
+      </div>
+      <div class="mt-4 pt-3 border-t border-stone-100 dark:border-slate-800/80 text-[11px] text-zinc-500 dark:text-slate-400">
+        Reportes convencionales P1 siempre disponibles
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Historial de Suscripciones Table -->
+  <div class="rounded-3xl bg-white dark:bg-slate-950 border border-stone-200 dark:border-slate-800 shadow-sm overflow-hidden">
+
+    <!-- Table Header -->
+    <div class="p-5 border-b border-stone-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div>
+        <h2 class="text-base font-black text-zinc-900 dark:text-white">Historial de Suscripciones</h2>
+        <p class="text-xs text-zinc-500 dark:text-slate-400 mt-0.5">
+          Registro cronológico e inmutable de periodos de servicio asignados, renovados y cancelados.
+        </p>
+      </div>
+
+      <span class="text-xs font-semibold px-2.5 py-1 rounded-xl bg-stone-100 dark:bg-slate-900 text-zinc-600 dark:text-slate-300">
+        Total: {{ historial.length }} periodo(s)
+      </span>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="cargandoHistorial" class="p-8 text-center text-xs text-zinc-500 dark:text-slate-400 space-y-2">
+      <svg class="w-6 h-6 animate-spin mx-auto text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+      <p>Cargando historial de suscripciones...</p>
+    </div>
+
+    <!-- Table Content -->
+    <div *ngIf="errorHistorial && !cargandoHistorial" role="alert" class="p-5 text-sm text-rose-700 dark:text-rose-300">
+      {{ errorHistorial }}
+    </div>
+    <div *ngIf="!cargandoHistorial && !errorHistorial" class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="border-b border-stone-100 dark:border-slate-800/80 bg-stone-50/50 dark:bg-slate-900/30 text-[11px] font-black uppercase tracking-wider text-zinc-500 dark:text-slate-400">
+            <th class="py-3 px-4"># ID</th>
+            <th class="py-3 px-4">Plan</th>
+            <th class="py-3 px-4">Inicio</th>
+            <th class="py-3 px-4">Fin</th>
+            <th class="py-3 px-4">Estado</th>
+            <th class="py-3 px-4">Motivo Administrativo</th>
+            <th class="py-3 px-4">Registrado Por</th>
+            <th *ngIf="puedeGestionar" class="py-3 px-4 text-right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-stone-100 dark:divide-slate-800/60 text-xs text-zinc-700 dark:text-slate-300">
+          <tr *ngFor="let item of historial"
+              class="hover:bg-stone-50/70 dark:hover:bg-slate-900/40 transition-colors">
+            <td class="py-3 px-4 font-mono font-bold text-zinc-900 dark:text-white">#{{ item.id_suscripcion }}</td>
+            <td class="py-3 px-4 font-black">
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold"
+                    [ngClass]="item.codigo_plan === 'PROFESIONAL'
+                      ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800'
+                      : 'bg-stone-100 text-zinc-700 dark:bg-slate-900 dark:text-slate-300 border border-stone-200 dark:border-slate-800'">
+                {{ item.codigo_plan }}
+              </span>
+            </td>
+            <td class="py-3 px-4 whitespace-nowrap">{{ formatearFechaDisplay(item.inicio) }}</td>
+            <td class="py-3 px-4 whitespace-nowrap">{{ formatearFechaDisplay(item.fin) }}</td>
+            <td class="py-3 px-4">
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" [ngClass]="obtenerBadgeEstadoClass(estadoPeriodo(item))">
+                {{ estadoPeriodo(item) }}
+              </span>
+            </td>
+            <td class="py-3 px-4 max-w-xs truncate" [title]="item.motivo">
+              {{ item.motivo }}
+            </td>
+            <td class="py-3 px-4 whitespace-nowrap text-zinc-500 dark:text-slate-400">
+              {{ item.creado_por ? ('Usuario #' + item.creado_por) : 'Sistema' }}
+            </td>
+            <td *ngIf="puedeGestionar" class="py-3 px-4 text-right whitespace-nowrap">
+              <button *ngIf="puedeCancelar(item)"
+                      (click)="abrirModalCancelar(item)"
+                      class="px-2.5 py-1 text-[11px] font-bold text-rose-600 hover:text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors border border-rose-200 dark:border-rose-900/50">
+                Cancelar
+              </button>
+            </td>
+          </tr>
+
+          <!-- Empty Row -->
+          <tr *ngIf="historial.length === 0">
+            <td [attr.colspan]="puedeGestionar ? 8 : 7" class="py-8 text-center text-xs text-zinc-400 dark:text-slate-500">
+              No hay historial de suscripciones registradas para esta empresa.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- Modal: Asignar / Renovar Suscripción -->
+  <div *ngIf="mostrarModalAsignar"
+       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 dark:bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
+    <div class="w-full max-w-lg rounded-3xl bg-white dark:bg-slate-950 border border-stone-200 dark:border-slate-800 shadow-2xl overflow-hidden animate-slideUp">
+
+      <!-- Header -->
+      <div class="p-6 border-b border-stone-100 dark:border-slate-800 flex items-center justify-between">
+        <div>
+          <h3 class="text-base font-black text-zinc-900 dark:text-white">Asignar o Renovar Suscripción</h3>
+          <p class="text-xs text-zinc-500 dark:text-slate-400 mt-0.5">Empresa ID #{{ empresaSeleccionadaId }}</p>
+        </div>
+        <button (click)="cerrarModalAsignar()" class="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-slate-200 rounded-xl transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+      </div>
+
+      <!-- Error inside modal -->
+      <div *ngIf="modalError" class="mx-6 mt-4 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs leading-relaxed">
+        {{ modalError }}
+      </div>
+
+      <!-- Form Body -->
+      <div class="p-6 space-y-4">
+
+        <!-- Plan selection -->
+        <div>
+          <label class="block text-xs font-bold text-zinc-700 dark:text-slate-300 mb-1.5">Plan Contratado</label>
+          <div class="grid grid-cols-2 gap-3">
+            <button type="button"
+                    (click)="formPlan = 'BASICO'"
+                    class="p-3 text-left rounded-2xl border transition-all"
+                    [ngClass]="formPlan === 'BASICO'
+                      ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/30 ring-1 ring-indigo-500'
+                      : 'border-stone-200 dark:border-slate-800 hover:bg-stone-50 dark:hover:bg-slate-900/60'">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-black text-zinc-900 dark:text-white">BÁSICO</span>
+                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-stone-200 dark:bg-slate-800 text-zinc-700 dark:text-slate-300">2 Suc.</span>
+              </div>
+              <p class="text-[11px] text-zinc-500 dark:text-slate-400 mt-1">Hasta 2 sucursales activas</p>
+            </button>
+
+            <button type="button"
+                    (click)="formPlan = 'PROFESIONAL'"
+                    class="p-3 text-left rounded-2xl border transition-all"
+                    [ngClass]="formPlan === 'PROFESIONAL'
+                      ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/30 ring-1 ring-indigo-500'
+                      : 'border-stone-200 dark:border-slate-800 hover:bg-stone-50 dark:hover:bg-slate-900/60'">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-black text-zinc-900 dark:text-white">PROFESIONAL</span>
+                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">10 Suc.</span>
+              </div>
+              <p class="text-[11px] text-zinc-500 dark:text-slate-400 mt-1">Hasta 10 sucursales y motor BI</p>
+            </button>
+          </div>
+        </div>
+
+        <!-- Dates Range -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-zinc-700 dark:text-slate-300 mb-1.5">Fecha y Hora de Inicio</label>
+            <input type="datetime-local"
+                   [(ngModel)]="formInicio"
+                   class="w-full px-3 py-2 text-xs bg-stone-50 dark:bg-slate-900 border border-stone-200 dark:border-slate-800 rounded-xl text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-zinc-700 dark:text-slate-300 mb-1.5">Fecha y Hora de Fin</label>
+            <input type="datetime-local"
+                   [(ngModel)]="formFin"
+                   class="w-full px-3 py-2 text-xs bg-stone-50 dark:bg-slate-900 border border-stone-200 dark:border-slate-800 rounded-xl text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+        </div>
+
+        <!-- Reason -->
+        <div>
+          <label class="block text-xs font-bold text-zinc-700 dark:text-slate-300 mb-1.5">Motivo Administrativo</label>
+          <textarea [(ngModel)]="formMotivo"
+                    rows="2"
+                    placeholder="Ej. Renovación administrativa anual aprobada según acuerdo comercial"
+                    class="w-full px-3 py-2 text-xs bg-stone-50 dark:bg-slate-900 border border-stone-200 dark:border-slate-800 rounded-xl text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+        </div>
+
+        <!-- Informative note -->
+        <p class="text-[11px] text-zinc-500 dark:text-slate-400 leading-relaxed">
+          Los periodos se registran como intervalos cerrados-abiertos <code>[inicio, fin)</code>. No se permiten periodos activos solapados para la misma empresa.
+        </p>
+
+      </div>
+
+      <!-- Footer -->
+      <div class="p-6 border-t border-stone-100 dark:border-slate-800 bg-stone-50/50 dark:bg-slate-900/30 flex items-center justify-end gap-3">
+        <button (click)="cerrarModalAsignar()"
+                [disabled]="guardando"
+                class="px-4 py-2 text-xs font-semibold text-zinc-600 dark:text-slate-300 hover:bg-stone-200/60 dark:hover:bg-slate-800 rounded-xl transition-colors">
+          Cancelar
+        </button>
+        <button (click)="guardarSuscripcion()"
+                [disabled]="guardando"
+                class="inline-flex items-center gap-2 px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 rounded-xl shadow-md shadow-indigo-600/25 transition-all disabled:opacity-50">
+          <svg *ngIf="guardando" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+          <span>{{ guardando ? 'Registrando...' : 'Confirmar Periodo' }}</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal: Cancelar Suscripción -->
+  <div *ngIf="mostrarModalCancelar"
+       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 dark:bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
+    <div class="w-full max-w-md rounded-3xl bg-white dark:bg-slate-950 border border-stone-200 dark:border-slate-800 shadow-2xl overflow-hidden animate-slideUp">
+
+      <!-- Header -->
+      <div class="p-6 border-b border-stone-100 dark:border-slate-800 flex items-center justify-between">
+        <div>
+          <h3 class="text-base font-black text-rose-600 dark:text-rose-400">Cancelar Suscripción</h3>
+          <p class="text-xs text-zinc-500 dark:text-slate-400 mt-0.5">Suscripción ID #{{ suscripcionACancelar?.id_suscripcion }} ({{ suscripcionACancelar?.codigo_plan }})</p>
+        </div>
+        <button (click)="cerrarModalCancelar()" class="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-slate-200 rounded-xl transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+      </div>
+
+      <!-- Error inside modal -->
+      <div *ngIf="modalError" class="mx-6 mt-4 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs">
+        {{ modalError }}
+      </div>
+
+      <!-- Body -->
+      <div class="p-6 space-y-4">
+        <p class="text-xs text-zinc-600 dark:text-slate-300 leading-relaxed">
+          Esta acción cancelará administrativamente el periodo vigente. El registro histórico se conservará y las operaciones comerciales de la empresa que requieran vigencia quedarán restringidas.
+        </p>
+
+        <div>
+          <label class="block text-xs font-bold text-zinc-700 dark:text-slate-300 mb-1.5">Motivo de Cancelación</label>
+          <textarea [(ngModel)]="formCancelarMotivo"
+                    rows="3"
+                    placeholder="Ej. Solicitud expresa del cliente por cese temporal de operaciones"
+                    class="w-full px-3 py-2 text-xs bg-stone-50 dark:bg-slate-900 border border-stone-200 dark:border-slate-800 rounded-xl text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500"></textarea>
+        </div>
+
+        <div class="p-3 rounded-2xl bg-rose-50/60 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/40">
+          <label class="flex items-start gap-2.5 cursor-pointer">
+            <input type="checkbox"
+                   [(ngModel)]="formCancelarConfirmar"
+                   class="rounded text-rose-600 focus:ring-rose-500 h-4 w-4 mt-0.5" />
+            <span class="text-xs font-semibold text-rose-900 dark:text-rose-200">
+              Confirmo que deseo cancelar inmediatamente este periodo de servicio.
+            </span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="p-6 border-t border-stone-100 dark:border-slate-800 bg-stone-50/50 dark:bg-slate-900/30 flex items-center justify-end gap-3">
+        <button (click)="cerrarModalCancelar()"
+                [disabled]="guardando"
+                class="px-4 py-2 text-xs font-semibold text-zinc-600 dark:text-slate-300 hover:bg-stone-200/60 dark:hover:bg-slate-800 rounded-xl transition-colors">
+          Volver
+        </button>
+        <button (click)="confirmarCancelacion()"
+                [disabled]="guardando || !formCancelarConfirmar"
+                class="inline-flex items-center gap-2 px-5 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 dark:bg-rose-500 dark:hover:bg-rose-600 rounded-xl shadow-md shadow-rose-600/25 transition-all disabled:opacity-50">
+          <svg *ngIf="guardando" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+          <span>{{ guardando ? 'Cancelando...' : 'Confirmar Cancelación' }}</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+</div>

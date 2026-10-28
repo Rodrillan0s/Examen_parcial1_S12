@@ -180,7 +180,7 @@ def eliminar_empresa_db(id_empresa: int):
     db.create_connection()
     try:
         schema = Config.SCHEMA or 'comercio'
-        query = f"DELETE FROM {schema}.empresa WHERE id_empresa = %s;"
+        query = f"UPDATE {schema}.empresa SET estado='INACTIVO', updated_at=CURRENT_TIMESTAMP WHERE id_empresa = %s;"
         filas_afectadas = db.execute_query(query, (id_empresa,), commit=True)
         return filas_afectadas > 0
     finally:

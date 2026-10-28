@@ -1,8 +1,10 @@
-import { Component, OnInit, inject, PLATFORM_ID, ChangeDetectorRef, DestroyRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, PLATFORM_ID, ChangeDetectorRef, DestroyRef } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, ActivatedRoute } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged, takeUntil } from 'rxjs/operators';
 import { 
   ReportesService, 
   ReporteVentaItem, 
@@ -21,6 +23,7 @@ import {
 } from '../../services/motor-reportes';
 import { AuthService } from '../../services/auth';
 import { KpisService } from '../../services/kpis';
+import { extraerMensajeError } from '../../utils/error-helper';
 
 export type TipoReporte = 'ventas' | 'inventario' | 'productos' | 'sucursales';
 
@@ -31,7 +34,7 @@ export type TipoReporte = 'ventas' | 'inventario' | 'productos' | 'sucursales';
   templateUrl: './reportes.html',
   styleUrls: ['./reportes.css']
 })
-export class ReportesComponent implements OnInit {
+export class ReportesComponent implements OnInit, OnDestroy {
 
   private reportesService = inject(ReportesService);
   public motorService = inject(MotorReportesService);
@@ -41,6 +44,10 @@ export class ReportesComponent implements OnInit {
   private platformId = inject(PLATFORM_ID);
   private cdr = inject(ChangeDetectorRef);
   private destroyRef = inject(DestroyRef);
+
+  // Control de peticiones reactivas y cancelación de consultas anteriores
+  private recargarReporte$ = new Subject<void>();
+  private cancelReportePrevio$ = new Subject<void>();
 
   // ---- MULTI-TENANT: SELECCIÓN DE TIENDA / TENANT ----
   tenants: any[] = [];
@@ -118,6 +125,16 @@ export class ReportesComponent implements OnInit {
       this.cargarCatalogoMotor();
       this.establecerRangoMesActual();
 
+      // Unificar consultas en pipeline debounced para evitar peticiones repetidas en la carga inicial
+      this.recargarReporte$
+        .pipe(
+          debounceTime(80),
+          takeUntilDestroyed(this.destroyRef)
+        )
+        .subscribe(() => {
+          this.ejecutarConsultaReporte();
+        });
+
       // Inicializar con la empresa y sucursal activas del Header
       this.empresaSeleccionada = this.authService.getEffectiveCompanyId();
       this.sucursalSeleccionada = this.authService.activeBranch()?.id || null;
@@ -126,7 +143,10 @@ export class ReportesComponent implements OnInit {
 
       // Suscribirse reactivamente al cambio de Empresa en el Header
       this.authService.companyChanged$
-        .pipe(takeUntilDestroyed(this.destroyRef))
+        .pipe(
+          distinctUntilChanged((p, c) => p?.id_empresa === c?.id_empresa),
+          takeUntilDestroyed(this.destroyRef)
+        )
         .subscribe(empresa => {
           const newId = empresa ? empresa.id_empresa : this.authService.getEffectiveCompanyId();
           if (this.empresaSeleccionada !== newId) {
@@ -139,7 +159,10 @@ export class ReportesComponent implements OnInit {
 
       // Suscribirse reactivamente al cambio de Sucursal en el Header
       this.authService.branchChanged$
-        .pipe(takeUntilDestroyed(this.destroyRef))
+        .pipe(
+          distinctUntilChanged((p, c) => p?.id === c?.id),
+          takeUntilDestroyed(this.destroyRef)
+        )
         .subscribe(branch => {
           const newBranchId = branch ? branch.id : null;
           if (this.sucursalSeleccionada !== newBranchId) {
@@ -149,31 +172,33 @@ export class ReportesComponent implements OnInit {
         });
 
       // Leer queryParams opcionales enviados desde el Dashboard de KPIs
-      this.route.queryParams.subscribe(params => {
-        if (params['empresa']) {
-          this.empresaSeleccionada = Number(params['empresa']);
-        }
-        if (params['tienda_nombre']) {
-          this.tiendaNombre = params['tienda_nombre'];
-        }
-        if (params['tipo']) {
-          const t = String(params['tipo']).toLowerCase();
-          if (t === 'ventas' || t === 'inventario' || t === 'productos' || t === 'sucursales') {
-            this.tipoReporteActivo = t as TipoReporte;
-            this.vistaActiva = 'estandar';
-            this.consultarReporte();
-          } else {
-            // Reporte especial dinámico (caja, pagos, reservas, etc.)
-            this.vistaActiva = 'dinamico';
-            this.ejecutarReporteDinamico({ 
-              tipo_reporte: t, 
-              filtros: this.empresaSeleccionada ? { id_empresa: this.empresaSeleccionada } : {} 
-            });
+      this.route.queryParams
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe(params => {
+          if (params['empresa']) {
+            this.empresaSeleccionada = Number(params['empresa']);
           }
-        } else {
-          this.consultarReporte();
-        }
-      });
+          if (params['tienda_nombre']) {
+            this.tiendaNombre = params['tienda_nombre'];
+          }
+          if (params['tipo']) {
+            const t = String(params['tipo']).toLowerCase();
+            if (t === 'ventas' || t === 'inventario' || t === 'productos' || t === 'sucursales') {
+              this.tipoReporteActivo = t as TipoReporte;
+              this.vistaActiva = 'estandar';
+              this.consultarReporte();
+            } else {
+              // Reporte especial dinámico (caja, pagos, reservas, etc.)
+              this.vistaActiva = 'dinamico';
+              this.ejecutarReporteDinamico({ 
+                tipo_reporte: t, 
+                filtros: this.empresaSeleccionada ? { id_empresa: this.empresaSeleccionada } : {} 
+              });
+            }
+          } else {
+            this.consultarReporte();
+          }
+        });
     }
   }
 
@@ -464,7 +489,18 @@ export class ReportesComponent implements OnInit {
     this.consultarReporte();
   }
 
-  consultarReporte() {
+  consultarReporte(inmediato: boolean = false) {
+    if (inmediato) {
+      this.ejecutarConsultaReporte();
+    } else {
+      this.recargarReporte$.next();
+    }
+  }
+
+  ejecutarConsultaReporte() {
+    // Cancelar cualquier petición de reporte previa aún en tránsito
+    this.cancelReportePrevio$.next();
+
     this.cargando = true;
     this.mensajeError = '';
     this.mensajeExito = '';
@@ -473,7 +509,6 @@ export class ReportesComponent implements OnInit {
     const fIni = this.fechaInicio || undefined;
     const fFin = this.fechaFin || undefined;
     const suc = this.sucursalSeleccionada || undefined;
-
     const emp = this.empresaSeleccionada || undefined;
 
     if (this.tipoReporteActivo === 'ventas') {
@@ -484,13 +519,17 @@ export class ReportesComponent implements OnInit {
         id_sucursal: suc,
         estado: est,
         id_empresa: emp
-      }).subscribe({
+      })
+      .pipe(takeUntil(this.cancelReportePrevio$))
+      .subscribe({
         next: (res) => {
           this.datosVentas = res.data;
           this.cargando = false;
           this.cdr.detectChanges();
         },
-        error: (err) => this.manejarError(err)
+        error: (err) => {
+          if (err?.name !== 'EmptyError') this.manejarError(err);
+        }
       });
     } else if (this.tipoReporteActivo === 'inventario') {
       const estStock = this.estadoStock !== 'todos' ? this.estadoStock : undefined;
@@ -500,13 +539,17 @@ export class ReportesComponent implements OnInit {
         id_categoria: cat,
         estado_stock: estStock,
         id_empresa: emp
-      }).subscribe({
+      })
+      .pipe(takeUntil(this.cancelReportePrevio$))
+      .subscribe({
         next: (res) => {
           this.datosInventario = res.data;
           this.cargando = false;
           this.cdr.detectChanges();
         },
-        error: (err) => this.manejarError(err)
+        error: (err) => {
+          if (err?.name !== 'EmptyError') this.manejarError(err);
+        }
       });
     } else if (this.tipoReporteActivo === 'productos') {
       const cat = this.categoriaSeleccionada || undefined;
@@ -516,28 +559,42 @@ export class ReportesComponent implements OnInit {
         id_sucursal: suc,
         id_categoria: cat,
         id_empresa: emp
-      }).subscribe({
+      })
+      .pipe(takeUntil(this.cancelReportePrevio$))
+      .subscribe({
         next: (res) => {
           this.datosProductos = res.data;
           this.cargando = false;
           this.cdr.detectChanges();
         },
-        error: (err) => this.manejarError(err)
+        error: (err) => {
+          if (err?.name !== 'EmptyError') this.manejarError(err);
+        }
       });
     } else if (this.tipoReporteActivo === 'sucursales') {
       this.reportesService.obtenerReporteSucursales({
         fecha_inicio: fIni,
         fecha_fin: fFin,
         id_empresa: emp
-      }).subscribe({
+      })
+      .pipe(takeUntil(this.cancelReportePrevio$))
+      .subscribe({
         next: (res) => {
           this.datosSucursales = res.data;
           this.cargando = false;
           this.cdr.detectChanges();
         },
-        error: (err) => this.manejarError(err)
+        error: (err) => {
+          if (err?.name !== 'EmptyError') this.manejarError(err);
+        }
       });
     }
+  }
+
+  ngOnDestroy(): void {
+    this.cancelReportePrevio$.next();
+    this.cancelReportePrevio$.complete();
+    this.recargarReporte$.complete();
   }
 
   descargarPdf() {
@@ -706,7 +763,7 @@ export class ReportesComponent implements OnInit {
 
   private manejarError(err: any) {
     this.cargando = false;
-    this.mensajeError = err.error?.detail || err.error?.message || 'Error al procesar la solicitud de reporte.';
+    this.mensajeError = extraerMensajeError(err, 'Error al procesar la solicitud de reporte.');
     this.cdr.detectChanges();
   }
 

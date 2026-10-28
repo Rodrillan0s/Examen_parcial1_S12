@@ -1,14 +1,16 @@
 import { Component, OnInit, inject, ChangeDetectorRef, NgZone, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../../services/auth';
 import { Empresa, EmpresaService } from '../../../services/empresa';
+import { extraerMensajeError } from '../../../utils/error-helper';
 
 @Component({
   selector: 'app-lista-empresas',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './lista-empresas.html'
 })
 export class ListaEmpresasComponent implements OnInit {
@@ -100,7 +102,7 @@ export class ListaEmpresasComponent implements OnInit {
         },
         error: (err) => {
           this.ngZone.run(() => {
-            this.mensajeError = err?.error?.detail || 'Error de conexión al cargar las empresas.';
+            this.mensajeError = extraerMensajeError(err, 'Error de conexión al cargar las empresas.');
             this.cargando = false;
             this.cdr.detectChanges();
           });
@@ -260,7 +262,7 @@ export class ListaEmpresasComponent implements OnInit {
           },
           error: (err) => {
             this.ngZone.run(() => {
-              this.mensajeModalError = err?.error?.detail || err?.message || 'Error al actualizar el Tenant.';
+              this.mensajeModalError = extraerMensajeError(err, 'Error al actualizar la empresa.');
               this.guardando = false;
               this.cdr.detectChanges();
             });
@@ -280,7 +282,7 @@ export class ListaEmpresasComponent implements OnInit {
           },
           error: (err) => {
             this.ngZone.run(() => {
-              this.mensajeModalError = err?.error?.detail || err?.message || 'Error al registrar el Tenant. Verifique los datos.';
+              this.mensajeModalError = extraerMensajeError(err, 'Error al registrar la empresa. Verifique los datos.');
               this.guardando = false;
               this.cdr.detectChanges();
             });
@@ -289,10 +291,11 @@ export class ListaEmpresasComponent implements OnInit {
     }
   }
 
-  eliminarEmpresa(idEmpresa?: number) {
+  eliminarEmpresa(idEmpresa?: number, nombreEmpresa?: string) {
     if (!idEmpresa) return;
 
-    const confirmar = confirm('¿Está seguro que desea eliminar este Tenant permanentemente? Las sucursales y productos asociados pueden verse afectados.');
+    const nombre = nombreEmpresa || 'esta empresa';
+    const confirmar = confirm(`¿Está seguro que desea desactivar ${nombre}? Sus sucursales y operaciones comerciales quedarán suspendidas sin eliminar sus registros históricos.`);
     if (!confirmar) return;
 
     this.cargando = true;
@@ -300,15 +303,17 @@ export class ListaEmpresasComponent implements OnInit {
     this.empresaService.eliminarEmpresa(idEmpresa)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: () => {
+        next: (res) => {
           this.ngZone.run(() => {
             this.cargarEmpresas();
-            this.mostrarNotificacionExito('Tenant eliminado correctamente.');
+            const msg = res?.message || 'Empresa desactivada exitosamente.';
+            this.mostrarNotificacionExito(msg);
           });
         },
         error: (err) => {
           this.ngZone.run(() => {
-            alert(err?.error?.detail || 'Error al eliminar el Tenant.');
+            const errorMsg = extraerMensajeError(err, 'Error al desactivar la empresa.');
+            alert(errorMsg);
             this.cargando = false;
             this.cdr.detectChanges();
           });

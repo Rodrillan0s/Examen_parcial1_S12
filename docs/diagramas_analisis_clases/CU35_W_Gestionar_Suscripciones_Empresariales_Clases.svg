@@ -1,0 +1,136 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 980" width="1440" height="980" style="background-color: #ffffff; font-family: Arial, Helvetica, sans-serif;">
+  <!-- Encabezado del Diagrama -->
+  <text x="35" y="34" font-size="16" font-weight="bold" fill="#0f172a">CU35 W: Gestionar suscripciones empresariales — Diagrama de Análisis de Clases (UML / ICONIX)</text>
+  <text x="35" y="54" font-size="12" font-weight="500" fill="#475569">Asignación Administrativa y Control de Vigencia | Estereotipos: Boundary (Form) ── Control ── Entity</text>
+  <text x="35" y="72" font-size="11.5" font-weight="bold" fill="#1e293b">Actor(es): <tspan font-weight="normal" fill="#334155">Superadministrador de Plataforma</tspan></text>
+  <line x1="35" y1="82" x2="1405" y2="82" stroke="#94a3b8" stroke-width="1.2"/>
+
+  <!-- Leyenda de Estructura ICONIX -->
+  <g transform="translate(1010, 24)">
+    <rect x="0" y="0" width="395" height="48" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+    <text x="12" y="19" font-size="11" font-weight="bold" fill="#1e293b">Estructura del Análisis de Clases (ICONIX):</text>
+    <text x="12" y="36" font-size="10.5" fill="#475569">Boundary (Form) ── Control (Lógica) ── Entity (Persistencia)</text>
+  </g>
+  <!-- Clase: Form / Suscripcion_Empresarial -->
+  <g id="class_form_suscripcion">
+    <rect x="50" y="350" width="270" height="248" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="50" y1="398" x2="320" y2="398" stroke="#000000" stroke-width="1.2"/>
+    <line x1="50" y1="506.0" x2="320" y2="506.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="185.0" y="367" text-anchor="middle" font-size="11" font-weight="bold" fill="#334155" font-family="Arial, Helvetica, sans-serif">Form</text>
+    <text x="185.0" y="384" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">Suscripcion_Empresarial</text>
+    <text x="60" y="414" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ id_empresa: int</text>
+    <text x="60" y="430" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ codigo_plan: string</text>
+    <text x="60" y="446" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ fecha_inicio: date</text>
+    <text x="60" y="462" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ fecha_fin: date</text>
+    <text x="60" y="478" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ motivo: string</text>
+    <text x="60" y="494" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ estado: string</text>
+    <text x="60" y="522.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ seleccionar_empresa()</text>
+    <text x="60" y="538.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ solicitar_asignacion_plan()</text>
+    <text x="60" y="554.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ confirmar_periodo()</text>
+    <text x="60" y="570.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ cancelar_suscripcion()</text>
+    <text x="60" y="586.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ mostrar_error_capacidad()</text>
+  </g>
+  <!-- Clase: Control / Suscripciones -->
+  <g id="class_ctrl_suscripcion">
+    <rect x="370" y="350" width="340" height="184" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="370" y1="398" x2="710" y2="398" stroke="#000000" stroke-width="1.2"/>
+    <line x1="370" y1="426.0" x2="710" y2="426.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="540.0" y="367" text-anchor="middle" font-size="11" font-weight="bold" fill="#334155" font-family="Arial, Helvetica, sans-serif">Control</text>
+    <text x="540.0" y="384" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">Suscripciones</text>
+    <text x="380" y="414" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">- validator: SubscriptionValidator</text>
+    <text x="380" y="442.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ crear_suscripcion(dto)</text>
+    <text x="380" y="458.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ validar_rango_fechas(ini, fin)</text>
+    <text x="380" y="474.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ obtener_limites_plan(codigo)</text>
+    <text x="380" y="490.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ contar_sucursales_activas(id_empresa)</text>
+    <text x="380" y="506.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ insertar_periodo_suscripcion(dto)</text>
+    <text x="380" y="522.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ cancelar_suscripcion_logica(id)</text>
+  </g>
+  <!-- Clase: T_SUSCRIPCION -->
+  <g id="class_ent_suscripcion">
+    <rect x="770" y="350" width="270" height="250" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="770" y1="384" x2="1040" y2="384" stroke="#000000" stroke-width="1.2"/>
+    <line x1="770" y1="540.0" x2="1040" y2="540.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="905.0" y="372.0" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">T_SUSCRIPCION</text>
+    <text x="780" y="400" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_SUSCRIPCION: bigint [PK]</text>
+    <text x="780" y="416" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_EMPRESA: int [FK]</text>
+    <text x="780" y="432" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ CODIGO_PLAN: string [FK]</text>
+    <text x="780" y="448" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ INICIO: timestamptz</text>
+    <text x="780" y="464" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ FIN: timestamptz</text>
+    <text x="780" y="480" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ESTADO: string = &apos;ACTIVA&apos;</text>
+    <text x="780" y="496" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ MOTIVO: text</text>
+    <text x="780" y="512" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ CREADO_POR: int [FK]</text>
+    <text x="780" y="528" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ CREADO_EN: timestamptz</text>
+    <text x="780" y="556.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ insertar_periodo(datos)</text>
+    <text x="780" y="572.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ actualizar_estado(id, estado)</text>
+    <text x="780" y="588.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ buscar_por_empresa(id_emp)</text>
+  </g>
+  <!-- Clase: T_PLAN -->
+  <g id="class_ent_plan">
+    <rect x="770" y="115" width="270" height="138" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="770" y1="149" x2="1040" y2="149" stroke="#000000" stroke-width="1.2"/>
+    <line x1="770" y1="225.0" x2="1040" y2="225.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="905.0" y="137.0" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">T_PLAN</text>
+    <text x="780" y="165" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ CODIGO: string [PK]</text>
+    <text x="780" y="181" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ NOMBRE: string</text>
+    <text x="780" y="197" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ MAX_SUCURSALES: int</text>
+    <text x="780" y="213" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ACTIVO: boolean</text>
+    <text x="780" y="241.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ obtener_limites(codigo)</text>
+  </g>
+  <!-- Clase: EMPRESA -->
+  <g id="class_ent_empresa">
+    <rect x="1100" y="350" width="270" height="122" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="1100" y1="384" x2="1370" y2="384" stroke="#000000" stroke-width="1.2"/>
+    <line x1="1100" y1="444.0" x2="1370" y2="444.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="1235.0" y="372.0" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">EMPRESA</text>
+    <text x="1110" y="400" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_EMPRESA: int [PK]</text>
+    <text x="1110" y="416" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ NOMBRE_EMPRESA: string</text>
+    <text x="1110" y="432" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ESTADO: string</text>
+    <text x="1110" y="460.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ existe_empresa(id)</text>
+  </g>
+  <!-- Clase: T_SUCURSAL -->
+  <g id="class_ent_sucursal">
+    <rect x="1100" y="115" width="270" height="138" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="1100" y1="149" x2="1370" y2="149" stroke="#000000" stroke-width="1.2"/>
+    <line x1="1100" y1="225.0" x2="1370" y2="225.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="1235.0" y="137.0" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">T_SUCURSAL</text>
+    <text x="1110" y="165" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_SUCURSAL: int [PK]</text>
+    <text x="1110" y="181" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_EMPRESA: int [FK]</text>
+    <text x="1110" y="197" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ NOMBRE: string</text>
+    <text x="1110" y="213" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ACTIVO: boolean</text>
+    <text x="1110" y="241.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ contar_activas(id_empresa)</text>
+  </g>
+  <!-- Clase: T_BITACORA -->
+  <g id="class_ent_bitacora">
+    <rect x="770" y="700" width="270" height="170" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="770" y1="734" x2="1040" y2="734" stroke="#000000" stroke-width="1.2"/>
+    <line x1="770" y1="842.0" x2="1040" y2="842.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="905.0" y="722.0" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">T_BITACORA</text>
+    <text x="780" y="750" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_BITACORA: bigint [PK]</text>
+    <text x="780" y="766" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ FECHA_HORA: timestamp</text>
+    <text x="780" y="782" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_USUARIO: int [FK]</text>
+    <text x="780" y="798" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_EMPRESA: int [FK]</text>
+    <text x="780" y="814" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ MODULO: string = &apos;SUSCRIPCION&apos;</text>
+    <text x="780" y="830" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ACCION: string = &apos;ASIGNAR_PLAN&apos;</text>
+    <text x="780" y="858.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ registrar_evento(accion, id_emp)</text>
+  </g>
+
+  <!-- Asociaciones y Multiplicidades -->
+  <g id="associations">
+    <polyline points="320,474.0 345,474.0 345,442.0 370,442.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="330" y="436.0" font-size="10" font-style="italic" fill="#334155">solicita</text>
+    <polyline points="710,442.0 740,442.0 740,475.0 770,475.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="725" y="469.0" font-size="10" font-style="italic" fill="#334155">persiste</text>
+    <polyline points="905.0,253 905.0,350" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="913.0" y="269" font-size="11" font-weight="bold" fill="#000000">1</text>
+    <text x="913.0" y="342" font-size="11" font-weight="bold" fill="#000000">0..*</text>
+    <polyline points="1100,411.0 1070,411.0 1070,475.0 1040,475.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="1075" y="405.0" font-size="11" font-weight="bold" fill="#000000">1</text>
+    <text x="1048" y="469.0" font-size="11" font-weight="bold" fill="#000000">0..*</text>
+    <polyline points="1235.0,350 1235.0,253" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="1243.0" y="342" font-size="11" font-weight="bold" fill="#000000">1</text>
+    <text x="1243.0" y="269" font-size="11" font-weight="bold" fill="#000000">0..*</text>
+    <polyline points="905.0,600 905.0,700" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="913.0" y="616" font-size="11" font-weight="bold" fill="#000000">1</text>
+    <text x="913.0" y="692" font-size="11" font-weight="bold" fill="#000000">0..*</text>
+  </g>
+</svg>

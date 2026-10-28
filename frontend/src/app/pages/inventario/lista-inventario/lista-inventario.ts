@@ -2,6 +2,8 @@ import { Component, OnInit, inject, ChangeDetectorRef, DestroyRef } from '@angul
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { AuthService } from '../../../services/auth';
 import { InventarioService, ItemInventario, ResumenInventario, MovimientoInventario, MovimientoPayload, FiltrosInventario } from '../../../services/inventario';
 import { SucursalService, Sucursal } from '../../../services/sucursales';
@@ -36,6 +38,7 @@ export class ListaInventarioComponent implements OnInit {
   public authService = inject(AuthService);
   private cdr = inject(ChangeDetectorRef);
   private destroyRef = inject(DestroyRef);
+  private recargarInventario$ = new Subject<void>();
 
   // Navegación por pestañas
   tabActiva: TabInventario = 'stock';
@@ -198,9 +201,27 @@ export class ListaInventarioComponent implements OnInit {
       this.cargarEmpresas();
     }
 
+    this.recargarInventario$
+      .pipe(
+        debounceTime(60),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => {
+        if (this.tabActiva === 'stock') {
+          this.cargarInventario();
+        } else if (this.tabActiva === 'ordenes') {
+          this.cargarOrdenesCompra();
+        } else if (this.tabActiva === 'lotes') {
+          this.cargarLotes();
+        }
+      });
+
     // Suscripción reactiva al cambio de empresa en el selector superior o directo
     this.authService.companyChanged$
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        distinctUntilChanged((p, c) => p?.id_empresa === c?.id_empresa),
+        takeUntilDestroyed(this.destroyRef)
+      )
       .subscribe(() => {
         // La sucursal pertenece al tenant anterior; obligar a resolverla de nuevo.
         this.sucursalDestinoImportacion = null;
@@ -214,19 +235,16 @@ export class ListaInventarioComponent implements OnInit {
           this.cdr.detectChanges();
         } else {
           this.cargarCatalogos();
-          if (this.tabActiva === 'stock') {
-            this.cargarInventario();
-          } else if (this.tabActiva === 'ordenes') {
-            this.cargarOrdenesCompra();
-          } else if (this.tabActiva === 'lotes') {
-            this.cargarLotes();
-          }
+          this.recargarInventario$.next();
         }
       });
 
     // Suscripción reactiva al cambio de sucursal en el selector superior
     this.authService.branchChanged$
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        distinctUntilChanged((p, c) => p?.id === c?.id),
+        takeUntilDestroyed(this.destroyRef)
+      )
       .subscribe((branch) => {
         if (this.esNivelSucursal) {
           const act = this.authService.activeBranch();
@@ -236,13 +254,7 @@ export class ListaInventarioComponent implements OnInit {
         }
         if (!this.empresaRequerida) {
           this.paginaActual = 1;
-          if (this.tabActiva === 'stock') {
-            this.cargarInventario();
-          } else if (this.tabActiva === 'ordenes') {
-            this.cargarOrdenesCompra();
-          } else if (this.tabActiva === 'lotes') {
-            this.cargarLotes();
-          }
+          this.recargarInventario$.next();
         }
       });
   }

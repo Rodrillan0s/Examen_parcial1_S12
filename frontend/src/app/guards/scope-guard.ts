@@ -8,7 +8,7 @@ import { AuthService } from '../services/auth';
  * ('PLATAFORMA', 'EMPRESA', 'SUCURSAL').
  * Ejemplo: /admin/empresas solo permite ['PLATAFORMA'].
  */
-export function scopeGuard(allowedScopes: Array<'PLATAFORMA' | 'EMPRESA' | 'SUCURSAL'>): CanActivateFn {
+export function scopeGuard(allowedScopes: Array<'PLATAFORMA' | 'EMPRESA' | 'SUCURSAL' | 'CLIENTE'>): CanActivateFn {
   return (route, state) => {
     const platformId = inject(PLATFORM_ID);
     if (!isPlatformBrowser(platformId)) {
@@ -27,6 +27,11 @@ export function scopeGuard(allowedScopes: Array<'PLATAFORMA' | 'EMPRESA' | 'SUCU
     }
 
     const currentScope = authService.getScopeLevel();
+    if (currentScope === 'CLIENTE') {
+      router.navigate(['/perfil']);
+      return false;
+    }
+
     const esPermitido = allowedScopes.includes(currentScope);
 
     if (!esPermitido) {

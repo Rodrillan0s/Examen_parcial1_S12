@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 980" width="1440" height="980" style="background-color: #ffffff; font-family: Arial, Helvetica, sans-serif;">
+  <!-- Encabezado del Diagrama -->
+  <text x="35" y="34" font-size="16" font-weight="bold" fill="#0f172a">CU01 W/M: Registrar usuario — Diagrama de Análisis de Clases (UML / ICONIX)</text>
+  <text x="35" y="54" font-size="12" font-weight="500" fill="#475569">Unificación Web (CU01W) y Móvil (CU01M) | Estereotipos: Boundary (Form) ── Control ── Entity</text>
+  <text x="35" y="72" font-size="11.5" font-weight="bold" fill="#1e293b">Actor(es): <tspan font-weight="normal" fill="#334155">Usuario No Autenticado (Cliente Web / Móvil)</tspan></text>
+  <line x1="35" y1="82" x2="1405" y2="82" stroke="#94a3b8" stroke-width="1.2"/>
+
+  <!-- Leyenda de Estructura ICONIX -->
+  <g transform="translate(1010, 24)">
+    <rect x="0" y="0" width="395" height="48" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+    <text x="12" y="19" font-size="11" font-weight="bold" fill="#1e293b">Estructura del Análisis de Clases (ICONIX):</text>
+    <text x="12" y="36" font-size="10.5" fill="#475569">Boundary (Form) ── Control (Lógica) ── Entity (Persistencia)</text>
+  </g>
+  <!-- Clase: Form / Registro_Usuario -->
+  <g id="class_form_registro">
+    <rect x="50" y="350" width="270" height="248" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="50" y1="398" x2="320" y2="398" stroke="#000000" stroke-width="1.2"/>
+    <line x1="50" y1="506.0" x2="320" y2="506.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="185.0" y="367" text-anchor="middle" font-size="11" font-weight="bold" fill="#334155" font-family="Arial, Helvetica, sans-serif">Form</text>
+    <text x="185.0" y="384" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">Registro_Usuario</text>
+    <text x="60" y="414" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ username: string</text>
+    <text x="60" y="430" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ email: string</text>
+    <text x="60" y="446" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ password: string</text>
+    <text x="60" y="462" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ nombre: string</text>
+    <text x="60" y="478" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ apellido: string</text>
+    <text x="60" y="494" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ telefono: string</text>
+    <text x="60" y="522.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ingresar_datos()</text>
+    <text x="60" y="538.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ solicitar_registro()</text>
+    <text x="60" y="554.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ renderizar_formulario()</text>
+    <text x="60" y="570.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ mostrar_confirmacion()</text>
+    <text x="60" y="586.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ mostrar_error_validacion()</text>
+  </g>
+  <!-- Clase: Control / Registro -->
+  <g id="class_ctrl_registro">
+    <rect x="380" y="350" width="330" height="216" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="380" y1="398" x2="710" y2="398" stroke="#000000" stroke-width="1.2"/>
+    <line x1="380" y1="442.0" x2="710" y2="442.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="545.0" y="367" text-anchor="middle" font-size="11" font-weight="bold" fill="#334155" font-family="Arial, Helvetica, sans-serif">Control</text>
+    <text x="545.0" y="384" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">Registro</text>
+    <text x="390" y="414" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">- validador: ValidatorService</text>
+    <text x="390" y="430" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">- hasher: Argon2Hasher</text>
+    <text x="390" y="458.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ registrar_usuario(dto_registro)</text>
+    <text x="390" y="474.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ validar_formato_email(email)</text>
+    <text x="390" y="490.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ verificar_unicidad_email(email)</text>
+    <text x="390" y="506.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ validar_politica_password(pass)</text>
+    <text x="390" y="522.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ hashear_password(pass)</text>
+    <text x="390" y="538.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ asignar_rol_por_defecto(id_usr)</text>
+    <text x="390" y="554.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ crear_perfil_persona(id_usr, datos)</text>
+  </g>
+  <!-- Clase: T_USUARIO -->
+  <g id="class_ent_usuario">
+    <rect x="770" y="350" width="270" height="250" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="770" y1="384" x2="1040" y2="384" stroke="#000000" stroke-width="1.2"/>
+    <line x1="770" y1="540.0" x2="1040" y2="540.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="905.0" y="372.0" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">T_USUARIO</text>
+    <text x="780" y="400" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_USUARIO: int [PK]</text>
+    <text x="780" y="416" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ USERNAME: string</text>
+    <text x="780" y="432" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ CORREO: string [UQ]</text>
+    <text x="780" y="448" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ PASSWORD_HASH: string</text>
+    <text x="780" y="464" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_ROL: int [FK]</text>
+    <text x="780" y="480" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_PERSONA: int [FK]</text>
+    <text x="780" y="496" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_EMPRESA: int [FK]</text>
+    <text x="780" y="512" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ESTADO: string = &apos;ACTIVO&apos;</text>
+    <text x="780" y="528" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ CREATED_AT: timestamp</text>
+    <text x="780" y="556.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ buscar_por_email(correo)</text>
+    <text x="780" y="572.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ insertar_usuario(datos)</text>
+    <text x="780" y="588.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ actualizar_estado(id, estado)</text>
+  </g>
+  <!-- Clase: T_PERSONA -->
+  <g id="class_ent_persona">
+    <rect x="1100" y="350" width="280" height="170" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="1100" y1="384" x2="1380" y2="384" stroke="#000000" stroke-width="1.2"/>
+    <line x1="1100" y1="476.0" x2="1380" y2="476.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="1240.0" y="372.0" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">T_PERSONA</text>
+    <text x="1110" y="400" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_PERSONA: int [PK]</text>
+    <text x="1110" y="416" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ NOMBRE: string</text>
+    <text x="1110" y="432" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ APELLIDO: string</text>
+    <text x="1110" y="448" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ TELEFONO: string</text>
+    <text x="1110" y="464" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ CREATED_AT: timestamp</text>
+    <text x="1110" y="492.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ insertar_persona(datos)</text>
+    <text x="1110" y="508.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ buscar_por_id(id)</text>
+  </g>
+  <!-- Clase: T_ROL -->
+  <g id="class_ent_rol">
+    <rect x="770" y="115" width="270" height="122" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="770" y1="149" x2="1040" y2="149" stroke="#000000" stroke-width="1.2"/>
+    <line x1="770" y1="209.0" x2="1040" y2="209.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="905.0" y="137.0" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">T_ROL</text>
+    <text x="780" y="165" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_ROL: int [PK]</text>
+    <text x="780" y="181" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ NOMBRE_ROL: string</text>
+    <text x="780" y="197" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ DESCRIPCION: string</text>
+    <text x="780" y="225.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ buscar_por_nombre(nom)</text>
+  </g>
+  <!-- Clase: T_BITACORA -->
+  <g id="class_ent_bitacora">
+    <rect x="770" y="710" width="270" height="186" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="770" y1="744" x2="1040" y2="744" stroke="#000000" stroke-width="1.2"/>
+    <line x1="770" y1="868.0" x2="1040" y2="868.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="905.0" y="732.0" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">T_BITACORA</text>
+    <text x="780" y="760" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_BITACORA: bigint [PK]</text>
+    <text x="780" y="776" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ FECHA_HORA: timestamp</text>
+    <text x="780" y="792" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_USUARIO: int [FK]</text>
+    <text x="780" y="808" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ MODULO: string = &apos;AUTH&apos;</text>
+    <text x="780" y="824" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ACCION: string = &apos;REGISTRO&apos;</text>
+    <text x="780" y="840" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ IP_ORIGEN: string</text>
+    <text x="780" y="856" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ RESULTADO: string = &apos;EXITO&apos;</text>
+    <text x="780" y="884.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ registrar_evento(accion, resultado)</text>
+  </g>
+
+  <!-- Asociaciones y Multiplicidades -->
+  <g id="associations">
+    <polyline points="320,474.0 350,474.0 350,458.0 380,458.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="335" y="452.0" font-size="10" font-style="italic" fill="#334155">solicita</text>
+    <polyline points="710,458.0 740,458.0 740,475.0 770,475.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="725" y="469.0" font-size="10" font-style="italic" fill="#334155">persiste</text>
+    <polyline points="1040,475.0 1070,475.0 1070,435.0 1100,435.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="1048" y="469.0" font-size="11" font-weight="bold" fill="#000000">1</text>
+    <text x="1075" y="429.0" font-size="11" font-weight="bold" fill="#000000">1</text>
+    <polyline points="905.0,237 905.0,350" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="913.0" y="253" font-size="11" font-weight="bold" fill="#000000">1</text>
+    <text x="913.0" y="342" font-size="11" font-weight="bold" fill="#000000">0..*</text>
+    <polyline points="905.0,600 905.0,710" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="913.0" y="616" font-size="11" font-weight="bold" fill="#000000">1</text>
+    <text x="913.0" y="702" font-size="11" font-weight="bold" fill="#000000">0..*</text>
+  </g>
+</svg>

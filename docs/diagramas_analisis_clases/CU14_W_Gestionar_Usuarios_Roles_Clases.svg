@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 980" width="1440" height="980" style="background-color: #ffffff; font-family: Arial, Helvetica, sans-serif;">
+  <!-- Encabezado del Diagrama -->
+  <text x="35" y="34" font-size="16" font-weight="bold" fill="#0f172a">CU14 W: Gestionar usuarios y roles — Diagrama de Análisis de Clases (UML / ICONIX)</text>
+  <text x="35" y="54" font-size="12" font-weight="500" fill="#475569">Estructura idéntica al modelo de referencia | Estereotipos: Boundary (Form) ── Control ── Entity</text>
+  <text x="35" y="72" font-size="11.5" font-weight="bold" fill="#1e293b">Actor(es): <tspan font-weight="normal" fill="#334155">Administrador de Empresa / Superadmin</tspan></text>
+  <line x1="35" y1="82" x2="1405" y2="82" stroke="#94a3b8" stroke-width="1.2"/>
+
+  <!-- Leyenda de Estructura ICONIX -->
+  <g transform="translate(1010, 24)">
+    <rect x="0" y="0" width="395" height="48" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+    <text x="12" y="19" font-size="11" font-weight="bold" fill="#1e293b">Estructura del Análisis de Clases (ICONIX):</text>
+    <text x="12" y="36" font-size="10.5" fill="#475569">Boundary (Form) ── Control (Lógica) ── Entity (Persistencia)</text>
+  </g>
+  <!-- Clase: Form / Asignar_Rol/Modificar_Rol -->
+  <g id="class_form_rol">
+    <rect x="50" y="350" width="270" height="136" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="50" y1="398" x2="320" y2="398" stroke="#000000" stroke-width="1.2"/>
+    <line x1="50" y1="458.0" x2="320" y2="458.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="185.0" y="367" text-anchor="middle" font-size="11" font-weight="bold" fill="#334155" font-family="Arial, Helvetica, sans-serif">Form</text>
+    <text x="185.0" y="384" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">Asignar_Rol/Modificar_Rol</text>
+    <text x="60" y="414" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ id_rol</text>
+    <text x="60" y="430" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ id_permiso</text>
+    <text x="60" y="446" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ id_usuario</text>
+    <text x="60" y="474.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ crear_rol_db()</text>
+  </g>
+  <!-- Clase: Registro -->
+  <g id="class_ctrl_registro">
+    <rect x="380" y="350" width="330" height="116" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="380" y1="384" x2="710" y2="384" stroke="#000000" stroke-width="1.2"/>
+    <line x1="380" y1="406" x2="710" y2="406" stroke="#000000" stroke-width="1.2"/>
+    <text x="545.0" y="372.0" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">Registro</text>
+    <text x="390" y="422" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">- obtener_Todos_los_roles()</text>
+    <text x="390" y="438" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">- actualizar_rol_db()</text>
+    <text x="390" y="454" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">- eliminar_rol_db()</text>
+  </g>
+  <!-- Clase: ROL -->
+  <g id="class_ent_rol">
+    <rect x="770" y="350" width="270" height="100" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="770" y1="384" x2="1040" y2="384" stroke="#000000" stroke-width="1.2"/>
+    <line x1="770" y1="428.0" x2="1040" y2="428.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="905.0" y="372.0" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">ROL</text>
+    <text x="780" y="400" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ id_rol</text>
+    <text x="780" y="416" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ nombre_rol</text>
+  </g>
+  <!-- Clase: Permisos -->
+  <g id="class_ent_permisos">
+    <rect x="770" y="115" width="270" height="116" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="770" y1="149" x2="1040" y2="149" stroke="#000000" stroke-width="1.2"/>
+    <line x1="770" y1="209.0" x2="1040" y2="209.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="905.0" y="137.0" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">Permisos</text>
+    <text x="780" y="165" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ id_permiso</text>
+    <text x="780" y="181" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ nombre_permiso</text>
+    <text x="780" y="197" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ id_modulo</text>
+  </g>
+  <!-- Clase: Modulos -->
+  <g id="class_ent_modulos">
+    <rect x="1100" y="115" width="280" height="100" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="1100" y1="149" x2="1380" y2="149" stroke="#000000" stroke-width="1.2"/>
+    <line x1="1100" y1="193.0" x2="1380" y2="193.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="1240.0" y="137.0" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">Modulos</text>
+    <text x="1110" y="165" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ id_modulo</text>
+    <text x="1110" y="181" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ nombre_modulo</text>
+  </g>
+  <!-- Clase: USUARIO -->
+  <g id="class_ent_usuario">
+    <rect x="770" y="700" width="270" height="180" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="770" y1="734" x2="1040" y2="734" stroke="#000000" stroke-width="1.2"/>
+    <line x1="770" y1="858.0" x2="1040" y2="858.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="905.0" y="722.0" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">USUARIO</text>
+    <text x="780" y="750" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ id_usuario</text>
+    <text x="780" y="766" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ correo</text>
+    <text x="780" y="782" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ username</text>
+    <text x="780" y="798" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ contraseña</text>
+    <text x="780" y="814" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ id_rol</text>
+    <text x="780" y="830" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ id_persona</text>
+    <text x="780" y="846" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ id_empresa</text>
+  </g>
+  <!-- Clase: T_BITACORA -->
+  <g id="class_ent_bitacora">
+    <rect x="1100" y="700" width="280" height="154" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="1100" y1="734" x2="1380" y2="734" stroke="#000000" stroke-width="1.2"/>
+    <line x1="1100" y1="826.0" x2="1380" y2="826.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="1240.0" y="722.0" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">T_BITACORA</text>
+    <text x="1110" y="750" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ id_bitacora</text>
+    <text x="1110" y="766" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ fecha_hora</text>
+    <text x="1110" y="782" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ id_usuario</text>
+    <text x="1110" y="798" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ modulo = &apos;ROLES&apos;</text>
+    <text x="1110" y="814" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ accion</text>
+    <text x="1110" y="842.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ registrar_evento(accion, id_rol)</text>
+  </g>
+
+  <!-- Asociaciones y Multiplicidades -->
+  <g id="associations">
+    <polyline points="320,418.0 350,418.0 350,408.0 380,408.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <polyline points="710,408.0 740,408.0 740,400.0 770,400.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <polyline points="1040,173.0 1070,173.0 1070,165.0 1100,165.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="1048" y="167.0" font-size="11" font-weight="bold" fill="#000000">1</text>
+    <text x="1075" y="159.0" font-size="11" font-weight="bold" fill="#000000">1</text>
+    <polyline points="905.0,231 905.0,350" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="913.0" y="247" font-size="11" font-weight="bold" fill="#000000">1</text>
+    <text x="913.0" y="342" font-size="11" font-weight="bold" fill="#000000">1..*</text>
+    <polyline points="905.0,450 905.0,700" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="913.0" y="466" font-size="11" font-weight="bold" fill="#000000">1</text>
+    <text x="913.0" y="692" font-size="11" font-weight="bold" fill="#000000">1..*</text>
+    <polyline points="1040,400.0 1070,400.0 1070,777.0 1100,777.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="1048" y="394.0" font-size="11" font-weight="bold" fill="#000000">1</text>
+    <text x="1075" y="771.0" font-size="11" font-weight="bold" fill="#000000">0..*</text>
+  </g>
+</svg>

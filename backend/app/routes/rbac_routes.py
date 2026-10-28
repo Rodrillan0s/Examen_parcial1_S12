@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
-from app.utils.security import verificar_token, require_permission
+from app.utils.security import verificar_token, require_permission, require_platform_admin
 from app.repos import rbac_repos
-from app.services import rbac_services
+from app.classes.postgres import atomic, transaction
+from app.services import rbac_services, asignaciones_services
 
 router = APIRouter(tags=["Administración de RBAC (Roles y Permisos)"])
 
@@ -39,7 +40,8 @@ def listar_roles_delegables(payload: dict = Depends(verificar_token)):
         "roles": rbac_services.obtener_roles_delegables(payload)
     }
 
-@router.post('/roles', dependencies=[Depends(require_permission('roles.crear'))])
+@router.post('/roles', dependencies=[Depends(require_platform_admin), Depends(require_permission('roles.crear'))])
+
 def crear_nuevo_rol(data: dict = Body(...)):
     nombre = (data.get('nombre') or '').strip().upper()
     descripcion = (data.get('descripcion') or '').strip()
@@ -51,7 +53,8 @@ def crear_nuevo_rol(data: dict = Body(...)):
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"No se pudo crear el rol: {str(e)}")
 
-@router.put('/roles/{id_rol}', dependencies=[Depends(require_permission('roles.editar'))])
+@router.put('/roles/{id_rol}', dependencies=[Depends(require_platform_admin), Depends(require_permission('roles.editar'))])
+
 def actualizar_rol_existente(id_rol: int, data: dict = Body(...)):
     nombre = (data.get('nombre') or '').strip().upper()
     descripcion = (data.get('descripcion') or '').strip()
@@ -64,7 +67,8 @@ def actualizar_rol_existente(id_rol: int, data: dict = Body(...)):
         raise HTTPException(status_code=404, detail="Rol no encontrado.")
     return {"success": True, "message": "Rol actualizado exitosamente."}
 
-@router.delete('/roles/{id_rol}', dependencies=[Depends(require_permission('roles.eliminar'))])
+@router.delete('/roles/{id_rol}', dependencies=[Depends(require_platform_admin), Depends(require_permission('roles.eliminar'))])
+
 def desactivar_rol_existente(id_rol: int):
     exito = rbac_repos.desactivar_rol(id_rol)
     if not exito:
@@ -86,7 +90,8 @@ def listar_permisos_delegables(payload: dict = Depends(verificar_token)):
         "permisos": rbac_services.obtener_permisos_delegables(payload)
     }
 
-@router.post('/permisos', dependencies=[Depends(require_permission('permisos.ver'))])
+@router.post('/permisos', dependencies=[Depends(require_platform_admin), Depends(require_permission('permisos.ver'))])
+
 def crear_nuevo_permiso(data: dict = Body(...)):
     codigo = (data.get('codigo') or '').strip().lower()
     nombre = (data.get('nombre') or '').strip()
@@ -110,7 +115,8 @@ def obtener_permisos_de_rol(id_rol: int):
         "permisos": rbac_repos.obtener_permisos_de_rol(id_rol)
     }
 
-@router.post('/roles/{id_rol}/permisos', dependencies=[Depends(require_permission('permisos.asignar'))])
+@router.post('/roles/{id_rol}/permisos', dependencies=[Depends(require_platform_admin), Depends(require_permission('permisos.asignar'))])
+
 def asignar_permisos_a_rol(id_rol: int, data: dict = Body(...)):
     ids_permisos = data.get('ids_permisos', [])
     if not isinstance(ids_permisos, list):
@@ -127,7 +133,9 @@ def obtener_roles_de_usuario(id_usuario: int, payload: dict = Depends(require_pe
     user_db = users_repos.obtener_usuario_por_id(id_usuario)
     if not user_db:
         raise HTTPException(status_code=404, detail="Usuario no encontrado.")
-    validar_acceso_recurso_tenant(payload, user_db.get('id_empresa'), "usuario")
+    validar_acceso_recurso_tenant(payload, user_db.get('id_empresa'), 'usuario')
+    with transaction() as db:
+        asignaciones_services.usuario_autorizado(db, id_usuario, payload)
 
     return {
         "success": True,
@@ -136,6 +144,7 @@ def obtener_roles_de_usuario(id_usuario: int, payload: dict = Depends(require_pe
     }
 
 @router.post('/usuarios/{id_usuario}/roles', dependencies=[Depends(require_permission('usuarios.editar'))])
+@atomic
 def asignar_roles_a_usuario(id_usuario: int, data: dict = Body(...), payload: dict = Depends(verificar_token)):
     from app.repos import users_repos
     from app.utils.tenant_guard import validar_acceso_recurso_tenant
@@ -144,7 +153,12 @@ def asignar_roles_a_usuario(id_usuario: int, data: dict = Body(...), payload: di
         raise HTTPException(status_code=404, detail="Usuario no encontrado.")
     validar_acceso_recurso_tenant(payload, user_db.get('id_empresa'), "usuario")
 
-    ids_roles = data.get('ids_roles', [])
+    with transaction() as db:
+        asignaciones_services.usuario_autorizado(db, id_usuario, payload)
+        asignaciones_services.validar_jerarquia_usuario(id_usuario, payload)
+    if 'ids_roles' not in data:
+        raise HTTPException(422, detail='Falta ids_roles; una lista vacía revoca los roles.')
+    ids_roles = asignaciones_services.validar_ids(data['ids_roles'])
     if not isinstance(ids_roles, list):
         raise HTTPException(status_code=400, detail="'ids_roles' debe ser un arreglo numérico de IDs de roles.")
     
@@ -154,6 +168,9 @@ def asignar_roles_a_usuario(id_usuario: int, data: dict = Body(...), payload: di
             rbac_services.validar_asignacion_rol(payload, id_r)
         
         rbac_repos.asignar_roles_a_usuario(id_usuario, ids_roles)
+        from app.services.saas_services import auditar
+        with transaction() as db:
+            auditar(db, payload, user_db.get('id_empresa'), 'ROLES_USUARIO_ASIGNADOS', {'id_usuario': id_usuario, 'ids_roles': ids_roles})
         return {"success": True, "message": f"Roles asignados correctamente al usuario ID {id_usuario}."}
     except ValueError as e:
         raise HTTPException(status_code=403, detail=str(e))
@@ -177,7 +194,9 @@ def asignar_permisos_directos_usuario(
     data: dict = Body(...), 
     payload: dict = Depends(require_permission('permisos.asignar'))
 ):
-    ids_permisos = data.get('ids_permisos', [])
+    if 'ids_permisos' not in data:
+        raise HTTPException(422, detail='Falta ids_permisos; una lista vacía revoca los permisos directos.')
+    ids_permisos = asignaciones_services.validar_ids(data['ids_permisos'])
     if not isinstance(ids_permisos, list):
         raise HTTPException(status_code=400, detail="'ids_permisos' debe ser una lista de enteros con IDs de permisos.")
     
@@ -185,30 +204,25 @@ def asignar_permisos_directos_usuario(
         return rbac_services.asignar_permisos_directos(id_usuario, ids_permisos, payload, request)
     except ValueError as e:
         raise HTTPException(status_code=403, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
 # --- SUCURSALES Y ALCANCE ---
-@router.get('/sucursales', dependencies=[Depends(require_permission('sucursales.ver'))])
-def listar_sucursales():
-    return {
-        "success": True,
-        "sucursales": rbac_repos.obtener_todas_las_sucursales()
-    }
+@router.get('/sucursales')
+def listar_sucursales(payload: dict = Depends(require_permission('sucursales.ver'))):
+    from app.services.sucursales_services import listar_sucursales as listar
+    return {'success': True, 'sucursales': listar(None, payload)['data']}
 
-@router.get('/usuarios/{id_usuario}/sucursales', dependencies=[Depends(require_permission('sucursales.ver'))])
-def obtener_sucursales_de_usuario(id_usuario: int):
-    return {
-        "success": True,
-        "id_usuario": id_usuario,
-        "sucursales": rbac_repos.obtener_sucursales_usuario(id_usuario)
-    }
 
-@router.post('/usuarios/{id_usuario}/sucursales', dependencies=[Depends(require_permission('sucursales.asignar'))])
-def asignar_sucursales_a_usuario(id_usuario: int, data: dict = Body(...)):
-    ids_sucursales = data.get('ids_sucursales', [])
-    if not isinstance(ids_sucursales, list):
-        raise HTTPException(status_code=400, detail="'ids_sucursales' debe ser un arreglo numérico de IDs de sucursales.")
-    
-    rbac_repos.asignar_sucursales_a_usuario(id_usuario, ids_sucursales)
-    return {"success": True, "message": f"Sucursales asignadas correctamente al usuario ID {id_usuario}."}
+@router.get('/usuarios/{id_usuario}/sucursales')
+def obtener_sucursales_de_usuario(id_usuario: int, payload: dict = Depends(require_permission('sucursales.ver'))):
+    return {'success': True, 'id_usuario': id_usuario, 'sucursales': asignaciones_services.consultar(id_usuario, payload)}
+
+
+@router.post('/usuarios/{id_usuario}/sucursales')
+def asignar_sucursales_a_usuario(id_usuario: int, data: dict = Body(...), payload: dict = Depends(require_permission('sucursales.asignar'))):
+    if 'ids_sucursales' not in data:
+        raise HTTPException(422, detail="Falta ids_sucursales; una lista vacia revoca las asignaciones.")
+    return asignaciones_services.asignar(id_usuario, data['ids_sucursales'], payload)

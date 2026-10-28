@@ -15,7 +15,9 @@ import { ThemeService } from '../../services/theme';
 import { NotificacionesService, Notificacion } from '../../services/notificaciones';
 import { KpisService, TenantDashboardItem } from '../../services/kpis';
 import { SucursalService } from '../../services/sucursales';
+import { SaasService, PlanVigenciaData } from '../../services/saas';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { distinctUntilChanged } from 'rxjs';
 
 @Component({
   selector: 'app-admin-layout',
@@ -30,6 +32,7 @@ export class AdminLayoutComponent implements OnInit {
   private notificacionesService  = inject(NotificacionesService);
   private kpisService           = inject(KpisService);
   private sucursalService       = inject(SucursalService);
+  private saasService           = inject(SaasService);
   private router                = inject(Router);
   private platformId            = inject(PLATFORM_ID);
   private cdr                   = inject(ChangeDetectorRef);
@@ -56,6 +59,7 @@ export class AdminLayoutComponent implements OnInit {
   sucursalesDeEmpresa: Array<{ id: number; nombre: string; ciudad?: string }> = [];
 
   sucursalActiva: { id: number; nombre: string; ciudad?: string } | null = null;
+  planVigencia: PlanVigenciaData | null = null;
 
   // ---- Definición dinámica del menú por Permisos y Alcance ----
   menuFiltrado: any[] = [];
@@ -149,6 +153,47 @@ export class AdminLayoutComponent implements OnInit {
       });
   }
 
+  cargarPlanHeader() {
+    if (!this.authService.hasPermission('suscripciones.ver')) {
+      this.planVigencia = null;
+      return;
+    }
+    const scope = this.authService.getScopeLevel();
+    if (scope === 'CLIENTE') {
+      this.planVigencia = null;
+      return;
+    }
+
+    const empId = scope === 'EMPRESA' 
+      ? (this.usuarioActual?.id_empresa || undefined) 
+      : (this.tiendaActiva?.id_empresa || this.authService.selectedCompany()?.id_empresa || undefined);
+
+    if (scope === 'PLATAFORMA' && !empId) {
+      this.planVigencia = null;
+      return;
+    }
+
+    // Evitar consultar si ya se tiene cargado el plan de esta misma empresa
+    if (this.planVigencia && this.planVigencia.id_empresa === empId) {
+      return;
+    }
+
+    this.saasService.consultarPlan(empId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res) => {
+          if (res && res.data) {
+            this.planVigencia = res.data;
+            this.cdr.detectChanges();
+          }
+        },
+        error: () => {
+          this.planVigencia = null;
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
   // ------------------------------------------------------------------
   // LIFECYCLE
   // ------------------------------------------------------------------
@@ -174,6 +219,7 @@ export class AdminLayoutComponent implements OnInit {
 
     this.sucursalActiva = this.authService.activeBranch();
     this.cargarSucursalesHeader();
+    this.cargarPlanHeader();
     this.construirMenuPorPermisosYAlcance();
 
     // Sincronizar tema con el servicio global reactivo
@@ -202,15 +248,24 @@ export class AdminLayoutComponent implements OnInit {
 
     // Suscribirse al tenant activo global
     this.kpisService.tiendaSeleccionada$
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        distinctUntilChanged((prev, curr) => prev?.id_empresa === curr?.id_empresa),
+        takeUntilDestroyed(this.destroyRef)
+      )
       .subscribe((t) => {
-        this.tiendaActiva = t;
-        this.cdr.detectChanges();
+        if (this.tiendaActiva?.id_empresa !== t?.id_empresa) {
+          this.tiendaActiva = t;
+          this.cargarPlanHeader();
+          this.cdr.detectChanges();
+        }
       });
 
     // Suscribirse a cambios en sucursal activa para sincronizar header
     this.authService.branchChanged$
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        distinctUntilChanged((prev, curr) => prev?.id === curr?.id),
+        takeUntilDestroyed(this.destroyRef)
+      )
       .subscribe((branch) => {
         this.sucursalActiva = branch;
         this.cdr.detectChanges();
@@ -218,16 +273,25 @@ export class AdminLayoutComponent implements OnInit {
 
     // Suscribirse a cambios de empresa para recargar las sucursales de dicha empresa
     this.authService.companyChanged$
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        distinctUntilChanged((prev, curr) => prev?.id_empresa === curr?.id_empresa),
+        takeUntilDestroyed(this.destroyRef)
+      )
       .subscribe((emp) => {
         if (this.scopeContext.canSelectCompany) {
+          const actualId = this.tiendaActiva?.id_empresa;
           if (emp) {
             const match = this.tenants.find(t => t.id_empresa === emp.id_empresa);
-            if (match) this.tiendaActiva = match;
-          } else {
+            if (match && match.id_empresa !== actualId) {
+              this.tiendaActiva = match;
+              this.cargarSucursalesHeader(true);
+              this.cargarPlanHeader();
+            }
+          } else if (this.tiendaActiva !== null) {
             this.tiendaActiva = null;
+            this.cargarSucursalesHeader(true);
+            this.cargarPlanHeader();
           }
-          this.cargarSucursalesHeader(true);
         }
       });
 
@@ -284,12 +348,17 @@ export class AdminLayoutComponent implements OnInit {
               const match = this.tenants.find(t => t.id_empresa === actual.id_empresa);
               if (match) {
                 this.tiendaActiva = match;
-                this.authService.setSelectedCompany({
-                  id_empresa: match.id_empresa,
-                  nombre_empresa: match.nombre_empresa,
-                  sucursales: match.sucursales
-                });
-                this.kpisService.establecerTiendaSeleccionada(match);
+                // Emitir solo si no coincide para prevenir bucles de eventos reactivos
+                if (this.authService.selectedCompany()?.id_empresa !== match.id_empresa) {
+                  this.authService.setSelectedCompany({
+                    id_empresa: match.id_empresa,
+                    nombre_empresa: match.nombre_empresa,
+                    sucursales: match.sucursales
+                  });
+                }
+                if (this.kpisService.obtenerTiendaActual()?.id_empresa !== match.id_empresa) {
+                  this.kpisService.establecerTiendaSeleccionada(match);
+                }
               }
             }
           } else {
@@ -299,7 +368,9 @@ export class AdminLayoutComponent implements OnInit {
               const miTienda = this.tenants.find(t => t.id_empresa === idEmp);
               if (miTienda) {
                 this.tiendaActiva = miTienda;
-                this.kpisService.establecerTiendaSeleccionada(miTienda);
+                if (this.kpisService.obtenerTiendaActual()?.id_empresa !== miTienda.id_empresa) {
+                  this.kpisService.establecerTiendaSeleccionada(miTienda);
+                }
               }
             }
           }
@@ -338,6 +409,7 @@ export class AdminLayoutComponent implements OnInit {
     this.kpisService.establecerTiendaSeleccionada(tienda);
 
     this.cargarSucursalesHeader(true);
+    this.cargarPlanHeader();
     setTimeout(() => {
       this.cargandoContexto = false;
       this.cdr.detectChanges();
@@ -428,6 +500,15 @@ export class AdminLayoutComponent implements OnInit {
         ]
       },
       {
+        titulo: 'SAAS & PLANES',
+        icono: 'M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z',
+        expandido: true,
+        submenus: [
+          { nombre: 'Planes y Capacidades', ruta: '/admin/planes', permiso: 'planes.ver' },
+          { nombre: 'Suscripciones y Límites', ruta: '/admin/suscripciones', permiso: 'suscripciones.ver' }
+        ]
+      },
+      {
         titulo: scope === 'PLATAFORMA' ? 'SEGURIDAD' : 'EQUIPO',
         icono: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z',
         expandido: true,
@@ -491,6 +572,7 @@ export class AdminLayoutComponent implements OnInit {
         };
       })
       .filter(modulo => modulo.submenus.length > 0);
+    this.cdr.detectChanges();
   }
 
   // ------------------------------------------------------------------
@@ -513,12 +595,15 @@ export class AdminLayoutComponent implements OnInit {
     const target = event.target as HTMLElement;
     if (this.mostrarNotificaciones && !target.closest('[data-notif-panel]')) {
       this.mostrarNotificaciones = false;
+      this.cdr.detectChanges();
     }
     if (this.mostrarTenantDropdown && !target.closest('[data-tenant-panel]')) {
       this.mostrarTenantDropdown = false;
+      this.cdr.detectChanges();
     }
     if (this.mostrarSucursalDropdown && !target.closest('[data-branch-panel]')) {
       this.mostrarSucursalDropdown = false;
+      this.cdr.detectChanges();
     }
   }
 
@@ -530,6 +615,7 @@ export class AdminLayoutComponent implements OnInit {
     const isDesktop = window.innerWidth >= 768;
     if (isDesktop && this.sidebarAbierto) {
       this.sidebarAbierto = false;
+      this.cdr.detectChanges();
     }
   }
 
@@ -544,6 +630,7 @@ export class AdminLayoutComponent implements OnInit {
         this.menuFiltrado.forEach(m => m.expandido = false);
       }
     }
+    this.cdr.detectChanges();
   }
 
   toggleAcordeon(modulo: any) {
@@ -551,10 +638,12 @@ export class AdminLayoutComponent implements OnInit {
       this.sidebarColapsado = false;
     }
     modulo.expandido = !modulo.expandido;
+    this.cdr.detectChanges();
   }
 
   cerrarSidebarMobile() {
     this.sidebarAbierto = false;
+    this.cdr.detectChanges();
   }
 
   // ------------------------------------------------------------------

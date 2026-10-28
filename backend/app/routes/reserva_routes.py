@@ -117,34 +117,11 @@ def _resolver_id_empresa_segura(token_data: dict, id_empresa_param: Optional[int
     2. Si no hay sucursal, se valida id_empresa_param o el token claim.
     3. Fallback para clientes globales al tenant público activo.
     """
-    sucursal_empresa = _resolver_empresa_de_sucursal(id_sucursal) if id_sucursal else None
-    if sucursal_empresa:
-        return sucursal_empresa
-
-    token_empresa = token_data.get('id_empresa')
-    if token_empresa is not None:
-        try:
-            token_empresa = int(token_empresa)
-        except (ValueError, TypeError):
-            token_empresa = None
-
-    if id_empresa_param:
-        try:
-            return int(id_empresa_param)
-        except (ValueError, TypeError):
-            pass
-
-    if token_empresa:
-        return token_empresa
-
-    tenants = catalogo_repos.obtener_tenants_publicos()
-    if tenants:
-        return tenants[0]["id_empresa"]
-
-    raise HTTPException(
-        status_code=status.HTTP_400_BAD_REQUEST,
-        detail="No se pudo determinar la tienda (Tenant) para esta operación."
-    )
+    from app.utils.commerce_tenant import resolver_empresa_compra
+    empresa_sucursal = _resolver_empresa_de_sucursal(id_sucursal) if id_sucursal else None
+    if id_sucursal and empresa_sucursal is None:
+        raise HTTPException(404, detail='Sucursal inexistente.')
+    return resolver_empresa_compra(token_data, id_empresa_param, empresa_sucursal, id_sucursal)
 
 @router.post('', status_code=status.HTTP_201_CREATED, summary="Crear una reserva de prendas para visita en sucursal")
 @router.post('/', status_code=status.HTTP_201_CREATED, summary="Crear una reserva de prendas para visita en sucursal")
@@ -160,6 +137,8 @@ def crear_reserva(
 
         empresa_id = _resolver_id_empresa_segura(token_data, body.id_empresa, body.id_sucursal)
 
+        from app.services.saas_services import exigir_vigencia
+        exigir_vigencia(empresa_id)
         datos = body.model_dump()
         reserva = reserva_repos.crear_reserva(
             id_usuario=id_usuario,

@@ -139,10 +139,10 @@
           </div>
           <div class="flex flex-col min-w-0">
             <span class="text-xs font-bold text-zinc-900 dark:text-white truncate leading-snug">
-              {{ usuarioActual.nombre || usuarioActual.nombre_completo }}
+              {{ usuarioActual?.nombre || usuarioActual?.nombre_completo || 'Usuario' }}
             </span>
             <span class="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider truncate">
-              {{ usuarioActual.nombre_rol || 'ADMIN' }}
+              {{ usuarioActual?.nombre_rol || 'ADMIN' }}
             </span>
           </div>
         </div>
@@ -342,6 +342,19 @@
           </span>
           <span>Sistema Operativo</span>
         </div>
+
+        <!-- SaaS Plan & Validity Badge -->
+        <a *ngIf="planVigencia && authService.hasPermission('suscripciones.ver')"
+           routerLink="/admin/suscripciones"
+           class="hidden md:inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border shadow-sm group"
+           [ngClass]="planVigencia.vigente
+             ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:hover:bg-emerald-900/50 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+             : 'bg-rose-50 hover:bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:hover:bg-rose-900/50 dark:text-rose-300 border-rose-200 dark:border-rose-800'"
+           [title]="'Plan ' + (planVigencia.codigo_plan || 'Sin Plan') + ': ' + (planVigencia.vigente ? 'Vigente' : planVigencia.estado) + '. Sucursales: ' + (planVigencia.uso?.sucursales_activas || 0) + '/' + (planVigencia.limites.sucursales_activas || '—')">
+          <span class="w-2 h-2 rounded-full" [ngClass]="planVigencia.vigente ? 'bg-emerald-500' : 'bg-rose-500'"></span>
+          <span>{{ planVigencia.codigo_plan || 'Sin Plan' }}</span>
+          <span class="text-[10px] font-semibold opacity-75">({{ planVigencia.uso?.sucursales_activas ?? 0 }}/{{ planVigencia.limites.sucursales_activas ?? '—' }})</span>
+        </a>
 
         <!-- Store Access Button -->
         <a routerLink="/" 

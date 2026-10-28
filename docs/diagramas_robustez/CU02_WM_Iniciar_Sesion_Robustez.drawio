@@ -1,0 +1,130 @@
+<mxfile host="app.diagrams.net" modified="2026-10-24T22:35:00.000Z" agent="Antigravity" version="24.0.0" type="device">
+  <diagram id="diagram_cu02_robustez" name="CU02 - Iniciar sesión (Robustez ICONIX)">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1700" pageHeight="1150" background="#ffffff" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="header_title" value="&lt;b&gt;AURORASTORE — DIAGRAMA DE ROBUSTEZ (ANÁLISIS ICONIX / UML 2.5)&lt;/b&gt;&lt;br/&gt;&lt;span style=&#x27;font-size: 13px; color: #475569; font-weight: normal;&#x27;&gt;&lt;b&gt;CU02W / CU02M: Iniciar sesión&lt;/b&gt; | Flujo Principal, Control de Intentos Fallidos (3 intentos / 15 min), Verificación de Dispositivos, Generación de JWT y Resolución de Contexto RBAC Multi-tenant&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#cbd5e1;strokeWidth=1.5;fontFamily=Arial;fontSize=15;fontColor=#0f172a;align=left;spacingLeft=20;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="1620" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="act_usuario" value="&lt;b&gt;Usuario&lt;/b&gt;&lt;br/&gt;(Cliente / Personal / Admin)" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=#f8fafc;strokeColor=#1e293b;strokeWidth=2;fontFamily=Arial;fontSize=12;fontStyle=1;fontColor=#0f172a;" vertex="1" parent="1">
+          <mxGeometry x="80" y="420" width="50" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="bnd_login" value="&lt;b&gt;IU_IniciarSesion&lt;/b&gt;&lt;br/&gt;(Formulario Web / Pantalla Móvil)" style="shape=umlBoundary;whiteSpace=wrap;html=1;verticalLabelPosition=bottom;verticalAlign=top;align=center;fillColor=#eff6ff;strokeColor=#2563eb;strokeWidth=2.2;fontFamily=Arial;fontSize=11;fontStyle=1;fontColor=#1e3a8a;" vertex="1" parent="1">
+          <mxGeometry x="270" y="425" width="95" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="bnd_menu" value="&lt;b&gt;IU_MenuPrincipal&lt;/b&gt;&lt;br/&gt;(Dashboard Admin / Catálogo Público)" style="shape=umlBoundary;whiteSpace=wrap;html=1;verticalLabelPosition=bottom;verticalAlign=top;align=center;fillColor=#eff6ff;strokeColor=#2563eb;strokeWidth=2.2;fontFamily=Arial;fontSize=11;fontStyle=1;fontColor=#1e3a8a;" vertex="1" parent="1">
+          <mxGeometry x="270" y="170" width="95" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="bnd_error" value="&lt;b&gt;IU_MensajeAlerta&lt;/b&gt;&lt;br/&gt;(Credenciales Inválidas / Cuenta Bloqueada)" style="shape=umlBoundary;whiteSpace=wrap;html=1;verticalLabelPosition=bottom;verticalAlign=top;align=center;fillColor=#eff6ff;strokeColor=#2563eb;strokeWidth=2.2;fontFamily=Arial;fontSize=11;fontStyle=1;fontColor=#1e3a8a;" vertex="1" parent="1">
+          <mxGeometry x="270" y="660" width="95" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="bnd_mfa" value="&lt;b&gt;IU_VerificarDispositivo&lt;/b&gt;&lt;br/&gt;(Formulario Código OTP de Seguridad)" style="shape=umlBoundary;whiteSpace=wrap;html=1;verticalLabelPosition=bottom;verticalAlign=top;align=center;fillColor=#eff6ff;strokeColor=#2563eb;strokeWidth=2.2;fontFamily=Arial;fontSize=11;fontStyle=1;fontColor=#1e3a8a;" vertex="1" parent="1">
+          <mxGeometry x="270" y="880" width="95" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ctrl_login" value="&lt;b&gt;ctrl_AutenticarUsuario&lt;/b&gt;&lt;br/&gt;(Valida campos y orquesta autenticación)" style="shape=umlControl;whiteSpace=wrap;html=1;verticalLabelPosition=bottom;verticalAlign=top;align=center;fillColor=#fef3c7;strokeColor=#d97706;strokeWidth=2.2;fontFamily=Arial;fontSize=11;fontStyle=1;fontColor=#78350f;" vertex="1" parent="1">
+          <mxGeometry x="550" y="425" width="85" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ctrl_bloqueo" value="&lt;b&gt;ctrl_GestionarIntentosBloqueo&lt;/b&gt;&lt;br/&gt;(Incrementa intentos o bloquea 15 min)" style="shape=umlControl;whiteSpace=wrap;html=1;verticalLabelPosition=bottom;verticalAlign=top;align=center;fillColor=#fef3c7;strokeColor=#d97706;strokeWidth=2.2;fontFamily=Arial;fontSize=11;fontStyle=1;fontColor=#78350f;" vertex="1" parent="1">
+          <mxGeometry x="550" y="660" width="85" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ctrl_dispositivo" value="&lt;b&gt;ctrl_VerificarDispositivo&lt;/b&gt;&lt;br/&gt;(Comprueba huella digital y genera OTP)" style="shape=umlControl;whiteSpace=wrap;html=1;verticalLabelPosition=bottom;verticalAlign=top;align=center;fillColor=#fef3c7;strokeColor=#d97706;strokeWidth=2.2;fontFamily=Arial;fontSize=11;fontStyle=1;fontColor=#78350f;" vertex="1" parent="1">
+          <mxGeometry x="550" y="880" width="85" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ctrl_token" value="&lt;b&gt;ctrl_GenerarTokenSesion&lt;/b&gt;&lt;br/&gt;(Construye y firma JWT con claims RBAC)" style="shape=umlControl;whiteSpace=wrap;html=1;verticalLabelPosition=bottom;verticalAlign=top;align=center;fillColor=#fef3c7;strokeColor=#d97706;strokeWidth=2.2;fontFamily=Arial;fontSize=11;fontStyle=1;fontColor=#78350f;" vertex="1" parent="1">
+          <mxGeometry x="550" y="170" width="85" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ctrl_rbac" value="&lt;b&gt;ctrl_CargarContextoRBAC&lt;/b&gt;&lt;br/&gt;(Carga roles, permisos y sucursales)" style="shape=umlControl;whiteSpace=wrap;html=1;verticalLabelPosition=bottom;verticalAlign=top;align=center;fillColor=#fef3c7;strokeColor=#d97706;strokeWidth=2.2;fontFamily=Arial;fontSize=11;fontStyle=1;fontColor=#78350f;" vertex="1" parent="1">
+          <mxGeometry x="860" y="260" width="85" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ctrl_bitacora" value="&lt;b&gt;ctrl_RegistrarAuditoria&lt;/b&gt;&lt;br/&gt;(Inserta evento LOGIN en auditoría)" style="shape=umlControl;whiteSpace=wrap;html=1;verticalLabelPosition=bottom;verticalAlign=top;align=center;fillColor=#fef3c7;strokeColor=#d97706;strokeWidth=2.2;fontFamily=Arial;fontSize=11;fontStyle=1;fontColor=#78350f;" vertex="1" parent="1">
+          <mxGeometry x="860" y="540" width="85" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_usuario" value="&lt;b&gt;t_usuario&lt;/b&gt;&lt;br/&gt;&lt;span style=&#x27;font-size:9.5px;&#x27;&gt;nro_usuario, correo, password_hash,&lt;br/&gt;estado, intentos_fallidos, bloqueado_hasta&lt;/span&gt;" style="shape=umlEntity;whiteSpace=wrap;html=1;verticalLabelPosition=bottom;verticalAlign=top;align=center;fillColor=#ecfdf5;strokeColor=#059669;strokeWidth=2.2;fontFamily=Arial;fontSize=11;fontStyle=1;fontColor=#064e3b;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="425" width="85" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_roles" value="&lt;b&gt;t_usuario_rol / t_rol&lt;/b&gt;&lt;br/&gt;&lt;span style=&#x27;font-size:9.5px;&#x27;&gt;id_rol, nombre_rol, alcance&lt;/span&gt;" style="shape=umlEntity;whiteSpace=wrap;html=1;verticalLabelPosition=bottom;verticalAlign=top;align=center;fillColor=#ecfdf5;strokeColor=#059669;strokeWidth=2.2;fontFamily=Arial;fontSize=11;fontStyle=1;fontColor=#064e3b;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="150" width="85" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_permisos" value="&lt;b&gt;t_rol_permiso / t_permiso&lt;/b&gt;&lt;br/&gt;&lt;span style=&#x27;font-size:9.5px;&#x27;&gt;codigo, modulo, accion&lt;/span&gt;" style="shape=umlEntity;whiteSpace=wrap;html=1;verticalLabelPosition=bottom;verticalAlign=top;align=center;fillColor=#ecfdf5;strokeColor=#059669;strokeWidth=2.2;fontFamily=Arial;fontSize=11;fontStyle=1;fontColor=#064e3b;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="260" width="85" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_sucursales" value="&lt;b&gt;t_usuario_sucursal / t_sucursal&lt;/b&gt;&lt;br/&gt;&lt;span style=&#x27;font-size:9.5px;&#x27;&gt;id_sucursal, nombre, id_empresa&lt;/span&gt;" style="shape=umlEntity;whiteSpace=wrap;html=1;verticalLabelPosition=bottom;verticalAlign=top;align=center;fillColor=#ecfdf5;strokeColor=#059669;strokeWidth=2.2;fontFamily=Arial;fontSize=11;fontStyle=1;fontColor=#064e3b;" vertex="1" parent="1">
+          <mxGeometry x="1450" y="260" width="85" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_bitacora" value="&lt;b&gt;t_bitacora&lt;/b&gt;&lt;br/&gt;&lt;span style=&#x27;font-size:9.5px;&#x27;&gt;modulo, accion, nivel, resultado, ip, detalle&lt;/span&gt;" style="shape=umlEntity;whiteSpace=wrap;html=1;verticalLabelPosition=bottom;verticalAlign=top;align=center;fillColor=#ecfdf5;strokeColor=#059669;strokeWidth=2.2;fontFamily=Arial;fontSize=11;fontStyle=1;fontColor=#064e3b;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="540" width="85" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ent_dispositivo" value="&lt;b&gt;t_dispositivo_usuario&lt;/b&gt;&lt;br/&gt;&lt;span style=&#x27;font-size:9.5px;&#x27;&gt;id_usuario, fingerprint, confirmado&lt;/span&gt;" style="shape=umlEntity;whiteSpace=wrap;html=1;verticalLabelPosition=bottom;verticalAlign=top;align=center;fillColor=#ecfdf5;strokeColor=#059669;strokeWidth=2.2;fontFamily=Arial;fontSize=11;fontStyle=1;fontColor=#064e3b;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="880" width="85" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="panel_legend" value="&lt;b&gt;ESTÁNDAR METODOLÓGICO ICONIX (UML 2.5) — REGLAS ESTRICTAS DE ROBUSTEZ:&lt;/b&gt;&lt;br/&gt;• &lt;b&gt;1. Actores:&lt;/b&gt; Solo pueden comunicarse directamente con objetos &lt;b&gt;Boundary&lt;/b&gt; (Interfaz). Nunca con Control ni Entity.&lt;br/&gt;• &lt;b&gt;2. Boundary (Frontera):&lt;/b&gt; Recibe eventos de la UI y delega exclusivamente a &lt;b&gt;Control&lt;/b&gt;. &lt;i&gt;(Prohibido Boundary ➔ Entity)&lt;/i&gt;.&lt;br/&gt;• &lt;b&gt;3. Control (Lógica):&lt;/b&gt; Orquesta transacciones, reglas de negocio y delega a otros &lt;b&gt;Control&lt;/b&gt;, &lt;b&gt;Entity&lt;/b&gt; o responde a &lt;b&gt;Boundary&lt;/b&gt;.&lt;br/&gt;• &lt;b&gt;4. Entity (Datos):&lt;/b&gt; Representa el estado persistente (tablas de BD PostgreSQL). Solo es accedido y manipulado por &lt;b&gt;Control&lt;/b&gt;." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f1f5f9;strokeColor=#94a3b8;strokeWidth=1.5;fontFamily=Arial;fontSize=10.5;fontColor=#334155;align=left;spacingLeft=15;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="40" y="1020" width="1620" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="e01_usuario_login" value="1: Ingresar credenciales y enviar formulario" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#334155;strokeWidth=1.6;endArrow=classic;endFill=1;fontFamily=Arial;fontSize=10;fontColor=#1e293b;labelBackgroundColor=#ffffff;labelBorderColor=#cbd5e1;exitX=1.0;exitY=0.5;entryX=0.0;entryY=0.5;" edge="1" parent="1" source="act_usuario" target="bnd_login">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e02_login_ctrl" value="2: Solicitar login(login_identifier, password)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#334155;strokeWidth=1.6;endArrow=classic;endFill=1;fontFamily=Arial;fontSize=10;fontColor=#1e293b;labelBackgroundColor=#ffffff;labelBorderColor=#cbd5e1;exitX=1.0;exitY=0.5;entryX=0.0;entryY=0.5;" edge="1" parent="1" source="bnd_login" target="ctrl_login">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e03_ctrl_usuario" value="3: Consultar credenciales por correo o username" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#334155;strokeWidth=1.6;endArrow=classic;endFill=1;fontFamily=Arial;fontSize=10;fontColor=#1e293b;labelBackgroundColor=#ffffff;labelBorderColor=#cbd5e1;exitX=1.0;exitY=0.5;entryX=0.0;entryY=0.5;" edge="1" parent="1" source="ctrl_login" target="ent_usuario">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e04_ctrl_bloqueo" value="[Credencial incorrecta o cuenta inactiva]" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;strokeColor=#dc2626;strokeWidth=1.6;endArrow=classic;endFill=1;fontFamily=Arial;fontSize=10;fontColor=#991b1b;labelBackgroundColor=#ffffff;labelBorderColor=#fca5a5;exitX=0.5;exitY=1.0;entryX=0.5;entryY=0.0;" edge="1" parent="1" source="ctrl_login" target="ctrl_bloqueo">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e05_bloqueo_ent" value="4a: Actualizar intentos_fallidos / fijar bloqueado_hasta (15 min)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;strokeColor=#dc2626;strokeWidth=1.6;endArrow=classic;endFill=1;fontFamily=Arial;fontSize=10;fontColor=#991b1b;labelBackgroundColor=#ffffff;labelBorderColor=#fca5a5;exitX=1.0;exitY=0.5;entryX=0.2;entryY=1.0;" edge="1" parent="1" source="ctrl_bloqueo" target="ent_usuario">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e06_bloqueo_auditoria" value="4b: Registrar LOGIN_FALLIDO o CUENTA_BLOQUEADA" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;strokeColor=#dc2626;strokeWidth=1.6;endArrow=classic;endFill=1;fontFamily=Arial;fontSize=10;fontColor=#991b1b;labelBackgroundColor=#ffffff;labelBorderColor=#fca5a5;exitX=0.8;exitY=0.0;entryX=0.2;entryY=1.0;" edge="1" parent="1" source="ctrl_bloqueo" target="ctrl_bitacora">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e07_bloqueo_error" value="4c: Notificar intentos restantes o tiempo de bloqueo" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;strokeColor=#dc2626;strokeWidth=1.6;endArrow=classic;endFill=1;fontFamily=Arial;fontSize=10;fontColor=#991b1b;labelBackgroundColor=#ffffff;labelBorderColor=#fca5a5;exitX=0.0;exitY=0.5;entryX=1.0;entryY=0.5;" edge="1" parent="1" source="ctrl_bloqueo" target="bnd_error">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e08_error_usuario" value="4d: Visualizar alerta de error" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;strokeColor=#dc2626;strokeWidth=1.6;endArrow=classic;endFill=1;fontFamily=Arial;fontSize=10;fontColor=#991b1b;labelBackgroundColor=#ffffff;labelBorderColor=#fca5a5;exitX=0.0;exitY=0.5;entryX=0.8;entryY=1.0;" edge="1" parent="1" source="bnd_error" target="act_usuario">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e09_ctrl_dispositivo" value="[Contraseña correcta] Verificar huella de dispositivo" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#334155;strokeWidth=1.6;endArrow=classic;endFill=1;fontFamily=Arial;fontSize=10;fontColor=#1e293b;labelBackgroundColor=#ffffff;labelBorderColor=#cbd5e1;exitX=0.3;exitY=1.0;entryX=0.3;entryY=0.0;" edge="1" parent="1" source="ctrl_login" target="ctrl_dispositivo">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e10_dispositivo_ent" value="5a: Consultar huella digital (device_fingerprint)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#334155;strokeWidth=1.6;endArrow=classic;endFill=1;fontFamily=Arial;fontSize=10;fontColor=#1e293b;labelBackgroundColor=#ffffff;labelBorderColor=#cbd5e1;exitX=1.0;exitY=0.5;entryX=0.0;entryY=0.5;" edge="1" parent="1" source="ctrl_dispositivo" target="ent_dispositivo">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e11_dispositivo_mfa" value="[Dispositivo desconocido] Generar código y solicitar OTP" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#334155;strokeWidth=1.6;endArrow=classic;endFill=1;fontFamily=Arial;fontSize=10;fontColor=#1e293b;labelBackgroundColor=#ffffff;labelBorderColor=#cbd5e1;exitX=0.0;exitY=0.5;entryX=1.0;entryY=0.5;" edge="1" parent="1" source="ctrl_dispositivo" target="bnd_mfa">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e12_mfa_usuario" value="5c: Solicitar ingreso de código de verificación" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#334155;strokeWidth=1.6;endArrow=classic;endFill=1;fontFamily=Arial;fontSize=10;fontColor=#1e293b;labelBackgroundColor=#ffffff;labelBorderColor=#cbd5e1;exitX=0.0;exitY=0.5;entryX=0.2;entryY=1.0;" edge="1" parent="1" source="bnd_mfa" target="act_usuario">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e13_ctrl_rbac" value="6: [Autenticado] Cargar privilegios y contexto" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#334155;strokeWidth=1.6;endArrow=classic;endFill=1;fontFamily=Arial;fontSize=10;fontColor=#1e293b;labelBackgroundColor=#ffffff;labelBorderColor=#cbd5e1;exitX=1.0;exitY=0.2;entryX=0.0;entryY=0.8;" edge="1" parent="1" source="ctrl_login" target="ctrl_rbac">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e14_rbac_roles" value="6a: Consultar roles del usuario" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#334155;strokeWidth=1.6;endArrow=classic;endFill=1;fontFamily=Arial;fontSize=10;fontColor=#1e293b;labelBackgroundColor=#ffffff;labelBorderColor=#cbd5e1;exitX=1.0;exitY=0.2;entryX=0.0;entryY=0.5;" edge="1" parent="1" source="ctrl_rbac" target="ent_roles">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e15_rbac_permisos" value="6b: Consultar permisos efectivos" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#334155;strokeWidth=1.6;endArrow=classic;endFill=1;fontFamily=Arial;fontSize=10;fontColor=#1e293b;labelBackgroundColor=#ffffff;labelBorderColor=#cbd5e1;exitX=1.0;exitY=0.5;entryX=0.0;entryY=0.5;" edge="1" parent="1" source="ctrl_rbac" target="ent_permisos">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e16_rbac_sucursales" value="6c: Consultar sucursales asignadas" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#334155;strokeWidth=1.6;endArrow=classic;endFill=1;fontFamily=Arial;fontSize=10;fontColor=#1e293b;labelBackgroundColor=#ffffff;labelBorderColor=#cbd5e1;exitX=1.0;exitY=0.8;entryX=0.0;entryY=0.5;" edge="1" parent="1" source="ctrl_rbac" target="ent_sucursales">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e17_rbac_token" value="7: Entregar roles, permisos, tenant y alcance" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#334155;strokeWidth=1.6;endArrow=classic;endFill=1;fontFamily=Arial;fontSize=10;fontColor=#1e293b;labelBackgroundColor=#ffffff;labelBorderColor=#cbd5e1;exitX=0.0;exitY=0.2;entryX=1.0;entryY=0.8;" edge="1" parent="1" source="ctrl_rbac" target="ctrl_token">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e18_token_menu" value="8: Retornar token JWT y autorizar redirección" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#334155;strokeWidth=1.6;endArrow=classic;endFill=1;fontFamily=Arial;fontSize=10;fontColor=#1e293b;labelBackgroundColor=#ffffff;labelBorderColor=#cbd5e1;exitX=0.0;exitY=0.5;entryX=1.0;entryY=0.5;" edge="1" parent="1" source="ctrl_token" target="bnd_menu">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e19_menu_usuario" value="9: Presentar vista inicial según rol (Admin/POS/Tienda)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#334155;strokeWidth=1.6;endArrow=classic;endFill=1;fontFamily=Arial;fontSize=10;fontColor=#1e293b;labelBackgroundColor=#ffffff;labelBorderColor=#cbd5e1;exitX=0.0;exitY=0.5;entryX=0.5;entryY=0.0;" edge="1" parent="1" source="bnd_menu" target="act_usuario">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e20_login_bitacora" value="10: Registrar LOGIN_EXITOSO" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#334155;strokeWidth=1.6;endArrow=classic;endFill=1;fontFamily=Arial;fontSize=10;fontColor=#1e293b;labelBackgroundColor=#ffffff;labelBorderColor=#cbd5e1;exitX=1.0;exitY=0.8;entryX=0.0;entryY=0.2;" edge="1" parent="1" source="ctrl_login" target="ctrl_bitacora">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e21_bitacora_ent" value="10a: Insertar registro de auditoría" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#334155;strokeWidth=1.6;endArrow=classic;endFill=1;fontFamily=Arial;fontSize=10;fontColor=#1e293b;labelBackgroundColor=#ffffff;labelBorderColor=#cbd5e1;exitX=1.0;exitY=0.5;entryX=0.0;entryY=0.5;" edge="1" parent="1" source="ctrl_bitacora" target="ent_bitacora">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

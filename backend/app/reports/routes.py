@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from app.utils.security import verificar_token
+from app.utils.security import verificar_token, require_permission
 from app.reports.engine.catalog import CATALOGO_REPORTES
 from app.reports.parser.command_parser import interpretar_comando_reporte
 from app.reports.engine.report_engine import (
@@ -19,6 +19,7 @@ router = APIRouter(prefix="/api/motor-reportes", tags=["Motor de Reportes Dinám
 class ParseCommandIn(BaseModel):
     command: Optional[str] = Field(None, description="Comando en lenguaje natural")
     comando: Optional[str] = Field(None, description="Alias en español para el comando")
+    id_empresa: Optional[int] = Field(None, gt=0)
     contexto: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Contexto opcional")
 
     def texto_comando(self) -> str:
@@ -26,6 +27,7 @@ class ParseCommandIn(BaseModel):
 
 
 class ReporteEjecucionIn(BaseModel):
+    id_empresa: Optional[int] = Field(None, gt=0)
     tipo_reporte: str = Field(..., description="Código canónico del reporte (ej. ventas, inventario, etc.)")
     filtros: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Diccionario de filtros normalizados")
     groupBy: Optional[str] = Field(None, description="Campo para agrupación SQL")
@@ -33,8 +35,16 @@ class ReporteEjecucionIn(BaseModel):
     orderDirection: Optional[str] = Field("DESC", description="ASC o DESC")
 
 
+def _contexto_reporte(payload, empresa):
+    from app.utils.tenant_guard import resolver_tenant_operacion
+    from app.services.saas_services import exigir_vigencia
+    empresa = resolver_tenant_operacion(payload, empresa)
+    exigir_vigencia(empresa, reportes=True)
+    return {**payload, '_empresa_reporte': empresa}
+
+
 @router.get("/catalogo")
-def obtener_catalogo_reportes(token_data: dict = Depends(verificar_token)):
+def obtener_catalogo_reportes(token_data: dict = Depends(require_permission('reportes.ver'))):
     """
     Retorna la lista de reportes disponibles en el motor, sus vistas,
     filtros permitidos, agrupaciones y metadatos de columnas.
@@ -45,6 +55,8 @@ def obtener_catalogo_reportes(token_data: dict = Depends(verificar_token)):
             "total": len(CATALOGO_REPORTES),
             "catalogo": list(CATALOGO_REPORTES.values())
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -55,13 +67,14 @@ def obtener_catalogo_reportes(token_data: dict = Depends(verificar_token)):
 @router.post("/parse-command")
 def parsear_comando_reporte(
     payload: ParseCommandIn,
-    token_data: dict = Depends(verificar_token)
+    token_data: dict = Depends(require_permission('reportes.ver'))
 ):
     """
     Interpreta un comando de voz o texto determinísticamente.
     Retorna un ReportRequest canónico y si existen ambigüedades.
     """
     try:
+        token_data = _contexto_reporte(token_data, payload.id_empresa)
         txt = payload.texto_comando()
         if not txt:
             raise ValueError("Debe ingresar o dictar un comando de texto.")
@@ -72,6 +85,8 @@ def parsear_comando_reporte(
             "success": True,
             **resultado
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -82,13 +97,14 @@ def parsear_comando_reporte(
 @router.post("/ejecutar")
 def ejecutar_reporte(
     payload: ReporteEjecucionIn,
-    token_data: dict = Depends(verificar_token)
+    token_data: dict = Depends(require_permission('reportes.ver'))
 ):
     """
     Ejecuta una consulta SQL parametrizada a través del motor de reportes dinámico.
     Garantiza aislamiento multi-tenant estricto según la empresa del usuario.
     """
     try:
+        token_data = _contexto_reporte(token_data, payload.id_empresa)
         req_dict = payload.model_dump()
         datos = ejecutar_reporte_dinamico(req_dict, token_data)
         return {
@@ -100,6 +116,8 @@ def ejecutar_reporte(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(ve)
         )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -110,12 +128,13 @@ def ejecutar_reporte(
 @router.post("/exportar/pdf")
 def exportar_reporte_pdf(
     payload: ReporteEjecucionIn,
-    token_data: dict = Depends(verificar_token)
+    token_data: dict = Depends(require_permission('reportes.ver'))
 ):
     """
     Genera y descarga en streaming un PDF profesional del reporte especificado.
     """
     try:
+        token_data = _contexto_reporte(token_data, payload.id_empresa)
         req_dict = payload.model_dump()
         datos = ejecutar_reporte_dinamico(req_dict, token_data)
         
@@ -137,6 +156,8 @@ def exportar_reporte_pdf(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(ve)
         )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

@@ -42,6 +42,7 @@ export class NotificacionesService {
 
   private socket: WebSocket | null = null;
   private cargandoHistorial = false;
+  private reconnectTimer: any = null;
 
   // Estado reactivo central: mezcla de historial (BD) + push (WS)
   private notificacionesSource = new BehaviorSubject<Notificacion[]>([]);
@@ -53,7 +54,13 @@ export class NotificacionesService {
 
   conectar() {
     if (!isPlatformBrowser(this.platformId)) return;
-    if (this.socket) return;
+    if (this.socket && (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING)) {
+      return;
+    }
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
 
     const token = this.authService.obtenerToken();
     if (!token) return;
@@ -99,9 +106,13 @@ export class NotificacionesService {
       };
 
       this.socket.onclose = () => {
-        console.log('WebSocket Desconectado 🔴. Reconectando en 5s...');
         this.socket = null;
-        setTimeout(() => this.conectar(), 5000);
+        if (!this.reconnectTimer && this.authService.obtenerToken()) {
+          this.reconnectTimer = setTimeout(() => {
+            this.reconnectTimer = null;
+            this.conectar();
+          }, 5000);
+        }
       };
 
       this.socket.onerror = (err) => {
@@ -111,7 +122,12 @@ export class NotificacionesService {
   }
 
   desconectar() {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
     if (this.socket) {
+      this.socket.onclose = null;
       this.socket.close();
       this.socket = null;
     }

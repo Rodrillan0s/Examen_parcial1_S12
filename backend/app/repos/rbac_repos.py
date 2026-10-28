@@ -30,20 +30,13 @@ def obtener_permisos_efectivos_usuario(id_usuario: int) -> List[str]:
     try:
         schema = Config.SCHEMA or 'comercio'
         # 1. Comprobar si el usuario es SuperAdmin (id_rol 1 o rol ADMINISTRADOR sin empresa)
-        check_admin = f"""
-            SELECT u.id_empresa, r.id_rol, r.nombre
-            FROM {schema}.t_usuario u
-            LEFT JOIN {schema}.t_usuario_rol ur ON ur.id_usuario = u.id_usuario
-            LEFT JOIN {schema}.t_rol r ON r.id_rol = ur.id_rol
-            WHERE u.id_usuario = %s AND r.activo = TRUE
-            LIMIT 1;
-        """
-        user_row = db.execute_query(check_admin, (id_usuario,), fetchone=True)
-        if user_row and user_row[1] == 1 and user_row[0] is None:
-            # Superadmin global tiene todos los permisos activos
-            all_perm = f"SELECT codigo FROM {schema}.t_permiso WHERE activo = TRUE ORDER BY codigo ASC;"
-            res_all = db.execute_query(all_perm, fetchall=True)
-            return [r[0] for r in res_all] if res_all else []
+        check_admin = f"""SELECT 1 FROM {schema}.t_usuario u
+            JOIN {schema}.t_usuario_rol ur ON ur.id_usuario=u.id_usuario JOIN {schema}.t_rol r ON r.id_rol=ur.id_rol
+            WHERE u.id_usuario=%s AND u.estado AND u.id_empresa IS NULL AND r.activo
+              AND r.nombre IN ('ADMINISTRADOR','SUPERADMIN') LIMIT 1"""
+        if db.execute_query(check_admin, (id_usuario,), fetchone=True):
+            rows = db.execute_query(f"SELECT codigo FROM {schema}.t_permiso WHERE activo ORDER BY codigo", fetchall=True)
+            return [r[0] for r in rows]
 
         # 2. Unión de Permisos Heredados de Roles Activos + Permisos Directos
         query = f"""
@@ -149,7 +142,7 @@ def asignar_permisos_directos_a_usuario(id_usuario: int, ids_permisos: List[int]
                 db.execute_query(query_insert, (id_usuario, id_permiso))
 
         if db.conn:
-            db.conn.commit()
+            db.commit()
         return True
     except Exception as e:
         if db.conn:
@@ -349,7 +342,7 @@ def asignar_permisos_a_rol(id_rol: int, ids_permisos: List[int]) -> bool:
                 db.execute_query(query_insert, (id_rol, id_permiso, id_rol, id_permiso))
 
         if db.conn:
-            db.conn.commit()
+            db.commit()
         return True
     except Exception as e:
         if db.conn:
@@ -364,6 +357,7 @@ def asignar_roles_a_usuario(id_usuario: int, ids_roles: List[int]) -> bool:
     db.create_connection()
     try:
         schema = Config.SCHEMA or 'comercio'
+        db.execute_query(f"UPDATE {schema}.t_usuario SET id_rol=%s WHERE id_usuario=%s;", (ids_roles[0] if ids_roles else None, id_usuario))
         query_delete = f"DELETE FROM {schema}.t_usuario_rol WHERE id_usuario = %s;"
         db.execute_query(query_delete, (id_usuario,))
 
@@ -379,7 +373,7 @@ def asignar_roles_a_usuario(id_usuario: int, ids_roles: List[int]) -> bool:
                 db.execute_query(query_insert, (id_usuario, id_rol, id_usuario, id_rol))
 
         if db.conn:
-            db.conn.commit()
+            db.commit()
         return True
     except Exception as e:
         if db.conn:
@@ -409,7 +403,7 @@ def asignar_sucursales_a_usuario(id_usuario: int, ids_sucursales: List[int]) -> 
                 db.execute_query(query_insert, (id_usuario, id_sucursal, id_usuario, id_sucursal))
 
         if db.conn:
-            db.conn.commit()
+            db.commit()
         return True
     except Exception as e:
         if db.conn:

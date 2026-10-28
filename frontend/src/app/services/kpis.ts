@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
-import { Observable, BehaviorSubject } from 'rxjs';
+import { Observable, BehaviorSubject, shareReplay, catchError } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth';
 
@@ -224,12 +224,36 @@ export class KpisService {
       : new HttpHeaders();
   }
 
-  // Obtener listado de tiendas / tenants con métricas agregadas
-  obtenerTenants(): Observable<RespuestaApi<TenantDashboardItem[]>> {
-    return this.http.get<RespuestaApi<TenantDashboardItem[]>>(
+  private tenantsCache$: Observable<RespuestaApi<TenantDashboardItem[]>> | null = null;
+  private tenantsCacheTimestamp = 0;
+  private readonly TENANTS_CACHE_TTL = 30000; // 30 segundos
+
+  // Obtener listado de tiendas / tenants con métricas agregadas (con caché en memoria)
+  obtenerTenants(forzarRefresco: boolean = false): Observable<RespuestaApi<TenantDashboardItem[]>> {
+    const ahora = Date.now();
+    if (!forzarRefresco && this.tenantsCache$ && (ahora - this.tenantsCacheTimestamp < this.TENANTS_CACHE_TTL)) {
+      return this.tenantsCache$;
+    }
+
+    this.tenantsCacheTimestamp = ahora;
+    this.tenantsCache$ = this.http.get<RespuestaApi<TenantDashboardItem[]>>(
       `${this.apiUrl}/api/kpis/tenants`,
       { headers: this.getHeaders() }
+    ).pipe(
+      shareReplay({ bufferSize: 1, refCount: false }),
+      catchError((err) => {
+        this.tenantsCache$ = null;
+        this.tenantsCacheTimestamp = 0;
+        throw err;
+      })
     );
+
+    return this.tenantsCache$;
+  }
+
+  invalidarCacheTenants(): void {
+    this.tenantsCache$ = null;
+    this.tenantsCacheTimestamp = 0;
   }
 
   // Compatibilidad anterior

@@ -1,7 +1,7 @@
 import { Injectable, inject, PLATFORM_ID, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { isPlatformBrowser } from '@angular/common';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, map, shareReplay, catchError } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface EmpresaSeleccionada {
@@ -26,7 +26,7 @@ export interface Usuario {
   nombre_sucursal?: string;
   sucursal_nombre?: string;
   sucursales_detalle?: any[];
-  alcance?: 'PLATAFORMA' | 'EMPRESA' | 'SUCURSAL';
+  alcance?: 'PLATAFORMA' | 'EMPRESA' | 'SUCURSAL' | 'CLIENTE';
   roles?: string[];
   permisos?: string[];
   sucursales?: number[];
@@ -211,6 +211,44 @@ export class AuthService {
     return perms.includes(codigo);
   }
 
+  private permisosCache$: Observable<string[]> | null = null;
+  private permisosCacheTimestamp = 0;
+  private readonly PERMISOS_CACHE_TTL = 15000; // 15 segundos
+
+  refrescarPermisos(forzar: boolean = false): Observable<string[]> {
+    const token = this.obtenerToken();
+    const ahora = Date.now();
+
+    if (!forzar && this.permisosCache$ && (ahora - this.permisosCacheTimestamp < this.PERMISOS_CACHE_TTL)) {
+      return this.permisosCache$;
+    }
+
+    this.permisosCacheTimestamp = ahora;
+    this.permisosCache$ = this.http.get<{ permisos: string[] }>(`${this.apiUrl}/api/rbac/mis-permisos`).pipe(
+      map(res => {
+        if (token !== this.obtenerToken() || !this.currentUser()) {
+          throw new Error('La sesión cambió durante la consulta de permisos.');
+        }
+        const permisos = Array.isArray(res.permisos) ? res.permisos : [];
+        this.permissions.set(permisos);
+        const usuario = { ...this.currentUser()!, permisos };
+        this.currentUser.set(usuario);
+        if (isPlatformBrowser(this.platformId)) {
+          localStorage.setItem('usuario', JSON.stringify(usuario));
+        }
+        return permisos;
+      }),
+      shareReplay({ bufferSize: 1, refCount: false }),
+      catchError(err => {
+        this.permisosCache$ = null;
+        this.permisosCacheTimestamp = 0;
+        throw err;
+      })
+    );
+
+    return this.permisosCache$;
+  }
+
   hasAnyPermission(codigos: string[]): boolean {
     if (!codigos || codigos.length === 0) return true;
     const perms = this.permissions();
@@ -309,6 +347,8 @@ export class AuthService {
     this.companyChangedSubject.next(null);
     this.activeBranch.set(null);
     this.branchChangedSubject.next(null);
+    this.permisosCache$ = null;
+    this.permisosCacheTimestamp = 0;
     
     // Force a full reload to clear any remaining in-memory state in the SPA
     if (isPlatformBrowser(this.platformId)) {
@@ -386,9 +426,14 @@ export class AuthService {
 
   // --- MÉTODOS DE DETECCIÓN DE NIVEL DE ACCESO Y ALCANCE (SCOPE) ---
 
-  getScopeLevel(): 'PLATAFORMA' | 'EMPRESA' | 'SUCURSAL' {
+  getScopeLevel(): 'PLATAFORMA' | 'EMPRESA' | 'SUCURSAL' | 'CLIENTE' {
     const user = this.obtenerUsuario();
-    if (!user) return 'PLATAFORMA';
+    if (!user) return 'CLIENTE';
+
+    // 0. Clientes sin rol administrativo o con alcance explícito CLIENTE
+    if (user.alcance === 'CLIENTE' || this.esCliente() || user.id_rol === 2) {
+      return 'CLIENTE';
+    }
     
     const rol = (user.nombre_rol || '').toUpperCase();
     const rolesList = (user.roles || []).map(r => r.toUpperCase());
@@ -429,6 +474,7 @@ export class AuthService {
   }
 
   isGlobalAdmin(): boolean {
+    if (this.esCliente() || this.getScopeLevel() === 'CLIENTE') return false;
     return this.getScopeLevel() === 'PLATAFORMA';
   }
 
@@ -557,6 +603,21 @@ export class AuthService {
         canSelectBranch: true,   // Solo sucursales autorizadas de su empresa
         isGlobalAdmin: false,
         isStoreAdmin: true,
+        isBranchLevel: false
+      };
+    } else if (scope === 'CLIENTE') {
+      return {
+        scope,
+        headerTitle: 'Aurora Store',
+        headerSubtitle: 'Tienda Online',
+        sidebarTitle: 'Aurora Store',
+        sidebarSubtitle: 'Cliente Retail',
+        badgeText: 'CLIENTE',
+        badgeClass: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+        canSelectCompany: false,
+        canSelectBranch: false,
+        isGlobalAdmin: false,
+        isStoreAdmin: false,
         isBranchLevel: false
       };
     } else {

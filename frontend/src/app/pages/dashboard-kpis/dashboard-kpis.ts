@@ -1,7 +1,10 @@
-import { Component, OnInit, inject, ChangeDetectorRef, NgZone, PLATFORM_ID } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef, NgZone, PLATFORM_ID, DestroyRef } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged, takeUntil } from 'rxjs/operators';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { 
   KpisService, 
   KpisResumen, 
@@ -20,7 +23,7 @@ import { AuthService } from '../../services/auth';
   imports: [CommonModule, RouterModule, FormsModule],
   templateUrl: './dashboard-kpis.html'
 })
-export class DashboardKpisComponent implements OnInit {
+export class DashboardKpisComponent implements OnInit, OnDestroy {
 
   private kpisService = inject(KpisService);
   public authService = inject(AuthService);
@@ -28,6 +31,11 @@ export class DashboardKpisComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
   private ngZone = inject(NgZone);
   private platformId = inject(PLATFORM_ID);
+  private destroyRef = inject(DestroyRef);
+
+  // Control reactivo de peticiones y cancelación de vuelos obsoletos
+  private recargarTrigger$ = new Subject<void>();
+  private cancelPeticionesPrevias$ = new Subject<void>();
 
   // ---- MULTI-TENANT: SELECCIÓN DE TIENDA / TENANT ----
   tenants: TenantDashboardItem[] = [];
@@ -112,34 +120,64 @@ export class DashboardKpisComponent implements OnInit {
       const scope = this.authService.getScopeLevel();
       const idEmpresaUsuario = this.usuarioActual?.id_empresa;
 
-      this.kpisService.tiendaSeleccionada$.subscribe((tienda) => {
-        if (scope === 'PLATAFORMA') {
-          if (tienda !== this.tiendaSeleccionada) {
-            this.tiendaSeleccionada = tienda;
-            this.cargarTodosLosIndicadores();
-          }
-        } else if (tienda && tienda.id_empresa === idEmpresaUsuario) {
-          this.tiendaSeleccionada = tienda;
-          this.cargarTodosLosIndicadores();
-        }
-      });
+      // Unificar todas las recargas en un flujo debounced para evitar avalanchas
+      this.recargarTrigger$
+        .pipe(
+          debounceTime(100),
+          takeUntilDestroyed(this.destroyRef)
+        )
+        .subscribe(() => {
+          this.ejecutarCargaIndicadores();
+        });
 
-      this.authService.companyChanged$.subscribe((empresa) => {
-        if (scope === 'PLATAFORMA') {
-          const match = empresa ? this.tenants.find(t => t.id_empresa === empresa.id_empresa) : null;
-          if (match !== this.tiendaSeleccionada) {
-            this.tiendaSeleccionada = match || null;
-            this.cargarTodosLosIndicadores();
+      this.kpisService.tiendaSeleccionada$
+        .pipe(
+          distinctUntilChanged((prev, curr) => prev?.id_empresa === curr?.id_empresa),
+          takeUntilDestroyed(this.destroyRef)
+        )
+        .subscribe((tienda) => {
+          if (scope === 'PLATAFORMA') {
+            if (tienda?.id_empresa !== this.tiendaSeleccionada?.id_empresa) {
+              this.tiendaSeleccionada = tienda;
+              this.cargarTodosLosIndicadores();
+            }
+          } else if (tienda && tienda.id_empresa === idEmpresaUsuario) {
+            if (this.tiendaSeleccionada?.id_empresa !== tienda.id_empresa) {
+              this.tiendaSeleccionada = tienda;
+              this.cargarTodosLosIndicadores();
+            }
           }
-        }
-      });
+        });
 
-      this.authService.branchChanged$.subscribe((branch) => {
-        this.sucursalSeleccionada = branch ? branch.id : null;
-        if (this.tiendaSeleccionada || scope === 'PLATAFORMA' || idEmpresaUsuario) {
-          this.cargarTodosLosIndicadores();
-        }
-      });
+      this.authService.companyChanged$
+        .pipe(
+          distinctUntilChanged((prev, curr) => prev?.id_empresa === curr?.id_empresa),
+          takeUntilDestroyed(this.destroyRef)
+        )
+        .subscribe((empresa) => {
+          if (scope === 'PLATAFORMA') {
+            const match = empresa ? this.tenants.find(t => t.id_empresa === empresa.id_empresa) : null;
+            if (match?.id_empresa !== this.tiendaSeleccionada?.id_empresa) {
+              this.tiendaSeleccionada = match || null;
+              this.cargarTodosLosIndicadores();
+            }
+          }
+        });
+
+      this.authService.branchChanged$
+        .pipe(
+          distinctUntilChanged((prev, curr) => prev?.id === curr?.id),
+          takeUntilDestroyed(this.destroyRef)
+        )
+        .subscribe((branch) => {
+          const newSuc = branch ? branch.id : null;
+          if (this.sucursalSeleccionada !== newSuc) {
+            this.sucursalSeleccionada = newSuc;
+            if (this.tiendaSeleccionada || scope === 'PLATAFORMA' || idEmpresaUsuario) {
+              this.cargarTodosLosIndicadores();
+            }
+          }
+        });
 
       this.cargarTenants();
     }
@@ -160,25 +198,33 @@ export class DashboardKpisComponent implements OnInit {
           if (scope !== 'PLATAFORMA' && idEmpresaUsuario) {
             // Usuario de tienda: SIEMPRE fijar su empresa
             const miTienda = this.tenants.find(t => t.id_empresa === idEmpresaUsuario);
-            if (miTienda) {
+            if (miTienda && this.tiendaSeleccionada?.id_empresa !== miTienda.id_empresa) {
               this.seleccionarTienda(miTienda, false);
             }
           } else if (scope === 'PLATAFORMA') {
             const effId = this.authService.getEffectiveCompanyId();
             if (effId) {
               const match = this.tenants.find(t => t.id_empresa === effId);
-              this.tiendaSeleccionada = match || null;
+              if (match?.id_empresa !== this.tiendaSeleccionada?.id_empresa) {
+                this.tiendaSeleccionada = match || null;
+                this.cargarTodosLosIndicadores();
+              }
             } else {
               const activaGlobal = this.kpisService.obtenerTiendaActual();
               if (activaGlobal) {
                 const match = this.tenants.find(t => t.id_empresa === activaGlobal.id_empresa);
-                this.tiendaSeleccionada = match || null;
-              } else {
+                if (match?.id_empresa !== this.tiendaSeleccionada?.id_empresa) {
+                  this.tiendaSeleccionada = match || null;
+                  this.cargarTodosLosIndicadores();
+                }
+              } else if (this.tiendaSeleccionada !== null) {
                 this.tiendaSeleccionada = null; // Vista global consolidada
+                this.cargarTodosLosIndicadores();
               }
             }
-            this.cargarTodosLosIndicadores();
           }
+          // Disparar carga inicial única consolidada
+          this.cargarTodosLosIndicadores();
         }
         this.cdr.detectChanges();
       },
@@ -259,10 +305,21 @@ export class DashboardKpisComponent implements OnInit {
     }
   }
 
-  cargarTodosLosIndicadores(): void {
+  cargarTodosLosIndicadores(inmediato: boolean = false): void {
+    if (inmediato) {
+      this.ejecutarCargaIndicadores();
+    } else {
+      this.recargarTrigger$.next();
+    }
+  }
+
+  ejecutarCargaIndicadores(): void {
     if (!this.tiendaSeleccionada && this.alcance !== 'PLATAFORMA') {
       return;
     }
+
+    // Cancelar cualquier lote de peticiones KPI anterior que siga en vuelo
+    this.cancelPeticionesPrevias$.next();
 
     this.cargando = true;
     this.mensajeError = '';
@@ -274,66 +331,89 @@ export class DashboardKpisComponent implements OnInit {
     const idEmpresa = this.tiendaSeleccionada ? this.tiendaSeleccionada.id_empresa : (this.alcance === 'PLATAFORMA' ? undefined : this.usuarioActual?.id_empresa);
 
     // 1. Resumen de KPIs
-    this.kpisService.obtenerResumen(fIni, fFin, suc, idEmpresa).subscribe({
-      next: (res) => {
-        if (res.success) {
-          this.kpisResumen = res.data;
+    this.kpisService.obtenerResumen(fIni, fFin, suc, idEmpresa)
+      .pipe(takeUntil(this.cancelPeticionesPrevias$))
+      .subscribe({
+        next: (res) => {
+          if (res.success) {
+            this.kpisResumen = res.data;
+          }
+        },
+        error: (err) => {
+          if (err?.name !== 'EmptyError') console.error('Error al cargar resumen KPIs:', err);
         }
-      },
-      error: (err) => console.error('Error al cargar resumen KPIs:', err)
-    });
+      });
 
     // 2. Línea temporal de ventas (para SVG)
-    this.kpisService.obtenerVentasTimeline(fIni, fFin, suc, idEmpresa).subscribe({
-      next: (res) => {
-        if (res.success) {
-          this.ventasTimeline = res.data || [];
+    this.kpisService.obtenerVentasTimeline(fIni, fFin, suc, idEmpresa)
+      .pipe(takeUntil(this.cancelPeticionesPrevias$))
+      .subscribe({
+        next: (res) => {
+          if (res.success) {
+            this.ventasTimeline = res.data || [];
+          }
+        },
+        error: (err) => {
+          if (err?.name !== 'EmptyError') console.error('Error timeline:', err);
         }
-      },
-      error: (err) => console.error('Error timeline:', err)
-    });
+      });
 
     // 3. Ranking de productos más vendidos
-    this.kpisService.obtenerProductosMasVendidos(fIni, fFin, suc, 6, idEmpresa).subscribe({
-      next: (res) => {
-        if (res.success) {
-          this.productosTop = res.data || [];
+    this.kpisService.obtenerProductosMasVendidos(fIni, fFin, suc, 6, idEmpresa)
+      .pipe(takeUntil(this.cancelPeticionesPrevias$))
+      .subscribe({
+        next: (res) => {
+          if (res.success) {
+            this.productosTop = res.data || [];
+          }
+        },
+        error: (err) => {
+          if (err?.name !== 'EmptyError') console.error('Error top productos:', err);
         }
-      },
-      error: (err) => console.error('Error top productos:', err)
-    });
+      });
 
     // 4. Inventario crítico
-    this.kpisService.obtenerInventarioAlertas(suc, idEmpresa).subscribe({
-      next: (res) => {
-        if (res.success && res.data) {
-          this.alertasInventario = res.data.alertas_stock || [];
+    this.kpisService.obtenerInventarioAlertas(suc, idEmpresa)
+      .pipe(takeUntil(this.cancelPeticionesPrevias$))
+      .subscribe({
+        next: (res) => {
+          if (res.success && res.data) {
+            this.alertasInventario = res.data.alertas_stock || [];
+          }
+        },
+        error: (err) => {
+          if (err?.name !== 'EmptyError') console.error('Error alertas inventario:', err);
         }
-      },
-      error: (err) => console.error('Error alertas inventario:', err)
-    });
+      });
 
     // 5. Ventas por sucursal
-    this.kpisService.obtenerVentasPorSucursal(fIni, fFin, idEmpresa).subscribe({
-      next: (res) => {
-        if (res.success) {
-          this.ventasPorSucursal = res.data || [];
+    this.kpisService.obtenerVentasPorSucursal(fIni, fFin, idEmpresa)
+      .pipe(takeUntil(this.cancelPeticionesPrevias$))
+      .subscribe({
+        next: (res) => {
+          if (res.success) {
+            this.ventasPorSucursal = res.data || [];
+          }
+          this.finalizarCarga();
+        },
+        error: (err) => {
+          if (err?.name !== 'EmptyError') console.error('Error ventas por sucursal:', err);
+          this.finalizarCarga();
         }
-        this.finalizarCarga();
-      },
-      error: (err) => {
-        console.error('Error ventas por sucursal:', err);
-        this.finalizarCarga();
-      }
-    });
+      });
 
     // 6. Cargar también resumen de empresa si es nivel alto
     if (this.authService.getAuthorityLevel() <= 3) {
-      this.kpisService.obtenerMetricasDashboard(idEmpresa).subscribe({
-        next: (res) => {
-          if (res.success) this.metricasPlataforma = res.data;
-        }
-      });
+      this.kpisService.obtenerMetricasDashboard(idEmpresa)
+        .pipe(takeUntil(this.cancelPeticionesPrevias$))
+        .subscribe({
+          next: (res) => {
+            if (res.success) this.metricasPlataforma = res.data;
+          },
+          error: (err) => {
+            if (err?.name !== 'EmptyError') console.error('Error métricas plataforma:', err);
+          }
+        });
     }
   }
 
@@ -419,5 +499,11 @@ export class DashboardKpisComponent implements OnInit {
 
   cerrarSesion(): void {
     this.authService.cerrarSesion();
+  }
+
+  ngOnDestroy(): void {
+    this.cancelPeticionesPrevias$.next();
+    this.cancelPeticionesPrevias$.complete();
+    this.recargarTrigger$.complete();
   }
 }

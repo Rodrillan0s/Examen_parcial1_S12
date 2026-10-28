@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 980" width="1440" height="980" style="background-color: #ffffff; font-family: Arial, Helvetica, sans-serif;">
+  <!-- Encabezado del Diagrama -->
+  <text x="35" y="34" font-size="16" font-weight="bold" fill="#0f172a">CU17 W: Gestionar productos — Diagrama de Análisis de Clases (UML / ICONIX)</text>
+  <text x="35" y="54" font-size="12" font-weight="500" fill="#475569">Catálogo Maestro de Prendas | Estereotipos: Boundary (Form) ── Control ── Entity</text>
+  <text x="35" y="72" font-size="11.5" font-weight="bold" fill="#1e293b">Actor(es): <tspan font-weight="normal" fill="#334155">Administrador de Tienda / Encargado de Sucursal</tspan></text>
+  <line x1="35" y1="82" x2="1405" y2="82" stroke="#94a3b8" stroke-width="1.2"/>
+
+  <!-- Leyenda de Estructura ICONIX -->
+  <g transform="translate(1010, 24)">
+    <rect x="0" y="0" width="395" height="48" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+    <text x="12" y="19" font-size="11" font-weight="bold" fill="#1e293b">Estructura del Análisis de Clases (ICONIX):</text>
+    <text x="12" y="36" font-size="10.5" fill="#475569">Boundary (Form) ── Control (Lógica) ── Entity (Persistencia)</text>
+  </g>
+  <!-- Clase: Form / Productos -->
+  <g id="class_form_productos">
+    <rect x="50" y="350" width="270" height="264" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="50" y1="398" x2="320" y2="398" stroke="#000000" stroke-width="1.2"/>
+    <line x1="50" y1="522.0" x2="320" y2="522.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="185.0" y="367" text-anchor="middle" font-size="11" font-weight="bold" fill="#334155" font-family="Arial, Helvetica, sans-serif">Form</text>
+    <text x="185.0" y="384" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">Productos</text>
+    <text x="60" y="414" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ id_producto: int</text>
+    <text x="60" y="430" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ codigo_sku: string</text>
+    <text x="60" y="446" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ nombre: string</text>
+    <text x="60" y="462" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ descripcion: string</text>
+    <text x="60" y="478" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ precio_base: decimal</text>
+    <text x="60" y="494" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ id_categoria: int</text>
+    <text x="60" y="510" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ id_proveedor: int</text>
+    <text x="60" y="538.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ingresar_datos_producto()</text>
+    <text x="60" y="554.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ guardar_producto()</text>
+    <text x="60" y="570.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ asociar_categoria()</text>
+    <text x="60" y="586.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ asociar_proveedor()</text>
+    <text x="60" y="602.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ mostrar_error_sku_duplicado()</text>
+  </g>
+  <!-- Clase: Control / Productos -->
+  <g id="class_ctrl_productos">
+    <rect x="380" y="350" width="330" height="184" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="380" y1="398" x2="710" y2="398" stroke="#000000" stroke-width="1.2"/>
+    <line x1="380" y1="426.0" x2="710" y2="426.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="545.0" y="367" text-anchor="middle" font-size="11" font-weight="bold" fill="#334155" font-family="Arial, Helvetica, sans-serif">Control</text>
+    <text x="545.0" y="384" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">Productos</text>
+    <text x="390" y="414" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">- catalog_service: ProductCatalogService</text>
+    <text x="390" y="442.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ crear_producto(id_empresa, dto)</text>
+    <text x="390" y="458.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ validar_sku_unico(id_empresa, sku)</text>
+    <text x="390" y="474.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ verificar_precio_positivo(precio)</text>
+    <text x="390" y="490.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ insertar_producto(datos)</text>
+    <text x="390" y="506.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ actualizar_producto(id, datos)</text>
+    <text x="390" y="522.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ dar_de_baja_producto(id)</text>
+  </g>
+  <!-- Clase: T_PRODUCTO -->
+  <g id="class_ent_producto">
+    <rect x="770" y="350" width="270" height="234" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="770" y1="384" x2="1040" y2="384" stroke="#000000" stroke-width="1.2"/>
+    <line x1="770" y1="524.0" x2="1040" y2="524.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="905.0" y="372.0" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">T_PRODUCTO</text>
+    <text x="780" y="400" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_PRODUCTO: int [PK]</text>
+    <text x="780" y="416" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_EMPRESA: int [FK]</text>
+    <text x="780" y="432" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_CATEGORIA: int [FK]</text>
+    <text x="780" y="448" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_PROVEEDOR: int [FK]</text>
+    <text x="780" y="464" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ NOMBRE: string</text>
+    <text x="780" y="480" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ DESCRIPCION: string</text>
+    <text x="780" y="496" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ PRECIO_BASE: decimal</text>
+    <text x="780" y="512" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ESTADO: string = &apos;ACTIVO&apos;</text>
+    <text x="780" y="540.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ buscar_por_sku(id_emp, sku)</text>
+    <text x="780" y="556.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ insertar(datos)</text>
+    <text x="780" y="572.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ actualizar(id, datos)</text>
+  </g>
+  <!-- Clase: T_CATEGORIA -->
+  <g id="class_ent_categoria">
+    <rect x="770" y="115" width="270" height="122" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="770" y1="149" x2="1040" y2="149" stroke="#000000" stroke-width="1.2"/>
+    <line x1="770" y1="209.0" x2="1040" y2="209.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="905.0" y="137.0" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">T_CATEGORIA</text>
+    <text x="780" y="165" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_CATEGORIA: int [PK]</text>
+    <text x="780" y="181" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ NOMBRE: string</text>
+    <text x="780" y="197" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ESTADO: string</text>
+    <text x="780" y="225.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ existe_categoria(id)</text>
+  </g>
+  <!-- Clase: T_PROVEEDOR -->
+  <g id="class_ent_proveedor">
+    <rect x="1100" y="350" width="280" height="138" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="1100" y1="384" x2="1380" y2="384" stroke="#000000" stroke-width="1.2"/>
+    <line x1="1100" y1="460.0" x2="1380" y2="460.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="1240.0" y="372.0" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">T_PROVEEDOR</text>
+    <text x="1110" y="400" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_PROVEEDOR: int [PK]</text>
+    <text x="1110" y="416" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ RAZON_SOCIAL: string</text>
+    <text x="1110" y="432" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ NIT_RUC: string</text>
+    <text x="1110" y="448" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ACTIVO: boolean</text>
+    <text x="1110" y="476.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ existe_proveedor(id)</text>
+  </g>
+  <!-- Clase: T_BITACORA -->
+  <g id="class_ent_bitacora">
+    <rect x="770" y="700" width="270" height="154" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="770" y1="734" x2="1040" y2="734" stroke="#000000" stroke-width="1.2"/>
+    <line x1="770" y1="826.0" x2="1040" y2="826.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="905.0" y="722.0" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">T_BITACORA</text>
+    <text x="780" y="750" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_BITACORA: bigint [PK]</text>
+    <text x="780" y="766" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ FECHA_HORA: timestamp</text>
+    <text x="780" y="782" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_USUARIO: int [FK]</text>
+    <text x="780" y="798" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ MODULO: string = &apos;PRODUCTO&apos;</text>
+    <text x="780" y="814" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ACCION: string = &apos;REG_PRODUCTO&apos;</text>
+    <text x="780" y="842.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ registrar_evento(accion, id_prod)</text>
+  </g>
+
+  <!-- Asociaciones y Multiplicidades -->
+  <g id="associations">
+    <polyline points="320,482.0 350,482.0 350,442.0 380,442.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="335" y="436.0" font-size="10" font-style="italic" fill="#334155">solicita</text>
+    <polyline points="710,442.0 740,442.0 740,467.0 770,467.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="725" y="461.0" font-size="10" font-style="italic" fill="#334155">persiste</text>
+    <polyline points="905.0,237 905.0,350" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="913.0" y="253" font-size="11" font-weight="bold" fill="#000000">1</text>
+    <text x="913.0" y="342" font-size="11" font-weight="bold" fill="#000000">0..*</text>
+    <polyline points="1040,467.0 1070,467.0 1070,419.0 1100,419.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="1048" y="461.0" font-size="11" font-weight="bold" fill="#000000">0..*</text>
+    <text x="1075" y="413.0" font-size="11" font-weight="bold" fill="#000000">0..1</text>
+    <polyline points="905.0,584 905.0,700" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="913.0" y="600" font-size="11" font-weight="bold" fill="#000000">1</text>
+    <text x="913.0" y="692" font-size="11" font-weight="bold" fill="#000000">0..*</text>
+  </g>
+</svg>

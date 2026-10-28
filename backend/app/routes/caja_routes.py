@@ -63,7 +63,6 @@ def _verificar_permiso_supervisor(token_data: dict) -> None:
     alcance = token_data.get("alcance")
 
     es_supervisor = (
-        id_rol in (1, 2, 3, 4) or
         any(r in ('ADMINISTRADOR', 'SUPERADMIN', 'ADMINISTRADOR_TIENDA', 'ENCARGADO', 'ENCARGADO_SUCURSAL') for r in roles) or
         alcance in ('PLATAFORMA', 'EMPRESA') or
         any(tiene_permiso(token_data, codigo) for codigo in ('caja.ver', 'reportes.ver', 'ventas.ver', 'admin.acceder'))
@@ -77,81 +76,25 @@ def _verificar_permiso_supervisor(token_data: dict) -> None:
 
 
 def _obtener_empresa_efectiva(token_data: dict, id_empresa_solicitada: Optional[int] = None) -> int:
-    alcance = token_data.get("alcance")
-    id_empresa_jwt = token_data.get("id_empresa")
-    if alcance != "PLATAFORMA" and id_empresa_jwt:
-        return id_empresa_jwt
-    if id_empresa_solicitada and id_empresa_solicitada > 0:
-        return id_empresa_solicitada
-    if id_empresa_jwt:
-        return id_empresa_jwt
-    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="El usuario no tiene una empresa autorizada.")
+    from app.utils.tenant_guard import resolver_tenant_operacion
+    return resolver_tenant_operacion(token_data, id_empresa_solicitada)
 
 
 def _obtener_sucursal_efectiva(token_data: dict, id_sucursal_solicitada: Optional[int] = None, id_empresa: Optional[int] = None) -> int:
-    """
-    Determina la sucursal autorizada sin confiar en valores arbitrarios.
-    """
-    sucursales_usuario = token_data.get("sucursales", [])
-    id_rol = token_data.get("id_rol")
-    roles = [str(r).upper() for r in token_data.get("roles", [])]
-    alcance = token_data.get("alcance")
-    es_global = (id_rol == 1 or "ADMINISTRADOR" in roles or "SUPERADMIN" in roles or alcance == "PLATAFORMA")
-    es_tienda = (alcance == "EMPRESA")
+    from app.routes.pos_routes import _obtener_sucursal_contexto
+    return _obtener_sucursal_contexto(token_data, id_sucursal_solicitada, id_empresa)
 
-    if id_sucursal_solicitada:
-        if es_global:
-            return id_sucursal_solicitada
-        if es_tienda and id_empresa:
-            from app.classes.postgres import PostgreSQL
-            from app.config import Config
-            db = PostgreSQL()
-            db.create_connection()
-            try:
-                schema = Config.SCHEMA or 'comercio'
-                valida = db.execute_query(
-                    f"SELECT 1 FROM {schema}.t_sucursal WHERE id_sucursal = %s AND id_empresa = %s AND activo = TRUE;",
-                    (id_sucursal_solicitada, id_empresa),
-                    fetchone=True
-                )
-                if valida:
-                    return id_sucursal_solicitada
-            finally:
-                db.close_connection()
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tienes autorización sobre esta sucursal.")
-        if id_sucursal_solicitada in sucursales_usuario:
-            return id_sucursal_solicitada
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="No estás autorizado para operar en la sucursal especificada."
-        )
 
-    if sucursales_usuario:
-        return sucursales_usuario[0]
-
-    if es_global or es_tienda:
-        if id_empresa:
-            from app.classes.postgres import PostgreSQL
-            from app.config import Config
-            db = PostgreSQL()
-            db.create_connection()
-            try:
-                schema = Config.SCHEMA or 'comercio'
-                row = db.execute_query(
-                    f"SELECT id_sucursal FROM {schema}.t_sucursal WHERE id_empresa = %s AND activo = TRUE ORDER BY id_sucursal LIMIT 1;",
-                    (id_empresa,),
-                    fetchone=True
-                )
-                if row:
-                    return row[0]
-            finally:
-                db.close_connection()
-        return 1
-
-    raise HTTPException(
-        status_code=status.HTTP_400_BAD_REQUEST,
-        detail="El usuario no tiene una sucursal asignada para operar."
-    )
+def _contexto_supervision(token_data, empresa, sucursal):
+    from app.utils.tenant_guard import resolver_tenant_operacion, resolver_sucursal_autorizada
+    empresa = resolver_tenant_operacion(token_data, empresa, permitir_global=True)
+    sucursal = resolver_sucursal_autorizada(token_data, sucursal)
+    if sucursal is not None:
+        from app.repos.sucursales_repos import obtener_sucursal_por_id
+        branch = obtener_sucursal_por_id(sucursal)
+        if not branch or (empresa is not None and branch['id_empresa'] != empresa):
+            raise HTTPException(403, detail='Sucursal fuera de la empresa seleccionada.')
+    return empresa, sucursal
 
 
 # --- ENDPOINTS ---
@@ -166,6 +109,8 @@ def listar_denominaciones(token_data: dict = Depends(verificar_token)):
             "denominaciones": data,
             "data": data
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"[DENOMINACIONES ERROR] {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
@@ -353,19 +298,7 @@ def monitorear_cajas(
 ):
     _verificar_permiso_supervisor(token_data)
     try:
-        alcance = token_data.get("alcance")
-        id_rol = token_data.get("id_rol")
-        roles = [str(r).upper() for r in token_data.get("roles", [])]
-        es_global = (id_rol == 1 or "ADMINISTRADOR" in roles or "SUPERADMIN" in roles or alcance == "PLATAFORMA")
-
-        empresa_efectiva = id_empresa if (es_global and id_empresa) else (token_data.get("id_empresa") or id_empresa)
-        
-        sucursal_efectiva = id_sucursal
-        if not es_global and alcance != "EMPRESA" and id_rol not in (1, 3):
-            # Encargado de sucursal se restringe a sus sucursales autorizadas
-            sucursales_usuario = token_data.get("sucursales", [])
-            if sucursales_usuario:
-                sucursal_efectiva = sucursales_usuario[0]
+        empresa_efectiva, sucursal_efectiva = _contexto_supervision(token_data, id_empresa, id_sucursal)
 
         data = caja_repos.monitorear_cajas_tienda_sucursal(
             id_empresa=empresa_efectiva,
@@ -373,6 +306,8 @@ def monitorear_cajas(
             estado_filtro=estado
         )
         return data
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"[MONITOREO CAJAS ERROR] {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
@@ -388,17 +323,7 @@ def listar_historial_sesiones(
 ):
     _verificar_permiso_supervisor(token_data)
     try:
-        alcance = token_data.get("alcance")
-        id_rol = token_data.get("id_rol")
-        roles = [str(r).upper() for r in token_data.get("roles", [])]
-        es_global = (id_rol == 1 or "ADMINISTRADOR" in roles or "SUPERADMIN" in roles or alcance == "PLATAFORMA")
-
-        empresa_efectiva = id_empresa if (es_global and id_empresa) else (token_data.get("id_empresa") or id_empresa)
-        sucursal_efectiva = id_sucursal
-        if not es_global and alcance != "EMPRESA" and id_rol not in (1, 3):
-            sucursales_usuario = token_data.get("sucursales", [])
-            if sucursales_usuario:
-                sucursal_efectiva = sucursales_usuario[0]
+        empresa_efectiva, sucursal_efectiva = _contexto_supervision(token_data, id_empresa, id_sucursal)
 
         sesiones = caja_repos.listar_todas_sesiones_caja(
             id_empresa=empresa_efectiva,
@@ -411,6 +336,8 @@ def listar_historial_sesiones(
             "sesiones": sesiones,
             "total": len(sesiones)
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"[HISTORIAL SESIONES ERROR] {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
@@ -440,6 +367,8 @@ def registrar_caja(
         }
     except ValueError as ve:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"[CREAR CAJA ERROR] {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

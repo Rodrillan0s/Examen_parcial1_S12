@@ -4,7 +4,7 @@ from typing import Optional
 from datetime import datetime
 
 from app.services import reportes_services
-from app.utils.security import verificar_token
+from app.utils.security import verificar_token, require_permission
 
 router = APIRouter(prefix='/api/reportes', tags=["Reportes Bajo Demanda W33"])
 
@@ -17,7 +17,7 @@ def reporte_ventas(
     id_metodo_pago: Optional[int] = Query(None, description="Filtrar por método de pago"),
     id_empresa: Optional[int] = Query(None, description="Filtrar por empresa / tenant"),
     formato: str = Query('json', description="Formato de salida: 'json' o 'pdf'"),
-    token_data: dict = Depends(verificar_token)
+    token_data: dict = Depends(require_permission('reportes.ver'))
 ):
     """
     Genera el reporte de ventas bajo demanda con filtros dinámicos.
@@ -40,6 +40,8 @@ def reporte_ventas(
             )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error generando reporte de ventas: {str(e)}")
 
@@ -51,7 +53,7 @@ def reporte_inventario(
     estado_stock: Optional[str] = Query(None, description="Estado de existencias: 'todos', 'bajo', 'agotado', 'disponible'"),
     id_empresa: Optional[int] = Query(None, description="Filtrar por empresa / tenant"),
     formato: str = Query('json', description="Formato de salida: 'json' o 'pdf'"),
-    token_data: dict = Depends(verificar_token)
+    token_data: dict = Depends(require_permission('reportes.ver'))
 ):
     """
     Genera el reporte de inventario y existencias por almacén/sucursal.
@@ -73,6 +75,8 @@ def reporte_inventario(
             )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error generando reporte de inventario: {str(e)}")
 
@@ -85,7 +89,7 @@ def reporte_productos_vendidos(
     id_categoria: Optional[int] = Query(None, description="Filtrar por categoría"),
     id_empresa: Optional[int] = Query(None, description="Filtrar por empresa / tenant"),
     formato: str = Query('json', description="Formato de salida: 'json' o 'pdf'"),
-    token_data: dict = Depends(verificar_token)
+    token_data: dict = Depends(require_permission('reportes.ver'))
 ):
     """
     Genera el reporte de productos más vendidos, unidades y recaudación generada.
@@ -107,6 +111,8 @@ def reporte_productos_vendidos(
             )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error generando reporte de productos: {str(e)}")
 
@@ -117,7 +123,7 @@ def reporte_sucursales(
     fecha_fin: Optional[str] = Query(None, description="Fecha final YYYY-MM-DD"),
     id_empresa: Optional[int] = Query(None, description="Filtrar por empresa / tenant"),
     formato: str = Query('json', description="Formato de salida: 'json' o 'pdf'"),
-    token_data: dict = Depends(verificar_token)
+    token_data: dict = Depends(require_permission('reportes.ver'))
 ):
     """
     Genera el reporte comparativo entre sucursales de la empresa.
@@ -139,5 +145,7 @@ def reporte_sucursales(
             )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error generando reporte de sucursales: {str(e)}")

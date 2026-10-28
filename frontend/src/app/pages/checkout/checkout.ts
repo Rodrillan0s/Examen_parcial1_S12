@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -6,6 +6,7 @@ import { CarritoService, CarritoData, ItemCarrito } from '../../services/carrito
 import { AuthService } from '../../services/auth';
 import { PerfilService } from '../../services/perfil';
 import { PedidoService, SucursalCheckout, CrearPedidoPayload } from '../../services/pedido';
+import { extraerMensajeError } from '../../utils/error-helper';
 
 @Component({
   selector: 'app-checkout',
@@ -19,6 +20,7 @@ export class CheckoutComponent implements OnInit {
   private perfilService = inject(PerfilService);
   private pedidoService = inject(PedidoService);
   private router = inject(Router);
+  private cdr = inject(ChangeDetectorRef);
 
   // Datos del carrito
   carrito: CarritoData | null = null;
@@ -74,10 +76,12 @@ export class CheckoutComponent implements OnInit {
           this.carrito = null;
           this.cargandoSucursales = false;
         }
+        this.cdr.detectChanges();
       },
       error: () => {
         this.cargandoCarrito = false;
         this.cargandoSucursales = false;
+        this.cdr.detectChanges();
       }
     });
 
@@ -92,6 +96,7 @@ export class CheckoutComponent implements OnInit {
           if (p.direccion) this.direccionEntrega = p.direccion;
           if (p.ciudad) this.ciudadEntrega = p.ciudad;
         }
+        this.cdr.detectChanges();
       },
       error: () => {
         // Fallback al usuario en AuthService
@@ -100,6 +105,7 @@ export class CheckoutComponent implements OnInit {
           this.nombreContacto = `${u.nombre || ''} ${u.apellido || ''}`.trim();
           this.correoContacto = u.correo || '';
         }
+        this.cdr.detectChanges();
       }
     });
   }
@@ -111,9 +117,11 @@ export class CheckoutComponent implements OnInit {
         this.cargandoSucursales = false;
         const conStock = this.sucursales.find(s => s.tiene_stock_completo !== false);
         this.sucursalSeleccionadaId = conStock ? conStock.id_sucursal : (this.sucursales.length > 0 ? this.sucursales[0].id_sucursal : null);
+        this.cdr.detectChanges();
       },
       error: () => {
         this.cargandoSucursales = false;
+        this.cdr.detectChanges();
       }
     });
   }
@@ -221,7 +229,7 @@ export class CheckoutComponent implements OnInit {
       },
       error: (err) => {
         this.procesando = false;
-        this.errorMensaje = err?.error?.detail || 'Ocurrió un error al procesar tu pedido. Por favor intenta nuevamente.';
+        this.errorMensaje = extraerMensajeError(err, 'Ocurrió un error al procesar tu pedido. Por favor intenta nuevamente.');
         // Si fue un problema de stock, recargar el carrito para sincronizar alertas
         this.carritoService.cargarCarrito().subscribe();
       }

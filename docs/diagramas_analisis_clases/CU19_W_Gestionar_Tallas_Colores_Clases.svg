@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 980" width="1440" height="980" style="background-color: #ffffff; font-family: Arial, Helvetica, sans-serif;">
+  <!-- Encabezado del Diagrama -->
+  <text x="35" y="34" font-size="16" font-weight="bold" fill="#0f172a">CU19 W: Gestionar tallas y colores — Diagrama de Análisis de Clases (UML / ICONIX)</text>
+  <text x="35" y="54" font-size="12" font-weight="500" fill="#475569">Variantes de Prendas | Estereotipos: Boundary (Form) ── Control ── Entity</text>
+  <text x="35" y="72" font-size="11.5" font-weight="bold" fill="#1e293b">Actor(es): <tspan font-weight="normal" fill="#334155">Administrador de Tienda</tspan></text>
+  <line x1="35" y1="82" x2="1405" y2="82" stroke="#94a3b8" stroke-width="1.2"/>
+
+  <!-- Leyenda de Estructura ICONIX -->
+  <g transform="translate(1010, 24)">
+    <rect x="0" y="0" width="395" height="48" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+    <text x="12" y="19" font-size="11" font-weight="bold" fill="#1e293b">Estructura del Análisis de Clases (ICONIX):</text>
+    <text x="12" y="36" font-size="10.5" fill="#475569">Boundary (Form) ── Control (Lógica) ── Entity (Persistencia)</text>
+  </g>
+  <!-- Clase: Form / Tallas_Colores -->
+  <g id="class_form_variantes">
+    <rect x="50" y="350" width="270" height="232" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="50" y1="398" x2="320" y2="398" stroke="#000000" stroke-width="1.2"/>
+    <line x1="50" y1="490.0" x2="320" y2="490.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="185.0" y="367" text-anchor="middle" font-size="11" font-weight="bold" fill="#334155" font-family="Arial, Helvetica, sans-serif">Form</text>
+    <text x="185.0" y="384" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">Tallas_Colores</text>
+    <text x="60" y="414" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ id_talla: int</text>
+    <text x="60" y="430" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ nombre_talla: string</text>
+    <text x="60" y="446" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ id_color: int</text>
+    <text x="60" y="462" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ nombre_color: string</text>
+    <text x="60" y="478" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ codigo_hex: string</text>
+    <text x="60" y="506.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ capturar_talla()</text>
+    <text x="60" y="522.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ capturar_color()</text>
+    <text x="60" y="538.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ guardar_variante()</text>
+    <text x="60" y="554.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ asociar_a_producto()</text>
+    <text x="60" y="570.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ mostrar_alerta_duplicado()</text>
+  </g>
+  <!-- Clase: Control / Variantes -->
+  <g id="class_ctrl_variantes">
+    <rect x="380" y="350" width="330" height="152" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="380" y1="398" x2="710" y2="398" stroke="#000000" stroke-width="1.2"/>
+    <line x1="380" y1="426.0" x2="710" y2="426.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="545.0" y="367" text-anchor="middle" font-size="11" font-weight="bold" fill="#334155" font-family="Arial, Helvetica, sans-serif">Control</text>
+    <text x="545.0" y="384" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">Variantes</text>
+    <text x="390" y="414" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">- variant_service: VariantService</text>
+    <text x="390" y="442.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ registrar_talla(nombre)</text>
+    <text x="390" y="458.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ registrar_color(nombre, hex)</text>
+    <text x="390" y="474.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ crear_variante_producto(id_p, id_t, id_c)</text>
+    <text x="390" y="490.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ validar_unicidad_variante(id_p, id_t, id_c)</text>
+  </g>
+  <!-- Clase: T_PRODUCTO_VARIANTE -->
+  <g id="class_ent_variante">
+    <rect x="770" y="350" width="285" height="202" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="770" y1="384" x2="1055" y2="384" stroke="#000000" stroke-width="1.2"/>
+    <line x1="770" y1="508.0" x2="1055" y2="508.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="912.5" y="372.0" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">T_PRODUCTO_VARIANTE</text>
+    <text x="780" y="400" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_VARIANTE: int [PK]</text>
+    <text x="780" y="416" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_PRODUCTO: int [FK]</text>
+    <text x="780" y="432" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_TALLA: int [FK]</text>
+    <text x="780" y="448" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_COLOR: int [FK]</text>
+    <text x="780" y="464" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ PRECIO_ADICIONAL: decimal</text>
+    <text x="780" y="480" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ SKU_VARIANTE: string</text>
+    <text x="780" y="496" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ESTADO: string</text>
+    <text x="780" y="524.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ insertar_variante(datos)</text>
+    <text x="780" y="540.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ verificar_duplicado(id_p, id_t, id_c)</text>
+  </g>
+  <!-- Clase: T_TALLA -->
+  <g id="class_ent_talla">
+    <rect x="770" y="115" width="270" height="122" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="770" y1="149" x2="1040" y2="149" stroke="#000000" stroke-width="1.2"/>
+    <line x1="770" y1="209.0" x2="1040" y2="209.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="905.0" y="137.0" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">T_TALLA</text>
+    <text x="780" y="165" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_TALLA: int [PK]</text>
+    <text x="780" y="181" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ NOMBRE: string [UQ]</text>
+    <text x="780" y="197" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ESTADO: string</text>
+    <text x="780" y="225.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ buscar_por_nombre(nom)</text>
+  </g>
+  <!-- Clase: T_COLOR -->
+  <g id="class_ent_color">
+    <rect x="1100" y="115" width="280" height="122" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="1100" y1="149" x2="1380" y2="149" stroke="#000000" stroke-width="1.2"/>
+    <line x1="1100" y1="209.0" x2="1380" y2="209.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="1240.0" y="137.0" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">T_COLOR</text>
+    <text x="1110" y="165" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_COLOR: int [PK]</text>
+    <text x="1110" y="181" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ NOMBRE: string</text>
+    <text x="1110" y="197" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ CODIGO_HEX: string</text>
+    <text x="1110" y="225.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ buscar_por_nombre(nom)</text>
+  </g>
+  <!-- Clase: T_PRODUCTO -->
+  <g id="class_ent_producto">
+    <rect x="1100" y="350" width="280" height="116" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="1100" y1="384" x2="1380" y2="384" stroke="#000000" stroke-width="1.2"/>
+    <line x1="1100" y1="444.0" x2="1380" y2="444.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="1240.0" y="372.0" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">T_PRODUCTO</text>
+    <text x="1110" y="400" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_PRODUCTO: int [PK]</text>
+    <text x="1110" y="416" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ NOMBRE: string</text>
+    <text x="1110" y="432" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ PRECIO_BASE: decimal</text>
+  </g>
+  <!-- Clase: T_BITACORA -->
+  <g id="class_ent_bitacora">
+    <rect x="770" y="700" width="270" height="154" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <line x1="770" y1="734" x2="1040" y2="734" stroke="#000000" stroke-width="1.2"/>
+    <line x1="770" y1="826.0" x2="1040" y2="826.0" stroke="#000000" stroke-width="1.2"/>
+    <text x="905.0" y="722.0" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#000000" font-family="Arial, Helvetica, sans-serif">T_BITACORA</text>
+    <text x="780" y="750" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_BITACORA: bigint [PK]</text>
+    <text x="780" y="766" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ FECHA_HORA: timestamp</text>
+    <text x="780" y="782" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ID_USUARIO: int [FK]</text>
+    <text x="780" y="798" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ MODULO: string = &apos;VARIANTES&apos;</text>
+    <text x="780" y="814" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ ACCION: string = &apos;CREAR_VARIANTE&apos;</text>
+    <text x="780" y="842.0" font-size="11" fill="#000000" font-family="monospace, Courier New, sans-serif">+ registrar_evento(accion, id_var)</text>
+  </g>
+
+  <!-- Asociaciones y Multiplicidades -->
+  <g id="associations">
+    <polyline points="320,466.0 350,466.0 350,426.0 380,426.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="335" y="420.0" font-size="10" font-style="italic" fill="#334155">solicita</text>
+    <polyline points="710,426.0 740,426.0 740,451.0 770,451.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="725" y="445.0" font-size="10" font-style="italic" fill="#334155">persiste</text>
+    <polyline points="905.0,237 905.0,294 912.5,294 912.5,350" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="913.0" y="253" font-size="11" font-weight="bold" fill="#000000">1</text>
+    <text x="920.5" y="342" font-size="11" font-weight="bold" fill="#000000">0..*</text>
+    <polyline points="1240.0,237 1240.0,294 912.5,294 912.5,350" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="1248.0" y="253" font-size="11" font-weight="bold" fill="#000000">1</text>
+    <text x="920.5" y="342" font-size="11" font-weight="bold" fill="#000000">0..*</text>
+    <polyline points="1100,408.0 1078,408.0 1078,451.0 1055,451.0" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="1075" y="402.0" font-size="11" font-weight="bold" fill="#000000">1</text>
+    <text x="1063" y="445.0" font-size="11" font-weight="bold" fill="#000000">1..*</text>
+    <polyline points="912.5,552 912.5,626 905.0,626 905.0,700" fill="none" stroke="#000000" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="920.5" y="568" font-size="11" font-weight="bold" fill="#000000">1</text>
+    <text x="913.0" y="692" font-size="11" font-weight="bold" fill="#000000">0..*</text>
+  </g>
+</svg>
