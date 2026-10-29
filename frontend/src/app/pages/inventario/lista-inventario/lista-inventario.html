@@ -287,7 +287,7 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-stone-100 dark:divide-slate-800/60 font-medium">
-            <tr *ngFor="let it of inventario" class="hover:bg-stone-50/70 dark:hover:bg-slate-800/40 transition-colors">
+            <tr *ngFor="let it of inventario; trackBy: trackByItemInventario" class="hover:bg-stone-50/70 dark:hover:bg-slate-800/40 transition-colors">
               <td class="py-3 px-4 font-bold text-zinc-900 dark:text-white">{{ it.producto_nombre }}</td>
               <td class="py-3 px-3 font-mono text-zinc-400">{{ it.sku }}</td>
               <td class="py-3 px-3">{{ it.talla_nombre }} / {{ it.color_nombre }}</td>

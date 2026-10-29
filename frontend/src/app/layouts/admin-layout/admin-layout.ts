@@ -16,6 +16,7 @@ import { NotificacionesService, Notificacion } from '../../services/notificacion
 import { KpisService, TenantDashboardItem } from '../../services/kpis';
 import { SucursalService } from '../../services/sucursales';
 import { SaasService, PlanVigenciaData } from '../../services/saas';
+import { NetworkStatusService } from '../../core/network/network-status.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { distinctUntilChanged } from 'rxjs';
 
@@ -33,6 +34,7 @@ export class AdminLayoutComponent implements OnInit {
   private kpisService           = inject(KpisService);
   private sucursalService       = inject(SucursalService);
   private saasService           = inject(SaasService);
+  public networkStatus          = inject(NetworkStatusService);
   private router                = inject(Router);
   private platformId            = inject(PLATFORM_ID);
   private cdr                   = inject(ChangeDetectorRef);
@@ -173,8 +175,8 @@ export class AdminLayoutComponent implements OnInit {
       return;
     }
 
-    // Evitar consultar si ya se tiene cargado el plan de esta misma empresa
-    if (this.planVigencia && this.planVigencia.id_empresa === empId) {
+    // Evitar consultar si ya se tiene cargado el plan de esta misma empresa o si estamos sin conexión
+    if (!this.networkStatus.isOnline() || (this.planVigencia && this.planVigencia.id_empresa === empId)) {
       return;
     }
 
@@ -232,8 +234,21 @@ export class AdminLayoutComponent implements OnInit {
 
     this.verificarResolucion();
 
-    // Iniciar WS + cargar historial desde BD
-    this.notificacionesService.conectar();
+    // Iniciar WS + cargar historial desde BD solo si hay conexión online
+    if (this.networkStatus.isOnline()) {
+      this.notificacionesService.conectar();
+    }
+
+    // Al reconectar internet, restablecer WebSocket y refrescar estado del header
+    this.networkStatus.reconnected$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((timestamp) => {
+        if (timestamp > 0 && this.networkStatus.isOnline()) {
+          this.notificacionesService.conectar();
+          this.cargarTenantsGlobales();
+          this.cargarPlanHeader();
+        }
+      });
 
     // Suscribirse al stream reactivo (mezcla BD + WS en tiempo real)
     this.notificacionesService.notificaciones$
@@ -300,6 +315,40 @@ export class AdminLayoutComponent implements OnInit {
 
   cargarTenantsGlobales() {
     const scope = this.authService.getScopeLevel();
+
+    // Si estamos sin conexión con el backend, usar datos locales sin generar peticiones fallidas
+    if (!this.networkStatus.isOnline()) {
+      this.cargandoTenants = false;
+      const idEmp = this.usuarioActual?.id_empresa;
+      const nomEmp = this.authService.getUserCompanyName();
+      if (idEmp && !this.tiendaActiva) {
+        this.tiendaActiva = {
+          id_empresa: idEmp,
+          nombre_empresa: nomEmp,
+          razon_social: nomEmp,
+          nit: '',
+          ciudad: '',
+          direccion: '',
+          telefono: '',
+          correo: '',
+          logo: '',
+          estado: 'ACTIVO',
+          total_sucursales: 1,
+          total_productos: 0,
+          total_stock_disponible: 0,
+          total_ventas_cantidad: 0,
+          total_ingresos_historico: 0,
+          sucursales: [{
+            id: this.authService.activeBranch()?.id || 1,
+            nombre: this.authService.activeBranch()?.nombre || 'Sucursal Principal',
+            ciudad: this.authService.activeBranch()?.ciudad || '',
+            direccion: ''
+          }]
+        };
+      }
+      this.cdr.detectChanges();
+      return;
+    }
 
     // Para Cajeros y usuarios de nivel sucursal/operativo, no consultar /api/kpis/tenants (evita 403)
     if (scope !== 'PLATAFORMA' && !this.authService.isStoreAdmin()) {
@@ -739,6 +788,22 @@ export class AdminLayoutComponent implements OnInit {
   // ------------------------------------------------------------------
   // SESIÓN
   // ------------------------------------------------------------------
+
+  esModuloSoloOnline(): boolean {
+    const url = this.router.url;
+    const rutasOnlineOnly = [
+      '/admin/usuarios',
+      '/admin/empresas',
+      '/admin/planes',
+      '/admin/backup',
+      '/admin/bitacora',
+      '/admin/suscripciones',
+      '/admin/sucursales',
+      '/admin/proveedores',
+      '/admin/bi'
+    ];
+    return rutasOnlineOnly.some(r => url.startsWith(r));
+  }
 
   cerrarSesion() {
     this.notificacionesService.desconectar();

@@ -1,10 +1,12 @@
-import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
 import { ReservaService, ReservaData } from '../../../services/reserva';
 import { AuthService } from '../../../services/auth';
 import { ThemeService } from '../../../services/theme';
+import { SyncQueueService } from '../../../core/sync/sync-queue.service';
 
 @Component({
   selector: 'app-mis-reservas',
@@ -12,12 +14,14 @@ import { ThemeService } from '../../../services/theme';
   imports: [CommonModule, RouterModule, FormsModule],
   templateUrl: './mis-reservas.html'
 })
-export class MisReservasComponent implements OnInit {
+export class MisReservasComponent implements OnInit, OnDestroy {
   private reservaService = inject(ReservaService);
   public authService = inject(AuthService);
   public themeService = inject(ThemeService);
+  private syncQueue = inject(SyncQueueService);
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
+  private syncSub?: Subscription;
 
   reservas: ReservaData[] = [];
   cargando: boolean = true;
@@ -42,6 +46,19 @@ export class MisReservasComponent implements OnInit {
       return;
     }
     this.cargarReservas();
+    this.syncSub = this.syncQueue.syncCompleted$.subscribe((batch) => {
+      const syncedReserva = (batch.results || []).find(
+        (r) => r.kind === 'RESERVA_SOLICITUD' && r.status === 'synced'
+      );
+      if (syncedReserva) {
+        this.mostrarToast('exito', syncedReserva.message || 'Tu solicitud de reserva offline fue confirmada en línea.');
+      }
+      this.cargarReservas();
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.syncSub?.unsubscribe();
   }
 
   cargarReservas(): void {
@@ -63,6 +80,14 @@ export class MisReservasComponent implements OnInit {
 
   get reservasFiltradas(): ReservaData[] {
     if (this.filtroEstado === 'TODOS') return this.reservas;
+    if (this.filtroEstado === 'PENDIENTE') {
+      return this.reservas.filter(
+        r =>
+          r.estado === 'PENDIENTE' ||
+          r.estado === 'SOLICITUD_PENDIENTE_ONLINE' ||
+          r.estado === 'EN_CONFLICTO_SYNC'
+      );
+    }
     return this.reservas.filter(r => r.estado === this.filtroEstado);
   }
 
@@ -97,7 +122,7 @@ export class MisReservasComponent implements OnInit {
     const motivo = this.motivoCancelacion.trim() || 'Cancelación solicitada por el cliente.';
 
     this.reservaService.cancelarReserva(this.reservaACancelar.id_reserva, motivo).subscribe({
-      next: (res) => {
+      next: () => {
         this.cargandoCancelacion = false;
         this.mostrarModalCancelar = false;
         this.mostrarToast('exito', `Reserva ${this.reservaACancelar?.codigo_reserva} cancelada. El inventario ha sido restituido.`);
@@ -123,6 +148,10 @@ export class MisReservasComponent implements OnInit {
 
   obtenerClaseEstado(estado: string): string {
     switch (estado) {
+      case 'SOLICITUD_PENDIENTE_ONLINE':
+        return 'bg-sky-500/15 text-sky-400 border-sky-500/30';
+      case 'EN_CONFLICTO_SYNC':
+        return 'bg-rose-500/15 text-rose-400 border-rose-500/30';
       case 'PENDIENTE':
         return 'bg-amber-500/15 text-amber-500 border-amber-500/30';
       case 'CONFIRMADA':
@@ -140,6 +169,10 @@ export class MisReservasComponent implements OnInit {
 
   obtenerIconoEstado(estado: string): string {
     switch (estado) {
+      case 'SOLICITUD_PENDIENTE_ONLINE':
+        return 'ph-cloud-arrow-up';
+      case 'EN_CONFLICTO_SYNC':
+        return 'ph-warning-octagon';
       case 'PENDIENTE':
         return 'ph-clock';
       case 'CONFIRMADA':

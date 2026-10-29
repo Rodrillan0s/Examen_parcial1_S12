@@ -66,6 +66,41 @@
   </div>
 
   <!-- ========================================================================= -->
+  <!-- BANNER DE TRANSPARENCIA OFFLINE (CU04W / CU05W / Fase F4)                 -->
+  <!-- ========================================================================= -->
+  <div
+    *ngIf="catalogoService.lastCatalogMeta().fromCache"
+    role="status"
+    class="p-4 rounded-2xl bg-amber-50/90 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-900 dark:text-amber-200">
+    <div class="space-y-1">
+      <p class="font-bold flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+        <span>Mostrando catálogo desde almacenamiento local (IndexedDB)</span>
+        <span *ngIf="catalogoService.lastCatalogMeta().fetchedAt" class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-200 dark:bg-amber-900/60 font-semibold">
+          Sincronizado: {{ catalogoService.lastCatalogMeta().fetchedAt | date:'short' }}
+        </span>
+      </p>
+      <p class="text-[11px] opacity-90 leading-relaxed">
+        <span *ngIf="catalogoService.lastCatalogMeta().isPartial">
+          Búsqueda y filtros aplicados sobre los productos precargados localmente en tu dispositivo.
+        </span>
+        <span *ngIf="!catalogoService.lastCatalogMeta().isPartial">
+          Estás consultando una copia guardada en tu dispositivo mientras no hay conexión con el servidor.
+        </span>
+        <span class="block mt-0.5 text-amber-800 dark:text-amber-300 font-medium">
+          ⚠️ Aviso: Los precios, ofertas y disponibilidad de stock corresponden a la última descarga local y pueden haber variado respecto al servidor.
+        </span>
+      </p>
+    </div>
+    <button
+      type="button"
+      (click)="aplicarFiltros()"
+      class="px-3.5 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 font-semibold shrink-0 transition cursor-pointer self-start sm:self-auto text-amber-900 dark:text-amber-100">
+      Reintentar en línea
+    </button>
+  </div>
+
+  <!-- ========================================================================= -->
   <!-- COMPONENTE DESACOPLADO DE FILTROS                                         -->
   <!-- ========================================================================= -->
   <app-catalogo-filtros
@@ -179,8 +214,28 @@
 
   </div>
 
-  <!-- Estado Vacío (Sin Resultados) -->
-  <div *ngIf="!cargando && productos.length === 0" 
+  <!-- Estado Vacío Honesto para Modo Sin Conexión (Fase F4 / CU04W) -->
+  <div *ngIf="!cargando && productos.length === 0 && !networkStatus.isOnline()" 
+       class="py-16 text-center rounded-3xl bg-white dark:bg-zinc-900/40 border border-amber-500/30 p-8 space-y-4 max-w-lg mx-auto shadow-sm">
+    <div class="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-500 flex items-center justify-center mx-auto text-2xl">
+      <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728M5.636 5.636a9 9 0 000 12.728M12 9v4m0 4h.01" />
+      </svg>
+    </div>
+    <div class="space-y-1">
+      <h3 class="text-lg font-bold text-zinc-900 dark:text-white">Este contenido no se descargó previamente para uso sin conexión</h3>
+      <p class="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+        No se encontraron registros de prendas o colecciones almacenadas localmente para esta tienda en tu dispositivo. Conéctate a internet para consultar el catálogo o explorar otras tiendas.
+      </p>
+    </div>
+    <button (click)="aplicarFiltros()" 
+            class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer shadow-sm">
+      Reintentar Conexión
+    </button>
+  </div>
+
+  <!-- Estado Vacío (Sin Resultados Conectado) -->
+  <div *ngIf="!cargando && productos.length === 0 && networkStatus.isOnline()" 
        class="py-16 text-center rounded-3xl bg-white dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800 p-8 space-y-4 max-w-lg mx-auto shadow-sm">
     <div class="w-16 h-16 rounded-full bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 text-zinc-500 flex items-center justify-center mx-auto text-2xl">
       🔍
@@ -207,4 +262,3 @@
   [producto]="selectedProductForModal" 
   (close)="cerrarModalDetalle()">
 </app-product-detail-modal>
-

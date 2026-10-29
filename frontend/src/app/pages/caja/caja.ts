@@ -1,8 +1,9 @@
-import { Component, OnInit, inject, ChangeDetectorRef, DestroyRef, effect } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { distinctUntilChanged } from 'rxjs/operators';
 import { AuthService } from '../../services/auth';
 import { EmpresaService, Empresa } from '../../services/empresa';
 import {
@@ -17,6 +18,8 @@ import {
 } from '../../services/caja';
 import { CategoriasService, Categoria } from '../../services/categorias';
 import { extraerMensajeError } from '../../utils/error-helper';
+import { NetworkStatusService } from '../../core/network/network-status.service';
+import { SyncQueueService } from '../../core/sync/sync-queue.service';
 
 export interface CartItem {
   variante: VariantePos;
@@ -49,12 +52,15 @@ export interface ConteoFila {
 })
 export class CajaComponent implements OnInit {
   public authService = inject(AuthService);
+  public networkStatus = inject(NetworkStatusService);
+  public syncQueue = inject(SyncQueueService);
   private cajaService = inject(CajaService);
   private categoriasService = inject(CategoriasService);
   private empresaService = inject(EmpresaService);
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
   private destroyRef = inject(DestroyRef);
+  private searchTimer: any = null;
 
   // --- CONTEXTO MULTI-TENANT & ALCANCE ---
   empresasDisponibles: Empresa[] = [];
@@ -77,16 +83,7 @@ export class CajaComponent implements OnInit {
     return this.esSuperAdmin && !this.empresaActivaId;
   }
 
-  constructor() {
-    effect(() => {
-      // Reaccionar inmediatamente ante el cambio de sucursal o empresa en la cabecera
-      const branch = this.authService.activeBranch();
-      const comp = this.authService.selectedCompany();
-      if (this.inicializado) {
-        this.onContextoCambio();
-      }
-    });
-  }
+  constructor() { }
 
   // --- ESTADO GENERAL ---
   cargando: boolean = false;
@@ -131,8 +128,8 @@ export class CajaComponent implements OnInit {
   // --- CONTEXTO DE RESERVA ---
   idReservaActual: number | null = null;
   reservaEnAtencion: boolean = false;
-  reservaContexto: any = null;  
-  
+  reservaContexto: any = null;
+
 
   // --- GESTIÓN DE CLIENTE ---
   tipoCliente: 'SIN_CLIENTE' | 'CON_CLIENTE' = 'SIN_CLIENTE';
@@ -154,7 +151,29 @@ export class CajaComponent implements OnInit {
   modalResumenAbierto: boolean = false;
   modalConfirmarVentaAbierto: boolean = false;
   modalVentaExitosaAbierto: boolean = false;
-  ventaExitosaInfo: { id_venta: number; codigo_venta: string; total: number; cant_items: number } | null = null;
+  ventaExitosaInfo: {
+    id_venta: number;
+    codigo_venta: string;
+    total: number;
+    cant_items: number;
+    offline_queued?: boolean;
+    monto_recibido?: number;
+    cambio?: number;
+  } | null = null;
+
+  // --- VENTA DE CONTADO EN EFECTIVO (CU24W ONLINE / OFFLINE) ---
+  modalidadCobroConfirmacion: 'PASO_W28_ONLINE' | 'EFECTIVO_INMEDIATO' = 'PASO_W28_ONLINE';
+  montoRecibidoEfectivo: number = 0;
+  nitCiFacturacionOffline: string = 'S/N';
+  razonSocialFacturacionOffline: string = 'SIN NOMBRE';
+
+  get cambioEfectivoCalculado(): number {
+    return Math.max(0, Math.round(((Number(this.montoRecibidoEfectivo) || 0) - this.totalCarrito) * 100) / 100);
+  }
+
+  get montoEfectivoValido(): boolean {
+    return (Number(this.montoRecibidoEfectivo) || 0) >= this.totalCarrito;
+  }
 
   // --- PERMISOS ---
   get puedeAbrirCaja(): boolean {
@@ -214,19 +233,22 @@ export class CajaComponent implements OnInit {
 
   ngOnInit(): void {
     const navigation = this.router.getCurrentNavigation();
-const state = navigation?.extras?.state || history.state;
+    const state = navigation?.extras?.state || history.state;
 
-if (state?.reserva) {
-  this.reservaContexto = state.reserva;
-  this.idReservaActual = Number(state.reserva.id_reserva);
-  this.reservaEnAtencion = true;
-}
+    if (state?.reserva) {
+      this.reservaContexto = state.reserva;
+      this.idReservaActual = Number(state.reserva.id_reserva);
+      this.reservaEnAtencion = true;
+    }
     if (this.esSuperAdmin) {
       this.cargarEmpresas();
     }
 
     this.authService.companyChanged$
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        distinctUntilChanged((prev, curr) => prev?.id_empresa === curr?.id_empresa),
+        takeUntilDestroyed(this.destroyRef)
+      )
       .subscribe(() => {
         if (this.inicializado) {
           this.onContextoCambio();
@@ -234,10 +256,36 @@ if (state?.reserva) {
       });
 
     this.authService.branchChanged$
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        distinctUntilChanged((prev, curr) => prev?.id === curr?.id),
+        takeUntilDestroyed(this.destroyRef)
+      )
       .subscribe(() => {
         if (this.inicializado) {
           this.onContextoCambio();
+        }
+      });
+
+    this.syncQueue.syncCompleted$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((batch) => {
+        const ventasSync = (batch.results || []).filter(r => r.kind === 'VENTA_CONTADO' && r.status === 'synced');
+        const ventasInc = (batch.results || []).filter(
+          r => r.kind === 'VENTA_CONTADO' && (r.status === 'reconciliation_required' || r.reconciliation_required || r.status === 'conflict')
+        );
+        if (ventasSync.length > 0) {
+          this.mostrarExito(`Se sincronizaron ${ventasSync.length} venta(s) en efectivo offline con el servidor.`);
+        }
+        if (ventasInc.length > 0) {
+          this.mostrarError(
+            ventasInc[0].message ||
+            'Atención: una venta en efectivo offline requiere conciliación de caja (CU39W).'
+          );
+        }
+        this.cargarCatalogoPOS();
+        if (this.estadoCaja?.sesion_activa) {
+          this.consultarResumenCaja(this.estadoCaja.sesion_activa.id_sesion_caja);
+          this.cargarVentasTurno();
         }
       });
 
@@ -247,11 +295,34 @@ if (state?.reserva) {
       return;
     }
 
+    this.ultimoContextoCargado = {
+      empresaId: this.empresaActivaId || null,
+      sucursalId: this.sucursalActiva?.id || null
+    };
     this.cargarDatosIniciales();
     this.inicializado = true;
   }
 
+  private ultimoContextoCargado: { empresaId: number | null; sucursalId: number | null } | null = null;
+
   onContextoCambio(): void {
+    const currentEmpresaId = this.empresaActivaId || null;
+    const currentSucursalId = this.sucursalActiva?.id || null;
+
+    if (
+      this.ultimoContextoCargado &&
+      this.ultimoContextoCargado.empresaId === currentEmpresaId &&
+      this.ultimoContextoCargado.sucursalId === currentSucursalId
+    ) {
+      // Contexto idéntico: prevenir bucles de recarga de POS y categorías
+      return;
+    }
+
+    this.ultimoContextoCargado = {
+      empresaId: currentEmpresaId,
+      sucursalId: currentSucursalId
+    };
+
     // Vaciar canasta para prevenir mezclas de inventarios entre distintas tiendas o sucursales
     this.vaciarCarrito();
     this.productos = [];
@@ -293,7 +364,7 @@ if (state?.reserva) {
       });
     }
   }
- 
+
   cargarDatosIniciales(): void {
     this.cargando = true;
     this.cajaService.obtenerDenominaciones().subscribe({
@@ -369,7 +440,9 @@ if (state?.reserva) {
   cargarCategorias(): void {
     this.categoriasService.listarCategorias({ solo_activas: true }).subscribe({
       next: (res: any) => {
-        if (res && res.success && res.categorias) {
+        if (res && res.success && res.data && Array.isArray(res.data)) {
+          this.categorias = res.data;
+        } else if (res && res.success && res.categorias && Array.isArray(res.categorias)) {
           this.categorias = res.categorias;
         } else if (Array.isArray(res)) {
           this.categorias = res;
@@ -574,6 +647,7 @@ if (state?.reserva) {
       this.cargandoCatalogo = false;
       return;
     }
+    if (this.cargandoCatalogo) return;
     this.cargandoCatalogo = true;
     const idSucursal = this.sucursalActiva?.id;
     const idEmpresa = this.empresaActivaId || undefined;
@@ -603,7 +677,12 @@ if (state?.reserva) {
   }
 
   onBuscarProductoChange(): void {
-    this.cargarCatalogoPOS();
+    if (this.searchTimer) {
+      clearTimeout(this.searchTimer);
+    }
+    this.searchTimer = setTimeout(() => {
+      this.cargarCatalogoPOS();
+    }, 250);
   }
 
   limpiarBusqueda(): void {
@@ -783,6 +862,13 @@ if (state?.reserva) {
   // REGISTRAR VENTA POS (TRANSACCIÓN)
   // -------------------------------------------------------------
   abrirModalConfirmarVenta(): void {
+    if (!this.networkStatus.isOnline()) {
+      this.mostrarError(
+        'CU24W: El registro de ventas presenciales POS y descuento definitivo de stock requiere conexión en línea activa.'
+      );
+      return;
+    }
+
     if (!this.estadoCaja?.tiene_sesion_activa || !this.estadoCaja.sesion_activa) {
       this.mostrarError('No puede registrar ventas sin una caja abierta.');
       return;
@@ -794,7 +880,15 @@ if (state?.reserva) {
     }
 
     this.validarDescuento();
+    this.montoRecibidoEfectivo = this.totalCarrito;
+    this.nitCiFacturacionOffline = this.clienteSeleccionado?.nit_ci || 'S/N';
+    this.razonSocialFacturacionOffline = this.clienteSeleccionado?.nombre_completo || 'SIN NOMBRE';
+    this.modalidadCobroConfirmacion = this.networkStatus.isOnline() ? 'PASO_W28_ONLINE' : 'EFECTIVO_INMEDIATO';
     this.modalConfirmarVentaAbierto = true;
+  }
+
+  fijarMontoRecibidoRapido(monto: number): void {
+    this.montoRecibidoEfectivo = Math.round(monto * 100) / 100;
   }
 
   cerrarModalConfirmarVenta(): void {
@@ -804,24 +898,36 @@ if (state?.reserva) {
   procesarVentaPos(): void {
     if (!this.estadoCaja?.sesion_activa) return;
 
+    // Si estamos sin conexión o el cajero eligió cobro directo en efectivo (CU24W)
+    if (!this.networkStatus.isOnline() || this.modalidadCobroConfirmacion === 'EFECTIVO_INMEDIATO') {
+      if (!this.montoEfectivoValido) {
+        this.mostrarError(
+          `El monto recibido en efectivo (Bs. ${(Number(this.montoRecibidoEfectivo) || 0).toFixed(2)}) debe cubrir el total a pagar (Bs. ${this.totalCarrito.toFixed(2)}).`
+        );
+        return;
+      }
+      void this.ejecutarVentaEfectivoOffline();
+      return;
+    }
+
     const payloadItems = this.carrito.map(item => ({
       id_variante: item.variante.id_variante,
       cantidad: item.cantidad
     }));
 
     this.procesando = true;
-this.cajaService.registrarVentaPos({
-  id_sesion_caja: this.estadoCaja.sesion_activa.id_sesion_caja,
-  id_cliente: this.clienteSeleccionado
-    ? this.clienteSeleccionado.id_cliente
-    : null,
-  id_empresa: this.empresaActivaId || undefined,
-  id_sucursal: this.sucursalActiva?.id,
-  id_reserva: this.idReservaActual,
-  items: payloadItems,
-  descuento: this.descuento || 0.00,
-  observaciones: this.observacionesVenta.trim() || undefined
-}).subscribe({
+    this.cajaService.registrarVentaPos({
+      id_sesion_caja: this.estadoCaja.sesion_activa.id_sesion_caja,
+      id_cliente: this.clienteSeleccionado
+        ? this.clienteSeleccionado.id_cliente
+        : null,
+      id_empresa: this.empresaActivaId || undefined,
+      id_sucursal: this.sucursalActiva?.id,
+      id_reserva: this.idReservaActual,
+      items: payloadItems,
+      descuento: this.descuento || 0.00,
+      observaciones: this.observacionesVenta.trim() || undefined
+    }).subscribe({
       next: (res) => {
         this.procesando = false;
         this.modalConfirmarVentaAbierto = false;
@@ -829,7 +935,8 @@ this.cajaService.registrarVentaPos({
           id_venta: res.venta.id_venta,
           codigo_venta: res.venta.codigo_venta,
           total: res.venta.total,
-          cant_items: this.totalItemsCarrito
+          cant_items: this.totalItemsCarrito,
+          offline_queued: false
         };
         this.modalVentaExitosaAbierto = true;
 
@@ -840,10 +947,72 @@ this.cajaService.registrarVentaPos({
         this.cargarVentasTurno();
       },
       error: (err) => {
+        if (err?.status === 0) {
+          this.montoRecibidoEfectivo = Math.max(Number(this.montoRecibidoEfectivo) || 0, this.totalCarrito);
+          void this.ejecutarVentaEfectivoOffline();
+          return;
+        }
         this.procesando = false;
         this.mostrarError(err.error?.message || err.message || 'Error al procesar la venta.');
       }
     });
+  }
+
+  private async ejecutarVentaEfectivoOffline(): Promise<void> {
+    if (!this.estadoCaja?.sesion_activa) return;
+    this.procesando = true;
+    this.cdr.detectChanges();
+
+    try {
+      const payloadItems = this.carrito.map(item => ({
+        id_variante: item.variante.id_variante,
+        cantidad: item.cantidad,
+        expected_unit_price: item.precioUnitario,
+        producto_nombre: item.productoNombre,
+        talla: item.variante.talla_nombre || 'Única',
+        color: item.variante.color_nombre || 'Estándar',
+        sku: item.variante.sku
+      }));
+
+      const cantTotal = this.totalItemsCarrito;
+      const res = await this.cajaService.registrarVentaContadoOffline({
+        id_sesion_caja: this.estadoCaja.sesion_activa.id_sesion_caja,
+        id_cliente: this.clienteSeleccionado ? this.clienteSeleccionado.id_cliente : null,
+        id_empresa: this.empresaActivaId || undefined,
+        id_sucursal: this.sucursalActiva?.id,
+        items: payloadItems,
+        descuento: this.descuento || 0,
+        observaciones: this.observacionesVenta.trim() || undefined,
+        metodo_tipo: 'EFECTIVO',
+        monto_recibido: Number(this.montoRecibidoEfectivo) || this.totalCarrito,
+        expected_total: this.totalCarrito,
+        nit_ci: (this.nitCiFacturacionOffline || 'S/N').trim(),
+        razon_social: (this.razonSocialFacturacionOffline || 'SIN NOMBRE').trim()
+      });
+
+      this.procesando = false;
+      this.modalConfirmarVentaAbierto = false;
+      this.ventaExitosaInfo = {
+        id_venta: res.venta.id_venta,
+        codigo_venta: res.venta.codigo_venta,
+        total: res.venta.total,
+        cant_items: cantTotal,
+        offline_queued: true,
+        monto_recibido: res.venta.monto_recibido,
+        cambio: res.venta.cambio
+      };
+      this.modalVentaExitosaAbierto = true;
+
+      this.vaciarCarrito();
+      this.cargarCatalogoPOS();
+      this.consultarResumenCaja(this.estadoCaja.sesion_activa.id_sesion_caja);
+      this.cargarVentasTurno();
+      this.cdr.detectChanges();
+    } catch (err: any) {
+      this.procesando = false;
+      this.mostrarError(err?.message || 'No se pudo registrar la venta en efectivo offline.');
+      this.cdr.detectChanges();
+    }
   }
 
   cerrarModalVentaExitosa(): void {
@@ -915,6 +1084,37 @@ this.cajaService.registrarVentaPos({
   }
 
   verDetalleVenta(idVenta: number): void {
+    if (idVenta < 0) {
+      const localVenta = this.ventasTurno.find(v => v.id_venta === idVenta);
+      const localOp = localVenta?.offline_operation_id
+        ? this.syncQueue.operations().find(o => o.operation_id === localVenta.offline_operation_id)
+        : undefined;
+      if (localVenta) {
+        const items = Array.isArray(localOp?.payload?.['items']) ? localOp!.payload['items'] : [];
+        this.ventaDetalleSeleccionada = {
+          id_venta: localVenta.id_venta,
+          codigo_venta: localVenta.codigo_venta,
+          cliente: localVenta.cliente,
+          cajero: localVenta.cajero,
+          fecha: localVenta.fecha,
+          estado: localVenta.estado,
+          total: localVenta.total,
+          offline_conflict_message: localVenta.offline_conflict_message,
+          detalles: items.map((it: any) => ({
+            producto: it.producto_nombre || `Variante #${it.id_variante}`,
+            talla: it.talla || '',
+            color: it.color || '',
+            sku: it.sku || '',
+            cantidad: Number(it.cantidad || 1),
+            precio_unitario: Number(it.expected_unit_price || 0),
+            subtotal: Math.round(Number(it.cantidad || 1) * Number(it.expected_unit_price || 0) * 100) / 100
+          }))
+        };
+        this.modalDetalleVentaAbierto = true;
+      }
+      return;
+    }
+
     this.cajaService.obtenerDetalleVenta(idVenta).subscribe({
       next: (res) => {
         if (res.success) {

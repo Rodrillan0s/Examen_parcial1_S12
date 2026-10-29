@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subject } from 'rxjs';
-import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
+import { debounceTime, distinctUntilChanged, skip } from 'rxjs/operators';
 import { AuthService } from '../../../services/auth';
 import { InventarioService, ItemInventario, ResumenInventario, MovimientoInventario, MovimientoPayload, FiltrosInventario } from '../../../services/inventario';
 import { SucursalService, Sucursal } from '../../../services/sucursales';
@@ -242,19 +242,24 @@ export class ListaInventarioComponent implements OnInit {
     // Suscripción reactiva al cambio de sucursal en el selector superior
     this.authService.branchChanged$
       .pipe(
+        skip(1),
         distinctUntilChanged((p, c) => p?.id === c?.id),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe((branch) => {
+        let nuevoFiltro = '';
         if (this.esNivelSucursal) {
           const act = this.authService.activeBranch();
-          this.filtroSucursal = act && act.id ? String(act.id) : '';
+          nuevoFiltro = act && act.id ? String(act.id) : '';
         } else {
-          this.filtroSucursal = branch && branch.id ? String(branch.id) : '';
+          nuevoFiltro = branch && branch.id ? String(branch.id) : '';
         }
-        if (!this.empresaRequerida) {
-          this.paginaActual = 1;
-          this.recargarInventario$.next();
+        if (nuevoFiltro !== this.filtroSucursal) {
+          this.filtroSucursal = nuevoFiltro;
+          if (!this.empresaRequerida) {
+            this.paginaActual = 1;
+            this.recargarInventario$.next();
+          }
         }
       });
   }
@@ -283,6 +288,10 @@ export class ListaInventarioComponent implements OnInit {
         nombre_empresa: emp.nombre_empresa
       });
     }
+  }
+
+  trackByItemInventario(index: number, it: ItemInventario): any {
+    return it.id_inventario || it.id_variante || it.sku || index;
   }
 
   cambiarTab(tab: TabInventario): void {

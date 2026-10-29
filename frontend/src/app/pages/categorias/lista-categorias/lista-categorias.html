@@ -120,7 +120,7 @@
       <input 
         type="text" 
         [(ngModel)]="filtroBusqueda" 
-        (input)="aplicarFiltros()"
+        (input)="onBusquedaInput()"
         placeholder="Buscar por nombre, descripción o categoría padre..."
         class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-stone-50 dark:bg-zinc-950/80 border border-stone-200 dark:border-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30 transition-all">
       <svg class="w-4 h-4 text-zinc-400 dark:text-zinc-500 absolute left-3.5 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -214,7 +214,7 @@
           </tr>
 
           <!-- Rows -->
-          <tr *ngFor="let cat of categoriasFiltradas" class="hover:bg-stone-50/80 dark:hover:bg-zinc-800/30 transition-colors group">
+          <tr *ngFor="let cat of categoriasFiltradas; trackBy: trackByCategoriaId" class="hover:bg-stone-50/80 dark:hover:bg-zinc-800/30 transition-colors group">
             <!-- Categoría & Imagen Cloudinary -->
             <td class="px-5 py-3.5">
               <div class="flex items-center gap-3.5">
@@ -224,6 +224,8 @@
                     *ngIf="cat.imagen_url" 
                     [src]="cat.imagen_url" 
                     [alt]="cat.nombre" 
+                    loading="lazy"
+                    decoding="async"
                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
                   <span *ngIf="!cat.imagen_url" class="text-zinc-400 dark:text-zinc-500 font-semibold text-xs">
                     <svg class="w-5 h-5 text-zinc-400 dark:text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">

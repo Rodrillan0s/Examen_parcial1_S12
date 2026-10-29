@@ -2,10 +2,12 @@ import { Component, OnInit, inject, ChangeDetectorRef, NgZone, DestroyRef } from
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { AuthService } from '../../../services/auth';
 import { RbacService, Permiso, Rol } from '../../../services/rbac';
 import { SucursalService, Sucursal } from '../../../services/sucursales';
+import { EmpresaService } from '../../../services/empresa';
 import { extraerMensajeError } from '../../../utils/error-helper';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -62,9 +64,11 @@ export class ListaUsuariosComponent implements OnInit {
   public authService = inject(AuthService);
   private rbacService = inject(RbacService);
   private sucursalService = inject(SucursalService);
+  private empresaService = inject(EmpresaService);
   private ngZone = inject(NgZone);
   private apiUrl = environment.apiUrl;
   private destroyRef = inject(DestroyRef);
+  private busquedaSubject = new Subject<string>();
 
   // --- VARIABLES DE DATOS ---
   usuarios: Usuario[] = [];
@@ -215,14 +219,13 @@ export class ListaUsuariosComponent implements OnInit {
     return '';
   }
 
-  async ngOnInit() {
-    this.cargando = true;
-    
-    let intentos = 0;
-    while (!this.authService.obtenerToken() && intentos < 10) {
-      await new Promise(r => setTimeout(r, 50)); 
-      intentos++;
-    }
+  ngOnInit() {
+    this.busquedaSubject
+      .pipe(debounceTime(200), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.aplicarFiltros();
+        this.cdr.detectChanges();
+      });
 
     if (this.authService.obtenerToken()) {
       const currentUser = this.authService.obtenerUsuario();
@@ -231,13 +234,16 @@ export class ListaUsuariosComponent implements OnInit {
       } else if (this.isGlobalAdmin) {
         const eff = this.authService.getEffectiveCompanyId();
         this.filtroEmpresa = eff ? String(eff) : 'TODOS';
+        this.cargarEmpresas();
       }
-      this.cargarRolesDelegables();
-      this.cargarEmpresas();
       this.cargarUsuarios();
+      this.cargarRolesDelegables();
 
       this.authService.companyChanged$
-        .pipe(takeUntilDestroyed(this.destroyRef))
+        .pipe(
+          distinctUntilChanged((p, c) => p?.id_empresa === c?.id_empresa),
+          takeUntilDestroyed(this.destroyRef)
+        )
         .subscribe(empresa => {
           if (this.isGlobalAdmin) {
             const nueva = empresa ? String(empresa.id_empresa) : 'TODOS';
@@ -252,6 +258,14 @@ export class ListaUsuariosComponent implements OnInit {
       this.cargando = false;
       this.mensajeError = "No se pudo iniciar sesión. Por favor recarga la página.";
     }
+  }
+
+  onBusquedaInput() {
+    this.busquedaSubject.next(this.filtroTexto);
+  }
+
+  trackByUsuarioId(index: number, item: Usuario): number {
+    return item.id_usuario || item.nro_usuario || index;
   }
 
   private getHeaders(): HttpHeaders {
@@ -295,10 +309,10 @@ export class ListaUsuariosComponent implements OnInit {
   }
 
   cargarEmpresas() {
-    this.http.get<any>(`${this.apiUrl}/api/empresas/`, { headers: this.getHeaders() })
+    this.empresaService.listarEmpresas()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (res) => {
+        next: (res: any) => {
           this.ngZone.run(() => {
             if (res && res.success) {
               this.empresas = (res.data || []).filter((e: any) => e.estado === 'ACTIVO');

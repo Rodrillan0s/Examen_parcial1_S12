@@ -81,8 +81,12 @@ export class SuscripcionesComponent implements OnInit {
   }
 
   ngOnInit() {
-    // Si es admin global, cargar listado de empresas
+    // Si es admin global, cargar listado de empresas en paralelo con la empresa activa si ya se conoce
     if (this.isGlobalAdmin) {
+      const paramEmpresa = Number(this.route.snapshot.queryParams['empresa'] || 0);
+      const effEmpresa = this.authService.getEffectiveCompanyId() || 1;
+      this.empresaSeleccionadaId = paramEmpresa > 0 ? paramEmpresa : effEmpresa;
+      this.cargarDatosEmpresa();
       this.cargarEmpresas();
     } else {
       // Empresa directa desde sesión
@@ -92,7 +96,12 @@ export class SuscripcionesComponent implements OnInit {
     }
   }
 
+  trackBySuscripcionId(index: number, item: SuscripcionItem): number {
+    return item.id_suscripcion || index;
+  }
+
   cargarEmpresas() {
+    const empresaPrevia = this.empresaSeleccionadaId;
     this.empresaService.listarEmpresas()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -110,8 +119,8 @@ export class SuscripcionesComponent implements OnInit {
                 }
               }
 
-              // Si aún no hay empresa seleccionada, tomar la del usuario o la primera
-              if (!this.empresaSeleccionadaId) {
+              // Si la empresa seleccionada no existe en el listado, tomar la del usuario o la primera
+              if (!this.empresaSeleccionadaId || !this.empresas.some(e => e.id_empresa === this.empresaSeleccionadaId)) {
                 const user = this.authService.obtenerUsuario();
                 if (user?.id_empresa && this.empresas.some(e => e.id_empresa === user.id_empresa)) {
                   this.empresaSeleccionadaId = user.id_empresa;
@@ -121,7 +130,11 @@ export class SuscripcionesComponent implements OnInit {
               }
 
               this.actualizarEmpresaActual();
-              this.cargarDatosEmpresa();
+              if (this.empresaSeleccionadaId !== empresaPrevia) {
+                this.cargarDatosEmpresa();
+              } else {
+                this.cdr.detectChanges();
+              }
             }
           });
         },

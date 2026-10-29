@@ -34,6 +34,12 @@ from migrate import render
 class Iter1Integration(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        if PostgreSQL._pool:
+            try:
+                PostgreSQL._pool.closeall()
+            except Exception:
+                pass
+            PostgreSQL._pool = None
         cls.cluster = LocalPostgres()
         cls.pg = cls.cluster.__enter__()
         for name, value in [('DB_HOST',cls.pg.params['host']),('DB_PORT',cls.pg.params['port']),('DB_USER','iter1_test'),('DB_NAME','postgres'),('DB_PASSWORD','')]:

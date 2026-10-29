@@ -6,6 +6,7 @@ import { AuthService } from '../../services/auth';
 import { CarritoService } from '../../services/carrito';
 import { ReservaService } from '../../services/reserva';
 import { DetallePrendaCatalogo, VarianteDetalle, SucursalStockDetalle } from '../../services/catalogo-publico';
+import { SyncQueueService } from '../../core/sync/sync-queue.service';
 
 // Interfaz retrocompatible para páginas estáticas previas
 export interface ProductoFashion {
@@ -41,11 +42,12 @@ export class ProductDetailModalComponent implements OnChanges, OnDestroy {
   @Input() producto: DetallePrendaCatalogo | ProductoFashion | null = null;
   @Output() close = new EventEmitter<void>();
 
-  public authService    = inject(AuthService);
+  public authService = inject(AuthService);
   public carritoService = inject(CarritoService);
   public reservaService = inject(ReservaService);
-  public router         = inject(Router);
-  private cdr           = inject(ChangeDetectorRef);
+  public syncQueue = inject(SyncQueueService);
+  public router = inject(Router);
+  private cdr = inject(ChangeDetectorRef);
 
   // Estados visuales de selección
   selectedImageIndex: number = 0;
@@ -70,6 +72,7 @@ export class ProductDetailModalComponent implements OnChanges, OnDestroy {
   cargandoReserva: boolean = false;
   errorReserva: string = '';
   reservaExitosa: boolean = false;
+  reservaEnColaOffline: boolean = false;
   codigoReservaGenerado: string = '';
   modalidadReserva: 'SIN_PAGO' | 'CON_PAGO' = 'SIN_PAGO';
   montoReservaPagado: number = 0;
@@ -128,7 +131,7 @@ export class ProductDetailModalComponent implements OnChanges, OnDestroy {
       if (typeof document !== 'undefined') {
         document.body.style.overflow = 'hidden';
       }
-    } catch (_) {}
+    } catch (_) { }
   }
 
   private desbloquearBodyScroll(): void {
@@ -136,7 +139,7 @@ export class ProductDetailModalComponent implements OnChanges, OnDestroy {
       if (typeof document !== 'undefined') {
         document.body.style.overflow = '';
       }
-    } catch (_) {}
+    } catch (_) { }
   }
 
   inicializarDatosReserva(): void {
@@ -197,8 +200,8 @@ export class ProductDetailModalComponent implements OnChanges, OnDestroy {
   getVarianteSeleccionada(): VarianteDetalle | null {
     if (!this.producto || !this.esDetalleReal(this.producto)) return null;
     const variantes = this.producto.variantes || [];
-    const match = variantes.find(v => 
-      v.talla_nombre === this.selectedSizeName && 
+    const match = variantes.find(v =>
+      v.talla_nombre === this.selectedSizeName &&
       v.codigo_hex.toLowerCase() === this.selectedColorHex.toLowerCase()
     );
     return match || (variantes.length > 0 ? variantes[0] : null);
@@ -216,6 +219,12 @@ export class ProductDetailModalComponent implements OnChanges, OnDestroy {
     return 0;
   }
 
+  getPrecioTalla(tallaNombre: string): number | null {
+    if (!this.producto || !this.esDetalleReal(this.producto) || !this.producto.variantes) return null;
+    const variante = this.producto.variantes.find(v => v.talla_nombre === tallaNombre);
+    return variante && variante.precio ? variante.precio : null;
+  }
+
   getSucursalesStock(): SucursalStockDetalle[] {
     if (!this.producto || !this.esDetalleReal(this.producto)) return [];
     return this.producto.sucursales_stock || [];
@@ -227,7 +236,8 @@ export class ProductDetailModalComponent implements OnChanges, OnDestroy {
     const keyStr = v.id_variante.toString();
     const keyNum = v.id_variante;
     const val = suc.stock_por_variante?.[keyStr] ?? suc.stock_por_variante?.[keyNum as any] ?? 0;
-    return Math.max(0, val);
+    const provisionalDelta = this.syncQueue.getProvisionalDeltaForVariant(v.id_variante, suc.id_sucursal);
+    return Math.max(0, val - provisionalDelta);
   }
 
   getStockTotalVarianteSeleccionada(): number {
@@ -306,8 +316,8 @@ export class ProductDetailModalComponent implements OnChanges, OnDestroy {
 
   getStockTallaEnColorActual(tallaNombre: string): number {
     if (!this.producto || !this.esDetalleReal(this.producto)) return 99;
-    const v = (this.producto.variantes || []).find(varItem => 
-      varItem.talla_nombre === tallaNombre && 
+    const v = (this.producto.variantes || []).find(varItem =>
+      varItem.talla_nombre === tallaNombre &&
       varItem.codigo_hex.toLowerCase() === this.selectedColorHex.toLowerCase()
     );
     if (!v) return 0;
@@ -347,7 +357,7 @@ export class ProductDetailModalComponent implements OnChanges, OnDestroy {
   selectSize(sizeName: string): void {
     this.selectedSizeName = sizeName;
     if (this.esDetalleReal(this.producto) && this.producto.variantes) {
-      const matchExacto = this.producto.variantes.find(v => 
+      const matchExacto = this.producto.variantes.find(v =>
         v.talla_nombre === sizeName && v.codigo_hex.toLowerCase() === this.selectedColorHex.toLowerCase()
       );
       if (!matchExacto) {
@@ -364,7 +374,7 @@ export class ProductDetailModalComponent implements OnChanges, OnDestroy {
   selectColor(hex: string): void {
     this.selectedColorHex = hex;
     if (this.esDetalleReal(this.producto) && this.producto.variantes) {
-      const matchExacto = this.producto.variantes.find(v => 
+      const matchExacto = this.producto.variantes.find(v =>
         v.codigo_hex.toLowerCase() === hex.toLowerCase() && v.talla_nombre === this.selectedSizeName
       );
       if (!matchExacto) {
@@ -474,25 +484,50 @@ export class ProductDetailModalComponent implements OnChanges, OnDestroy {
     const totalPagar = this.getPrecioActual() * this.quantity;
 
     this.cargandoReserva = true;
+    this.reservaEnColaOffline = false;
     this.cdr.markForCheck();
 
-    this.reservaService.crearReserva({
-      id_sucursal: Number(this.sucursalReservaSeleccionada),
-      fecha_hora_visita: fechaHora,
-      observaciones: this.observacionesReserva || undefined,
-      items: [{
-        id_variante: v.id_variante,
-        cantidad: this.quantity
-      }],
-      id_empresa: empresaId,
-      con_pago: esConPago,
-      monto_pagado: esConPago ? totalPagar : 0.0
-    }).subscribe({
+    const sucObj = this.getSucursalSeleccionadaObj();
+    const precioUnitarioActual = this.getPrecioActual();
+    const imgPrincipal = this.getImagenes()[this.selectedImageIndex] || this.getImagenes()[0] || null;
+
+    this.reservaService.crearReserva(
+      {
+        id_sucursal: Number(this.sucursalReservaSeleccionada),
+        fecha_hora_visita: fechaHora,
+        observaciones: this.observacionesReserva || undefined,
+        items: [{
+          id_variante: v.id_variante,
+          cantidad: this.quantity,
+          expected_unit_price: precioUnitarioActual,
+          producto_nombre: this.producto?.nombre,
+          talla: v.talla_nombre,
+          color: v.color_nombre,
+          codigo_hex: v.codigo_hex,
+          imagen_url: imgPrincipal
+        }],
+        id_empresa: empresaId,
+        con_pago: esConPago,
+        monto_pagado: esConPago ? totalPagar : 0.0
+      },
+      {
+        productoNombre: this.producto?.nombre,
+        sucursalNombre: sucObj?.nombre,
+        sucursalDireccion: sucObj?.direccion,
+        sucursalCiudad: sucObj?.ciudad,
+        talla: v.talla_nombre,
+        color: v.color_nombre,
+        codigoHex: v.codigo_hex,
+        imagenUrl: imgPrincipal,
+        expectedUnitPrice: precioUnitarioActual
+      }
+    ).subscribe({
       next: (res) => {
         this.cargandoReserva = false;
         this.reservaExitosa = true;
+        this.reservaEnColaOffline = Boolean(res.offline_queued);
         this.codigoReservaGenerado = res.data.codigo_reserva;
-        this.montoReservaPagado = esConPago ? totalPagar : 0.0;
+        this.montoReservaPagado = esConPago && !res.offline_queued ? totalPagar : 0.0;
         this.cdr.markForCheck();
       },
       error: (err) => {
@@ -512,8 +547,8 @@ export class ProductDetailModalComponent implements OnChanges, OnDestroy {
       this.toastMessage = 'Inicia sesión para guardar prendas en tu bolsa de compras.';
       this.addedToast = true;
       this.cdr.markForCheck();
-      setTimeout(() => { 
-        this.addedToast = false; 
+      setTimeout(() => {
+        this.addedToast = false;
         this.cdr.markForCheck();
       }, 3500);
       this.authService.openAuthModal('login');
@@ -532,8 +567,8 @@ export class ProductDetailModalComponent implements OnChanges, OnDestroy {
       this.toastMessage = 'Por favor selecciona una talla y color disponibles.';
       this.addedToast = true;
       this.cdr.markForCheck();
-      setTimeout(() => { 
-        this.addedToast = false; 
+      setTimeout(() => {
+        this.addedToast = false;
         this.cdr.markForCheck();
       }, 3500);
       return;
@@ -545,8 +580,8 @@ export class ProductDetailModalComponent implements OnChanges, OnDestroy {
       this.toastMessage = 'Prenda agotada temporalmente en todas las sucursales.';
       this.addedToast = true;
       this.cdr.markForCheck();
-      setTimeout(() => { 
-        this.addedToast = false; 
+      setTimeout(() => {
+        this.addedToast = false;
         this.cdr.markForCheck();
       }, 3500);
       return;
@@ -557,23 +592,35 @@ export class ProductDetailModalComponent implements OnChanges, OnDestroy {
       this.toastMessage = `Solo quedan ${stockTotal} unidades disponibles.`;
       this.addedToast = true;
       this.cdr.markForCheck();
-      setTimeout(() => { 
-        this.addedToast = false; 
+      setTimeout(() => {
+        this.addedToast = false;
         this.cdr.markForCheck();
       }, 3500);
       return;
     }
 
     const empresaId = this.esDetalleReal(this.producto) ? this.producto.id_empresa : undefined;
+    const imgs = this.getImagenes();
     this.cargandoBolsa = true;
     this.cdr.markForCheck();
 
-    this.carritoService.agregarItem(v.id_variante, this.quantity, empresaId).subscribe({
-      next: () => {
+    this.carritoService.agregarItem(v.id_variante, this.quantity, empresaId, {
+      id_producto: this.esDetalleReal(this.producto) ? this.producto.id_producto : 0,
+      producto_nombre: this.producto?.nombre || 'Prenda',
+      talla_nombre: v.talla_nombre,
+      color_nombre: v.color_nombre,
+      codigo_hex: v.codigo_hex,
+      precio_unitario: Number(v.promocion?.precio_promocional ?? this.getPrecioActual()),
+      imagen_url: imgs[0] || null,
+      stock_disponible: stockTotal
+    }).subscribe({
+      next: (res) => {
         this.cargandoBolsa = false;
         this.toastEsError = false;
         const info = ` (${v.talla_nombre} / ${v.color_nombre})`;
-        this.toastMessage = `✓ ${this.quantity} unidad(es) añadida(s) a tu Bolsa${info}.`;
+        this.toastMessage = res.offline_queued
+          ? `⏳ Guardada en tu Bolsa Local (${this.quantity} u.${info}) — pendiente de sincronizar al reconectar.`
+          : `✓ ${this.quantity} unidad(es) añadida(s) a tu Bolsa${info}.`;
         this.addedToast = true;
         this.cdr.markForCheck();
         setTimeout(() => {

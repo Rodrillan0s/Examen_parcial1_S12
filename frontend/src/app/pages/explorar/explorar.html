@@ -1,44 +1,44 @@
 <!-- Hero Section: Fashion Editorial Banner -->
 <section
-  class="relative min-h-[90vh] flex items-center justify-center overflow-hidden pt-12 pb-24 border-b border-white/10">
+  class="relative min-h-[90vh] flex items-center justify-center overflow-hidden pt-12 pb-24 border-b border-stone-200 dark:border-white/10">
 
-  <!-- Background Image with Gradient Mask & Grain -->
+  <!-- Background Image with Gradient Mask & High Contrast Dark Backing -->
   <div class="absolute inset-0 z-0">
     <img src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=2000&q=80"
-      alt="AURA Atelier Luxury Fashion"
+      alt="AURORA Store Luxury Fashion"
       class="w-full h-full object-cover object-center opacity-35 scale-105 filter brightness-75 contrast-125" />
-    <div class="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/60 to-transparent"></div>
-    <div class="absolute inset-0 bg-gradient-to-r from-zinc-950/80 via-transparent to-zinc-950/80"></div>
+    <div class="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/80 to-zinc-950/90"></div>
+    <div class="absolute inset-0 bg-black/40"></div>
   </div>
 
   <div class="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 text-center space-y-8 animate-fade-in">
 
     <!-- Eyebrow Pill Badge -->
     <div
-      class="inline-flex items-center space-x-2.5 px-4 py-1.5 rounded-full bg-zinc-900/90 border border-amber-500/30 text-amber-300 text-xs uppercase tracking-[0.25em] font-medium backdrop-blur-xl shadow-xl">
+      class="inline-flex items-center space-x-2.5 px-4 py-1.5 rounded-full bg-zinc-900/90 border border-amber-500/40 text-amber-300 text-xs uppercase tracking-[0.25em] font-medium backdrop-blur-xl shadow-xl">
       <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
       <span>Cadena de Tiendas & Alta Costura Bolivia</span>
     </div>
 
-    <!-- Main Editorial Headline -->
-    <h1 class="text-4xl sm:text-6xl md:text-7xl font-editorial font-bold text-white tracking-tight leading-[1.1]">
+    <!-- Main Editorial Headline (Alto Contraste y Legibilidad) -->
+    <h1 class="text-4xl sm:text-6xl md:text-7xl font-editorial font-bold text-white tracking-tight leading-[1.1] drop-shadow-sm">
       Elegancia Redefinida. <br />
-      <span class="text-gradient-gold font-light italic">Colección Otoño 2026</span>
+      <span class="text-amber-400 dark:text-amber-300 font-light italic drop-shadow">Colección Otoño 2026</span>
     </h1>
 
     <!-- Subtitle -->
-    <p class="max-w-2xl mx-auto text-sm sm:text-base text-zinc-300 font-light leading-relaxed">
-      Explora nuestras colecciones exclusivas de ropa, sastrería y accesorios. Puedes conocer todos los productos
-      libremente y acceder a tu cuenta para pedidos privados.
+    <p class="max-w-2xl mx-auto text-sm sm:text-base text-zinc-200 font-normal leading-relaxed drop-shadow-sm">
+      Explora nuestras colecciones exclusivas de ropa, sastrería y accesorios. Conoce todas las prendas libremente
+      y accede a tu cuenta para pedidos y reservas privadas.
     </p>
 
-    <!-- CTAs -->
+    <!-- CTAs Adaptativos según Rol y Autenticación -->
     <div class="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
 
       <!-- Primary CTA: Catalog -->
       <a routerLink="/catalogo" class="double-bezel group cursor-pointer w-full sm:w-auto active:scale-98">
         <div
-          class="double-bezel-inner px-8 py-3.5 text-xs uppercase tracking-wider font-bold text-black bg-amber-400 hover:bg-amber-300 flex items-center justify-center space-x-3 transition-colors">
+          class="double-bezel-inner px-8 py-3.5 text-xs uppercase tracking-wider font-bold text-black bg-amber-400 hover:bg-amber-300 flex items-center justify-center space-x-3 transition-colors shadow-md">
           <span>Explorar Catálogo Completo</span>
           <div
             class="w-7 h-7 rounded-full bg-black/10 flex items-center justify-center group-hover:translate-x-1 transition-transform">
@@ -47,11 +47,38 @@
         </div>
       </a>
 
-      <!-- Secondary CTA: Login / Register Modal Trigger -->
-      <button (click)="openAuth('login')"
-        class="w-full sm:w-auto px-8 py-4 rounded-2xl bg-zinc-900/80 border border-white/10 hover:border-amber-500/40 text-xs uppercase tracking-wider font-semibold text-zinc-200 hover:text-white backdrop-blur-xl transition-all">
-        ✦ Acceder a Mi Cuenta
-      </button>
+      <!-- Secondary CTA: Adaptado a Clientes Autenticados o Invitados -->
+      <ng-container *ngIf="authService.currentUser() as user; else guestHeroCtas">
+        <!-- Si es cliente autenticado -->
+        <ng-container *ngIf="authService.esCliente()">
+          <a routerLink="/mis-pedidos"
+            class="w-full sm:w-auto px-7 py-3.5 rounded-2xl bg-amber-500/20 border border-amber-500/50 hover:bg-amber-500/30 text-xs uppercase tracking-wider font-bold text-amber-300 hover:text-white backdrop-blur-xl transition-all flex items-center justify-center space-x-2 shadow-sm">
+            <i class="ph ph-package text-base"></i>
+            <span>✦ Ver Mis Pedidos</span>
+          </a>
+          <a routerLink="/mis-reservas"
+            class="w-full sm:w-auto px-7 py-3.5 rounded-2xl bg-zinc-900/80 border border-zinc-700 hover:border-amber-500/40 text-xs uppercase tracking-wider font-semibold text-zinc-200 hover:text-white backdrop-blur-xl transition-all flex items-center justify-center space-x-2">
+            <i class="ph ph-calendar-check text-base text-amber-400"></i>
+            <span>✦ Mis Reservas</span>
+          </a>
+        </ng-container>
+
+        <!-- Si es empleado / admin -->
+        <ng-container *ngIf="!authService.esCliente()">
+          <a routerLink="/admin"
+            class="w-full sm:w-auto px-7 py-3.5 rounded-2xl bg-amber-500/20 border border-amber-500/50 hover:bg-amber-500/30 text-xs uppercase tracking-wider font-bold text-amber-300 hover:text-white backdrop-blur-xl transition-all flex items-center justify-center space-x-2 shadow-sm">
+            <i class="ph ph-sliders text-base"></i>
+            <span>✦ Panel de Control</span>
+          </a>
+        </ng-container>
+      </ng-container>
+
+      <ng-template #guestHeroCtas>
+        <button (click)="openAuth('login')"
+          class="w-full sm:w-auto px-8 py-4 rounded-2xl bg-zinc-900/80 border border-white/20 hover:border-amber-500/40 text-xs uppercase tracking-wider font-semibold text-zinc-100 hover:text-white backdrop-blur-xl transition-all shadow-md">
+          ✦ Acceder a Mi Cuenta
+        </button>
+      </ng-template>
 
     </div>
 
@@ -155,7 +182,7 @@
         </span>
         <h3 class="text-2xl font-editorial font-bold text-white">Noche & Ceremonia</h3>
         <p class="text-xs text-zinc-300 leading-relaxed">
-          Siluetas sofisticadas con caídas fluidas y acabados de atelier.
+          Siluetas sofisticadas con caídas fluidas y acabados de alta costura.
         </p>
         <a routerLink="/catalogo"
           class="inline-flex items-center space-x-2 text-xs font-bold text-amber-400 hover:text-amber-300 pt-2">
@@ -267,15 +294,26 @@
       </p>
 
       <div class="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-        <button (click)="openAuth('register')"
-          class="px-8 py-3.5 rounded-full bg-amber-500 text-black font-bold text-xs uppercase tracking-wider hover:bg-amber-400 transition-colors shadow-lg shadow-amber-500/20">
-          Crear Cuenta Gratuita ↗
-        </button>
-
-        <button (click)="openAuth('login')"
-          class="px-8 py-3.5 rounded-full bg-white dark:bg-zinc-900 border border-stone-300 dark:border-zinc-800 text-zinc-800 dark:text-zinc-300 font-semibold text-xs uppercase tracking-wider hover:text-zinc-900 dark:hover:text-white hover:border-zinc-400 dark:hover:border-zinc-700 transition-colors shadow-sm">
-          Ya tengo cuenta (Iniciar Sesión)
-        </button>
+        <ng-container *ngIf="authService.currentUser(); else guestBottomCtas">
+          <a routerLink="/catalogo"
+            class="px-8 py-3.5 rounded-full bg-amber-500 text-black font-bold text-xs uppercase tracking-wider hover:bg-amber-400 transition-colors shadow-lg shadow-amber-500/20">
+            Explorar Catálogo Completo ↗
+          </a>
+          <a *ngIf="authService.esCliente()" routerLink="/mis-pedidos"
+            class="px-8 py-3.5 rounded-full bg-white dark:bg-zinc-900 border border-stone-300 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 font-semibold text-xs uppercase tracking-wider hover:text-zinc-900 dark:hover:text-white hover:border-zinc-400 dark:hover:border-zinc-700 transition-colors shadow-sm">
+            Consultar Mis Pedidos
+          </a>
+        </ng-container>
+        <ng-template #guestBottomCtas>
+          <button (click)="openAuth('register')"
+            class="px-8 py-3.5 rounded-full bg-amber-500 text-black font-bold text-xs uppercase tracking-wider hover:bg-amber-400 transition-colors shadow-lg shadow-amber-500/20">
+            Crear Cuenta Gratuita ↗
+          </button>
+          <button (click)="openAuth('login')"
+            class="px-8 py-3.5 rounded-full bg-white dark:bg-zinc-900 border border-stone-300 dark:border-zinc-800 text-zinc-800 dark:text-zinc-300 font-semibold text-xs uppercase tracking-wider hover:text-zinc-900 dark:hover:text-white hover:border-zinc-400 dark:hover:border-zinc-700 transition-colors shadow-sm">
+            Ya tengo cuenta (Iniciar Sesión)
+          </button>
+        </ng-template>
       </div>
 
     </div>

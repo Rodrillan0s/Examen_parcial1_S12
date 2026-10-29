@@ -124,7 +124,7 @@
         <input 
           type="text" 
           [(ngModel)]="filtroBusquedaTallas" 
-          (input)="aplicarFiltrosTallas()"
+          (input)="onBusquedaTallasInput()"
           placeholder="Buscar talla por nombre o descripción (ej. XS, 38, Busto)..."
           class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-stone-50 dark:bg-zinc-950/80 border border-stone-200 dark:border-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:border-amber-500/50">
         <svg class="w-4 h-4 text-zinc-400 dark:text-zinc-500 absolute left-3.5 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -184,7 +184,7 @@
             </td>
           </tr>
 
-          <tr *ngFor="let talla of tallasFiltradas" class="hover:bg-zinc-800/30 transition-colors group">
+          <tr *ngFor="let talla of tallasFiltradas; trackBy: trackByTallaId" class="hover:bg-zinc-800/30 transition-colors group">
             <td class="px-5 py-3.5">
               <span class="inline-flex items-center justify-center min-w-[3rem] px-2.5 py-1 rounded-lg bg-zinc-800 border border-zinc-700 font-bold text-amber-400 text-sm">
                 {{ talla.nombre }}
@@ -268,7 +268,7 @@
         <input 
           type="text" 
           [(ngModel)]="filtroBusquedaColores" 
-          (input)="aplicarFiltrosColores()"
+          (input)="onBusquedaColoresInput()"
           placeholder="Buscar color por nombre o código HEX (ej. Champagne, #E8C5C8)..."
           class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-stone-50 dark:bg-zinc-950/80 border border-stone-200 dark:border-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:border-amber-500/50">
         <svg class="w-4 h-4 text-zinc-400 dark:text-zinc-500 absolute left-3.5 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -329,7 +329,7 @@
             </td>
           </tr>
 
-          <tr *ngFor="let color of coloresFiltrados" class="hover:bg-zinc-800/30 transition-colors group">
+          <tr *ngFor="let color of coloresFiltrados; trackBy: trackByColorId" class="hover:bg-zinc-800/30 transition-colors group">
             <!-- Muestra visual Swatch -->
             <td class="px-5 py-3.5">
               <div class="flex items-center gap-3">

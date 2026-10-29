@@ -2,6 +2,7 @@ import { CanActivateFn, Router } from '@angular/router';
 import { inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { AuthService } from '../services/auth';
+import { NetworkStatusService } from '../core/network/network-status.service';
 import { catchError, map, of } from 'rxjs';
 
 /**
@@ -17,6 +18,7 @@ export function permissionGuard(requiredPermissions: string | string[]): CanActi
 
     const authService = inject(AuthService);
     const router = inject(Router);
+    const networkStatus = inject(NetworkStatusService);
 
     const usuario = authService.obtenerUsuario();
     if (!usuario || authService.tokenExpirado()) {
@@ -27,6 +29,17 @@ export function permissionGuard(requiredPermissions: string | string[]): CanActi
     }
 
     const permissionsToCheck = Array.isArray(requiredPermissions) ? requiredPermissions : [requiredPermissions];
+
+    // Si no hay conexión a internet o el backend está inalcanzable, validar de inmediato con la sesión local
+    // para evitar peticiones HTTP fallidas redundantes en cada pestaña o navegación
+    if (!networkStatus.isOnline()) {
+      if (authService.hasAnyPermission(permissionsToCheck)) {
+        return true;
+      }
+      const destino = authService.getDefaultRouteForUser(usuario);
+      return router.parseUrl(destino === state.url ? '/' : destino);
+    }
+
     return authService.refrescarPermisos().pipe(
       map(() => {
         if (authService.hasAnyPermission(permissionsToCheck)) return true;

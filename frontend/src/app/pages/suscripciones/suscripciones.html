@@ -225,7 +225,7 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-stone-100 dark:divide-slate-800/60 text-xs text-zinc-700 dark:text-slate-300">
-          <tr *ngFor="let item of historial"
+          <tr *ngFor="let item of historial; trackBy: trackBySuscripcionId"
               class="hover:bg-stone-50/70 dark:hover:bg-slate-900/40 transition-colors">
             <td class="py-3 px-4 font-mono font-bold text-zinc-900 dark:text-white">#{{ item.id_suscripcion }}</td>
             <td class="py-3 px-4 font-black">

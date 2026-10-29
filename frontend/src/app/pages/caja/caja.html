@@ -135,6 +135,17 @@
     </div>
   </header>
 
+  <!-- Aviso de Protección POS Sin Conexión (CU24W) -->
+  <div *ngIf="!networkStatus.isOnline()" role="status" class="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800/80 text-amber-900 dark:text-amber-200 text-xs font-medium flex items-start gap-2.5 shadow-sm">
+    <span class="text-base shrink-0">⚠️</span>
+    <div>
+      <strong class="font-bold">Punto de Venta (CU24W) requiere conexión activa:</strong>
+      <p class="mt-0.5 opacity-90">
+        Por integridad contable y para impedir descuadres de inventario físico o doble venta en sucursal, la confirmación de cobros y emisión de tickets POS están bloqueadas hasta restablecer la conexión con el servidor.
+      </p>
+    </div>
+  </div>
+
   <!-- ========================================================================= -->
   <!-- ALERTAS FLOTANTES / MENSAJES -->
   <!-- ========================================================================= -->
@@ -339,7 +350,7 @@
               </svg>
             </div>
 
-            <!-- Badge de Stock en Sucursal -->
+            <!-- Badge de Stock en Sucursal (Diferencia Stock Confirmado vs Provisional Local) -->
             <span *ngIf="prod.stock_total_sucursal > 0"
                   class="absolute top-2 right-2 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-600 text-white shadow-sm">
               {{ prod.stock_total_sucursal }} disp.
@@ -347,6 +358,11 @@
             <span *ngIf="prod.stock_total_sucursal <= 0"
                   class="absolute top-2 right-2 px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-600 text-white shadow-sm">
               Agotado
+            </span>
+            <span *ngIf="(prod.unidades_provisionales_offline || 0) > 0"
+                  title="Unidades descontadas provisionalmente en cola offline frente al último stock confirmado del servidor"
+                  class="absolute bottom-2 left-2 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/95 text-zinc-950 shadow-sm">
+              Prov: -{{ prod.unidades_provisionales_offline }} (Srv: {{ prod.stock_confirmado_servidor }})
             </span>
           </div>
 
@@ -1012,6 +1028,10 @@
                   class="text-[10px] font-bold">
               {{ v.stock_disponible > 0 ? v.stock_disponible + ' disponibles' : 'Sin stock' }}
             </span>
+            <span *ngIf="(v.unidades_provisionales_offline || 0) > 0"
+                  class="block text-[9px] text-amber-600 dark:text-amber-400 font-semibold">
+              Stock servidor: {{ v.stock_confirmado_servidor }} ({{ v.unidades_provisionales_offline }} en cola local)
+            </span>
           </div>
 
         </div>
@@ -1021,10 +1041,10 @@
   </div>
 
   <!-- ========================================================================= -->
-  <!-- MODAL: CONFIRMAR VENTA POS -->
+  <!-- MODAL: CONFIRMAR VENTA POS (CON SOPORTE OFFLINE EN EFECTIVO · CU24W) -->
   <!-- ========================================================================= -->
   <div *ngIf="modalConfirmarVentaAbierto" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-    <div class="bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-scaleUp">
+    <div class="bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 animate-scaleUp max-h-[92vh] overflow-y-auto">
       
       <div class="text-center space-y-1">
         <div class="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 mx-auto flex items-center justify-center mb-2">
@@ -1034,6 +1054,17 @@
         </div>
         <h3 class="text-lg font-black text-zinc-900 dark:text-white">Confirmar Venta POS</h3>
         <p class="text-xs text-zinc-500 dark:text-slate-400">Verifique los detalles antes de registrar la venta</p>
+      </div>
+
+      <!-- Aviso explícito cuando está en modo sin conexión (CU24W) -->
+      <div *ngIf="!networkStatus.isOnline()"
+           class="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs space-y-1">
+        <div class="font-bold flex items-center gap-1.5">
+          <span>⚡ Modo Offline Activo (CU24W)</span>
+        </div>
+        <p class="text-[11px] leading-relaxed">
+          Solo se permiten <strong>ventas de contado en EFECTIVO</strong>. Los pagos electrónicos (Tarjeta, QR, PayPal) están deshabilitados sin conexión. El stock local se descontará provisionalmente y la venta se validará al reconectar.
+        </p>
       </div>
 
       <div class="p-3.5 bg-stone-50 dark:bg-slate-800/60 rounded-xl space-y-2 text-xs border border-stone-200 dark:border-slate-700">
@@ -1059,6 +1090,98 @@
         </div>
       </div>
 
+      <!-- Selector de Modalidad de Cobro -->
+      <div class="space-y-2">
+        <label class="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-slate-400">
+          Modalidad de Cobro:
+        </label>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+          <button type="button"
+                  (click)="modalidadCobroConfirmacion = 'EFECTIVO_INMEDIATO'"
+                  [ngClass]="modalidadCobroConfirmacion === 'EFECTIVO_INMEDIATO' || !networkStatus.isOnline()
+                    ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-200 font-bold ring-1 ring-emerald-500'
+                    : 'border-stone-200 dark:border-slate-700 text-zinc-600 dark:text-slate-300'"
+                  class="p-2.5 rounded-xl border text-left transition-all cursor-pointer">
+            <div class="flex items-center justify-between">
+              <span>💵 Contado en Efectivo</span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-600 text-white font-bold">CU24W</span>
+            </div>
+            <span class="block text-[10px] opacity-80 mt-0.5">Cobro directo en caja (Online y Offline)</span>
+          </button>
+
+          <button type="button"
+                  [disabled]="!networkStatus.isOnline()"
+                  (click)="networkStatus.isOnline() ? (modalidadCobroConfirmacion = 'PASO_W28_ONLINE') : null"
+                  [ngClass]="modalidadCobroConfirmacion === 'PASO_W28_ONLINE' && networkStatus.isOnline()
+                    ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-800 dark:text-indigo-200 font-bold ring-1 ring-indigo-500'
+                    : 'border-stone-200 dark:border-slate-700 text-zinc-600 dark:text-slate-300 disabled:opacity-45 disabled:cursor-not-allowed'"
+                  class="p-2.5 rounded-xl border text-left transition-all cursor-pointer">
+            <div class="flex items-center justify-between">
+              <span>💳 Pasarela W28 (Tarjeta/QR)</span>
+              <span *ngIf="!networkStatus.isOnline()" class="text-[10px] px-1.5 py-0.5 rounded bg-rose-600 text-white font-bold">Solo Online</span>
+            </div>
+            <span class="block text-[10px] opacity-80 mt-0.5">
+              {{ networkStatus.isOnline() ? 'Pasar orden a cobro W28 (Efectivo/Tarjeta/QR)' : 'Bloqueado sin conexión a internet' }}
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Panel de Cobro en Efectivo (CU24W) -->
+      <div *ngIf="modalidadCobroConfirmacion === 'EFECTIVO_INMEDIATO' || !networkStatus.isOnline()"
+           class="p-3.5 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/60 space-y-3 text-xs">
+        <div class="flex items-center justify-between">
+          <label class="font-bold text-zinc-800 dark:text-slate-200">Efectivo Recibido (Bs.):</label>
+          <div class="flex items-center gap-1">
+            <button type="button" (click)="fijarMontoRecibidoRapido(totalCarrito)"
+                    class="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-stone-300 dark:border-slate-700 text-[10px] font-bold hover:border-emerald-500 cursor-pointer">
+              Exacto
+            </button>
+            <button type="button" (click)="fijarMontoRecibidoRapido(totalCarrito + 10)"
+                    class="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-stone-300 dark:border-slate-700 text-[10px] font-bold hover:border-emerald-500 cursor-pointer">
+              +10
+            </button>
+            <button type="button" (click)="fijarMontoRecibidoRapido(totalCarrito + 50)"
+                    class="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-stone-300 dark:border-slate-700 text-[10px] font-bold hover:border-emerald-500 cursor-pointer">
+              +50
+            </button>
+            <button type="button" (click)="fijarMontoRecibidoRapido(totalCarrito + 100)"
+                    class="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-stone-300 dark:border-slate-700 text-[10px] font-bold hover:border-emerald-500 cursor-pointer">
+              +100
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 items-center">
+          <div>
+            <input type="number"
+                   min="0"
+                   step="0.5"
+                   [(ngModel)]="montoRecibidoEfectivo"
+                   class="w-full px-3 py-2 font-mono font-black text-base bg-white dark:bg-slate-900 border border-stone-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500">
+          </div>
+          <div class="text-right">
+            <span class="text-[10px] uppercase font-bold text-zinc-500 block">Cambio a Entregar:</span>
+            <span class="font-mono text-lg font-black text-emerald-600 dark:text-emerald-400">
+              Bs. {{ cambioEfectivoCalculado.toFixed(2) }}
+            </span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 pt-1 border-t border-emerald-200/60 dark:border-emerald-900/40">
+          <div>
+            <label class="block text-[10px] font-semibold text-zinc-600 dark:text-slate-400 mb-0.5">NIT / CI Comprobante:</label>
+            <input type="text" [(ngModel)]="nitCiFacturacionOffline" placeholder="S/N"
+                   class="w-full px-2.5 py-1.5 text-xs bg-white dark:bg-slate-900 border border-stone-300 dark:border-slate-700 rounded-lg outline-none">
+          </div>
+          <div>
+            <label class="block text-[10px] font-semibold text-zinc-600 dark:text-slate-400 mb-0.5">Razón Social / Nombre:</label>
+            <input type="text" [(ngModel)]="razonSocialFacturacionOffline" placeholder="SIN NOMBRE"
+                   class="w-full px-2.5 py-1.5 text-xs bg-white dark:bg-slate-900 border border-stone-300 dark:border-slate-700 rounded-lg outline-none">
+          </div>
+        </div>
+      </div>
+
       <div>
         <label class="block text-[11px] font-semibold text-zinc-700 dark:text-slate-300 mb-1">Notas de la venta (opcional):</label>
         <input type="text" [(ngModel)]="observacionesVenta" placeholder="Ej: Venta de mostrador..."
@@ -1069,10 +1192,13 @@
         <button (click)="cerrarModalConfirmarVenta()" class="flex-1 py-2.5 bg-stone-100 hover:bg-stone-200 dark:bg-slate-800 text-zinc-700 dark:text-slate-300 text-xs font-semibold rounded-xl">
           Cancelar
         </button>
-        <button (click)="procesarVentaPos()" [disabled]="procesando"
+        <button (click)="procesarVentaPos()"
+                [disabled]="procesando || ((modalidadCobroConfirmacion === 'EFECTIVO_INMEDIATO' || !networkStatus.isOnline()) && !montoEfectivoValido)"
                 class="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-600/20 disabled:opacity-50 flex items-center justify-center gap-2">
           <span *ngIf="procesando" class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-          Registrar Venta
+          <span>
+            {{ (!networkStatus.isOnline() || modalidadCobroConfirmacion === 'EFECTIVO_INMEDIATO') ? 'Cobrar en Efectivo y Registrar' : 'Registrar Venta' }}
+          </span>
         </button>
       </div>
 
@@ -1080,7 +1206,7 @@
   </div>
 
   <!-- ========================================================================= -->
-  <!-- MODAL: VENTA EXITOSA (CONFIRMACIÓN Y PASO A COBRO) -->
+  <!-- MODAL: VENTA EXITOSA (CONFIRMACIÓN Y PASO A COBRO / RECIBO OFFLINE) -->
   <!-- ========================================================================= -->
   <div *ngIf="modalVentaExitosaAbierto" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
     <div class="bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-800 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl space-y-5 text-center animate-scaleUp">
@@ -1093,10 +1219,12 @@
 
       <div class="space-y-1">
         <h3 class="text-xl font-black text-zinc-900 dark:text-white">
-          ¡Venta Registrada con Éxito!
+          {{ ventaExitosaInfo?.offline_queued ? '¡Venta en Efectivo Registrada!' : '¡Venta Registrada con Éxito!' }}
         </h3>
         <p class="text-xs text-zinc-500 dark:text-slate-400">
-          La venta ha sido guardada y el stock fue actualizado correctamente.
+          {{ ventaExitosaInfo?.offline_queued
+            ? 'El cobro en efectivo y el descuento provisional de stock se guardaron en la cola segura (CU24W).'
+            : 'La venta ha sido guardada y el stock fue actualizado correctamente.' }}
         </p>
       </div>
 
@@ -1107,24 +1235,42 @@
         </div>
         <div class="flex justify-between">
           <span class="text-zinc-500">Estado:</span>
-          <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-400">
+          <span *ngIf="!ventaExitosaInfo?.offline_queued"
+                class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-400">
             PENDIENTE DE PAGO (W28)
+          </span>
+          <span *ngIf="ventaExitosaInfo?.offline_queued"
+                class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+            PAGADO EN EFECTIVO (COLA SYNC)
           </span>
         </div>
         <div class="flex justify-between items-baseline pt-1 border-t border-stone-200 dark:border-slate-700">
-          <span class="font-bold text-zinc-700 dark:text-slate-300">Total a Cobrar:</span>
+          <span class="font-bold text-zinc-700 dark:text-slate-300">Total Venta:</span>
           <span class="text-xl font-black text-zinc-900 dark:text-white font-mono">
             Bs. {{ ventaExitosaInfo?.total?.toFixed(2) }}
           </span>
         </div>
+        <div *ngIf="ventaExitosaInfo?.offline_queued" class="pt-1 border-t border-stone-200 dark:border-slate-700 space-y-1">
+          <div class="flex justify-between">
+            <span class="text-zinc-500">Efectivo Recibido:</span>
+            <strong class="font-mono">Bs. {{ ventaExitosaInfo?.monto_recibido?.toFixed(2) }}</strong>
+          </div>
+          <div class="flex justify-between text-emerald-600 dark:text-emerald-400">
+            <span class="font-bold">Cambio Entregado:</span>
+            <strong class="font-mono">Bs. {{ ventaExitosaInfo?.cambio?.toFixed(2) }}</strong>
+          </div>
+        </div>
       </div>
 
       <p class="text-[11px] text-zinc-400">
-        El monto y la orden quedan listos para su recepción de pago en efectivo o pasarela según el protocolo W28.
+        {{ ventaExitosaInfo?.offline_queued
+          ? 'La operación sobrevive al reinicio del navegador y se sincronizará de forma idempotente al reconectar.'
+          : 'El monto y la orden quedan listos para su recepción de pago en efectivo o pasarela según el protocolo W28.' }}
       </p>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
-        <button (click)="irACobrar(ventaExitosaInfo!.id_venta)"
+      <div class="grid grid-cols-1 gap-2 pt-2" [class.sm:grid-cols-2]="!ventaExitosaInfo?.offline_queued">
+        <button *ngIf="!ventaExitosaInfo?.offline_queued"
+                (click)="irACobrar(ventaExitosaInfo!.id_venta)"
                 class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
@@ -1133,7 +1279,7 @@
         </button>
         <button (click)="cerrarModalVentaExitosa()"
                 class="w-full py-3 bg-stone-100 hover:bg-stone-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-zinc-700 dark:text-slate-300 font-bold text-xs rounded-xl transition-all">
-          Nueva Venta
+          {{ ventaExitosaInfo?.offline_queued ? 'Aceptar y Continuar Vendiendo' : 'Nueva Venta' }}
         </button>
       </div>
 

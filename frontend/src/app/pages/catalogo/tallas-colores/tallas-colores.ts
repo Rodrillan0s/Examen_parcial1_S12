@@ -2,6 +2,7 @@ import { Component, OnInit, inject, ChangeDetectorRef, NgZone, DestroyRef } from
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { AuthService } from '../../../services/auth';
 import { Talla, ColorPrenda, TallasColoresService } from '../../../services/tallas-colores';
 import { Empresa, EmpresaService } from '../../../services/empresa';
@@ -19,6 +20,8 @@ export class TallasColoresComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
   private ngZone = inject(NgZone);
   private destroyRef = inject(DestroyRef);
+  private busquedaTallasSubject = new Subject<string>();
+  private busquedaColoresSubject = new Subject<string>();
 
   // Tab activo: 'TALLAS' | 'COLORES'
   tabActivo: 'TALLAS' | 'COLORES' = 'TALLAS';
@@ -29,6 +32,14 @@ export class TallasColoresComponent implements OnInit {
   colores: ColorPrenda[] = [];
   coloresFiltrados: ColorPrenda[] = [];
   empresas: Empresa[] = [];
+  tallasCargadas: boolean = false;
+  coloresCargados: boolean = false;
+
+  // Métricas precomputadas
+  totalTallas: number = 0;
+  tallasActivas: number = 0;
+  totalColores: number = 0;
+  coloresActivos: number = 0;
 
   // Filtros
   filtroEstadoTallas: string = 'TODOS';
@@ -59,6 +70,14 @@ export class TallasColoresComponent implements OnInit {
   elementoAeliminar: { tipo: 'TALLA' | 'COLOR', id: number, nombre: string, variantes: number } | null = null;
 
   ngOnInit(): void {
+    this.busquedaTallasSubject
+      .pipe(debounceTime(200), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.aplicarFiltrosTallas());
+
+    this.busquedaColoresSubject
+      .pipe(debounceTime(200), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.aplicarFiltrosColores());
+
     if (this.esSuperAdmin) {
       this.cargarEmpresasSiEsAdmin();
       this.filtroEmpresaId = this.authService.getEffectiveCompanyId() || 0;
@@ -66,17 +85,38 @@ export class TallasColoresComponent implements OnInit {
     this.cargarDatos();
 
     this.authService.companyChanged$
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        distinctUntilChanged((p, c) => p?.id_empresa === c?.id_empresa),
+        takeUntilDestroyed(this.destroyRef)
+      )
       .subscribe(empresa => {
         if (this.esSuperAdmin) {
           const nueva = empresa ? empresa.id_empresa : 0;
           if (this.filtroEmpresaId !== nueva) {
             this.filtroEmpresaId = nueva;
+            this.tallasCargadas = false;
+            this.coloresCargados = false;
             this.cargarDatos();
             this.cdr.detectChanges();
           }
         }
       });
+  }
+
+  onBusquedaTallasInput(): void {
+    this.busquedaTallasSubject.next(this.filtroBusquedaTallas);
+  }
+
+  onBusquedaColoresInput(): void {
+    this.busquedaColoresSubject.next(this.filtroBusquedaColores);
+  }
+
+  trackByTallaId(index: number, item: Talla): number {
+    return item.id_talla || index;
+  }
+
+  trackByColorId(index: number, item: ColorPrenda): number {
+    return item.id_color || index;
   }
 
   onFiltroEmpresaChange(): void {
@@ -130,6 +170,11 @@ export class TallasColoresComponent implements OnInit {
     this.tabActivo = tab;
     this.mensajeError = '';
     this.mensajeExito = '';
+    if (tab === 'COLORES' && !this.coloresCargados) {
+      this.cargarColores();
+    } else if (tab === 'TALLAS' && !this.tallasCargadas) {
+      this.cargarTallas();
+    }
     this.cdr.detectChanges();
   }
 
@@ -148,39 +193,76 @@ export class TallasColoresComponent implements OnInit {
     }
   }
 
-  cargarDatos(): void {
-    this.cargando = true;
-    this.mensajeError = '';
-
+  private construirParams(): any {
     const params: any = {};
     if (this.filtroEmpresaId > 0) {
       params.id_empresa = this.filtroEmpresaId;
     }
+    return params;
+  }
 
-    // Cargar Tallas
+  cargarDatos(): void {
+    this.mensajeError = '';
+    if (this.tabActivo === 'TALLAS') {
+      this.cargarTallas();
+      if (this.coloresCargados) {
+        this.cargarColores(true);
+      }
+    } else {
+      this.cargarColores();
+      if (this.tallasCargadas) {
+        this.cargarTallas(true);
+      }
+    }
+  }
+
+  cargarTallas(silencioso: boolean = false): void {
+    if (!silencioso) {
+      this.cargando = true;
+    }
+    const params = this.construirParams();
     this.tallasColoresService.listarTallas(params)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res) => {
           this.ngZone.run(() => {
+            if (!silencioso) {
+              this.cargando = false;
+            }
+            this.tallasCargadas = true;
             if (res?.success) {
               this.tallas = res.data || [];
               this.aplicarFiltrosTallas();
             }
+            this.cdr.detectChanges();
           });
         },
         error: (err) => {
-          this.mensajeError = err.error?.detail || 'Error al cargar tallas.';
+          this.ngZone.run(() => {
+            if (!silencioso) {
+              this.cargando = false;
+            }
+            this.mensajeError = err.error?.detail || 'Error al cargar tallas.';
+            this.cdr.detectChanges();
+          });
         }
       });
+  }
 
-    // Cargar Colores
+  cargarColores(silencioso: boolean = false): void {
+    if (!silencioso) {
+      this.cargando = true;
+    }
+    const params = this.construirParams();
     this.tallasColoresService.listarColores(params)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res) => {
           this.ngZone.run(() => {
-            this.cargando = false;
+            if (!silencioso) {
+              this.cargando = false;
+            }
+            this.coloresCargados = true;
             if (res?.success) {
               this.colores = res.data || [];
               this.aplicarFiltrosColores();
@@ -189,9 +271,13 @@ export class TallasColoresComponent implements OnInit {
           });
         },
         error: (err) => {
-          this.cargando = false;
-          this.mensajeError = err.error?.detail || 'Error al cargar colores.';
-          this.cdr.detectChanges();
+          this.ngZone.run(() => {
+            if (!silencioso) {
+              this.cargando = false;
+            }
+            this.mensajeError = err.error?.detail || 'Error al cargar colores.';
+            this.cdr.detectChanges();
+          });
         }
       });
   }
@@ -213,6 +299,8 @@ export class TallasColoresComponent implements OnInit {
       );
     }
     this.tallasFiltradas = list;
+    this.totalTallas = this.tallas.length;
+    this.tallasActivas = this.tallas.filter(t => t.activo).length;
     this.cdr.detectChanges();
   }
 
@@ -233,21 +321,9 @@ export class TallasColoresComponent implements OnInit {
       );
     }
     this.coloresFiltrados = list;
+    this.totalColores = this.colores.length;
+    this.coloresActivos = this.colores.filter(c => c.activo).length;
     this.cdr.detectChanges();
-  }
-
-  // Métricas
-  get totalTallas(): number {
-    return this.tallas.length;
-  }
-  get tallasActivas(): number {
-    return this.tallas.filter(t => t.activo).length;
-  }
-  get totalColores(): number {
-    return this.colores.length;
-  }
-  get coloresActivos(): number {
-    return this.colores.filter(c => c.activo).length;
   }
 
   // --- ACCIONES TALLA ---

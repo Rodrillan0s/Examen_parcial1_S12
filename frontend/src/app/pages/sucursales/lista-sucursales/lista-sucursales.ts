@@ -2,6 +2,7 @@ import { Component, OnInit, inject, ChangeDetectorRef, NgZone, DestroyRef } from
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { AuthService } from '../../../services/auth';
 import { Sucursal, SucursalService } from '../../../services/sucursales';
 import { Ciudad, CiudadService } from '../../../services/ciudades';
@@ -28,6 +29,9 @@ export class ListaSucursalesComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
   private ngZone = inject(NgZone);
   private destroyRef = inject(DestroyRef);
+  private busquedaSucursalSubject = new Subject<string>();
+  private busquedaCiudadSubject = new Subject<string>();
+  ciudadesCargadas: boolean = false;
 
   // Tab navigation
 tabActiva: 'SUCURSALES' | 'CIUDADES' | 'MAPA' = 'SUCURSALES';
@@ -132,18 +136,16 @@ get sucursalesParaMapa(): Sucursal[] {
 
   return this.sucursales;
 }
-  async ngOnInit() {
-    this.cargando = true;
+  ngOnInit() {
+    this.busquedaSucursalSubject
+      .pipe(debounceTime(200), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.aplicarFiltrosSucursales());
 
-    let intentos = 0;
-
-    while (!this.authService.obtenerToken() && intentos < 10) {
-      await new Promise(resolve => setTimeout(resolve, 50));
-      intentos++;
-    }
+    this.busquedaCiudadSubject
+      .pipe(debounceTime(200), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.aplicarFiltrosCiudades());
 
     if (this.authService.obtenerToken()) {
-
       if (this.isGlobalAdmin) {
         this.cargarEmpresas();
         const effId = this.authService.getEffectiveCompanyId();
@@ -152,34 +154,55 @@ get sucursalesParaMapa(): Sucursal[] {
         }
       }
 
-      this.cargarCiudades();
       this.cargarSucursales();
 
       this.authService.companyChanged$
-        .pipe(takeUntilDestroyed(this.destroyRef))
+        .pipe(
+          distinctUntilChanged((p, c) => p?.id_empresa === c?.id_empresa),
+          takeUntilDestroyed(this.destroyRef)
+        )
         .subscribe((emp) => {
           if (this.isGlobalAdmin) {
             this.filtroEmpresaId = emp && emp.id_empresa ? Number(emp.id_empresa) : 0;
             this.aplicarFiltrosSucursales();
           }
         });
-
     } else {
       this.cargando = false;
       this.mensajeError = 'No se pudo iniciar sesión. Por favor recarga la página.';
     }
   }
 
+  onBusquedaSucursalInput() {
+    this.busquedaSucursalSubject.next(this.filtroBusqueda);
+  }
+
+  onBusquedaCiudadInput() {
+    this.busquedaCiudadSubject.next(this.filtroCiudadBusqueda);
+  }
+
+  trackBySucursalId(index: number, item: Sucursal): number {
+    return item.id_sucursal || index;
+  }
+
+  trackByCiudadId(index: number, item: Ciudad): number {
+    return item.id_ciudad || index;
+  }
+
   // ============================================================
   // TABS
   // ============================================================
-cambiarTab(tab: 'SUCURSALES' | 'CIUDADES' | 'MAPA') {
-  this.tabActiva = tab;
+  cambiarTab(tab: 'SUCURSALES' | 'CIUDADES' | 'MAPA') {
+    this.tabActiva = tab;
     this.mensajeError = '';
     this.mensajeExito = '';
 
     if (tab === 'CIUDADES') {
-      this.aplicarFiltrosCiudades();
+      if (!this.ciudadesCargadas) {
+        this.cargarCiudades();
+      } else {
+        this.aplicarFiltrosCiudades();
+      }
     } else {
       this.aplicarFiltrosSucursales();
     }
@@ -209,6 +232,7 @@ cambiarTab(tab: 'SUCURSALES' | 'CIUDADES' | 'MAPA') {
       .subscribe({
         next: (res) => {
           this.ngZone.run(() => {
+            this.ciudadesCargadas = true;
             if (res && res.success) {
               this.ciudades = [...res.data];
               this.aplicarFiltrosCiudades();
@@ -485,6 +509,9 @@ cambiarTab(tab: 'SUCURSALES' | 'CIUDADES' | 'MAPA') {
   // ============================================================
 
   abrirModalNuevaSucursal() {
+    if (!this.ciudadesCargadas) {
+      this.cargarCiudades();
+    }
     this.modoEdicionSucursal = false;
     this.mensajeModalError = '';
 
@@ -498,6 +525,9 @@ cambiarTab(tab: 'SUCURSALES' | 'CIUDADES' | 'MAPA') {
   }
 
   abrirModalEditarSucursal(sucursal: Sucursal) {
+    if (!this.ciudadesCargadas) {
+      this.cargarCiudades();
+    }
     this.modoEdicionSucursal = true;
     this.mensajeModalError = '';
 

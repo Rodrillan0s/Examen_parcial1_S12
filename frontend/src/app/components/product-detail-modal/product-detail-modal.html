@@ -26,7 +26,7 @@
 
         <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
         <span class="font-mono uppercase tracking-widest text-zinc-500 dark:text-zinc-400 font-bold truncate max-w-[150px] sm:max-w-[240px]">
-          {{ esDetalleReal(producto) ? producto.empresa_nombre : 'Atelier Boutique' }}
+          {{ esDetalleReal(producto) ? producto.empresa_nombre : 'Aurora Store' }}
         </span>
         <span class="text-zinc-300 dark:text-zinc-700 shrink-0">•</span>
         <span *ngIf="esDetalleReal(producto) && producto.codigo_producto" class="font-mono text-[11px] text-zinc-400 dark:text-zinc-500 shrink-0">
@@ -55,25 +55,45 @@
     <!-- 2. CUERPO DEL MODAL (Scrollable interno)                                  -->
     <!-- ========================================================================= -->
     <div class="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 md:p-8 space-y-6">
+
+      <!-- Banner de Transparencia Offline para Detalle y Stock por Sucursal (CU06W / CU07W) -->
+      <div *ngIf="esDetalleReal(producto) && producto._offline_metadata?.fromCache"
+           role="status"
+           class="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/70 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2.5">
+        <span class="mt-0.5 text-amber-500 font-bold">⏳</span>
+        <div>
+          <p class="font-bold">Mostrando último dato conocido en tu dispositivo</p>
+          <p class="text-[11px] opacity-90 mt-0.5">
+            La disponibilidad real por sucursal no se garantiza sin conexión y se validará automáticamente en el servidor al reconectar.
+            <span *ngIf="producto._offline_metadata?.fetchedAt">
+              (Consultado: {{ producto._offline_metadata?.fetchedAt | date:'short' }})
+            </span>
+          </p>
+        </div>
+      </div>
       
       <!-- --------------------------------------------------------------------- -->
-      <!-- CASO A: RESERVA EXITOSA (PANTALLA DE CONFIRMACIÓN INMEDIATA)           -->
+      <!-- CASO A: RESERVA EXITOSA O SOLICITUD EN COLA OFFLINE (CU10W)           -->
       <!-- --------------------------------------------------------------------- -->
       <div *ngIf="reservaExitosa" class="max-w-lg mx-auto py-6 sm:py-10 text-center space-y-6 animate-fade-in">
         
-        <div class="w-20 h-20 rounded-full bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 flex items-center justify-center mx-auto text-4xl shadow-xl shadow-emerald-500/10 animate-bounce">
-          ✓
+        <div class="w-20 h-20 rounded-full flex items-center justify-center mx-auto text-4xl shadow-xl"
+             [ngClass]="reservaEnColaOffline ? 'bg-amber-500/15 text-amber-500 border border-amber-500/30' : 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 animate-bounce'">
+          {{ reservaEnColaOffline ? '⏳' : '✓' }}
         </div>
 
         <div class="space-y-2">
-          <span class="text-xs font-mono uppercase tracking-widest text-emerald-600 dark:text-emerald-400 font-bold">
-            Cita en Boutique Agendada
+          <span class="text-xs font-mono uppercase tracking-widest font-bold"
+                [ngClass]="reservaEnColaOffline ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'">
+            {{ reservaEnColaOffline ? 'Solicitud Pendiente de Sincronización (CU10W)' : 'Cita en Boutique Agendada' }}
           </span>
           <h2 class="text-2xl sm:text-3xl font-serif font-bold text-zinc-900 dark:text-white">
-            ¡Prenda Apartada & Vestidor Listo!
+            {{ reservaEnColaOffline ? 'Solicitud Guardada en Cola Offline' : '¡Prenda Apartada & Vestidor Listo!' }}
           </h2>
           <p class="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 max-w-md mx-auto leading-relaxed">
-            Hemos apartado tu prenda en el inventario para que puedas probártela con calma y asesoría exclusiva.
+            {{ reservaEnColaOffline
+               ? 'Tu solicitud fue resguardada en el dispositivo. El stock no se descuenta ni confirma hasta que el servidor valide disponibilidad automáticamente al recuperar conexión.'
+               : 'Hemos apartado tu prenda en el inventario para que puedas probártela con calma y asesoría exclusiva.' }}
           </p>
         </div>
 
@@ -281,6 +301,9 @@
                       [class.cursor-not-allowed]="isTallaAgotada(t.nombre)"
                       class="min-w-[44px] h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-mono transition-all hover:border-amber-400 flex flex-col items-center justify-center cursor-pointer shadow-xs relative">
                 <span>{{ t.nombre }}</span>
+                <span *ngIf="getPrecioTalla(t.nombre) as pt" class="text-[9px] font-mono leading-none mt-0.5 opacity-80">
+                  Bs. {{ pt | number:'1.0-0' }}
+                </span>
                 <span *ngIf="isTallaUltimas(t.nombre)" class="text-[8px] text-amber-700 dark:text-amber-300 font-bold leading-none mt-0.5">
                   Últimas
                 </span>
@@ -308,7 +331,7 @@
             <span class="font-bold text-zinc-800 dark:text-zinc-200 block text-[11px] uppercase tracking-wider">Detalles de Confección:</span>
             <ul class="list-disc list-inside space-y-0.5 text-[11px] leading-relaxed">
               <li>Tejido seleccionado con caída y tacto suave de alta duración.</li>
-              <li>Ajuste anatómico con corte regular de atelier.</li>
+              <li>Ajuste anatómico con corte regular de alta costura.</li>
               <li>Apta para lavado en seco o ciclo delicado.</li>
             </ul>
           </div>
@@ -414,7 +437,7 @@
           </button>
 
           <span class="text-[10px] font-mono uppercase tracking-widest text-amber-600 dark:text-amber-400 font-bold">
-            Atelier Boutique Cita
+            Aurora Store Cita
           </span>
         </div>
 

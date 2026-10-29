@@ -223,12 +223,22 @@ export class ReportesComponent implements OnInit, OnDestroy {
   }
 
   onCambiarEmpresa() {
-    const t = this.tenants.find(x => x.id_empresa === this.empresaSeleccionada);
-    if (t) this.tiendaNombre = t.nombre_empresa;
+    this.empresaSeleccionada = this.empresaSeleccionada ? Number(this.empresaSeleccionada) : null;
+    if (this.empresaSeleccionada) {
+      const t = this.tenants.find(x => Number(x.id_empresa) === Number(this.empresaSeleccionada));
+      if (t) {
+        this.tiendaNombre = t.nombre_empresa;
+        this.authService.setSelectedCompany({
+          id_empresa: t.id_empresa,
+          nombre_empresa: t.nombre_empresa
+        });
+      }
+    }
     if (this.vistaActiva === 'estandar') {
       this.consultarReporte();
     } else if (this.ultimoReportRequest) {
       if (!this.ultimoReportRequest.filtros) this.ultimoReportRequest.filtros = {};
+      this.ultimoReportRequest.id_empresa = this.empresaSeleccionada || undefined;
       this.ultimoReportRequest.filtros['id_empresa'] = this.empresaSeleccionada;
       this.ejecutarReporteDinamico(this.ultimoReportRequest);
     }
@@ -321,7 +331,10 @@ export class ReportesComponent implements OnInit, OnDestroy {
     this.mensajeError = '';
     this.mensajeExito = '';
 
-    this.motorService.parsearComando(query).subscribe({
+    const idEmpresa = this.empresaSeleccionada ? Number(this.empresaSeleccionada) : this.authService.getEffectiveCompanyId();
+    const contexto: any = idEmpresa ? { id_empresa: idEmpresa } : {};
+
+    this.motorService.parsearComando(query, contexto).subscribe({
       next: (res) => {
         this.interpretandoComando = false;
         if (!res.valido) {
@@ -332,6 +345,11 @@ export class ReportesComponent implements OnInit, OnDestroy {
 
         this.comandoInterpretadoResumen = res.resumen_interpretacion;
         this.ultimoReportRequest = res.report_request;
+        if (idEmpresa && this.ultimoReportRequest) {
+          this.ultimoReportRequest.id_empresa = idEmpresa;
+          if (!this.ultimoReportRequest.filtros) this.ultimoReportRequest.filtros = {};
+          this.ultimoReportRequest.filtros['id_empresa'] = idEmpresa;
+        }
 
         // Si existen ambigüedades (ej. "vestido" coincide con producto y categoría)
         if (res.ambiguities && res.ambiguities.length > 0) {
@@ -342,7 +360,7 @@ export class ReportesComponent implements OnInit, OnDestroy {
         }
 
         // Ejecutar directamente en el motor dinámico
-        this.ejecutarReporteDinamico(res.report_request);
+        this.ejecutarReporteDinamico(this.ultimoReportRequest);
       },
       error: (err) => {
         this.interpretandoComando = false;
@@ -390,6 +408,13 @@ export class ReportesComponent implements OnInit, OnDestroy {
     this.paginaActual = 1;
     this.mensajeError = '';
 
+    const idEmpresa = this.empresaSeleccionada ? Number(this.empresaSeleccionada) : this.authService.getEffectiveCompanyId();
+    if (idEmpresa) {
+      req.id_empresa = idEmpresa;
+      if (!req.filtros) req.filtros = {};
+      req.filtros['id_empresa'] = idEmpresa;
+    }
+
     this.motorService.ejecutarReporte(req).subscribe({
       next: (res) => {
         this.resultadoDinamico = res.data;
@@ -408,6 +433,13 @@ export class ReportesComponent implements OnInit, OnDestroy {
     if (!this.ultimoReportRequest) return;
     this.descargandoPdfDinamico = true;
     this.mensajeError = '';
+
+    const idEmpresa = this.empresaSeleccionada ? Number(this.empresaSeleccionada) : this.authService.getEffectiveCompanyId();
+    if (idEmpresa) {
+      this.ultimoReportRequest.id_empresa = idEmpresa;
+      if (!this.ultimoReportRequest.filtros) this.ultimoReportRequest.filtros = {};
+      this.ultimoReportRequest.filtros['id_empresa'] = idEmpresa;
+    }
 
     this.motorService.exportarPdf(this.ultimoReportRequest).subscribe({
       next: (blob) => {

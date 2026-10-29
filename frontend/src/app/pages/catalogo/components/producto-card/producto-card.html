@@ -92,7 +92,7 @@
         class="flex items-center justify-between text-[11px] font-mono text-zinc-500 dark:text-zinc-400">
 
         <span class="truncate">
-          {{ prenda.marca || 'Aurora Atelier' }}
+          {{ prenda.marca || 'Aurora Store' }}
         </span>
 
         <span
@@ -158,9 +158,16 @@
           <ng-template #precioNormal>
 
             <span
-              class="text-lg font-bold font-mono text-amber-700 dark:text-amber-300">
-              Bs. {{ prenda.precio | number:'1.2-2' }}
+              *ngIf="prenda.precio_min && prenda.precio_max && prenda.precio_min !== prenda.precio_max; else precioFijo"
+              class="text-base sm:text-lg font-bold font-mono text-amber-700 dark:text-amber-300">
+              Bs. {{ prenda.precio_min | number:'1.2-2' }} - {{ prenda.precio_max | number:'1.2-2' }}
             </span>
+            <ng-template #precioFijo>
+              <span
+                class="text-lg font-bold font-mono text-amber-700 dark:text-amber-300">
+                Bs. {{ prenda.precio | number:'1.2-2' }}
+              </span>
+            </ng-template>
 
           </ng-template>
 

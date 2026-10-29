@@ -1,12 +1,14 @@
 <div class="min-h-full space-y-8 antialiased text-zinc-900 dark:text-zinc-100">
-  
+
   <!-- Header / Workspace Context Banner -->
-  <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white dark:bg-zinc-950/90 p-8 rounded-3xl border border-stone-200 dark:border-zinc-800 shadow-sm dark:shadow-2xl backdrop-blur-xl relative overflow-hidden transition-colors duration-200">
+  <div
+    class="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white dark:bg-zinc-950/90 p-8 rounded-3xl border border-stone-200 dark:border-zinc-800 shadow-sm dark:shadow-2xl backdrop-blur-xl relative overflow-hidden transition-colors duration-200">
     <!-- Subtle Gradient Glow in Background -->
     <div class="absolute -top-16 -right-16 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
     <div class="space-y-2 relative z-10">
-      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-[10px] font-bold uppercase tracking-widest">
+      <div
+        class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-[10px] font-bold uppercase tracking-widest">
         <span class="w-1.5 h-1.5 rounded-full bg-amber-500 dark:bg-amber-400 animate-pulse"></span>
         Control de Acceso • Roles & Permisos Directos
       </div>
@@ -15,14 +17,15 @@
         <span>Gestión de Usuarios & Autorizaciones</span>
       </h1>
       <p class="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 max-w-2xl leading-relaxed">
-        Jerarquía multi-tenant con autorización por acción. Asigna roles estructurados y otorga permisos directos específicos a cada usuario de manera granular.
+        Jerarquía multi-tenant con autorización por acción. Asigna roles estructurados y otorga permisos directos
+        específicos a cada usuario de manera granular.
       </p>
     </div>
 
     <!-- Primary Action Button -->
     <div class="relative z-10 shrink-0">
-      <button *ngIf="authService.hasPermission('usuarios.crear')" (click)="abrirModalNuevo()" 
-              class="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-[0.98] text-zinc-950 text-xs font-black rounded-2xl shadow-lg shadow-amber-500/20 transition-all ring-1 ring-amber-400/40 focus:outline-none cursor-pointer">
+      <button *ngIf="authService.hasPermission('usuarios.crear')" (click)="abrirModalNuevo()"
+        class="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-[0.98] text-zinc-950 text-xs font-black rounded-2xl shadow-lg shadow-amber-500/20 transition-all ring-1 ring-amber-400/40 focus:outline-none cursor-pointer">
         <i class="ph ph-user-plus text-base"></i>
         <span>Registrar Usuario</span>
       </button>
@@ -30,66 +33,79 @@
   </div>
 
   <!-- Success Notification Banner -->
-  <div *ngIf="mensajeExito" class="p-4 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-500/40 rounded-2xl text-xs sm:text-sm font-semibold text-emerald-800 dark:text-emerald-300 flex items-center justify-between gap-3 shadow-sm dark:shadow-lg dark:shadow-emerald-950/50 animate-fade-in backdrop-blur-md">
+  <div *ngIf="mensajeExito"
+    class="p-4 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-500/40 rounded-2xl text-xs sm:text-sm font-semibold text-emerald-800 dark:text-emerald-300 flex items-center justify-between gap-3 shadow-sm dark:shadow-lg dark:shadow-emerald-950/50 animate-fade-in backdrop-blur-md">
     <div class="flex items-center gap-3">
-      <div class="w-8 h-8 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+      <div
+        class="w-8 h-8 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
         <i class="ph ph-check-circle text-lg"></i>
       </div>
       <span>{{ mensajeExito }}</span>
     </div>
-    <button (click)="mensajeExito = ''" class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-200 text-xs px-2 py-1 cursor-pointer">✕</button>
+    <button (click)="mensajeExito = ''"
+      class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-200 text-xs px-2 py-1 cursor-pointer">✕</button>
   </div>
 
   <!-- Error Banner -->
-  <div *ngIf="mensajeError" class="p-5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 rounded-2xl text-xs sm:text-sm font-semibold text-rose-800 dark:text-rose-300 flex items-center gap-3 backdrop-blur-md shadow-sm">
+  <div *ngIf="mensajeError"
+    class="p-5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 rounded-2xl text-xs sm:text-sm font-semibold text-rose-800 dark:text-rose-300 flex items-center gap-3 backdrop-blur-md shadow-sm">
     <i class="ph ph-warning-circle text-lg text-rose-500 dark:text-rose-400 shrink-0"></i>
     <span>{{ mensajeError }}</span>
   </div>
 
   <!-- Metric Strip -->
   <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
-    <div class="bg-white dark:bg-zinc-950/80 p-6 rounded-3xl border border-stone-200 dark:border-zinc-800 shadow-sm dark:shadow-xl flex items-center justify-between group hover:border-amber-500/40 transition-all">
+    <div
+      class="bg-white dark:bg-zinc-950/80 p-6 rounded-3xl border border-stone-200 dark:border-zinc-800 shadow-sm dark:shadow-xl flex items-center justify-between group hover:border-amber-500/40 transition-all">
       <div class="space-y-1">
         <p class="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">Total Usuarios</p>
         <p class="text-3xl font-black text-zinc-900 dark:text-white tracking-tight">{{ totalUsuarios }}</p>
         <p class="text-[11px] font-medium text-amber-600 dark:text-amber-400/80 mt-1">Cuentas en el sistema</p>
       </div>
-      <div class="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+      <div
+        class="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
         <i class="ph ph-users text-2xl"></i>
       </div>
     </div>
 
-    <div class="bg-white dark:bg-zinc-950/80 p-6 rounded-3xl border border-stone-200 dark:border-zinc-800 shadow-sm dark:shadow-xl flex items-center justify-between group hover:border-emerald-500/40 transition-all">
+    <div
+      class="bg-white dark:bg-zinc-950/80 p-6 rounded-3xl border border-stone-200 dark:border-zinc-800 shadow-sm dark:shadow-xl flex items-center justify-between group hover:border-emerald-500/40 transition-all">
       <div class="space-y-1">
         <p class="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">Usuarios Activos</p>
         <p class="text-3xl font-black text-zinc-900 dark:text-white tracking-tight">{{ usuariosActivos }}</p>
         <p class="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 mt-1">Acceso habilitado</p>
       </div>
-      <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+      <div
+        class="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
         <i class="ph ph-check-square-offset text-2xl"></i>
       </div>
     </div>
 
-    <div class="bg-white dark:bg-zinc-950/80 p-6 rounded-3xl border border-stone-200 dark:border-zinc-800 shadow-sm dark:shadow-xl flex items-center justify-between group hover:border-zinc-400 dark:hover:border-zinc-700 transition-all">
+    <div
+      class="bg-white dark:bg-zinc-950/80 p-6 rounded-3xl border border-stone-200 dark:border-zinc-800 shadow-sm dark:shadow-xl flex items-center justify-between group hover:border-zinc-400 dark:hover:border-zinc-700 transition-all">
       <div class="space-y-1">
-        <p class="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">Inactivos / Suspendidos</p>
+        <p class="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">Inactivos /
+          Suspendidos</p>
         <p class="text-3xl font-black text-zinc-900 dark:text-white tracking-tight">{{ usuariosInactivos }}</p>
         <p class="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 mt-1">Sin acceso a la plataforma</p>
       </div>
-      <div class="w-12 h-12 rounded-2xl bg-stone-100 dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 flex items-center justify-center shrink-0">
+      <div
+        class="w-12 h-12 rounded-2xl bg-stone-100 dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 flex items-center justify-center shrink-0">
         <i class="ph ph-prohibit text-2xl"></i>
       </div>
     </div>
   </div>
 
   <!-- Filter & Control Toolbar -->
-  <div class="bg-white dark:bg-zinc-950/90 p-5 rounded-3xl border border-stone-200 dark:border-zinc-800 shadow-sm dark:shadow-xl flex flex-col md:flex-row items-center justify-between gap-4 backdrop-blur-xl transition-colors">
+  <div
+    class="bg-white dark:bg-zinc-950/90 p-5 rounded-3xl border border-stone-200 dark:border-zinc-800 shadow-sm dark:shadow-xl flex flex-col md:flex-row items-center justify-between gap-4 backdrop-blur-xl transition-colors">
     <!-- Search Bar -->
     <div class="relative w-full md:w-80">
-      <i class="ph ph-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 text-base pointer-events-none"></i>
-      <input type="text" [(ngModel)]="filtroTexto" (input)="aplicarFiltros()"
-             placeholder="Buscar por nombre, usuario, rol o correo..."
-             class="w-full bg-stone-50 dark:bg-zinc-900/80 border border-stone-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 text-xs font-medium rounded-2xl pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all">
+      <i
+        class="ph ph-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 text-base pointer-events-none"></i>
+      <input type="text" [(ngModel)]="filtroTexto" (input)="onBusquedaInput()"
+        placeholder="Buscar por nombre, usuario, rol o correo..."
+        class="w-full bg-stone-50 dark:bg-zinc-900/80 border border-stone-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 text-xs font-medium rounded-2xl pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all">
     </div>
 
     <!-- Selectors -->
@@ -98,7 +114,7 @@
       <div *ngIf="isGlobalAdmin && empresas.length > 0" class="flex items-center gap-2">
         <span class="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">Tenant:</span>
         <select [(ngModel)]="filtroEmpresa" (change)="onFiltroEmpresaChange()"
-                class="bg-stone-50 dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-200 text-xs font-bold rounded-2xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all cursor-pointer">
+          class="bg-stone-50 dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-200 text-xs font-bold rounded-2xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all cursor-pointer">
           <option value="TODOS">Todos los Tenants</option>
           <option *ngFor="let emp of empresas" [value]="emp.id_empresa">{{ emp.nombre_empresa }}</option>
         </select>
@@ -108,7 +124,7 @@
       <div class="flex items-center gap-2">
         <span class="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">Rol:</span>
         <select [(ngModel)]="filtroRol" (change)="aplicarFiltros()"
-                class="bg-stone-50 dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-200 text-xs font-bold rounded-2xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all cursor-pointer">
+          class="bg-stone-50 dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-200 text-xs font-bold rounded-2xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all cursor-pointer">
           <option value="TODOS">Todos los Roles</option>
           <option *ngFor="let r of rolesDisponibles" [value]="r.id_rol">{{ r.nombre }}</option>
         </select>
@@ -118,7 +134,7 @@
       <div class="flex items-center gap-2">
         <span class="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">Estado:</span>
         <select [(ngModel)]="filtroEstado" (change)="aplicarFiltros()"
-                class="bg-stone-50 dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-200 text-xs font-bold rounded-2xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all cursor-pointer">
+          class="bg-stone-50 dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-200 text-xs font-bold rounded-2xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all cursor-pointer">
           <option value="TODOS">Todos</option>
           <option value="ACTIVO">Activos</option>
           <option value="INACTIVO">Inactivos</option>
@@ -128,9 +144,11 @@
   </div>
 
   <!-- Users Table -->
-  <div class="bg-white dark:bg-zinc-950/90 border border-stone-200 dark:border-zinc-800 rounded-3xl shadow-sm dark:shadow-2xl overflow-hidden backdrop-blur-xl transition-colors">
+  <div
+    class="bg-white dark:bg-zinc-950/90 border border-stone-200 dark:border-zinc-800 rounded-3xl shadow-sm dark:shadow-2xl overflow-hidden backdrop-blur-xl transition-colors">
     <div *ngIf="cargando && !mostrarModal && !mostrarModalPermisos" class="p-8 space-y-4">
-      <div *ngFor="let i of [1,2,3]" class="animate-pulse flex items-center justify-between py-4 border-b border-stone-200 dark:border-zinc-900">
+      <div *ngFor="let i of [1,2,3]"
+        class="animate-pulse flex items-center justify-between py-4 border-b border-stone-200 dark:border-zinc-900">
         <div class="w-48 h-4 bg-stone-200 dark:bg-zinc-900 rounded"></div>
         <div class="w-28 h-4 bg-stone-200 dark:bg-zinc-900 rounded"></div>
         <div class="w-20 h-4 bg-stone-200 dark:bg-zinc-900 rounded"></div>
@@ -140,7 +158,8 @@
     <div *ngIf="!cargando || mostrarModal || mostrarModalPermisos" class="overflow-x-auto">
       <table class="w-full text-left border-collapse">
         <thead>
-          <tr class="bg-stone-50/80 dark:bg-zinc-900/80 border-b border-stone-200 dark:border-zinc-800 text-[11px] font-bold uppercase tracking-widest text-zinc-600 dark:text-zinc-400">
+          <tr
+            class="bg-stone-50/80 dark:bg-zinc-900/80 border-b border-stone-200 dark:border-zinc-800 text-[11px] font-bold uppercase tracking-widest text-zinc-600 dark:text-zinc-400">
             <th class="py-4 px-6">Usuario & Identidad</th>
             <th class="py-4 px-6">Rol Jerárquico</th>
             <th class="py-4 px-6">Empresa / Tenant</th>
@@ -150,18 +169,23 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-zinc-900 text-xs">
-          <tr *ngFor="let u of usuariosFiltrados" class="hover:bg-zinc-900/50 transition-colors group">
-            
+          <tr *ngFor="let u of usuariosFiltrados; trackBy: trackByUsuarioId"
+            class="hover:bg-zinc-900/50 transition-colors group">
+
             <!-- Usuario & Identidad -->
             <td class="py-4 px-6">
-              <div (click)="abrirModalDetalle(u)" class="flex items-center gap-3.5 cursor-pointer group/user" title="Ver ficha completa de este usuario">
-                <div class="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 font-black text-xs flex items-center justify-center shrink-0 shadow-inner group-hover/user:border-amber-400 group-hover/user:scale-105 transition-all">
+              <div (click)="abrirModalDetalle(u)" class="flex items-center gap-3.5 cursor-pointer group/user"
+                title="Ver ficha completa de este usuario">
+                <div
+                  class="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 font-black text-xs flex items-center justify-center shrink-0 shadow-inner group-hover/user:border-amber-400 group-hover/user:scale-105 transition-all">
                   {{ obtenerIniciales(u.nombre_completo || u.nombre_usuario) }}
                 </div>
                 <div>
-                  <p class="font-bold text-white text-sm group-hover/user:text-amber-300 transition-colors flex items-center gap-1.5">
+                  <p
+                    class="font-bold text-white text-sm group-hover/user:text-amber-300 transition-colors flex items-center gap-1.5">
                     <span>{{ u.nombre_completo || u.nombre_usuario }}</span>
-                    <i class="ph ph-arrow-up-right text-xs opacity-0 group-hover/user:opacity-100 text-amber-400 transition-opacity"></i>
+                    <i
+                      class="ph ph-arrow-up-right text-xs opacity-0 group-hover/user:opacity-100 text-amber-400 transition-opacity"></i>
                   </p>
                   <p class="text-[11px] text-zinc-400 font-mono flex items-center gap-1.5 mt-0.5">
                     <span>&#64;{{ u.nombre_usuario }}</span>
@@ -174,8 +198,7 @@
 
             <!-- Rol Jerárquico -->
             <td class="py-4 px-6">
-              <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border"
-                   [ngClass]="{
+              <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border" [ngClass]="{
                      'bg-amber-500/10 border-amber-500/30 text-amber-400': u.nombre_rol === 'ADMINISTRADOR',
                      'bg-indigo-500/10 border-indigo-500/30 text-indigo-300': u.nombre_rol === 'ADMINISTRADOR_TIENDA',
                      'bg-sky-500/10 border-sky-500/30 text-sky-400': u.nombre_rol === 'ENCARGADO' || u.nombre_rol === 'ENCARGADO_SUCURSAL',
@@ -200,7 +223,8 @@
                   <i class="ph ph-storefront text-zinc-500"></i>
                   <span>{{ u.nombre_empresa || 'Plataforma Global' }}</span>
                 </span>
-                <span *ngIf="obtenerNombresSucursales(u)" class="inline-flex items-center gap-1 text-[11px] text-amber-400 font-normal">
+                <span *ngIf="obtenerNombresSucursales(u)"
+                  class="inline-flex items-center gap-1 text-[11px] text-amber-400 font-normal">
                   <i class="ph ph-map-pin text-amber-500"></i>
                   <span>{{ obtenerNombresSucursales(u) }}</span>
                 </span>
@@ -210,10 +234,11 @@
             <!-- Permisos Directos + Heredados -->
             <td class="py-4 px-6 text-center">
               <button (click)="abrirModalPermisos(u)" title="Ver y gestionar permisos específicos"
-                      class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-amber-500/10 border border-zinc-800 hover:border-amber-500/40 text-zinc-300 hover:text-amber-300 text-xs font-semibold transition-all cursor-pointer group/btn">
+                class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-amber-500/10 border border-zinc-800 hover:border-amber-500/40 text-zinc-300 hover:text-amber-300 text-xs font-semibold transition-all cursor-pointer group/btn">
                 <i class="ph ph-shield-star text-amber-400 group-hover/btn:scale-110 transition-transform"></i>
                 <span>Roles + Directos</span>
-                <span *ngIf="(u.permisos_directos_count || 0) > 0" class="px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold">
+                <span *ngIf="(u.permisos_directos_count || 0) > 0"
+                  class="px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold">
                   +{{ u.permisos_directos_count }}
                 </span>
               </button>
@@ -221,10 +246,12 @@
 
             <!-- Estado -->
             <td class="py-4 px-6 text-center">
-              <span *ngIf="u.estado === 'ACTIVO'" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              <span *ngIf="u.estado === 'ACTIVO'"
+                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Activo
               </span>
-              <span *ngIf="u.estado !== 'ACTIVO'" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-zinc-900 text-zinc-400 border border-zinc-800">
+              <span *ngIf="u.estado !== 'ACTIVO'"
+                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-zinc-900 text-zinc-400 border border-zinc-800">
                 <span class="w-1.5 h-1.5 rounded-full bg-zinc-500"></span> Inactivo
               </span>
             </td>
@@ -232,22 +259,27 @@
             <!-- Acciones -->
             <td class="py-4 px-6 text-right">
               <div class="flex items-center justify-end gap-1.5">
-                <button (click)="abrirModalDetalle(u)" title="Ver Datos Completos del Usuario" class="p-2 text-zinc-400 hover:text-amber-300 hover:bg-zinc-900 border border-transparent hover:border-zinc-800 rounded-xl transition-all cursor-pointer">
+                <button (click)="abrirModalDetalle(u)" title="Ver Datos Completos del Usuario"
+                  class="p-2 text-zinc-400 hover:text-amber-300 hover:bg-zinc-900 border border-transparent hover:border-zinc-800 rounded-xl transition-all cursor-pointer">
                   <i class="ph ph-eye text-base"></i>
                 </button>
-                <button (click)="abrirModalPermisos(u)" title="Asignar Permisos Directos" class="p-2 text-zinc-400 hover:text-amber-300 hover:bg-zinc-900 border border-transparent hover:border-zinc-800 rounded-xl transition-all cursor-pointer">
+                <button (click)="abrirModalPermisos(u)" title="Asignar Permisos Directos"
+                  class="p-2 text-zinc-400 hover:text-amber-300 hover:bg-zinc-900 border border-transparent hover:border-zinc-800 rounded-xl transition-all cursor-pointer">
                   <i class="ph ph-shield-star text-base"></i>
                 </button>
-                <button (click)="abrirModalSucursales(u)" title="Asignar Sucursales Autorizadas" class="p-2 text-zinc-400 hover:text-emerald-300 hover:bg-zinc-900 border border-transparent hover:border-zinc-800 rounded-xl transition-all cursor-pointer">
+                <button (click)="abrirModalSucursales(u)" title="Asignar Sucursales Autorizadas"
+                  class="p-2 text-zinc-400 hover:text-emerald-300 hover:bg-zinc-900 border border-transparent hover:border-zinc-800 rounded-xl transition-all cursor-pointer">
                   <i class="ph ph-storefront text-base"></i>
                 </button>
-                <button *ngIf="authService.hasPermission('usuarios.editar')" (click)="abrirModalEditar(u)" title="Editar Usuario" class="p-2 text-zinc-400 hover:text-amber-300 hover:bg-zinc-900 border border-transparent hover:border-zinc-800 rounded-xl transition-all cursor-pointer">
+                <button *ngIf="authService.hasPermission('usuarios.editar')" (click)="abrirModalEditar(u)"
+                  title="Editar Usuario"
+                  class="p-2 text-zinc-400 hover:text-amber-300 hover:bg-zinc-900 border border-transparent hover:border-zinc-800 rounded-xl transition-all cursor-pointer">
                   <i class="ph ph-pencil-simple text-base"></i>
                 </button>
-                <button *ngIf="authService.hasPermission('usuarios.desactivar')" (click)="cambiarEstadoUsuario(u)" 
-                        [title]="u.estado === 'ACTIVO' ? 'Desactivar Usuario' : 'Activar Usuario'" 
-                        class="p-2 text-zinc-400 hover:bg-zinc-900 border border-transparent hover:border-zinc-800 rounded-xl transition-all cursor-pointer"
-                        [ngClass]="u.estado === 'ACTIVO' ? 'hover:text-rose-400' : 'hover:text-emerald-400'">
+                <button *ngIf="authService.hasPermission('usuarios.desactivar')" (click)="cambiarEstadoUsuario(u)"
+                  [title]="u.estado === 'ACTIVO' ? 'Desactivar Usuario' : 'Activar Usuario'"
+                  class="p-2 text-zinc-400 hover:bg-zinc-900 border border-transparent hover:border-zinc-800 rounded-xl transition-all cursor-pointer"
+                  [ngClass]="u.estado === 'ACTIVO' ? 'hover:text-rose-400' : 'hover:text-emerald-400'">
                   <i class="ph" [ngClass]="u.estado === 'ACTIVO' ? 'ph-prohibit' : 'ph-check-circle'" text-base></i>
                 </button>
               </div>
@@ -268,40 +300,47 @@
 <!-- ==================================================== -->
 <!-- MODAL: REGISTRAR / EDITAR USUARIO                    -->
 <!-- ==================================================== -->
-<div *ngIf="mostrarModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/85 backdrop-blur-md transition-all overflow-y-auto">
-  <div class="bg-zinc-950 border border-zinc-800 rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden ring-1 ring-amber-500/20 my-8">
-    
+<div *ngIf="mostrarModal"
+  class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/85 backdrop-blur-md transition-all overflow-y-auto">
+  <div
+    class="bg-zinc-950 border border-zinc-800 rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden ring-1 ring-amber-500/20 my-8">
+
     <div class="flex justify-between items-center px-8 py-6 border-b border-zinc-800 bg-zinc-900/60">
       <div class="space-y-1">
-        <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-bold uppercase tracking-widest">
+        <div
+          class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-bold uppercase tracking-widest">
           {{ modoEdicion ? 'Actualización' : 'Nuevo Usuario' }}
         </div>
         <h3 class="text-lg font-black text-white">
-          <span *ngIf="modoEdicion">Editar Usuario <span class="text-amber-400 font-mono text-sm">&#64;{{ usuarioForm.nombre_usuario }}</span></span>
+          <span *ngIf="modoEdicion">Editar Usuario <span class="text-amber-400 font-mono text-sm">&#64;{{
+              usuarioForm.nombre_usuario }}</span></span>
           <span *ngIf="!modoEdicion">Registrar Usuario</span>
         </h3>
       </div>
-      <button (click)="cerrarModal()" class="p-2 text-zinc-400 hover:text-white rounded-xl hover:bg-zinc-900 transition-colors cursor-pointer">
+      <button (click)="cerrarModal()"
+        class="p-2 text-zinc-400 hover:text-white rounded-xl hover:bg-zinc-900 transition-colors cursor-pointer">
         <i class="ph ph-x text-lg"></i>
       </button>
     </div>
 
     <div class="p-8 max-h-[75vh] overflow-y-auto space-y-6">
-      <div *ngIf="mensajeModalError" class="p-4 bg-rose-950/50 border border-rose-800/60 rounded-2xl text-xs font-semibold text-rose-300 flex items-center gap-3">
+      <div *ngIf="mensajeModalError"
+        class="p-4 bg-rose-950/50 border border-rose-800/60 rounded-2xl text-xs font-semibold text-rose-300 flex items-center gap-3">
         <i class="ph ph-warning-circle text-lg text-rose-400 shrink-0"></i>
         <span>{{ mensajeModalError }}</span>
       </div>
 
       <form #formUser="ngForm" class="space-y-4 text-xs">
-        
+
         <!-- Nombre Completo * -->
         <div>
           <label class="block font-bold text-zinc-300 mb-1.5 flex items-center justify-between">
             <span>Nombre Completo *</span>
             <span class="text-[10px] font-normal text-amber-400">Obligatorio</span>
           </label>
-          <input type="text" name="nombre_completo" [(ngModel)]="usuarioForm.nombre_completo" required placeholder="Ej. Mariana López Daza"
-                 class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-white placeholder-zinc-600 focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all">
+          <input type="text" name="nombre_completo" [(ngModel)]="usuarioForm.nombre_completo" required
+            placeholder="Ej. Mariana López Daza"
+            class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-white placeholder-zinc-600 focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all">
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -311,15 +350,16 @@
               <span>Nombre de Usuario *</span>
               <span class="text-[10px] font-normal text-amber-400">Único</span>
             </label>
-            <input type="text" name="nombre_usuario" [(ngModel)]="usuarioForm.nombre_usuario" required placeholder="ej. mlopez"
-                   class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-white lowercase placeholder-zinc-600 focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all">
+            <input type="text" name="nombre_usuario" [(ngModel)]="usuarioForm.nombre_usuario" required
+              placeholder="ej. mlopez"
+              class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-white lowercase placeholder-zinc-600 focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all">
           </div>
 
           <!-- Correo -->
           <div>
             <label class="block font-bold text-zinc-300 mb-1.5">Correo Electrónico</label>
             <input type="email" name="correo" [(ngModel)]="usuarioForm.correo" placeholder="correo@ejemplo.com"
-                   class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-white lowercase placeholder-zinc-600 focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all">
+              class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-white lowercase placeholder-zinc-600 focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all">
           </div>
         </div>
 
@@ -328,7 +368,7 @@
           <div>
             <label class="block font-bold text-zinc-300 mb-1.5">Teléfono de Contacto</label>
             <input type="text" name="telefono" [(ngModel)]="usuarioForm.telefono" placeholder="Ej. 77012345"
-                   class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-white placeholder-zinc-600 focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all">
+              class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-white placeholder-zinc-600 focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all">
           </div>
 
           <!-- Rol Delegable (según jerarquía) * -->
@@ -338,7 +378,7 @@
               <span class="text-[10px] font-normal text-amber-400">Jerarquía</span>
             </label>
             <select name="nro_rol" [(ngModel)]="usuarioForm.nro_rol" (change)="onRolFormChange()" required
-                    class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-white focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all cursor-pointer">
+              class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-white focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all cursor-pointer">
               <option *ngFor="let r of rolesDisponibles" [ngValue]="r.id_rol">{{ r.nombre }}</option>
             </select>
           </div>
@@ -351,9 +391,10 @@
             <span class="text-[10px] font-normal text-zinc-400">Opcional para Global</span>
           </label>
           <select name="id_empresa" [(ngModel)]="usuarioForm.id_empresa" (change)="onEmpresaFormChange()"
-                  class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-white focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all cursor-pointer">
+            class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-white focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all cursor-pointer">
             <option [ngValue]="null">Plataforma Global (Sin Empresa)</option>
-            <option *ngFor="let emp of empresas" [ngValue]="emp.id_empresa">{{ emp.nombre_empresa }} (ID #{{ emp.id_empresa }})</option>
+            <option *ngFor="let emp of empresas" [ngValue]="emp.id_empresa">{{ emp.nombre_empresa }} (ID #{{
+              emp.id_empresa }})</option>
           </select>
         </div>
 
@@ -368,14 +409,16 @@
             <span *ngIf="!requiereSucursal()" class="text-[10px] font-normal text-zinc-400">Opcional</span>
           </label>
           <select name="id_sucursal" [(ngModel)]="usuarioForm.id_sucursal" [required]="requiereSucursal()"
-                  class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-white focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all cursor-pointer">
-            <option [ngValue]="null">-- {{ requiereSucursal() ? 'Seleccione una sucursal' : 'Sin sucursal fija / Todas' }} --</option>
+            class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-white focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all cursor-pointer">
+            <option [ngValue]="null">-- {{ requiereSucursal() ? 'Seleccione una sucursal' : 'Sin sucursal fija / Todas'
+              }} --</option>
             <option *ngFor="let suc of sucursalesDisponibles" [ngValue]="suc.id_sucursal">
               {{ suc.nombre }} {{ suc.ciudad ? '(' + suc.ciudad + ')' : '' }}
             </option>
           </select>
           <p *ngIf="cargandoSucursales" class="text-[11px] text-zinc-400 mt-1">Cargando sucursales disponibles...</p>
-          <p *ngIf="!cargandoSucursales && sucursalesDisponibles.length === 0" class="text-[11px] text-amber-400/80 mt-1">
+          <p *ngIf="!cargandoSucursales && sucursalesDisponibles.length === 0"
+            class="text-[11px] text-amber-400/80 mt-1">
             No hay sucursales disponibles para la empresa seleccionada.
           </p>
         </div>
@@ -386,21 +429,23 @@
             <span>{{ modoEdicion ? 'Cambiar Contraseña (dejar vacío para mantener)' : 'Contraseña Inicial *' }}</span>
             <span *ngIf="!modoEdicion" class="text-[10px] font-normal text-amber-400">Obligatorio</span>
           </label>
-          <input type="password" name="password" [(ngModel)]="usuarioForm.password" [required]="!modoEdicion" placeholder="••••••••"
-                 class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-white placeholder-zinc-600 focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all">
+          <input type="password" name="password" [(ngModel)]="usuarioForm.password" [required]="!modoEdicion"
+            placeholder="••••••••"
+            class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-white placeholder-zinc-600 focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all">
         </div>
 
       </form>
     </div>
 
     <div class="px-8 py-5 border-t border-zinc-800 bg-zinc-900/60 flex items-center justify-end gap-3">
-      <button type="button" (click)="cerrarModal()" 
-              class="px-5 py-2.5 text-xs font-bold text-zinc-300 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-xl transition-all cursor-pointer">
+      <button type="button" (click)="cerrarModal()"
+        class="px-5 py-2.5 text-xs font-bold text-zinc-300 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-xl transition-all cursor-pointer">
         Cancelar
       </button>
       <button type="button" (click)="guardarUsuario()" [disabled]="formUser.invalid || guardando"
-              class="px-6 py-2.5 text-xs font-black text-zinc-950 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 rounded-xl transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-amber-500/20 ring-1 ring-amber-400/40 cursor-pointer">
-        <span *ngIf="guardando" class="animate-spin rounded-full h-3.5 w-3.5 border-2 border-zinc-950 border-r-transparent"></span>
+        class="px-6 py-2.5 text-xs font-black text-zinc-950 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 rounded-xl transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-amber-500/20 ring-1 ring-amber-400/40 cursor-pointer">
+        <span *ngIf="guardando"
+          class="animate-spin rounded-full h-3.5 w-3.5 border-2 border-zinc-950 border-r-transparent"></span>
         <i *ngIf="!guardando" class="ph ph-check text-base"></i>
         {{ modoEdicion ? 'Actualizar Usuario' : 'Registrar Usuario' }}
       </button>
@@ -412,13 +457,16 @@
 <!-- ==================================================== -->
 <!-- MODAL: GESTIÓN DE PERMISOS DIRECTOS POR ACCIÓN       -->
 <!-- ==================================================== -->
-<div *ngIf="mostrarModalPermisos" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/85 backdrop-blur-md transition-all overflow-y-auto">
-  <div class="bg-zinc-950 border border-zinc-800 rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden ring-1 ring-amber-500/20 my-8">
-    
+<div *ngIf="mostrarModalPermisos"
+  class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/85 backdrop-blur-md transition-all overflow-y-auto">
+  <div
+    class="bg-zinc-950 border border-zinc-800 rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden ring-1 ring-amber-500/20 my-8">
+
     <!-- Header Modal Permisos -->
     <div class="flex justify-between items-center px-8 py-6 border-b border-zinc-800 bg-zinc-900/60">
       <div class="space-y-1">
-        <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-bold uppercase tracking-widest">
+        <div
+          class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-bold uppercase tracking-widest">
           Roles + Permisos Directos
         </div>
         <h3 class="text-lg font-black text-white flex items-center gap-2">
@@ -426,18 +474,22 @@
           <span class="text-amber-400 font-mono">{{ usuarioSeleccionadoPermisos?.nombre_completo }}</span>
         </h3>
         <p class="text-xs text-zinc-400">
-          Rol asignado: <strong class="text-zinc-200">{{ usuarioSeleccionadoPermisos?.nombre_rol }}</strong>. Los permisos marcados como "Heredado" provienen de su rol; activa casillas adicionales para asignar permisos directos.
+          Rol asignado: <strong class="text-zinc-200">{{ usuarioSeleccionadoPermisos?.nombre_rol }}</strong>. Los
+          permisos marcados como "Heredado" provienen de su rol; activa casillas adicionales para asignar permisos
+          directos.
         </p>
       </div>
-      <button (click)="cerrarModalPermisos()" class="p-2 text-zinc-400 hover:text-white rounded-xl hover:bg-zinc-900 transition-colors cursor-pointer">
+      <button (click)="cerrarModalPermisos()"
+        class="p-2 text-zinc-400 hover:text-white rounded-xl hover:bg-zinc-900 transition-colors cursor-pointer">
         <i class="ph ph-x text-lg"></i>
       </button>
     </div>
 
     <!-- Body Modal Permisos -->
     <div class="p-8 max-h-[70vh] overflow-y-auto space-y-6">
-      
-      <div *ngIf="mensajeModalError" class="p-4 bg-rose-950/50 border border-rose-800/60 rounded-2xl text-xs font-semibold text-rose-300 flex items-center gap-3">
+
+      <div *ngIf="mensajeModalError"
+        class="p-4 bg-rose-950/50 border border-rose-800/60 rounded-2xl text-xs font-semibold text-rose-300 flex items-center gap-3">
         <i class="ph ph-warning-circle text-lg text-rose-400 shrink-0"></i>
         <span>{{ mensajeModalError }}</span>
       </div>
@@ -465,8 +517,9 @@
 
       <!-- Grupos por Módulo -->
       <div *ngIf="!cargandoPermisos" class="space-y-6">
-        <div *ngFor="let mod of modulosPermisos" class="bg-zinc-900/40 p-5 rounded-2xl border border-zinc-800/80 space-y-3">
-          
+        <div *ngFor="let mod of modulosPermisos"
+          class="bg-zinc-900/40 p-5 rounded-2xl border border-zinc-800/80 space-y-3">
+
           <div class="flex items-center justify-between border-b border-zinc-800 pb-2">
             <h4 class="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-2">
               <i class="ph ph-folder-notch-open"></i>
@@ -476,14 +529,13 @@
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div *ngFor="let p of mod.permisos" 
-                 class="p-3 rounded-xl border flex items-center justify-between text-xs transition-colors"
-                 [ngClass]="{
+            <div *ngFor="let p of mod.permisos"
+              class="p-3 rounded-xl border flex items-center justify-between text-xs transition-colors" [ngClass]="{
                    'bg-indigo-950/20 border-indigo-500/30 text-indigo-200': codigosPermisosHeredados.has(p.codigo),
                    'bg-amber-950/20 border-amber-500/30 text-amber-200': !codigosPermisosHeredados.has(p.codigo) && idsPermisosDirectosSeleccionados.has(p.id_permiso),
                    'bg-zinc-900/60 border-zinc-800/80 text-zinc-400': !codigosPermisosHeredados.has(p.codigo) && !idsPermisosDirectosSeleccionados.has(p.id_permiso)
                  }">
-              
+
               <div class="space-y-0.5">
                 <p class="font-bold text-white text-xs">{{ p.nombre }}</p>
                 <p class="text-[10px] font-mono text-zinc-400">{{ p.codigo }}</p>
@@ -492,19 +544,17 @@
               <!-- Estado: Heredado vs Checkbox Directo -->
               <div class="shrink-0">
                 <!-- Si es heredado del rol -->
-                <span *ngIf="codigosPermisosHeredados.has(p.codigo)" 
-                      class="px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] font-bold">
+                <span *ngIf="codigosPermisosHeredados.has(p.codigo)"
+                  class="px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] font-bold">
                   Heredado
                 </span>
 
                 <!-- Si no es heredado, checkbox para permiso directo -->
-                <label *ngIf="!codigosPermisosHeredados.has(p.codigo)" 
-                       class="inline-flex items-center gap-2 cursor-pointer select-none">
-                  <input type="checkbox" 
-                         [checked]="idsPermisosDirectosSeleccionados.has(p.id_permiso)"
-                         [disabled]="!esPermisoDelegable(p)"
-                         (change)="togglePermisoDirecto(p)"
-                         class="w-4 h-4 rounded bg-zinc-900 border-zinc-700 text-amber-500 focus:ring-amber-500 focus:ring-offset-zinc-950 cursor-pointer disabled:opacity-30">
+                <label *ngIf="!codigosPermisosHeredados.has(p.codigo)"
+                  class="inline-flex items-center gap-2 cursor-pointer select-none">
+                  <input type="checkbox" [checked]="idsPermisosDirectosSeleccionados.has(p.id_permiso)"
+                    [disabled]="!esPermisoDelegable(p)" (change)="togglePermisoDirecto(p)"
+                    class="w-4 h-4 rounded bg-zinc-900 border-zinc-700 text-amber-500 focus:ring-amber-500 focus:ring-offset-zinc-950 cursor-pointer disabled:opacity-30">
                   <span *ngIf="!esPermisoDelegable(p)" class="text-[9px] text-zinc-600 italic">No delegable</span>
                 </label>
               </div>
@@ -523,13 +573,14 @@
         Permisos directos asignados: <strong class="text-amber-400">{{ idsPermisosDirectosSeleccionados.size }}</strong>
       </div>
       <div class="flex items-center gap-3">
-        <button type="button" (click)="cerrarModalPermisos()" 
-                class="px-5 py-2.5 text-xs font-bold text-zinc-300 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-xl transition-all cursor-pointer">
+        <button type="button" (click)="cerrarModalPermisos()"
+          class="px-5 py-2.5 text-xs font-bold text-zinc-300 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-xl transition-all cursor-pointer">
           Cancelar
         </button>
         <button type="button" (click)="guardarPermisosDirectos()" [disabled]="guardando || cargandoPermisos"
-                class="px-6 py-2.5 text-xs font-black text-zinc-950 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 rounded-xl transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-amber-500/20 ring-1 ring-amber-400/40 cursor-pointer">
-          <span *ngIf="guardando" class="animate-spin rounded-full h-3.5 w-3.5 border-2 border-zinc-950 border-r-transparent"></span>
+          class="px-6 py-2.5 text-xs font-black text-zinc-950 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 rounded-xl transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-amber-500/20 ring-1 ring-amber-400/40 cursor-pointer">
+          <span *ngIf="guardando"
+            class="animate-spin rounded-full h-3.5 w-3.5 border-2 border-zinc-950 border-r-transparent"></span>
           <i *ngIf="!guardando" class="ph ph-shield-check text-base"></i>
           <span>Guardar Permisos Directos</span>
         </button>
@@ -542,11 +593,12 @@
 <!-- ============================================================== -->
 <!-- MODAL FICHA DE DATOS DEL USUARIO (DETALLE COMPLETO)           -->
 <!-- ============================================================== -->
-<div *ngIf="mostrarModalDetalle && usuarioSeleccionadoDetalle as user" 
-     class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-black/80 backdrop-blur-md animate-fade-in">
-  
-  <div class="relative w-full max-w-2xl bg-zinc-950 border border-zinc-800 rounded-3xl shadow-2xl shadow-black/90 overflow-hidden flex flex-col max-h-[90vh]">
-    
+<div *ngIf="mostrarModalDetalle && usuarioSeleccionadoDetalle as user"
+  class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-black/80 backdrop-blur-md animate-fade-in">
+
+  <div
+    class="relative w-full max-w-2xl bg-zinc-950 border border-zinc-800 rounded-3xl shadow-2xl shadow-black/90 overflow-hidden flex flex-col max-h-[90vh]">
+
     <!-- Top Gold Accent -->
     <div class="h-1 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600"></div>
 
@@ -555,13 +607,15 @@
       <div class="flex items-center gap-4">
         <!-- Big Avatar with Gold Ring -->
         <div class="relative">
-          <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-600 to-amber-400 p-[2px] shadow-lg shadow-amber-500/10">
-            <div class="w-full h-full rounded-2xl bg-zinc-950 flex items-center justify-center text-amber-300 font-black text-xl select-none">
+          <div
+            class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-600 to-amber-400 p-[2px] shadow-lg shadow-amber-500/10">
+            <div
+              class="w-full h-full rounded-2xl bg-zinc-950 flex items-center justify-center text-amber-300 font-black text-xl select-none">
               {{ obtenerIniciales(user.nombre_completo || user.nombre_usuario) }}
             </div>
           </div>
           <span class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-zinc-950"
-                [ngClass]="user.estado === 'ACTIVO' ? 'bg-emerald-500' : 'bg-zinc-600'"></span>
+            [ngClass]="user.estado === 'ACTIVO' ? 'bg-emerald-500' : 'bg-zinc-600'"></span>
         </div>
 
         <div>
@@ -569,14 +623,16 @@
             <h3 class="text-lg sm:text-xl font-bold text-white tracking-tight">
               {{ user.nombre_completo || user.nombre_usuario }}
             </h3>
-            <span *ngIf="user.estado === 'ACTIVO'" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            <span *ngIf="user.estado === 'ACTIVO'"
+              class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
               Activo
             </span>
-            <span *ngIf="user.estado !== 'ACTIVO'" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-zinc-900 text-zinc-400 border border-zinc-800">
+            <span *ngIf="user.estado !== 'ACTIVO'"
+              class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-zinc-900 text-zinc-400 border border-zinc-800">
               Inactivo
             </span>
           </div>
-          
+
           <p class="text-xs text-zinc-400 font-mono mt-0.5 flex items-center gap-2">
             <span>&#64;{{ user.nombre_usuario }}</span>
             <span class="text-zinc-600">•</span>
@@ -585,7 +641,8 @@
         </div>
       </div>
 
-      <button (click)="cerrarModalDetalle()" class="p-2 text-zinc-400 hover:text-white rounded-xl hover:bg-zinc-900 transition-colors">
+      <button (click)="cerrarModalDetalle()"
+        class="p-2 text-zinc-400 hover:text-white rounded-xl hover:bg-zinc-900 transition-colors">
         <i class="ph ph-x text-lg"></i>
       </button>
     </div>
@@ -595,18 +652,19 @@
 
       <!-- Grid 2 Columnas: Datos Personales & Organización -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        
+
         <!-- Bloque 1: Contacto y Ubicación -->
         <div class="p-4 rounded-2xl bg-zinc-900/40 border border-zinc-900 space-y-3">
           <p class="text-[11px] font-bold uppercase tracking-wider text-amber-400 font-mono flex items-center gap-1.5">
             <i class="ph ph-address-book text-sm"></i>
             <span>Contacto y Residencia</span>
           </p>
-          
+
           <div class="space-y-2 text-xs">
             <div>
               <span class="text-zinc-500 text-[10px] uppercase font-mono block">Correo Electrónico</span>
-              <a [href]="'mailto:' + user.correo" class="text-white font-medium hover:text-amber-300 transition-colors flex items-center gap-1.5 break-all">
+              <a [href]="'mailto:' + user.correo"
+                class="text-white font-medium hover:text-amber-300 transition-colors flex items-center gap-1.5 break-all">
                 <i class="ph ph-envelope text-zinc-400 shrink-0"></i>
                 <span>{{ user.correo || 'No especificado' }}</span>
               </a>
@@ -649,7 +707,7 @@
             <div>
               <span class="text-zinc-500 text-[10px] uppercase font-mono block">Rol Asignado</span>
               <div class="mt-1 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border"
-                   [ngClass]="{
+                [ngClass]="{
                      'bg-amber-500/10 border-amber-500/30 text-amber-400': user.nombre_rol === 'ADMINISTRADOR',
                      'bg-indigo-500/10 border-indigo-500/30 text-indigo-300': user.nombre_rol === 'ADMINISTRADOR_TIENDA',
                      'bg-sky-500/10 border-sky-500/30 text-sky-400': user.nombre_rol === 'ENCARGADO' || user.nombre_rol === 'ENCARGADO_SUCURSAL',
@@ -724,8 +782,8 @@
               ✦ Permisos Directos Especiales ({{ permisosDirectosDetalle.length }}):
             </p>
             <div class="flex flex-wrap gap-1.5">
-              <span *ngFor="let p of permisosDirectosDetalle" 
-                    class="px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/40 text-amber-300 text-[10px] font-mono font-semibold flex items-center gap-1 shadow-sm">
+              <span *ngFor="let p of permisosDirectosDetalle"
+                class="px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/40 text-amber-300 text-[10px] font-mono font-semibold flex items-center gap-1 shadow-sm">
                 <i class="ph ph-shield-star text-xs text-amber-400"></i>
                 <span>{{ p.codigo }}</span>
               </span>
@@ -738,14 +796,15 @@
               Permisos Heredados por su Rol ({{ permisosHeredadosDetalle.length }}):
             </p>
             <div class="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto custom-scrollbar p-1">
-              <span *ngFor="let p of permisosHeredadosDetalle" 
-                    class="px-2 py-0.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 text-[10px] font-mono">
+              <span *ngFor="let p of permisosHeredadosDetalle"
+                class="px-2 py-0.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 text-[10px] font-mono">
                 {{ p.codigo }}
               </span>
             </div>
           </div>
 
-          <div *ngIf="permisosDirectosDetalle.length === 0 && permisosHeredadosDetalle.length === 0" class="text-xs text-zinc-500 text-center py-3">
+          <div *ngIf="permisosDirectosDetalle.length === 0 && permisosHeredadosDetalle.length === 0"
+            class="text-xs text-zinc-500 text-center py-3">
             Este usuario no tiene permisos especiales asignados.
           </div>
         </div>
@@ -755,20 +814,20 @@
 
     <!-- Footer Modal -->
     <div class="p-6 border-t border-zinc-900 bg-zinc-900/50 flex flex-wrap items-center justify-between gap-3">
-      <button type="button" (click)="cerrarModalDetalle()" 
-              class="px-5 py-2.5 text-xs font-bold text-zinc-300 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-xl transition-all cursor-pointer">
+      <button type="button" (click)="cerrarModalDetalle()"
+        class="px-5 py-2.5 text-xs font-bold text-zinc-300 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-xl transition-all cursor-pointer">
         Cerrar Ficha
       </button>
 
       <div class="flex items-center gap-2 flex-wrap">
-        <button type="button" (click)="abrirPermisosDesdeDetalle()" 
-                class="px-4 py-2.5 text-xs font-bold text-amber-300 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer">
+        <button type="button" (click)="abrirPermisosDesdeDetalle()"
+          class="px-4 py-2.5 text-xs font-bold text-amber-300 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer">
           <i class="ph ph-shield-star text-sm"></i>
           <span>Gestionar Permisos</span>
         </button>
 
-        <button *ngIf="authService.hasPermission('usuarios.editar')" type="button" (click)="abrirEdicionDesdeDetalle()" 
-                class="px-4 py-2.5 text-xs font-bold text-zinc-200 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer">
+        <button *ngIf="authService.hasPermission('usuarios.editar')" type="button" (click)="abrirEdicionDesdeDetalle()"
+          class="px-4 py-2.5 text-xs font-bold text-zinc-200 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer">
           <i class="ph ph-pencil-simple text-sm"></i>
           <span>Editar Datos</span>
         </button>
@@ -781,26 +840,32 @@
 <!-- ==================================================== -->
 <!-- MODAL: ASIGNACIÓN DE SUCURSALES AUTORIZADAS          -->
 <!-- ==================================================== -->
-<div *ngIf="mostrarModalSucursales" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/85 backdrop-blur-md transition-all overflow-y-auto">
-  <div class="bg-zinc-950 border border-zinc-800 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden ring-1 ring-emerald-500/20 my-8">
+<div *ngIf="mostrarModalSucursales"
+  class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/85 backdrop-blur-md transition-all overflow-y-auto">
+  <div
+    class="bg-zinc-950 border border-zinc-800 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden ring-1 ring-emerald-500/20 my-8">
 
     <div class="flex justify-between items-center px-8 py-6 border-b border-zinc-800 bg-zinc-900/60">
       <div class="space-y-1">
-        <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-widest">
+        <div
+          class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-widest">
           Asignación de Sucursales
         </div>
         <h3 class="text-lg font-black text-white">
           Sucursales de <span class="text-emerald-400">{{ usuarioSeleccionadoSucursales?.nombre_completo }}</span>
         </h3>
-        <p class="text-[11px] text-zinc-400 font-mono">&#64;{{ usuarioSeleccionadoSucursales?.nombre_usuario }} · Rol: {{ usuarioSeleccionadoSucursales?.nombre_rol }}</p>
+        <p class="text-[11px] text-zinc-400 font-mono">&#64;{{ usuarioSeleccionadoSucursales?.nombre_usuario }} · Rol:
+          {{ usuarioSeleccionadoSucursales?.nombre_rol }}</p>
       </div>
-      <button (click)="cerrarModalSucursales()" class="p-2 text-zinc-400 hover:text-white rounded-xl hover:bg-zinc-900 transition-colors cursor-pointer">
+      <button (click)="cerrarModalSucursales()"
+        class="p-2 text-zinc-400 hover:text-white rounded-xl hover:bg-zinc-900 transition-colors cursor-pointer">
         <i class="ph ph-x text-lg"></i>
       </button>
     </div>
 
     <!-- Error message inside modal -->
-    <div *ngIf="mensajeModalSucursalesError" class="mx-8 mt-4 p-3 rounded-2xl bg-rose-950/40 border border-rose-800/60 text-rose-300 text-xs">
+    <div *ngIf="mensajeModalSucursalesError"
+      class="mx-8 mt-4 p-3 rounded-2xl bg-rose-950/40 border border-rose-800/60 text-rose-300 text-xs">
       {{ mensajeModalSucursalesError }}
     </div>
 
@@ -813,25 +878,24 @@
     <!-- Branches List -->
     <div *ngIf="!cargandoSucursalesModal" class="p-8 max-h-[60vh] overflow-y-auto space-y-4">
       <p class="text-xs text-zinc-400 leading-relaxed">
-        Seleccione las sucursales donde el colaborador está autorizado para operar ventas, caja y reservas. Una lista vacía revoca el acceso a tiendas específicas.
+        Seleccione las sucursales donde el colaborador está autorizado para operar ventas, caja y reservas. Una lista
+        vacía revoca el acceso a tiendas específicas.
       </p>
 
       <div class="space-y-2">
-        <div *ngFor="let suc of sucursalesModalDisponibles"
-             (click)="toggleSucursalModal(suc.id_sucursal!)"
-             class="p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between"
-             [ngClass]="idsSucursalesSeleccionadas.has(suc.id_sucursal!)
+        <div *ngFor="let suc of sucursalesModalDisponibles" (click)="toggleSucursalModal(suc.id_sucursal!)"
+          class="p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between" [ngClass]="idsSucursalesSeleccionadas.has(suc.id_sucursal!)
                ? 'bg-emerald-950/20 border-emerald-500/40 ring-1 ring-emerald-500/20 text-white'
                : 'bg-zinc-900/40 border-zinc-800/80 hover:border-zinc-700 text-zinc-400'">
           <div class="flex items-center gap-3">
-            <div class="w-5 h-5 rounded-lg border flex items-center justify-center transition-colors"
-                 [ngClass]="idsSucursalesSeleccionadas.has(suc.id_sucursal!)
+            <div class="w-5 h-5 rounded-lg border flex items-center justify-center transition-colors" [ngClass]="idsSucursalesSeleccionadas.has(suc.id_sucursal!)
                    ? 'bg-emerald-500 border-emerald-500 text-black'
                    : 'border-zinc-700 bg-zinc-900'">
               <i *ngIf="idsSucursalesSeleccionadas.has(suc.id_sucursal!)" class="ph ph-check text-xs font-bold"></i>
             </div>
             <div>
-              <p class="text-xs font-bold" [ngClass]="idsSucursalesSeleccionadas.has(suc.id_sucursal!) ? 'text-white' : 'text-zinc-300'">
+              <p class="text-xs font-bold"
+                [ngClass]="idsSucursalesSeleccionadas.has(suc.id_sucursal!) ? 'text-white' : 'text-zinc-300'">
                 {{ suc.nombre }}
               </p>
               <p class="text-[11px] text-zinc-500 mt-0.5">
@@ -840,15 +904,15 @@
             </div>
           </div>
 
-          <span class="text-[10px] font-mono px-2 py-0.5 rounded-full"
-                [ngClass]="idsSucursalesSeleccionadas.has(suc.id_sucursal!)
+          <span class="text-[10px] font-mono px-2 py-0.5 rounded-full" [ngClass]="idsSucursalesSeleccionadas.has(suc.id_sucursal!)
                   ? 'bg-emerald-500/20 text-emerald-300'
                   : 'bg-zinc-800 text-zinc-500'">
             ID #{{ suc.id_sucursal }}
           </span>
         </div>
 
-        <div *ngIf="sucursalesModalDisponibles.length === 0" class="p-6 text-center text-xs text-zinc-500 border border-zinc-800/60 rounded-2xl">
+        <div *ngIf="sucursalesModalDisponibles.length === 0"
+          class="p-6 text-center text-xs text-zinc-500 border border-zinc-800/60 rounded-2xl">
           No hay sucursales activas registradas para esta empresa.
         </div>
       </div>
@@ -861,14 +925,12 @@
       </span>
 
       <div class="flex items-center gap-3">
-        <button type="button" (click)="cerrarModalSucursales()"
-                [disabled]="guardando"
-                class="px-4 py-2 text-xs font-bold text-zinc-400 hover:text-white rounded-xl transition-colors">
+        <button type="button" (click)="cerrarModalSucursales()" [disabled]="guardando"
+          class="px-4 py-2 text-xs font-bold text-zinc-400 hover:text-white rounded-xl transition-colors">
           Cancelar
         </button>
-        <button type="button" (click)="guardarAsignacionSucursales()"
-                [disabled]="guardando || cargandoSucursalesModal"
-                class="px-5 py-2 text-xs font-bold text-black bg-emerald-400 hover:bg-emerald-300 rounded-xl transition-all shadow-md shadow-emerald-400/20 flex items-center gap-1.5 disabled:opacity-50 cursor-pointer">
+        <button type="button" (click)="guardarAsignacionSucursales()" [disabled]="guardando || cargandoSucursalesModal"
+          class="px-5 py-2 text-xs font-bold text-black bg-emerald-400 hover:bg-emerald-300 rounded-xl transition-all shadow-md shadow-emerald-400/20 flex items-center gap-1.5 disabled:opacity-50 cursor-pointer">
           <i *ngIf="guardando" class="ph ph-spinner animate-spin text-sm"></i>
           <span>{{ guardando ? 'Guardando...' : 'Guardar Asignaciones' }}</span>
         </button>

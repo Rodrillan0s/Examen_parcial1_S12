@@ -7,6 +7,7 @@ import { AuthService } from '../../services/auth';
 import { PerfilService } from '../../services/perfil';
 import { PedidoService, SucursalCheckout, CrearPedidoPayload } from '../../services/pedido';
 import { extraerMensajeError } from '../../utils/error-helper';
+import { NetworkStatusService } from '../../core/network/network-status.service';
 
 @Component({
   selector: 'app-checkout',
@@ -17,6 +18,7 @@ import { extraerMensajeError } from '../../utils/error-helper';
 export class CheckoutComponent implements OnInit {
   public carritoService = inject(CarritoService);
   public authService = inject(AuthService);
+  public networkStatus = inject(NetworkStatusService);
   private perfilService = inject(PerfilService);
   private pedidoService = inject(PedidoService);
   private router = inject(Router);
@@ -192,6 +194,12 @@ export class CheckoutComponent implements OnInit {
   confirmarPedido(): void {
     if (this.procesando) return;
     this.errorMensaje = null;
+
+    if (!this.networkStatus.isOnline()) {
+      this.errorMensaje =
+        'La confirmación definitiva de compra y pago requiere conexión en línea activa. Tu bolsa y datos siguen resguardados localmente.';
+      return;
+    }
 
     if (!this.formularioValido()) {
       this.errorMensaje = 'Por favor completa todos los campos requeridos antes de confirmar.';

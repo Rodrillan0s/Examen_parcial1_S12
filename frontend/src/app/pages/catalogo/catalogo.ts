@@ -1,10 +1,11 @@
-import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth';
 import { ThemeService } from '../../services/theme';
 import { CarritoService } from '../../services/carrito';
+import { NetworkStatusService } from '../../core/network/network-status.service';
 import { 
   CatalogoPublicoService, 
   TenantPublico, 
@@ -29,13 +30,15 @@ import { ProductDetailModalComponent } from '../../components/product-detail-mod
   ],
   templateUrl: './catalogo.html'
 })
-export class CatalogoComponent implements OnInit {
+export class CatalogoComponent implements OnInit, OnDestroy {
   public catalogoService = inject(CatalogoPublicoService);
   public authService     = inject(AuthService);
   public themeService    = inject(ThemeService);
   public carritoService  = inject(CarritoService);
+  public networkStatus   = inject(NetworkStatusService);
   private route          = inject(ActivatedRoute);
   private cdr            = inject(ChangeDetectorRef);
+  private searchTimer: any = null;
 
   // Tenants / Tiendas
   tenants: TenantPublico[] = [];
@@ -105,6 +108,12 @@ export class CatalogoComponent implements OnInit {
     });
   }
 
+  ngOnDestroy(): void {
+    if (this.searchTimer) {
+      clearTimeout(this.searchTimer);
+    }
+  }
+
   cargarTenants(initialTenantId: number | null = null): void {
     this.catalogoService.obtenerTenants().subscribe({
       next: (res) => {
@@ -124,14 +133,45 @@ export class CatalogoComponent implements OnInit {
           if (this.pendingProductId) {
             this.abrirDetalle(this.pendingProductId);
           }
+        } else {
+          this.usarFallbackTenant(initialTenantId);
         }
         this.cdr.markForCheck();
       },
       error: (err) => {
-        console.error('Error al cargar tiendas activas:', err);
+        console.warn('Error al cargar tiendas activas, activando modo offline:', err);
+        this.usarFallbackTenant(initialTenantId);
         this.cdr.markForCheck();
       }
     });
+  }
+
+  private usarFallbackTenant(initialTenantId: number | null): void {
+    if (typeof localStorage !== 'undefined') {
+      try {
+        const raw = localStorage.getItem('aurora_last_tenants');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed?.data && parsed.data.length > 0) {
+            this.tenants = parsed.data;
+            this.selectedTenantId = (initialTenantId && this.tenants.some(t => t.id_empresa === initialTenantId))
+              ? initialTenantId
+              : this.tenants[0].id_empresa;
+            this.selectedTenant = this.tenants.find(t => t.id_empresa === this.selectedTenantId) || this.tenants[0];
+            this.carritoService.setEmpresaId(this.selectedTenant.id_empresa);
+            this.cargarFiltrosYProductos();
+            return;
+          }
+        }
+      } catch (_) {}
+    }
+    const fallbackTenantId = initialTenantId || 1;
+    const fallbackTenant: TenantPublico = { id_empresa: fallbackTenantId, nombre_empresa: 'Tienda Aurora', ciudad: 'Bolivia' };
+    this.selectedTenantId = fallbackTenantId;
+    this.selectedTenant = fallbackTenant;
+    this.tenants = [fallbackTenant];
+    this.carritoService.setEmpresaId(fallbackTenantId);
+    this.cargarFiltrosYProductos();
   }
 
   cambiarTenant(idEmpresa: number): void {
@@ -149,6 +189,10 @@ export class CatalogoComponent implements OnInit {
 
     this.cargandoFiltros = true;
     this.cdr.markForCheck();
+
+    // Ejecutar carga de filtros y primera página de productos en paralelo para eliminar cascada secuencial
+    this.aplicarFiltros();
+
     this.catalogoService.obtenerFiltros(this.selectedTenantId).subscribe({
       next: (res) => {
         this.filtrosDisponibles = res.data;
@@ -157,19 +201,19 @@ export class CatalogoComponent implements OnInit {
         }
         this.cargandoFiltros = false;
         this.cdr.markForCheck();
-        this.aplicarFiltros();
       },
       error: (err) => {
         console.error('Error al cargar filtros dinámicos:', err);
         this.cargandoFiltros = false;
         this.cdr.markForCheck();
-        this.aplicarFiltros();
       }
     });
   }
 
   aplicarFiltros(): void {
-    if (!this.selectedTenantId) return;
+    if (!this.selectedTenantId) {
+      this.selectedTenantId = 1;
+    }
     this.cargando = true;
     this.cdr.markForCheck();
 
@@ -190,8 +234,26 @@ export class CatalogoComponent implements OnInit {
       offset: offset
     }).subscribe({
       next: (res) => {
-        this.productos = res.data || [];
-        this.totalProductos = res.total || 0;
+        let items = res.data || [];
+        if (!items.length && !this.networkStatus.isOnline() && typeof localStorage !== 'undefined') {
+          try {
+            const raw =
+              localStorage.getItem(`aurora_catalog_master_e_${this.selectedTenantId}`) ||
+              localStorage.getItem(`aurora_last_catalog_e_${this.selectedTenantId}`) ||
+              localStorage.getItem('aurora_last_catalog_global') ||
+              localStorage.getItem('aurora_cached_products_list');
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              const rawItems = Array.isArray(parsed) ? parsed : (parsed.data || parsed.productos || []);
+              if (Array.isArray(rawItems) && rawItems.length > 0) {
+                items = rawItems;
+                this.paginaActual = 1;
+              }
+            }
+          } catch (_) {}
+        }
+        this.productos = items;
+        this.totalProductos = res.total || items.length;
         this.totalPaginas = Math.ceil(this.totalProductos / this.limitePorPagina) || 1;
         if (this.paginaActual > this.totalPaginas && this.totalPaginas > 0) {
           this.paginaActual = this.totalPaginas;
@@ -200,7 +262,29 @@ export class CatalogoComponent implements OnInit {
         this.cdr.markForCheck();
       },
       error: (err) => {
-        console.error('Error al consultar productos:', err);
+        console.warn('Error al consultar productos, intentando respaldo offline:', err);
+        if (!this.networkStatus.isOnline() && typeof localStorage !== 'undefined') {
+          try {
+            const raw =
+              localStorage.getItem(`aurora_catalog_master_e_${this.selectedTenantId}`) ||
+              localStorage.getItem(`aurora_last_catalog_e_${this.selectedTenantId}`) ||
+              localStorage.getItem('aurora_last_catalog_global') ||
+              localStorage.getItem('aurora_cached_products_list');
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              const items = Array.isArray(parsed) ? parsed : (parsed.data || parsed.productos || []);
+              if (Array.isArray(items) && items.length > 0) {
+                this.productos = items;
+                this.totalProductos = items.length;
+                this.paginaActual = 1;
+                this.totalPaginas = Math.ceil(this.totalProductos / this.limitePorPagina) || 1;
+                this.cargando = false;
+                this.cdr.markForCheck();
+                return;
+              }
+            }
+          } catch (_) {}
+        }
         this.productos = [];
         this.totalProductos = 0;
         this.totalPaginas = 1;
@@ -214,7 +298,12 @@ export class CatalogoComponent implements OnInit {
   onBusquedaChange(q: string): void {
     this.searchQuery = q;
     this.paginaActual = 1;
-    this.aplicarFiltros();
+    if (this.searchTimer) {
+      clearTimeout(this.searchTimer);
+    }
+    this.searchTimer = setTimeout(() => {
+      this.aplicarFiltros();
+    }, 200);
   }
 
   onCategoriaChange(idCat: number | null): void {

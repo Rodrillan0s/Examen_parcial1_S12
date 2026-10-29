@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -114,7 +112,7 @@
 
 /* Gold Gradient text */
 .text-gradient-gold {
-  background: linear-gradient(135deg, #b8860b 0%, #d4af37 50%, #996515 100%);
+  background: linear-gradient(135deg, #d97706 0%, #f59e0b 50%, #b45309 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }

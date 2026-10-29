@@ -2,7 +2,7 @@ import { Component, OnInit, inject, ChangeDetectorRef, NgZone, DestroyRef } from
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { distinctUntilChanged } from 'rxjs';
+import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { AuthService } from '../../../services/auth';
 import { Categoria, CategoriasService } from '../../../services/categorias';
 import { Empresa, EmpresaService } from '../../../services/empresa';
@@ -20,11 +20,18 @@ export class ListaCategoriasComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
   private ngZone = inject(NgZone);
   private destroyRef = inject(DestroyRef);
+  private busquedaSubject = new Subject<string>();
 
   // Data
   categorias: Categoria[] = [];
   categoriasFiltradas: Categoria[] = [];
   empresas: Empresa[] = [];
+
+  // Métricas precomputadas (evita recalcular .filter() en cada ciclo de Change Detection)
+  totalCategorias: number = 0;
+  totalRaiz: number = 0;
+  totalSubcategorias: number = 0;
+  totalActivas: number = 0;
 
   // Filters
   filtroEstado: string = 'TODOS'; // 'TODOS' | 'ACTIVOS' | 'INACTIVOS'
@@ -56,6 +63,16 @@ export class ListaCategoriasComponent implements OnInit {
   categoriaAeliminar: Categoria | null = null;
 
   ngOnInit(): void {
+    this.busquedaSubject
+      .pipe(
+        debounceTime(200),
+        distinctUntilChanged(),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => {
+        this.aplicarFiltros();
+      });
+
     if (this.esSuperAdmin) {
       this.filtroEmpresaId = this.authService.getEffectiveCompanyId() || 0;
       this.cargarEmpresasSiEsAdmin();
@@ -76,6 +93,18 @@ export class ListaCategoriasComponent implements OnInit {
           }
         }
       });
+  }
+
+  onBusquedaInput(): void {
+    this.busquedaSubject.next(this.filtroBusqueda);
+  }
+
+  trackByCategoriaId(index: number, item: Categoria): number {
+    return item.id_categoria || index;
+  }
+
+  trackByEmpresaId(index: number, item: Empresa): number {
+    return item.id_empresa || index;
   }
 
   get esSuperAdmin(): boolean {
@@ -181,24 +210,28 @@ export class ListaCategoriasComponent implements OnInit {
     }
 
     this.categoriasFiltradas = list;
+    this.actualizarMetricas();
     this.cdr.detectChanges();
   }
 
-  // Métricas
-  get totalCategorias(): number {
-    return this.categorias.length;
-  }
-
-  get totalRaiz(): number {
-    return this.categorias.filter(c => c.es_raiz || !c.id_padre).length;
-  }
-
-  get totalSubcategorias(): number {
-    return this.categorias.filter(c => c.id_padre !== null && c.id_padre !== undefined).length;
-  }
-
-  get totalActivas(): number {
-    return this.categorias.filter(c => c.activo).length;
+  private actualizarMetricas(): void {
+    this.totalCategorias = this.categorias.length;
+    let raiz = 0;
+    let sub = 0;
+    let activas = 0;
+    for (const c of this.categorias) {
+      if (c.es_raiz || !c.id_padre) {
+        raiz++;
+      } else {
+        sub++;
+      }
+      if (c.activo) {
+        activas++;
+      }
+    }
+    this.totalRaiz = raiz;
+    this.totalSubcategorias = sub;
+    this.totalActivas = activas;
   }
 
   // Opciones para el combo de categoría padre (evitar la misma y ciclos)

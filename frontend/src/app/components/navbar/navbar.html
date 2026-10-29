@@ -1,6 +1,6 @@
 <!-- Top Announcement Banner -->
 <div class="bg-gradient-to-r from-amber-900/30 via-amber-600/20 to-amber-900/30 dark:from-amber-900/40 dark:via-amber-600/30 dark:to-amber-900/40 border-b border-amber-500/20 py-1.5 px-4 text-center text-xs tracking-widest text-amber-800 dark:text-amber-200 uppercase font-medium">
-  ✦ Colección Otoño/Invierno 2026 — Cadena de Tiendas Exclusivas AURA Atelier ✦
+  ✦ Colección Otoño/Invierno 2026 — Cadena de Tiendas Exclusivas AURORA ✦
 </div>
 
 <!-- Main Sticky Glass Navbar -->
@@ -12,10 +12,10 @@
       <div class="flex items-center space-x-6">
         <a routerLink="/" class="flex items-center space-x-2 group">
           <span class="text-2xl sm:text-3xl font-editorial font-bold tracking-tight text-zinc-900 dark:text-white group-hover:text-amber-500 transition-colors">
-            AURA
+            AURORA
           </span>
-          <span class="text-xs uppercase tracking-[0.3em] font-light text-zinc-500 dark:text-zinc-400 border-l border-zinc-300 dark:border-zinc-700 pl-3.5 py-1">
-            ATELIER
+          <span class="text-xs uppercase tracking-[0.3em] font-medium text-amber-700 dark:text-amber-400 border-l border-zinc-300 dark:border-zinc-700 pl-3.5 py-1">
+            STORE
           </span>
         </a>
 
@@ -93,11 +93,10 @@
           <i class="ph ph-magnifying-glass text-lg"></i>
         </a>
 
-        <!-- Wishlist Indicator -->
-        <button (click)="openAuth('login')" class="relative w-10 h-10 rounded-full bg-white dark:bg-zinc-900 border border-stone-300 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-rose-500 hover:border-rose-400 flex items-center justify-center transition-all shadow-sm" title="Favoritos">
+        <!-- Wishlist / Explorar Favoritos -->
+        <a routerLink="/catalogo" class="relative w-10 h-10 rounded-full bg-white dark:bg-zinc-900 border border-stone-300 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-rose-500 hover:border-rose-400 flex items-center justify-center transition-all shadow-sm" title="Explorar colecciones y favoritos">
           <i class="ph ph-heart text-lg"></i>
-          <span class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-[10px] font-bold text-white flex items-center justify-center">2</span>
-        </button>
+        </a>
 
         <!-- Shopping Bag Counter -->
         <button (click)="abrirCarrito()" 
@@ -113,8 +112,8 @@
         <ng-container *ngIf="authService.currentUser() as user; else guestActions">
           <div class="flex items-center space-x-3 border-l border-stone-300 dark:border-zinc-800 pl-4">
             
-            <!-- ACCESO DIRECTO AL POS / CAJA (CAJEROS Y OPERADORES) -->
-            <a *ngIf="authService.isCashier() || authService.hasPermission('ventas.crear')" 
+            <!-- ACCESO DIRECTO AL POS / CAJA (SOLO CAJEROS Y OPERADORES, NUNCA CLIENTES) -->
+            <a *ngIf="!authService.esCliente() && (authService.isCashier() || authService.hasPermission('ventas.crear'))" 
                routerLink="/admin/caja" 
                class="px-3.5 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/30 hover:border-emerald-400 text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm shadow-emerald-500/10"
                title="Terminal de Punto de Venta / Caja">
@@ -244,7 +243,7 @@
          class="block w-full py-3 rounded-xl bg-white dark:bg-zinc-900 border border-stone-300 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 text-sm font-semibold text-center hover:border-amber-500/40 hover:text-amber-500 transition-colors shadow-sm">
         👤 Mi Perfil de Usuario
       </a>
-      <a *ngIf="authService.isCashier() || authService.hasPermission('ventas.crear')" 
+      <a *ngIf="!authService.esCliente() && (authService.isCashier() || authService.hasPermission('ventas.crear'))" 
          routerLink="/admin/caja" 
          (click)="isMobileMenuOpen = false" 
          class="block w-full py-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 text-sm font-bold text-center">

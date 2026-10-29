@@ -334,13 +334,18 @@
           </span>
         </div>
 
-        <!-- Live Server Status Indicator -->
-        <div class="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-stone-100 dark:bg-slate-900 border border-stone-200 dark:border-slate-800 text-[11px] font-semibold text-zinc-700 dark:text-slate-300 shadow-sm">
+        <!-- Live Server Status Indicator (Fase F2) -->
+        <div class="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full border text-[11px] font-semibold transition-colors shadow-sm"
+             [ngClass]="{
+               'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60': networkStatus.isOnline(),
+               'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/60': !networkStatus.isOnline()
+             }"
+             [title]="networkStatus.isOnline() ? ('Conectado en línea' + (networkStatus.lastVerifiedAt() ? ' · ' + (networkStatus.lastVerifiedAt() | date:'HH:mm:ss') : '')) : 'Sin conexión con el backend'">
           <span class="relative flex h-2 w-2">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            <span *ngIf="networkStatus.isOnline()" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2" [ngClass]="networkStatus.isOnline() ? 'bg-emerald-500' : 'bg-amber-500'"></span>
           </span>
-          <span>Sistema Operativo</span>
+          <span>{{ networkStatus.isOnline() ? 'En Línea' : 'Sin Conexión' }}</span>
         </div>
 
         <!-- SaaS Plan & Validity Badge -->
@@ -425,6 +430,40 @@
 
     <!-- Route Content Canvas -->
     <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 w-full relative scrollbar-thin">
+      <!-- Banner informativo no invasivo cuando se pierde conexión (Fase F2) -->
+      <div *ngIf="!networkStatus.isOnline()"
+           role="status"
+           aria-live="polite"
+           class="mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+        <div class="flex items-start sm:items-center gap-3">
+          <div class="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 text-base">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728M5.636 5.636a9 9 0 000 12.728M12 9v4m0 4h.01" />
+            </svg>
+          </div>
+          <div class="space-y-0.5">
+            <p class="font-bold flex items-center gap-1.5">
+              <span *ngIf="esModuloSoloOnline()">Este módulo requiere conexión</span>
+              <span *ngIf="!esModuloSoloOnline()">Panel Administrativo en Modo Consulta Offline</span>
+              <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 border border-amber-400/30">Sesión Activa</span>
+            </p>
+            <p class="text-[11px] opacity-90">
+              <span *ngIf="esModuloSoloOnline()">
+                La gestión administrativa de esta sección requiere conexión activa con el servidor. Tu sesión no ha expirado y tus permisos se mantienen intactos.
+              </span>
+              <span *ngIf="!esModuloSoloOnline()">
+                No se detecta conexión con el servidor. Tu sesión se mantiene activa y segura. Las operaciones de modificación o confirmación en tiempo real requieren internet.
+              </span>
+            </p>
+          </div>
+        </div>
+        <button type="button"
+                (click)="networkStatus.verifyApiConnectivity(true)"
+                class="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 font-semibold shrink-0 transition cursor-pointer self-start sm:self-auto text-amber-900 dark:text-amber-100">
+          Reintentar conexión
+        </button>
+      </div>
+
       <router-outlet></router-outlet>
     </main>
 

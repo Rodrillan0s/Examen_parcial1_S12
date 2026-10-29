@@ -27,6 +27,15 @@
       </div>
     </div>
 
+    <!-- Offline Protection Banner (CU09W / CU27W) -->
+    <div *ngIf="!networkStatus.isOnline()" role="status" class="mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs sm:text-sm flex items-start space-x-3 shadow-sm">
+      <span class="text-lg shrink-0 mt-0.5">⏳</span>
+      <div class="flex-1">
+        <strong class="font-bold block mb-0.5">Modo sin conexión detectado (CU09W / CU27W):</strong>
+        <span>Puedes revisar tu bolsa y completar tus datos de contacto, pero la confirmación definitiva del pedido y el pago electrónico requieren conexión activa en línea.</span>
+      </div>
+    </div>
+
     <!-- Error Alert Banner -->
     <div *ngIf="errorMensaje" class="mb-6 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-800 dark:text-rose-300 text-xs sm:text-sm flex items-start space-x-3 animate-fade-in shadow-sm">
       <i class="ph ph-warning-circle text-lg text-rose-600 dark:text-rose-400 shrink-0 mt-0.5"></i>

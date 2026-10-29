@@ -2,6 +2,8 @@ import { Component, OnInit, inject, PLATFORM_ID, DestroyRef } from '@angular/cor
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import {
   ProductosService,
   Producto,
@@ -29,6 +31,7 @@ export class ProductosComponent implements OnInit {
   private authService = inject(AuthService);
   private platformId = inject(PLATFORM_ID);
   private destroyRef = inject(DestroyRef);
+  private busquedaSubject$ = new Subject<string>();
 
   // Estados de lista
   productos: Producto[] = [];
@@ -37,11 +40,14 @@ export class ProductosComponent implements OnInit {
   mensajeAlerta: string = '';
   tipoAlerta: 'exito' | 'error' | 'info' = 'info';
 
-  // Filtros
+  // Filtros y Paginación
   busqueda: string = '';
   filtroCategoria: number | null = null;
   filtroEstado: string = 'TODOS'; // 'TODOS' | 'ACTIVOS' | 'INACTIVOS'
   filtroEmpresa: number | null = null;
+  paginaActual: number = 1;
+  itemsPorPagina: number = 20;
+  readonly temporadaActual: string = this.calcularTemporadaActual();
 
   // Catálogos activos para selección
   categoriasDisponibles: Categoria[] = [];
@@ -72,6 +78,7 @@ export class ProductosComponent implements OnInit {
     activo: boolean;
     tallas_seleccionadas: number[];
     colores_seleccionados: number[];
+    precios_por_talla: { [id_talla: number]: number };
     imagenes: ImagenProducto[];
     tiene_ra: boolean;
     tipo_prenda_ra: string;
@@ -153,24 +160,23 @@ guardandoPromocion: boolean = false;
     }
     return res;
   }
-get temporadaActual(): string {
-  const mes = new Date().getMonth() + 1;
+  private calcularTemporadaActual(): string {
+    const mes = new Date().getMonth() + 1;
+    if ([12, 1, 2].includes(mes)) return 'VERANO';
+    if ([3, 4, 5].includes(mes)) return 'OTOÑO';
+    if ([6, 7, 8].includes(mes)) return 'INVIERNO';
+    return 'PRIMAVERA';
+  }
 
-  if ([12, 1, 2].includes(mes)) return 'VERANO';
-  if ([3, 4, 5].includes(mes)) return 'OTOÑO';
-  if ([6, 7, 8].includes(mes)) return 'INVIERNO';
+  esTemporadaActual(prod: Producto): boolean {
+    const temporada = (prod.temporada || 'PERMANENTE')
+      .trim()
+      .toUpperCase();
 
-  return 'PRIMAVERA';
-}
+    return temporada === 'PERMANENTE'
+      || temporada === this.temporadaActual;
+  }
 
-esTemporadaActual(prod: Producto): boolean {
-  const temporada = (prod.temporada || 'PERMANENTE')
-    .trim()
-    .toUpperCase();
-
-  return temporada === 'PERMANENTE'
-    || temporada === this.temporadaActual;
-}
   // Lista filtrada en cliente
   get productosFiltrados(): Producto[] {
     return this.productos.filter(p => {
@@ -195,9 +201,38 @@ esTemporadaActual(prod: Producto): boolean {
     });
   }
 
+  get totalPaginas(): number {
+    return Math.max(1, Math.ceil(this.productosFiltrados.length / this.itemsPorPagina));
+  }
+
+  get productosPaginados(): Producto[] {
+    const filtrados = this.productosFiltrados;
+    const maxPag = Math.max(1, Math.ceil(filtrados.length / this.itemsPorPagina));
+    const pag = Math.min(this.paginaActual, maxPag);
+    const inicio = (pag - 1) * this.itemsPorPagina;
+    return filtrados.slice(inicio, inicio + this.itemsPorPagina);
+  }
+
+  cambiarPagina(nuevaPagina: number): void {
+    if (nuevaPagina >= 1 && nuevaPagina <= this.totalPaginas) {
+      this.paginaActual = nuevaPagina;
+    }
+  }
+
   ngOnInit(): void {
     if (!isPlatformBrowser(this.platformId)) return;
     this.cargarDatosIniciales();
+
+    this.busquedaSubject$
+      .pipe(
+        debounceTime(250),
+        distinctUntilChanged(),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(val => {
+        this.busqueda = val;
+        this.paginaActual = 1;
+      });
 
     this.authService.companyChanged$
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -207,12 +242,22 @@ esTemporadaActual(prod: Producto): boolean {
           if (this.filtroEmpresa !== nuevoFiltro) {
             this.filtroEmpresa = nuevoFiltro;
             this.productos = [];
+            this.paginaActual = 1;
             this.mostrarModal = false;
             this.cargarProductos();
-            this.cargarCatalogosActivos(this.filtroEmpresa || undefined);
+            this.cargarCategoriasActivas(this.filtroEmpresa || undefined);
           }
         }
       });
+  }
+
+  trackByProductoId(index: number, prod: Producto): number {
+    return prod.id_producto || index;
+  }
+
+  onBusquedaInput(event: Event): void {
+    const val = (event.target as HTMLInputElement)?.value || '';
+    this.busquedaSubject$.next(val);
   }
 
   cargarDatosIniciales(): void {
@@ -223,7 +268,8 @@ esTemporadaActual(prod: Producto): boolean {
       this.filtroEmpresa = this.userCompanyId || null;
     }
     this.cargarProductos();
-    this.cargarCatalogosActivos(this.filtroEmpresa || undefined);
+    // Solo cargar categorías al entrar; tallas y colores se difieren hasta abrir el modal Crear/Editar
+    this.cargarCategoriasActivas(this.filtroEmpresa || undefined);
   }
 
   cargarEmpresas(): void {
@@ -246,8 +292,9 @@ esTemporadaActual(prod: Producto): boolean {
         this.authService.setSelectedCompany(null);
       }
     }
+    this.paginaActual = 1;
     this.cargarProductos();
-    this.cargarCatalogosActivos(this.filtroEmpresa || undefined);
+    this.cargarCategoriasActivas(this.filtroEmpresa || undefined);
   }
 
   onModalEmpresaChange(): void {
@@ -281,11 +328,21 @@ esTemporadaActual(prod: Producto): boolean {
     });
   }
 
+  cargarCategoriasActivas(idEmpresa?: number): void {
+    const paramsCat: any = { solo_activas: true };
+    if (idEmpresa) {
+      paramsCat.id_empresa = idEmpresa;
+    }
+    this.categoriasService.listarCategorias(paramsCat).subscribe({
+      next: (res) => {
+        this.categoriasDisponibles = res.data || [];
+      },
+      error: (err) => console.error('Error al cargar categorías activas:', err)
+    });
+  }
+
   cargarCatalogosActivos(idEmpresa?: number): void {
     const requestVersion = ++this.catalogosRequestVersion;
-    this.tallasDisponibles = [];
-    this.coloresDisponibles = [];
-    this.categoriasDisponibles = [];
     const paramsCat: any = { solo_activas: true };
     const paramsTallas: any = { solo_activas: true };
     const paramsColores: any = { solo_activos: true };
@@ -305,7 +362,7 @@ esTemporadaActual(prod: Producto): boolean {
       error: (err) => console.error('Error al cargar categorías activas:', err)
     });
 
-    // 2. Tallas activas
+    // 2. Tallas activas (diferidas a apertura de modal, cacheadas por servicio)
     this.tallasColoresService.listarTallas(paramsTallas).subscribe({
       next: (res) => {
         if (requestVersion !== this.catalogosRequestVersion) return;
@@ -314,7 +371,7 @@ esTemporadaActual(prod: Producto): boolean {
       error: (err) => console.error('Error al cargar tallas activas:', err)
     });
 
-    // 3. Colores activos
+    // 3. Colores activos (diferidos a apertura de modal, cacheados por servicio)
     this.tallasColoresService.listarColores(paramsColores).subscribe({
       next: (res) => {
         if (requestVersion !== this.catalogosRequestVersion) return;
@@ -367,6 +424,13 @@ esTemporadaActual(prod: Producto): boolean {
         const tallasIds = Array.from(new Set((p.variantes || []).filter(v => v.activo).map(v => v.id_talla)));
         const coloresIds = Array.from(new Set((p.variantes || []).filter(v => v.activo).map(v => v.id_color)));
 
+        const preciosPorTalla: { [id_talla: number]: number } = {};
+        (p.variantes || []).forEach(v => {
+          if (v.activo && v.id_talla && v.precio) {
+            preciosPorTalla[v.id_talla] = v.precio;
+          }
+        });
+
         this.productoForm = {
           id_producto: p.id_producto,
           id_empresa: p.id_empresa,
@@ -382,6 +446,7 @@ esTemporadaActual(prod: Producto): boolean {
           activo: p.activo,
           tallas_seleccionadas: tallasIds,
           colores_seleccionados: coloresIds,
+          precios_por_talla: preciosPorTalla,
           imagenes: p.imagenes || [],
           tiene_ra: !!p.tiene_ra,
           tipo_prenda_ra: p.tipo_prenda_ra || 'TOP',
@@ -460,6 +525,7 @@ esTemporadaActual(prod: Producto): boolean {
         activo: this.productoForm.activo,
         tallas_ids: tallasSeleccionadas,
         colores_ids: coloresSeleccionados,
+        precios_por_talla: this.productoForm.precios_por_talla,
         tiene_ra: !!this.productoForm.tiene_ra,
         tipo_prenda_ra: this.productoForm.tiene_ra ? this.productoForm.tipo_prenda_ra : undefined,
         modelo_2d_url: this.productoForm.tiene_ra ? (this.productoForm.modelo_2d_url || undefined) : undefined
@@ -493,6 +559,7 @@ esTemporadaActual(prod: Producto): boolean {
         activo: this.productoForm.activo,
         tallas_ids: this.productoForm.tallas_seleccionadas,
         colores_ids: this.productoForm.colores_seleccionados,
+        precios_por_talla: this.productoForm.precios_por_talla,
         imagenes: this.productoForm.imagenes.map(img => ({
           imagen_url: img.imagen_url,
           public_id: img.public_id,
@@ -519,7 +586,7 @@ esTemporadaActual(prod: Producto): boolean {
   }
 
   // ==============================================================================
-  // GESTIÓN DE VARIANTES (TALLAS & COLORES)
+  // GESTIÓN DE VARIANTES (TALLAS & COLORES & PRECIOS DIFERENCIADOS)
   // ==============================================================================
 
   toggleTalla(tallaId?: number): void {
@@ -527,9 +594,42 @@ esTemporadaActual(prod: Producto): boolean {
     const idx = this.productoForm.tallas_seleccionadas.indexOf(tallaId);
     if (idx > -1) {
       this.productoForm.tallas_seleccionadas.splice(idx, 1);
+      delete this.productoForm.precios_por_talla[tallaId];
     } else {
       this.productoForm.tallas_seleccionadas.push(tallaId);
+      if (this.productoForm.precios_por_talla[tallaId] === undefined) {
+        this.productoForm.precios_por_talla[tallaId] = this.productoForm.precio || 0;
+      }
     }
+  }
+
+  obtenerPrecioTalla(tallaId?: number): number {
+    if (tallaId === undefined) return this.productoForm.precio || 0;
+    if (this.productoForm.precios_por_talla && this.productoForm.precios_por_talla[tallaId] !== undefined) {
+      return this.productoForm.precios_por_talla[tallaId];
+    }
+    return this.productoForm.precio || 0;
+  }
+
+  asignarPrecioTalla(tallaId: number, precio: any): void {
+    const num = Number(precio);
+    if (!isNaN(num) && num > 0) {
+      this.productoForm.precios_por_talla[tallaId] = num;
+    } else {
+      delete this.productoForm.precios_por_talla[tallaId];
+    }
+  }
+
+  aplicarPrecioBaseATodasTallas(): void {
+    const base = this.productoForm.precio || 0;
+    for (const tid of this.productoForm.tallas_seleccionadas) {
+      this.productoForm.precios_por_talla[tid] = base;
+    }
+    this.mostrarAlerta(`Precio base (Bs. ${base.toFixed(2)}) aplicado a todas las tallas seleccionadas.`, 'info');
+  }
+
+  get tallasSeleccionadasObjetos(): Talla[] {
+    return this.tallasDisponibles.filter(t => t.id_talla !== undefined && this.productoForm.tallas_seleccionadas.includes(t.id_talla));
   }
 
   toggleColor(colorId?: number): void {
@@ -1045,6 +1145,7 @@ eliminarPromocionProducto(promocion: PromocionProducto): void {
       activo: true,
       tallas_seleccionadas: [] as number[],
       colores_seleccionados: [] as number[],
+      precios_por_talla: {} as { [id_talla: number]: number },
       imagenes: [] as ImagenProducto[],
       tiene_ra: false,
       tipo_prenda_ra: 'TOP',
