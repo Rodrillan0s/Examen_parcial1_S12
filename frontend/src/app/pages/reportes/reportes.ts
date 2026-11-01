@@ -207,14 +207,22 @@ export class ReportesComponent implements OnInit, OnDestroy {
       next: (res) => {
         if (res.success && res.data) {
           this.tenants = res.data;
-          const currentEffective = this.authService.getEffectiveCompanyId();
-          if (currentEffective) {
-            this.empresaSeleccionada = currentEffective;
+          const currentEffective = this.authService.getEffectiveCompanyId() || this.kpisService.obtenerTiendaActual()?.id_empresa;
+          if (currentEffective && this.tenants.some(x => Number(x.id_empresa) === Number(currentEffective))) {
+            this.empresaSeleccionada = Number(currentEffective);
           } else if (!this.empresaSeleccionada && this.tenants.length > 0) {
-            this.empresaSeleccionada = this.tenants[0].id_empresa;
+            this.empresaSeleccionada = Number(this.tenants[0].id_empresa);
           }
-          const t = this.tenants.find(x => x.id_empresa === this.empresaSeleccionada);
-          if (t) this.tiendaNombre = t.nombre_empresa;
+          const t = this.tenants.find(x => Number(x.id_empresa) === Number(this.empresaSeleccionada));
+          if (t) {
+            this.tiendaNombre = t.nombre_empresa;
+            if (this.authService.getEffectiveCompanyId() !== t.id_empresa) {
+              this.authService.setSelectedCompany({
+                id_empresa: t.id_empresa,
+                nombre_empresa: t.nombre_empresa
+              });
+            }
+          }
           this.cdr.detectChanges();
         }
       },

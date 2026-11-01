@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from typing import Optional, Dict, Any, List
-from app.core.postgres import PostgreSQL
+from app.core.postgres import PostgreSQL, atomic
 from app.core.config import Config
 from app.modules.ecommerce.repos.carrito_repos import obtener_o_crear_cliente
 
@@ -105,6 +105,7 @@ def obtener_sucursales_tenant(id_empresa: int, id_usuario: Optional[int] = None)
     finally:
         db.close_connection()
 
+@atomic
 def validar_y_crear_pedido(id_usuario: int, id_empresa: int, datos: Dict[str, Any]) -> Dict[str, Any]:
     """
     Crea un nuevo pedido formal a partir del carrito activo del cliente.
@@ -164,7 +165,7 @@ def validar_y_crear_pedido(id_usuario: int, id_empresa: int, datos: Dict[str, An
             SELECT id_carrito 
             FROM {schema}.t_carrito 
             WHERE id_cliente = %s AND id_empresa = %s AND estado = 'ACTIVO' 
-            LIMIT 1;
+            ORDER BY id_carrito LIMIT 1 FOR UPDATE;
         """
         car_row = db.execute_query(q_car, (id_cliente, id_empresa), fetchone=True)
         if not car_row:
@@ -199,6 +200,18 @@ def validar_y_crear_pedido(id_usuario: int, id_empresa: int, datos: Dict[str, An
             ORDER BY d.id_detalle_carrito ASC;
         """
         items_cart = db.execute_query(q_items, (id_carrito,), fetchall=True) or []
+        crossed = db.execute_query(f'''SELECT 1 FROM {schema}.t_detalle_carrito d
+            JOIN {schema}.t_producto_talla_color v ON v.id_variante=d.id_variante
+            JOIN {schema}.t_producto p ON p.id_producto=v.id_producto
+            JOIN {schema}.t_talla t ON t.id_talla=v.id_talla
+            JOIN {schema}.t_color c ON c.id_color=v.id_color
+            WHERE d.id_carrito=%s AND (p.id_empresa<>%s OR
+                (t.id_empresa IS NOT NULL AND t.id_empresa<>p.id_empresa) OR
+                (c.id_empresa IS NOT NULL AND c.id_empresa<>p.id_empresa)) LIMIT 1''',
+            (id_carrito,id_empresa), fetchone=True)
+        if crossed:
+            from fastapi import HTTPException
+            raise HTTPException(403, 'Carrito con prendas o catálogos de otra empresa; no se creó el pedido.')
         if not items_cart:
             raise ValueError("Tu bolsa de compras se encuentra vacía. Agrega prendas antes de proceder al checkout.")
 
@@ -405,15 +418,14 @@ def obtener_pedido_por_id(id_pedido: int, id_usuario: int, id_empresa: Optional[
     Verifica estrictamente que el pedido pertenezca al cliente autenticado
     y al Tenant correspondiente.
     """
-    id_cliente = obtener_o_crear_cliente(id_usuario)
 
     db = PostgreSQL()
     db.create_connection()
     try:
         schema = _get_schema()
 
-        condiciones = ["p.id_pedido = %s", "p.id_cliente = %s"]
-        params: List[Any] = [id_pedido, id_cliente]
+        condiciones = ["p.id_pedido = %s", f"EXISTS(SELECT 1 FROM {schema}.t_cliente owner WHERE owner.id_cliente=p.id_cliente AND owner.id_usuario=%s)"]
+        params: List[Any] = [id_pedido, id_usuario]
 
         if id_empresa and id_empresa > 0:
             condiciones.append("p.id_empresa = %s")
@@ -445,7 +457,8 @@ def obtener_pedido_por_id(id_pedido: int, id_usuario: int, id_empresa: Optional[
                 p.subtotal,
                 p.costo_envio,
                 p.descuento,
-                p.total
+                p.total,
+                p.id_venta
             FROM {schema}.t_pedido p
             JOIN {schema}.empresa emp ON emp.id_empresa = p.id_empresa
             JOIN {schema}.t_sucursal s ON s.id_sucursal = p.id_sucursal
@@ -532,6 +545,7 @@ def obtener_pedido_por_id(id_pedido: int, id_usuario: int, id_empresa: Optional[
             "costo_envio": float(row[20]),
             "descuento": float(row[21]),
             "total": float(row[22]),
+            "id_venta": row[23] if len(row) > 23 else None,
             "total_items": total_items,
             "items": items
         }
@@ -554,15 +568,14 @@ def listar_pedidos_cliente(
     Soporta filtros por estado, estado de pago, rango de fechas y código de pedido,
     además de paginación y aislamiento multitenant.
     """
-    id_cliente = obtener_o_crear_cliente(id_usuario)
 
     db = PostgreSQL()
     db.create_connection()
     try:
         schema = _get_schema()
 
-        condiciones = ["p.id_cliente = %s"]
-        params: List[Any] = [id_cliente]
+        condiciones = [f"EXISTS(SELECT 1 FROM {schema}.t_cliente owner WHERE owner.id_cliente=p.id_cliente AND owner.id_usuario=%s)"]
+        params: List[Any] = [id_usuario]
 
         if id_empresa and id_empresa > 0:
             condiciones.append("p.id_empresa = %s")
@@ -620,6 +633,7 @@ def listar_pedidos_cliente(
                 p.costo_envio,
                 p.descuento,
                 p.total,
+                p.id_venta,
                 (
                     SELECT COALESCE(SUM(d.cantidad), 0)
                     FROM {schema}.t_detalle_pedido d
@@ -712,7 +726,8 @@ def listar_pedidos_cliente(
                 "costo_envio": float(r[13]),
                 "descuento": float(r[14]),
                 "total": float(r[15]),
-                "total_items": int(r[16]),
+                "id_venta": r[16],
+                "total_items": int(r[17]),
                 "items_resumen": items_por_pedido.get(p_id, [])
             })
 

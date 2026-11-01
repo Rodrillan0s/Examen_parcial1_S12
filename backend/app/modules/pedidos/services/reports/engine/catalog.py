@@ -245,6 +245,113 @@ CATALOGO_REPORTES: Dict[str, Any] = {
             {"campo": "ticket_promedio", "titulo": "Ticket Promedio (Bs.)", "tipo": "currency"}
         ],
         "campo_monto": "total_ingresos"
+    },
+"devoluciones": {
+        "codigo": "devoluciones",
+        "nombre": "Reporte de Devoluciones y Reclamos",
+        "descripcion": "Control de solicitudes de devolución, motivos de reclamo, estado de reembolsos y montos devueltos.",
+        "vista": "vw_devoluciones_reporte",
+        "permiso": "reportes.ver",
+        "activo": True,
+        "filtros_permitidos": [
+            "fechaDesde", "fechaHasta", "sucursalId", "clienteId", "estado", "motivoGeneral", "reembolsoEstado"
+        ],
+        "agrupaciones_permitidas": [
+            "sucursal", "motivo_general", "estado", "reembolso_metodo", "dia"
+        ],
+        "columnas": [
+            {"campo": "codigo_devolucion", "titulo": "Cód. Devolución", "tipo": "string"},
+            {"campo": "fecha", "titulo": "Fecha", "tipo": "date"},
+            {"campo": "sucursal", "titulo": "Sucursal", "tipo": "string"},
+            {"campo": "cliente", "titulo": "Cliente", "tipo": "string"},
+            {"campo": "numero_venta", "titulo": "N° Venta", "tipo": "string"},
+            {"campo": "motivo_general", "titulo": "Motivo", "tipo": "badge"},
+            {"campo": "total_articulos", "titulo": "Prendas", "tipo": "number"},
+            {"campo": "monto_total_devolucion", "titulo": "Total Devolución (Bs.)", "tipo": "currency"},
+            {"campo": "estado", "titulo": "Estado", "tipo": "badge"},
+            {"campo": "reembolso_estado", "titulo": "Reembolso", "tipo": "badge"}
+        ],
+        "campo_monto": "monto_total_devolucion"
+    },
+
+    "rentabilidad": {
+        "codigo": "rentabilidad",
+        "nombre": "Reporte de Rentabilidad y Margen",
+        "descripcion": "Análisis de ingresos brutos, costo estimado y margen de utilidad por modelo, categoría y sucursal.",
+        "vista": "vw_rentabilidad_reporte",
+        "permiso": "reportes.ver",
+        "activo": True,
+        "filtros_permitidos": [
+            "fechaDesde", "fechaHasta", "sucursalId", "categoriaId", "productoId"
+        ],
+        "agrupaciones_permitidas": [
+            "categoria", "producto", "sucursal", "dia"
+        ],
+        "columnas": [
+            {"campo": "producto", "titulo": "Prenda / Modelo", "tipo": "string"},
+            {"campo": "categoria", "titulo": "Categoría", "tipo": "string"},
+            {"campo": "sucursal", "titulo": "Sucursal", "tipo": "string"},
+            {"campo": "transacciones", "titulo": "Ventas", "tipo": "number"},
+            {"campo": "unidades_vendidas", "titulo": "Unidades", "tipo": "number"},
+            {"campo": "ingresos_totales", "titulo": "Ingresos (Bs.)", "tipo": "currency"},
+            {"campo": "costo_estimado", "titulo": "Costo Est. (Bs.)", "tipo": "currency"},
+            {"campo": "margen_bruto_bs", "titulo": "Margen Bruto (Bs.)", "tipo": "currency"},
+            {"campo": "margen_porcentaje", "titulo": "Margen %", "tipo": "badge"}
+        ],
+        "campo_monto": "margen_bruto_bs"
+    },
+
+    "rendimiento_personal": {
+        "codigo": "rendimiento_personal",
+        "nombre": "Reporte de Rendimiento de Cajeros y Personal",
+        "descripcion": "Métricas de productividad, volumen de facturación y promedio por transacción por empleado.",
+        "vista": "vw_rendimiento_personal_reporte",
+        "permiso": "reportes.ver",
+        "activo": True,
+        "filtros_permitidos": [
+            "fechaDesde", "fechaHasta", "sucursalId", "usuarioId"
+        ],
+        "agrupaciones_permitidas": [
+            "empleado_nombre", "sucursal", "rol", "dia"
+        ],
+        "columnas": [
+            {"campo": "empleado_nombre", "titulo": "Colaborador", "tipo": "string"},
+            {"campo": "rol", "titulo": "Rol", "tipo": "badge"},
+            {"campo": "sucursal", "titulo": "Sucursal", "tipo": "string"},
+            {"campo": "fecha", "titulo": "Fecha", "tipo": "date"},
+            {"campo": "total_ventas", "titulo": "Total Tickets", "tipo": "number"},
+            {"campo": "total_recaudado", "titulo": "Recaudación (Bs.)", "tipo": "currency"},
+            {"campo": "ticket_promedio", "titulo": "Ticket Promedio (Bs.)", "tipo": "currency"}
+        ],
+        "campo_monto": "total_recaudado"
+    },
+
+    "stock_inmovilizado": {
+        "codigo": "stock_inmovilizado",
+        "nombre": "Reporte de Stock Inmovilizado / Baja Rotación",
+        "descripcion": "Prendas disponibles en tiendas físicas sin rotación reciente, recomendadas para ofertas o rebajas.",
+        "vista": "vw_stock_inmovilizado_reporte",
+        "permiso": "reportes.ver",
+        "activo": True,
+        "filtros_permitidos": [
+            "sucursalId", "categoriaId", "productoId"
+        ],
+        "agrupaciones_permitidas": [
+            "sucursal", "categoria", "producto"
+        ],
+        "columnas": [
+            {"campo": "producto", "titulo": "Prenda / Modelo", "tipo": "string"},
+            {"campo": "codigo_producto", "titulo": "Código", "tipo": "string"},
+            {"campo": "categoria", "titulo": "Categoría", "tipo": "string"},
+            {"campo": "talla", "titulo": "Talla", "tipo": "string"},
+            {"campo": "color", "titulo": "Color", "tipo": "string"},
+            {"campo": "sucursal", "titulo": "Sucursal", "tipo": "string"},
+            {"campo": "stock_disponible", "titulo": "Stock Disponible", "tipo": "number"},
+            {"campo": "precio", "titulo": "Precio Unit. (Bs.)", "tipo": "currency"},
+            {"campo": "capital_estancado_bs", "titulo": "Capital Estancado (Bs.)", "tipo": "currency"},
+            {"campo": "ultima_venta", "titulo": "Última Actividad", "tipo": "date"}
+        ],
+        "campo_monto": "capital_estancado_bs"
     }
 }
 
@@ -256,8 +363,21 @@ ALIASES_REPORTES: Dict[str, str] = {
     "cajas": "caja",
     "pago": "pagos",
     "reserva": "reservas",
-    "pos": "pos_auditoria"
+    "pos": "pos_auditoria",
+    "devolucion": "devoluciones",
+    "reclamo": "devoluciones",
+    "reclamos": "devoluciones",
+    "margen": "rentabilidad",
+    "utilidad": "rentabilidad",
+    "ganancia": "rentabilidad",
+    "cajeros": "rendimiento_personal",
+    "vendedores": "rendimiento_personal",
+    "personal": "rendimiento_personal",
+    "inmovilizado": "stock_inmovilizado",
+    "estancado": "stock_inmovilizado",
+    "rotacion_lenta": "stock_inmovilizado",
 }
+
 
 def resolver_alias_reporte(codigo: str) -> str:
     cod = (codigo or '').lower().strip()

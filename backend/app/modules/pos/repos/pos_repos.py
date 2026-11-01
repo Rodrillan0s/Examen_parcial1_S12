@@ -1,7 +1,8 @@
 import json
 import logging
 from typing import Dict, Any, List, Optional
-from app.core.postgres import PostgreSQL
+from app.core.postgres import PostgreSQL, atomic
+from app.core.inventory_integrity import lock_items
 from app.core.config import Config
 
 logger = logging.getLogger(__name__)
@@ -206,6 +207,7 @@ def buscar_clientes_pos(id_empresa: int, query: str) -> List[Dict[str, Any]]:
         return resultado
     finally:
         db.close_connection()
+@atomic
 def ejecutar_registro_venta_pos(
     id_sesion_caja: int,
     id_usuario: int,
@@ -227,6 +229,17 @@ def ejecutar_registro_venta_pos(
 
     try:
         schema = _get_schema()
+        session = db.execute_query(f'''SELECT cs.id_usuario,cs.id_sucursal,cs.id_empresa,cs.estado,s.id_empresa
+            FROM {schema}.t_caja_sesion cs JOIN {schema}.t_sucursal s ON s.id_sucursal=cs.id_sucursal
+            WHERE cs.id_sesion_caja=%s FOR UPDATE OF cs''', (id_sesion_caja,), fetchone=True)
+        if not session or tuple(session[:4]) != (id_usuario, id_sucursal, id_empresa, 'ABIERTA') or session[4] != id_empresa:
+            from fastapi import HTTPException
+            raise HTTPException(403, 'La sesión de caja no corresponde al usuario, sucursal y empresa autorizados.')
+        totals, positions = lock_items(db, schema, id_sucursal, items, id_empresa)
+        for variant, quantity in totals.items():
+            available = positions[variant][2] if id_reserva else positions[variant][3]
+            if quantity > available:
+                raise ValueError('Stock insuficiente para la cantidad acumulada de la venta.')
         items_json = json.dumps(items)
 
         sql = f"""
@@ -279,6 +292,13 @@ def ejecutar_registro_venta_pos(
                 f"[{err_code}] {msg}"
             )
 
+        lock_items(db, schema, id_sucursal, items, id_empresa)
+        if id_cliente:
+            try:
+                from app.modules.ia.services.ml_preferencias_services import aprender_preferencias_cliente
+                aprender_preferencias_cliente(id_cliente, id_empresa)
+            except Exception as ml_err:
+                logger.warning(f"Aviso no bloqueante: error aprendiendo preferencias tras venta POS cliente {id_cliente}: {ml_err}")
         return data
 
     finally:
@@ -444,6 +464,7 @@ def obtener_detalle_venta_pos(id_venta: int) -> Optional[Dict[str, Any]]:
         db.close_connection()
 
 
+@atomic
 def anular_venta_pendiente_pos(
     id_venta: int,
     id_usuario: Optional[int] = None,
@@ -472,6 +493,8 @@ def anular_venta_pendiente_pos(
             fetchall=True,
         ) or []
 
+        stock_items = [dict(id_variante=r[0],cantidad=r[1]) for r in items_rows]
+        lock_items(db,schema,id_sucursal,stock_items)
         for id_var, cant in items_rows:
             db.execute_query(
                 f"""
@@ -494,11 +517,12 @@ def anular_venta_pendiente_pos(
             """,
             (obs_extra, id_venta),
         )
-        db.conn.commit()
+        lock_items(db,schema,id_sucursal,stock_items)
+        db.commit()
         return True
     except Exception as e:
         if db.conn:
-            db.conn.rollback()
+            db.rollback()
         logger.error(f"[ERROR ANULAR VENTA PENDIENTE POS] {e}")
         return False
     finally:

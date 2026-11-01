@@ -1,0 +1,162 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1980 1060" width="1980" height="1060" style="background-color: #ffffff; font-family: 'Segoe UI', Arial, Helvetica, sans-serif;">
+  <defs>
+    <marker id="arrow-sync" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#000000" />
+    </marker>
+    <marker id="arrow-return" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <polyline points="0,1 10,5 0,9" fill="none" stroke="#000000" stroke-width="1.6" />
+    </marker>
+    <marker id="arrow-error" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <polyline points="0,1 10,5 0,9" fill="none" stroke="#b91c1c" stroke-width="1.6" />
+    </marker>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="115%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="1" dy="1.5" stdDeviation="1.5" flood-color="#000000" flood-opacity="0.08"/>
+    </filter>
+  </defs>
+
+  <!-- Marco exterior UML 2.5 -->
+  <rect x="20" y="20" width="1940" height="1020" fill="#ffffff" stroke="#1e293b" stroke-width="1.6" />
+  <!-- Pestana de titulo UML con esquina achaflanada -->
+  <path d="M 20 20 L 463 20 L 481 38 L 481 56 L 20 56 Z" fill="#ffffff" stroke="#1e293b" stroke-width="1.6" />
+  <text x="35" y="42" font-size="13.5" font-weight="bold" fill="#0f172a">sd [CU04W] Gestionar productos (UML 2.5+ / BCE)</text>
+
+  <!-- Actor -->
+  <g transform="translate(130, 65)">
+    <circle cx="0" cy="14" r="12" fill="#ffffff" stroke="#000000" stroke-width="1.8" />
+    <line x1="0" y1="26" x2="0" y2="52" stroke="#000000" stroke-width="1.8" />
+    <line x1="-22" y1="36" x2="22" y2="36" stroke="#000000" stroke-width="1.8" />
+    <line x1="0" y1="52" x2="-18" y2="78" stroke="#000000" stroke-width="1.8" />
+    <line x1="0" y1="52" x2="18" y2="78" stroke="#000000" stroke-width="1.8" />
+    <text x="0" y="98" text-anchor='middle' font-size='11' font-weight='bold' fill='#0f172a' paint-order='stroke fill' stroke='#ffffff' stroke-width='4px'>Administrador de Empresa /</text>
+    <text x='0' y='114' text-anchor='middle' font-size='11' font-weight='bold' fill='#0f172a' paint-order='stroke fill' stroke='#ffffff' stroke-width='4px'>Encargado de Sucursal</text>
+  </g>
+  <line x1="130" y1="195" x2="130" y2="1005" stroke="#000000" stroke-width="1.2" stroke-dasharray="6,4" />
+  <polygon points="126,1003 130,1013 134,1003" fill="#000000" />
+
+  <!-- Participante: IU_Producto -->
+  <g filter="url(#shadow)">
+    <rect x="315" y="135" width="130" height="56" rx="2" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+    <text x="380" y="157" text-anchor="middle" font-size="11" fill="#475569">&#171;boundary&#187;</text>
+    <text x="380" y="176" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">IU_Producto</text>
+  </g>
+  <line x1="380" y1="191" x2="380" y2="1005" stroke="#000000" stroke-width="1.2" stroke-dasharray="6,4" />
+  <polygon points="376,1003 380,1013 384,1003" fill="#000000" />
+
+  <!-- Participante: ProductoControl -->
+  <g filter="url(#shadow)">
+    <rect x="585" y="135" width="150" height="56" rx="2" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+    <text x="660" y="157" text-anchor="middle" font-size="11" fill="#475569">&#171;control&#187;</text>
+    <text x="660" y="176" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">ProductoControl</text>
+  </g>
+  <line x1="660" y1="191" x2="660" y2="1005" stroke="#000000" stroke-width="1.2" stroke-dasharray="6,4" />
+  <polygon points="656,1003 660,1013 664,1003" fill="#000000" />
+
+  <!-- Participante: :t_categoria -->
+  <g filter="url(#shadow)">
+    <rect x="875" y="135" width="130" height="56" rx="2" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+    <text x="940" y="157" text-anchor="middle" font-size="11" fill="#475569">&#171;entity&#187;</text>
+    <text x="940" y="176" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">:t_categoria</text>
+  </g>
+  <line x1="940" y1="191" x2="940" y2="1005" stroke="#000000" stroke-width="1.2" stroke-dasharray="6,4" />
+  <polygon points="936,1003 940,1013 944,1003" fill="#000000" />
+
+  <!-- Participante: :t_producto -->
+  <g filter="url(#shadow)">
+    <rect x="1135" y="135" width="130" height="56" rx="2" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+    <text x="1200" y="157" text-anchor="middle" font-size="11" fill="#475569">&#171;entity&#187;</text>
+    <text x="1200" y="176" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">:t_producto</text>
+  </g>
+  <line x1="1200" y1="191" x2="1200" y2="1005" stroke="#000000" stroke-width="1.2" stroke-dasharray="6,4" />
+  <polygon points="1196,1003 1200,1013 1204,1003" fill="#000000" />
+
+  <!-- Participante: :t_variante_producto -->
+  <g filter="url(#shadow)">
+    <rect x="1385" y="135" width="150" height="56" rx="2" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+    <text x="1460" y="157" text-anchor="middle" font-size="11" fill="#475569">&#171;entity&#187;</text>
+    <text x="1460" y="176" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">:t_variante_producto</text>
+  </g>
+  <line x1="1460" y1="191" x2="1460" y2="1005" stroke="#000000" stroke-width="1.2" stroke-dasharray="6,4" />
+  <polygon points="1456,1003 1460,1013 1464,1003" fill="#000000" />
+
+  <!-- Participante: :t_imagen_producto -->
+  <g filter="url(#shadow)">
+    <rect x="1620" y="135" width="140" height="56" rx="2" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+    <text x="1690" y="157" text-anchor="middle" font-size="11" fill="#475569">&#171;entity&#187;</text>
+    <text x="1690" y="176" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">:t_imagen_producto</text>
+  </g>
+  <line x1="1690" y1="191" x2="1690" y2="1005" stroke="#000000" stroke-width="1.2" stroke-dasharray="6,4" />
+  <polygon points="1686,1003 1690,1013 1694,1003" fill="#000000" />
+
+  <!-- Participante: :t_bitacora -->
+  <g filter="url(#shadow)">
+    <rect x="1830" y="135" width="120" height="56" rx="2" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+    <text x="1890" y="157" text-anchor="middle" font-size="11" fill="#475569">&#171;entity&#187;</text>
+    <text x="1890" y="176" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">:t_bitacora</text>
+  </g>
+  <line x1="1890" y1="191" x2="1890" y2="1005" stroke="#000000" stroke-width="1.2" stroke-dasharray="6,4" />
+  <polygon points="1886,1003 1890,1013 1894,1003" fill="#000000" />
+  <rect x="374" y="222" width="12" height="750" fill="#f8fafc" stroke="#334155" stroke-width="1.2" />
+  <rect x="654" y="254" width="12" height="695" fill="#f8fafc" stroke="#334155" stroke-width="1.2" />
+  <rect x="934" y="288" width="12" height="38" fill="#f8fafc" stroke="#334155" stroke-width="1.2" />
+  <rect x="1194" y="348" width="12" height="38" fill="#f8fafc" stroke="#334155" stroke-width="1.2" />
+  <rect x="1194" y="538" width="12" height="38" fill="#f8fafc" stroke="#334155" stroke-width="1.2" />
+  <rect x="1454" y="630" width="12" height="32" fill="#f8fafc" stroke="#334155" stroke-width="1.2" />
+  <rect x="1684" y="730" width="12" height="32" fill="#f8fafc" stroke="#334155" stroke-width="1.2" />
+  <rect x="1884" y="796" width="12" height="38" fill="#f8fafc" stroke="#334155" stroke-width="1.2" />
+  <line x1="130" y1="228" x2="374" y2="228" stroke="#000000" stroke-width="1.5" marker-end="url(#arrow-sync)" />
+  <text x="252.0" y="220" text-anchor="middle" font-size="10.5" font-weight="600" fill="#0f172a" paint-order="stroke fill" stroke="#ffffff" stroke-width="4.5px" stroke-linecap="round" stroke-linejoin="round">1: solicitar_creacion_producto(datos_producto)</text>
+  <line x1="386" y1="260" x2="654" y2="260" stroke="#000000" stroke-width="1.5" marker-end="url(#arrow-sync)" />
+  <text x="520.0" y="252" text-anchor="middle" font-size="10.5" font-weight="600" fill="#0f172a" paint-order="stroke fill" stroke="#ffffff" stroke-width="4.5px" stroke-linecap="round" stroke-linejoin="round">2: crear_producto(datos_producto)</text>
+  <line x1="666" y1="292" x2="934" y2="292" stroke="#000000" stroke-width="1.5" marker-end="url(#arrow-sync)" />
+  <text x="800.0" y="284" text-anchor="middle" font-size="10.5" font-weight="600" fill="#0f172a" paint-order="stroke fill" stroke="#ffffff" stroke-width="4.5px" stroke-linecap="round" stroke-linejoin="round">3: SELECT activo, id_empresa FROM t_categoria WHERE id_categoria = :id</text>
+  <line x1="934" y1="322" x2="666" y2="322" stroke="#000000" stroke-width="1.4" stroke-dasharray="6,4" marker-end="url(#arrow-return)" />
+  <text x="800.0" y="314" text-anchor="middle" font-size="10.5" font-style="italic" fill="#334155" paint-order="stroke fill" stroke="#ffffff" stroke-width="4.5px" stroke-linecap="round" stroke-linejoin="round">4: return categoria_datos</text>
+  <line x1="666" y1="352" x2="1194" y2="352" stroke="#000000" stroke-width="1.5" marker-end="url(#arrow-sync)" />
+  <text x="930.0" y="344" text-anchor="middle" font-size="10.5" font-weight="600" fill="#0f172a" paint-order="stroke fill" stroke="#ffffff" stroke-width="4.5px" stroke-linecap="round" stroke-linejoin="round">5: SELECT 1 FROM t_producto WHERE nombre = :nombre AND id_empresa = :id_empresa</text>
+  <line x1="1194" y1="382" x2="666" y2="382" stroke="#000000" stroke-width="1.4" stroke-dasharray="6,4" marker-end="url(#arrow-return)" />
+  <text x="930.0" y="374" text-anchor="middle" font-size="10.5" font-style="italic" fill="#334155" paint-order="stroke fill" stroke="#ffffff" stroke-width="4.5px" stroke-linecap="round" stroke-linejoin="round">6: return nombre_duplicado</text>
+  <!-- Fragmento alt -->
+  <rect x="35" y="405" width="1910" height="565" fill="none" stroke="#334155" stroke-width="1.3" />
+  <path d="M 35 405 L 115 405 L 127 418 L 127 429 L 35 429 Z" fill="#f8fafc" stroke="#334155" stroke-width="1.3" />
+  <text x="45" y="422" font-size="11" font-weight="bold" fill="#1e293b">alt</text>
+  <text x="137" y="422" font-size="11" font-weight="bold" fill="#b91c1c">[nombre_duplicado == true || !categoria_datos.activo] (Curso Alterno: Producto Duplicado o Categoria Invalida)</text>
+
+  <!-- Divisor alt else -->
+  <line x1="35" y1="505" x2="1945" y2="505" stroke="#334155" stroke-width="1.3" stroke-dasharray="7,4" />
+  <text x="47" y="497" font-size="10" font-weight="bold" fill="#475569">[else]</text>
+  <text x="90" y="523" font-size="11" font-weight="bold" fill="#15803d">[else: datos_validos &amp;&amp; nombre_unico] (Curso Basico: Insercion y Variantes)</text>
+  <line x1="654" y1="445" x2="386" y2="445" stroke="#b91c1c" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrow-error)" />
+  <text x="520.0" y="437" text-anchor="middle" font-size="10.5" font-weight="600" fill="#b91c1c" paint-order="stroke fill" stroke="#ffffff" stroke-width="4.5px" stroke-linecap="round" stroke-linejoin="round">7.1: (Error, "Nombre de producto ya existente o categoria invalida")</text>
+  <line x1="374" y1="475" x2="130" y2="475" stroke="#b91c1c" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrow-error)" />
+  <text x="252.0" y="467" text-anchor="middle" font-size="10.5" font-weight="600" fill="#b91c1c" paint-order="stroke fill" stroke="#ffffff" stroke-width="4.5px" stroke-linecap="round" stroke-linejoin="round">7.2: Mostrar error: "Nombre de producto ya existente o categoria inactiva"</text>
+  <line x1="666" y1="542" x2="1194" y2="542" stroke="#000000" stroke-width="1.5" marker-end="url(#arrow-sync)" />
+  <text x="930.0" y="534" text-anchor="middle" font-size="10.5" font-weight="600" fill="#0f172a" paint-order="stroke fill" stroke="#ffffff" stroke-width="4.5px" stroke-linecap="round" stroke-linejoin="round">8: INSERT INTO t_producto(nombre, precio, descripcion, id_categoria, id_empresa, activo, temporada)</text>
+  <line x1="1194" y1="572" x2="666" y2="572" stroke="#000000" stroke-width="1.4" stroke-dasharray="6,4" marker-end="url(#arrow-return)" />
+  <text x="930.0" y="564" text-anchor="middle" font-size="10.5" font-style="italic" fill="#334155" paint-order="stroke fill" stroke="#ffffff" stroke-width="4.5px" stroke-linecap="round" stroke-linejoin="round">9: return id_producto</text>
+  <!-- Fragmento loop -->
+  <rect x="470" y="600" width="1010" height="75" fill="none" stroke="#475569" stroke-width="1.2" stroke-dasharray="5,3" />
+  <path d="M 470 600 L 520 600 L 530 612 L 530 622 L 470 622 Z" fill="#f1f5f9" stroke="#475569" stroke-width="1.2" />
+  <text x="478" y="616" font-size="10.5" font-weight="bold" fill="#1e293b">loop</text>
+  <text x="536" y="616" font-size="10.5" font-weight="600" fill="#334155">[para cada variante: tallas y colores definidos]</text>
+  <line x1="666" y1="636" x2="1454" y2="636" stroke="#000000" stroke-width="1.5" marker-end="url(#arrow-sync)" />
+  <text x="1060.0" y="628" text-anchor="middle" font-size="10.5" font-weight="600" fill="#0f172a" paint-order="stroke fill" stroke="#ffffff" stroke-width="4.5px" stroke-linecap="round" stroke-linejoin="round">10: INSERT INTO t_variante_producto(id_producto, sku, talla, color, codigo_hex)</text>
+  <line x1="1454" y1="656" x2="666" y2="656" stroke="#000000" stroke-width="1.4" stroke-dasharray="6,4" marker-end="url(#arrow-return)" />
+  <text x="1060.0" y="648" text-anchor="middle" font-size="10.5" font-style="italic" fill="#334155" paint-order="stroke fill" stroke="#ffffff" stroke-width="4.5px" stroke-linecap="round" stroke-linejoin="round">11: return id_variante</text>
+  <!-- Fragmento loop -->
+  <rect x="470" y="695" width="1240" height="75" fill="none" stroke="#475569" stroke-width="1.2" stroke-dasharray="5,3" />
+  <path d="M 470 695 L 520 695 L 530 707 L 530 717 L 470 717 Z" fill="#f1f5f9" stroke="#475569" stroke-width="1.2" />
+  <text x="478" y="711" font-size="10.5" font-weight="bold" fill="#1e293b">loop</text>
+  <text x="536" y="711" font-size="10.5" font-weight="600" fill="#334155">[para cada imagen: archivos adjuntos != null]</text>
+  <line x1="666" y1="735" x2="1684" y2="735" stroke="#000000" stroke-width="1.5" marker-end="url(#arrow-sync)" />
+  <text x="1175.0" y="727" text-anchor="middle" font-size="10.5" font-weight="600" fill="#0f172a" paint-order="stroke fill" stroke="#ffffff" stroke-width="4.5px" stroke-linecap="round" stroke-linejoin="round">12: INSERT INTO t_imagen_producto(id_producto, url_imagen, orden, es_portada)</text>
+  <line x1="1684" y1="755" x2="666" y2="755" stroke="#000000" stroke-width="1.4" stroke-dasharray="6,4" marker-end="url(#arrow-return)" />
+  <text x="1175.0" y="747" text-anchor="middle" font-size="10.5" font-style="italic" fill="#334155" paint-order="stroke fill" stroke="#ffffff" stroke-width="4.5px" stroke-linecap="round" stroke-linejoin="round">13: return confirmacion_imagen</text>
+  <line x1="666" y1="800" x2="1884" y2="800" stroke="#000000" stroke-width="1.5" marker-end="url(#arrow-sync)" />
+  <text x="1275.0" y="792" text-anchor="middle" font-size="10.5" font-weight="600" fill="#0f172a" paint-order="stroke fill" stroke="#ffffff" stroke-width="4.5px" stroke-linecap="round" stroke-linejoin="round">14: INSERT INTO t_bitacora(id_usuario, id_empresa, modulo='CATALOGO', accion='PRODUCTO_CREADO', ...)</text>
+  <line x1="1884" y1="830" x2="666" y2="830" stroke="#000000" stroke-width="1.4" stroke-dasharray="6,4" marker-end="url(#arrow-return)" />
+  <text x="1275.0" y="822" text-anchor="middle" font-size="10.5" font-style="italic" fill="#334155" paint-order="stroke fill" stroke="#ffffff" stroke-width="4.5px" stroke-linecap="round" stroke-linejoin="round">15: return confirmacion_log</text>
+  <line x1="654" y1="885" x2="386" y2="885" stroke="#000000" stroke-width="1.4" stroke-dasharray="6,4" marker-end="url(#arrow-return)" />
+  <text x="520.0" y="877" text-anchor="middle" font-size="10.5" font-weight="600" fill="#15803d" paint-order="stroke fill" stroke="#ffffff" stroke-width="4.5px" stroke-linecap="round" stroke-linejoin="round">16: confirmar_creacion(id_producto)</text>
+  <line x1="374" y1="920" x2="130" y2="920" stroke="#000000" stroke-width="1.4" stroke-dasharray="6,4" marker-end="url(#arrow-return)" />
+  <text x="252.0" y="912" text-anchor="middle" font-size="10.5" font-weight="600" fill="#334155" paint-order="stroke fill" stroke="#ffffff" stroke-width="4.5px" stroke-linecap="round" stroke-linejoin="round">17: actualizar_catalogo()</text>
+</svg>

@@ -13,7 +13,7 @@ from app.modules.inventario.services import (
 from app.modules.ecommerce.services import paypal_service
 from app.modules.reservas.services import atender_reserva_services
 from app.modules.pos.services import comprobante_service
-from app.modules.pedidos.services import reportes_services, kpis_services
+from app.modules.pedidos.services import reportes_services, kpis_services, devoluciones_services
 from app.modules.ia.services import asistente_services
 from app.modules.admin.services import backup_services, bitacora_services, notificaciones_services
 
@@ -37,6 +37,7 @@ _SERVICES = {
     'atender_reserva_services': atender_reserva_services,
     'comprobante_service': comprobante_service,
     'reportes_services': reportes_services,
+    'devoluciones_services': devoluciones_services,
     'kpis_services': kpis_services,
     'asistente_services': asistente_services,
     'backup_services': backup_services,

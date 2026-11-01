@@ -6,7 +6,7 @@ from app.modules.inventario.routes import sucursales_routes, ciudades_routes, in
 from app.modules.ecommerce.routes import carrito_routes, pago_routes
 from app.modules.reservas.routes import reserva_routes, atender_reserva_routes
 from app.modules.pos.routes import pos_routes, caja_routes, caja_pago_routes, comprobante_routes
-from app.modules.pedidos.routes import pedido_routes, reportes_routes, kpis_routes, motor_reportes_routes
+from app.modules.pedidos.routes import pedido_routes, reportes_routes, kpis_routes, motor_reportes_routes, devoluciones_routes
 from app.modules.ia.routes import asistente_routes
 from app.modules.admin.routes import backup_routes, bitacora_routes, main_routes, notificaciones_routes
 
@@ -37,6 +37,7 @@ _ROUTES = {
     'caja_pago_routes': caja_pago_routes,
     'comprobante_routes': comprobante_routes,
     'pedido_routes': pedido_routes,
+    'devoluciones_routes': devoluciones_routes,
     'reportes_routes': reportes_routes,
     'kpis_routes': kpis_routes,
     'motor_reportes_routes': motor_reportes_routes,

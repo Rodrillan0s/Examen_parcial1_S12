@@ -509,7 +509,8 @@ export class AdminLayoutComponent implements OnInit {
   submenus: [
     { nombre: 'Punto de Venta / Caja', ruta: '/admin/caja', permiso: 'ventas.crear' },
     { nombre: 'Cajas de Tienda y Sucursales', ruta: '/admin/cajas-monitoreo', maxAuthorityLevel: 4 },
-    { nombre: 'Atender Reservas', ruta: '/admin/atender-reserva', permiso: 'ventas.ver' }
+    { nombre: 'Atender Reservas', ruta: '/admin/atender-reserva', permiso: 'ventas.ver' },
+    { nombre: 'Devoluciones & Garantías', ruta: '/admin/devoluciones', permiso: 'devoluciones.ver' }
   ]
 },
       {

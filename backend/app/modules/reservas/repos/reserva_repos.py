@@ -2,7 +2,8 @@ import uuid
 import json
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
-from app.core.postgres import PostgreSQL
+from app.core.postgres import PostgreSQL, atomic
+from app.core.inventory_integrity import lock_items
 from app.core.config import Config
 from app.modules.ecommerce.repos.carrito_repos import obtener_o_crear_cliente
 from app.modules.admin.repos.bitacora_repos import registrar_evento_db
@@ -15,6 +16,7 @@ def _generar_codigo_reserva() -> str:
     sufijo = uuid.uuid4().hex[:6].upper()
     return f"RES-{prefijo}-{sufijo}"
 
+@atomic
 def crear_reserva(id_usuario: int, id_empresa: int, datos: Dict[str, Any]) -> Dict[str, Any]:
     """
     Crea una reserva en una única transacción atómica:
@@ -102,9 +104,13 @@ def crear_reserva(id_usuario: int, id_empresa: int, datos: Dict[str, Any]) -> Di
                 raise ValueError(f"La prenda o variante '{p_row[0]}' se encuentra inactiva para reservas.")
 
         # 3. Reservar stock ejecutando fn_reservar_stock para cada variante
+        totals, positions = lock_items(db, schema, id_sucursal, items, id_empresa)
+        for variant, quantity in totals.items():
+            if quantity > positions[variant][3]:
+                raise ValueError('Stock insuficiente para la cantidad acumulada de la reserva.')
         # Si alguna falla, se lanza excepción y se ejecutará el ROLLBACK completo
         detalles_procesados = []
-        for item in items:
+        for item in sorted(items, key=lambda item: int(item['id_variante'])):
             id_var = item.get('id_variante')
             cant = int(item.get('cantidad', 1))
 
@@ -125,6 +131,8 @@ def crear_reserva(id_usuario: int, id_empresa: int, datos: Dict[str, Any]) -> Di
                 "cantidad": cant,
                 "stock_info": fn_res
             })
+
+        lock_items(db, schema, id_sucursal, items, id_empresa)
 
         con_pago = bool(datos.get('con_pago', False))
         monto_pagado = float(datos.get('monto_pagado', 0.0) or 0.0)
@@ -172,7 +180,7 @@ def crear_reserva(id_usuario: int, id_empresa: int, datos: Dict[str, Any]) -> Di
             })
 
         # 6. Confirmar transacción completa
-        db.conn.commit()
+        db.commit()
 
         # 7. Registrar evento de auditoría en t_bitacora
         try:
@@ -223,7 +231,7 @@ def crear_reserva(id_usuario: int, id_empresa: int, datos: Dict[str, Any]) -> Di
 
     except Exception as e:
         if db.conn:
-            db.conn.rollback()
+            db.rollback()
         raise e
     finally:
         db.close_connection()
@@ -234,7 +242,6 @@ def obtener_mis_reservas(id_usuario: int, id_empresa: Optional[int] = None) -> L
     Si se indica id_empresa, filtra por ese Tenant específico; de lo contrario retorna todas las reservas del cliente.
     Incluye datos de sucursal y el desglose de prendas/variantes reservadas.
     """
-    id_cliente = obtener_o_crear_cliente(id_usuario)
     schema = _get_schema()
     db = PostgreSQL()
     db.create_connection()
@@ -263,10 +270,10 @@ def obtener_mis_reservas(id_usuario: int, id_empresa: Optional[int] = None) -> L
             FROM {schema}.t_reserva r
             JOIN {schema}.t_sucursal s ON s.id_sucursal = r.id_sucursal
             LEFT JOIN {schema}.t_ciudad ci ON ci.id_ciudad = s.id_ciudad
-            WHERE r.id_cliente = %s {empresa_filtro}
+            WHERE EXISTS(SELECT 1 FROM {schema}.t_cliente owner WHERE owner.id_cliente=r.id_cliente AND owner.id_usuario=%s) {empresa_filtro}
             ORDER BY r.fecha_reserva DESC;
         """
-        params = (id_cliente, id_empresa) if id_empresa else (id_cliente,)
+        params = (id_usuario, id_empresa) if id_empresa else (id_usuario,)
         cur.execute(query, params)
         reservas_rows = cur.fetchall()
 
@@ -358,7 +365,6 @@ def obtener_detalle_reserva(id_reserva: int, id_usuario: int, id_empresa: int, e
     Retorna la información completa de una reserva puntual.
     Si no es administrador, valida que pertenezca forzosamente al id_cliente del usuario autenticado.
     """
-    id_cliente = obtener_o_crear_cliente(id_usuario)
     schema = _get_schema()
     db = PostgreSQL()
     db.create_connection()
@@ -406,7 +412,8 @@ def obtener_detalle_reserva(id_reserva: int, id_usuario: int, id_empresa: int, e
             return None
 
         # Validación de propiedad para clientes
-        if not es_admin and r[1] != id_cliente:
+        owner = db.execute_query(f'SELECT id_usuario FROM {schema}.t_cliente WHERE id_cliente=%s', (r[1],), fetchone=True)
+        if not es_admin and (not owner or owner[0] != id_usuario):
             return None
 
         # Obtener los items
@@ -483,6 +490,7 @@ def obtener_detalle_reserva(id_reserva: int, id_usuario: int, id_empresa: int, e
     finally:
         db.close_connection()
 
+@atomic
 def cancelar_reserva(id_reserva: int, id_usuario: int, id_empresa: int, motivo: str, es_admin: bool = False) -> Dict[str, Any]:
     """
     Cancela una reserva activa de forma atómica:
@@ -498,7 +506,6 @@ def cancelar_reserva(id_reserva: int, id_usuario: int, id_empresa: int, motivo: 
     if not motivo or not motivo.strip():
         motivo = "Cancelación solicitada por el cliente."
 
-    id_cliente = obtener_o_crear_cliente(id_usuario)
     schema = _get_schema()
     db = PostgreSQL()
     db.create_connection()
@@ -522,7 +529,9 @@ def cancelar_reserva(id_reserva: int, id_usuario: int, id_empresa: int, motivo: 
         if res_row[5] != id_empresa:
             raise ValueError("La reserva no pertenece a la tienda actual.")
 
-        if not es_admin and res_row[1] != id_cliente:
+        id_cliente = res_row[1]
+        owner = db.execute_query(f'SELECT id_usuario FROM {schema}.t_cliente WHERE id_cliente=%s', (id_cliente,), fetchone=True)
+        if not es_admin and (not owner or owner[0] != id_usuario):
             raise ValueError("No tienes autorización para cancelar una reserva que no te pertenece.")
 
         estado_actual = res_row[4]
@@ -542,6 +551,10 @@ def cancelar_reserva(id_reserva: int, id_usuario: int, id_empresa: int, motivo: 
             WHERE id_reserva = %s;
         """, (id_reserva,))
         detalles = cur.fetchall()
+        stock_items = [dict(id_variante=r[0],cantidad=r[1]) for r in detalles]
+        totals, positions = lock_items(db,schema,id_sucursal,stock_items,id_empresa)
+        if any(totals[v] > positions[v][2] for v in totals):
+            raise ValueError('INVENTORY_RECONCILIATION_REQUIRED: reserva superior al saldo reservado.')
 
         # 3. Restituir inventario de forma atómica para cada variante
         for det in detalles:
@@ -611,7 +624,8 @@ def cancelar_reserva(id_reserva: int, id_usuario: int, id_empresa: int, motivo: 
         """, (id_reserva,))
 
         # 5. Commit de la transacción
-        db.conn.commit()
+        lock_items(db,schema,id_sucursal,stock_items,id_empresa)
+        db.commit()
 
         # 6. Auditoría en bitácora
         try:
@@ -648,7 +662,7 @@ def cancelar_reserva(id_reserva: int, id_usuario: int, id_empresa: int, motivo: 
 
     except Exception as e:
         if db.conn:
-            db.conn.rollback()
+            db.rollback()
         raise e
     finally:
         db.close_connection()

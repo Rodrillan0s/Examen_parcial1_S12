@@ -5,6 +5,27 @@ from app.modules.pedidos.services.reports.parser.dates import interpretar_fechas
 from app.modules.pedidos.services.reports.parser.entities import resolver_entidades_en_texto
 
 DICCIONARIO_REPORTES = {
+    "devoluciones": [
+        "devoluciones y reclamos", "devoluciones", "devolucion", "reclamos", "reclamo",
+        "cambios de prenda", "prendas devueltas", "mercancia devuelta",
+        "fallas de fabrica", "garantias", "motivos de devolucion", "cambio de producto"
+    ],
+    "rentabilidad": [
+        "rentabilidad y margen", "margen de ganancia", "rentabilidad", "margen bruto",
+        "utilidad neta", "utilidad", "margen", "ganancia", "ganancias", "utilidades",
+        "costos y margen", "rentabilidad por producto", "margen de utilidad"
+    ],
+    "rendimiento_personal": [
+        "rendimiento de cajeros y personal", "rendimiento de cajeros", "rendimiento de personal",
+        "rendimiento personal", "desempeno de cajeros", "ventas por cajero", "ventas por vendedor",
+        "cajeros", "vendedores", "ranking de vendedores", "eficiencia de cajeros", "comisiones de venta",
+        "desempeno de vendedores", "rendimiento vendedores"
+    ],
+    "stock_inmovilizado": [
+        "stock inmovilizado", "stock estancado", "prendas estancadas", "baja rotacion",
+        "prendas sin movimiento", "productos estancados", "ropa sin vender", "stock sin rotacion",
+        "inventario estancado", "mercaderia inmovilizada", "capital estancado", "sin rotacion"
+    ],
     "ventas_pendientes": [
         "ventas pendientes", "venta pendiente", "prendas por pagar", "pedidos por pagar",
         "pendientes de pago", "pendiente de pago", "por cobrar", "cuentas por cobrar",
@@ -74,9 +95,21 @@ def parsear_comando_voz(comando_crudo: str, id_empresa: int = 1) -> Dict[str, An
     elif re.search(r'\bpor\s+(?:categoria|tipo\s+de\s+prenda)\b', texto_limpio):
         group_by = "categoria"
         texto_limpio = re.sub(r'\bpor\s+(?:categoria|tipo\s+de\s+prenda)\b', ' ', texto_limpio)
+    elif re.search(r'\bpor\s+(?:cajero|vendedor|personal|usuario)\b', texto_limpio):
+        group_by = "cajero"
+        texto_limpio = re.sub(r'\bpor\s+(?:cajero|vendedor|personal|usuario)\b', ' ', texto_limpio)
+    elif re.search(r'\bpor\s+(?:motivo|razon)\b', texto_limpio):
+        group_by = "motivo"
+        texto_limpio = re.sub(r'\bpor\s+(?:motivo|razon)\b', ' ', texto_limpio)
+    elif re.search(r'\bpor\s+(?:producto|prenda|modelo)\b', texto_limpio):
+        group_by = "producto"
+        texto_limpio = re.sub(r'\bpor\s+(?:producto|prenda|modelo)\b', ' ', texto_limpio)
     elif re.search(r'\bpor\s+(?:dia|fecha)\b', texto_limpio):
         group_by = "dia"
         texto_limpio = re.sub(r'\bpor\s+(?:dia|fecha)\b', ' ', texto_limpio)
+    elif re.search(r'\bpor\s+(?:mes)\b', texto_limpio):
+        group_by = "mes"
+        texto_limpio = re.sub(r'\bpor\s+(?:mes)\b', ' ', texto_limpio)
 
     # 3. Extracción de ordenamiento (ORDER BY)
     order_by = None
@@ -87,6 +120,18 @@ def parsear_comando_voz(comando_crudo: str, id_empresa: int = 1) -> Dict[str, An
     elif re.search(r'\b(?:menos\s+stock|menor\s+stock|criticos?)\b', texto_limpio):
         order_by = "stock_disponible"
         order_dir = "ASC"
+    elif re.search(r'\b(?:mayor\s+rentabilidad|mas\s+rentable|mayor\s+margen)\b', texto_limpio):
+        order_by = "margen_porcentual"
+        order_dir = "DESC"
+    elif re.search(r'\b(?:mayor\s+ganancia|mas\s+ganancia|mayor\s+utilidad)\b', texto_limpio):
+        order_by = "utilidad_neta_bs"
+        order_dir = "DESC"
+    elif re.search(r'\b(?:mas\s+estancado|mayor\s+capital\s+estancado|sin\s+rotacion)\b', texto_limpio):
+        order_by = "capital_estancado_bs"
+        order_dir = "DESC"
+    elif re.search(r'\b(?:mas\s+devoluciones|mayor\s+reclamos?)\b', texto_limpio):
+        order_by = "total_devoluciones"
+        order_dir = "DESC"
 
     # 4. Extracción determinista de fechas
     fecha_desde, fecha_hasta, texto_sin_fechas = interpretar_fechas(texto_limpio)
@@ -181,6 +226,8 @@ def parsear_comando_voz(comando_crudo: str, id_empresa: int = 1) -> Dict[str, An
         partes_resumen.append(f"Producto: **{entidades['producto_nombre']}**")
     if group_by:
         partes_resumen.append(f"Agrupado por: **{group_by}**")
+    if order_by:
+        partes_resumen.append(f"Orden: **{order_by} ({order_dir})**")
     if entidades["estado_stock"]:
         partes_resumen.append(f"Filtro Stock: **{entidades['estado_stock'].upper()}**")
 

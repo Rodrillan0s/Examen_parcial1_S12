@@ -1,3 +1,4 @@
+from app.core.inventory_integrity import lock_items, lock_position
 import io
 import datetime
 import random
@@ -8,7 +9,7 @@ import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 
-from app.core.postgres import PostgreSQL
+from app.core.postgres import PostgreSQL, atomic
 from app.core.config import Config
 from fastapi import HTTPException
 from app.core.tenant_guard import resolver_tenant_operacion, resolver_sucursal_autorizada
@@ -337,6 +338,7 @@ def analizar_y_previsualizar_excel(file_content: bytes, id_empresa: int, id_sucu
 # 3. CONFIRMACIÓN E IMPORTACIÓN TRANSACCIONAL A LA BASE DE DATOS
 # ==============================================================================
 
+@atomic
 def confirmar_e_importar_lote_db(
     payload: Dict[str, Any],
     token_data: Dict[str, Any]
@@ -376,6 +378,7 @@ def confirmar_e_importar_lote_db(
     db = PostgreSQL()
     db.create_connection()
     try:
+        db.execute_query('SELECT pg_advisory_xact_lock(hashtextextended(%s,0))', (f'catalog-sku:{schema}:{id_empresa}',))
         # Validar que la sucursal pertenezca a la empresa
         q_suc = f"SELECT id_sucursal, nombre FROM {schema}.t_sucursal WHERE id_sucursal = %s AND id_empresa = %s AND activo = TRUE;"
         suc = db.execute_query(q_suc, (id_sucursal, id_empresa), fetchone=True)
@@ -472,8 +475,8 @@ def confirmar_e_importar_lote_db(
                 id_cat = c_ins[0]
 
             # B. Resolver o crear Talla
-            q_tal_find = f"SELECT id_talla FROM {schema}.t_talla WHERE LOWER(nombre) = LOWER(%s) LIMIT 1;"
-            t_row = db.execute_query(q_tal_find, (talla_nom,), fetchone=True)
+            q_tal_find = f"SELECT id_talla FROM {schema}.t_talla WHERE LOWER(nombre) = LOWER(%s) AND (id_empresa=%s OR id_empresa IS NULL) ORDER BY id_empresa NULLS LAST,id_talla LIMIT 1;"
+            t_row = db.execute_query(q_tal_find, (talla_nom,id_empresa), fetchone=True)
             if t_row:
                 id_tal = t_row[0]
             else:
@@ -482,8 +485,8 @@ def confirmar_e_importar_lote_db(
                 id_tal = t_ins[0]
 
             # C. Resolver o crear Color
-            q_col_find = f"SELECT id_color FROM {schema}.t_color WHERE LOWER(nombre) = LOWER(%s) LIMIT 1;"
-            cl_row = db.execute_query(q_col_find, (color_nom,), fetchone=True)
+            q_col_find = f"SELECT id_color FROM {schema}.t_color WHERE LOWER(nombre) = LOWER(%s) AND (id_empresa=%s OR id_empresa IS NULL) ORDER BY id_empresa NULLS LAST,id_color LIMIT 1;"
+            cl_row = db.execute_query(q_col_find, (color_nom,id_empresa), fetchone=True)
             if cl_row:
                 id_col = cl_row[0]
             else:
@@ -517,6 +520,9 @@ def confirmar_e_importar_lote_db(
             if var_row:
                 id_variante = var_row[0]
             else:
+                collision = db.execute_query(f'''SELECT v.id_variante FROM {schema}.t_producto_talla_color v JOIN {schema}.t_producto p ON p.id_producto=v.id_producto WHERE p.id_empresa=%s AND lower(btrim(v.sku))=lower(btrim(%s)) LIMIT 1''', (id_empresa,sku_val), fetchone=True)
+                if collision:
+                    raise HTTPException(409, 'SKU_COLLISION: revise el SKU sin renombrar el historico.')
                 q_var_ins = f"""
                 INSERT INTO {schema}.t_producto_talla_color (
                     id_producto, id_talla, id_color, sku, codigo_barras, precio, activo, estado
@@ -543,6 +549,7 @@ def confirmar_e_importar_lote_db(
                 )
 
             # G. Afectación a Inventario en la Sucursal Destino (t_inventario)
+            lock_position(db,schema,id_sucursal,id_variante,id_empresa,allow_missing=True)
             q_inv_find = f"SELECT id_inventario, stock_actual, stock_disponible FROM {schema}.t_inventario WHERE id_sucursal = %s AND id_variante = %s LIMIT 1;"
             inv_row = db.execute_query(q_inv_find, (id_sucursal, id_variante), fetchone=True)
 
@@ -582,10 +589,11 @@ def confirmar_e_importar_lote_db(
             motivo_mov = f"Recepción de lote {numero_lote}" + (f" (OC #{id_orden_compra})" if id_orden_compra else "")
             db.execute_query(q_mov, (id_inventario, id_usuario, cantidad, stock_ant, stock_nuevo, motivo_mov), commit=False)
 
+            lock_position(db,schema,id_sucursal,id_variante,id_empresa)
             items_procesados += 1
 
         # Commit final de toda la transacción
-        db.conn.commit()
+        db.commit()
 
         # Registrar en Bitácora de Auditoría
         try:
@@ -627,7 +635,7 @@ def confirmar_e_importar_lote_db(
         }
     except Exception as e:
         if db.conn:
-            db.conn.rollback()
+            db.rollback()
         raise e
     finally:
         db.close_connection()
@@ -1032,6 +1040,7 @@ def rechazar_orden_compra_db(id_orden: int, motivo: str, token_data: Dict[str, A
         db.close_connection()
 
 
+@atomic
 def recibir_mercaderia_orden_db(
     id_orden: int,
     recepcion_data: Dict[str, Any],
@@ -1062,7 +1071,7 @@ def recibir_mercaderia_orden_db(
         q_oc = f"""
         SELECT id_orden_compra, id_sucursal, id_proveedor, estado, numero_orden, total_estimado
         FROM {schema}.t_orden_compra
-        WHERE id_orden_compra = %s AND id_empresa = %s;
+        WHERE id_orden_compra = %s AND id_empresa = %s FOR UPDATE;
         """
         oc = db.execute_query(q_oc, (id_orden, id_empresa), fetchone=True)
         if not oc:
@@ -1108,6 +1117,9 @@ def recibir_mercaderia_orden_db(
         )
         id_lote = l_res[0]
 
+        if any(not r[2] or int(r[3]) <= 0 for r in items):
+            raise HTTPException(409, 'Orden con prendas sin variante/cantidad verificable.')
+        lock_items(db,schema,id_sucursal,[dict(id_variante=r[2],cantidad=r[3]) for r in items],id_empresa,allow_missing=True)
         # 2. Afectar inventario por cada ítem
         for it in items:
             id_det = it[0]
@@ -1157,7 +1169,8 @@ def recibir_mercaderia_orden_db(
         q_upd_oc = f"UPDATE {schema}.t_orden_compra SET estado = 'RECIBIDA_TOTAL' WHERE id_orden_compra = %s;"
         db.execute_query(q_upd_oc, (id_orden,), commit=False)
 
-        db.conn.commit()
+        lock_items(db,schema,id_sucursal,[dict(id_variante=r[2],cantidad=r[3]) for r in items],id_empresa)
+        db.commit()
         return {
             "success": True,
             "mensaje": f"Orden {numero_oc} recibida exitosamente. Lote #{id_lote} ({numero_lote}) registrado en inventario.",
@@ -1167,7 +1180,7 @@ def recibir_mercaderia_orden_db(
         }
     except Exception as e:
         if db.conn:
-            db.conn.rollback()
+            db.rollback()
         raise e
     finally:
         db.close_connection()

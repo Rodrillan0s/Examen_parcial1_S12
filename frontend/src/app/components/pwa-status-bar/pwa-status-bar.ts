@@ -289,7 +289,7 @@ import { IndexedDbService } from '../../core/storage/indexed-db.service';
                   type="button"
                   (click)="confirmarConciliacionVenta(op)"
                   class="px-3 py-1 rounded bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs cursor-pointer">
-                  Guardar Incidencia Conciliada
+                  Guardar nota de conciliación
                 </button>
               </div>
             </div>
@@ -338,7 +338,7 @@ import { IndexedDbService } from '../../core/storage/indexed-db.service';
                 type="button"
                 (click)="descartarOperacion(op)"
                 class="px-2.5 py-1 rounded-lg text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-medium transition cursor-pointer ml-auto">
-                Descartar
+                Conservar para revisión
               </button>
             </div>
           </div>
@@ -346,7 +346,7 @@ import { IndexedDbService } from '../../core/storage/indexed-db.service';
           <!-- Historial Auditable de Ventas en Efectivo Conciliadas -->
           <div *ngIf="syncQueue.reconciledHistory().length > 0" class="pt-4 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
             <h4 class="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-              Incidencias de Caja Conciliadas ({{ syncQueue.reconciledHistory().length }})
+              Notas de conciliación de caja ({{ syncQueue.reconciledHistory().length }})
             </h4>
             <div
               *ngFor="let rec of syncQueue.reconciledHistory()"
@@ -498,7 +498,7 @@ export class PwaStatusBarComponent {
 
   public abrirConciliacion(op: PendingOperation): void {
     this.reconcilingOpId.set(op.operation_id);
-    this.reconciliationNote = 'Efectivo conciliado y restituido en arqueo de turno.';
+    this.reconciliationNote = '';
   }
 
   public cancelarConciliacion(): void {

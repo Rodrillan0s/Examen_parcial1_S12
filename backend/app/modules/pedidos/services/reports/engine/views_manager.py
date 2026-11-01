@@ -335,7 +335,120 @@ def asegurar_vistas_sql():
         GROUP BY s.id_sucursal, s.id_empresa, s.nombre, ci.nombre, s.telefono, s.direccion, s.activo;
         """
         db.execute_query(v_sucursales, commit=True)
+        # 10. Vista de Devoluciones y Reclamos
+        v_devoluciones = f"""
+        CREATE OR REPLACE VIEW {schema}.vw_devoluciones_reporte AS
+        SELECT 
+            d.id_devolucion,
+            d.codigo_devolucion,
+            d.id_empresa,
+            d.id_sucursal,
+            s.nombre AS sucursal,
+            COALESCE(ci.nombre, 'Santa Cruz') AS ciudad,
+            d.id_venta,
+            v.numero_venta,
+            d.id_cliente,
+            COALESCE(u.nombre || ' ' || COALESCE(u.apellido, ''), 'Cliente Aurora') AS cliente,
+            COALESCE(u.telefono, 'S/N') AS telefono,
+            d.fecha_solicitud,
+            DATE(d.fecha_solicitud) AS fecha,
+            COALESCE(d.monto_total_devolucion, 0) AS monto_total_devolucion,
+            d.estado,
+            COALESCE(d.motivo_general, 'OTRO') AS motivo_general,
+            COALESCE(d.total_articulos, 1) AS total_articulos,
+            COALESCE(d.reembolso_estado, 'NO_REQUERIDO') AS reembolso_estado,
+            COALESCE(d.reembolso_metodo, 'EFECTIVO') AS reembolso_metodo
+        FROM {schema}.t_devolucion d
+        JOIN {schema}.t_sucursal s ON s.id_sucursal = d.id_sucursal
+        LEFT JOIN {schema}.t_ciudad ci ON ci.id_ciudad = s.id_ciudad
+        LEFT JOIN {schema}.t_venta v ON v.id_venta = d.id_venta
+        LEFT JOIN {schema}.t_cliente cl ON cl.id_cliente = d.id_cliente
+        LEFT JOIN {schema}.t_usuario u ON u.id_usuario = cl.id_usuario;
+        """
+        db.execute_query(v_devoluciones, commit=True)
+
+        # 11. Vista de Rentabilidad y Margen
+        v_rentabilidad = f"""
+        CREATE OR REPLACE VIEW {schema}.vw_rentabilidad_reporte AS
+        SELECT 
+            p.id_producto,
+            p.id_empresa,
+            p.nombre AS producto,
+            COALESCE(cat.nombre, 'Sin Categoría') AS categoria,
+            s.id_sucursal,
+            s.nombre AS sucursal,
+            DATE(v.fecha_venta) AS fecha,
+            COUNT(dv.id_detalle_venta) AS transacciones,
+            SUM(dv.cantidad) AS unidades_vendidas,
+            SUM(dv.subtotal) AS ingresos_totales,
+            ROUND(SUM(dv.subtotal * 0.55), 2) AS costo_estimado,
+            ROUND(SUM(dv.subtotal * 0.45), 2) AS margen_bruto_bs,
+            45.0 AS margen_porcentaje
+        FROM {schema}.t_detalle_venta dv
+        JOIN {schema}.t_venta v ON v.id_venta = dv.id_venta
+        JOIN {schema}.t_sucursal s ON s.id_sucursal = v.id_sucursal
+        JOIN {schema}.t_producto_talla_color ptc ON ptc.id_variante = dv.id_variante
+        JOIN {schema}.t_producto p ON p.id_producto = ptc.id_producto
+        LEFT JOIN {schema}.t_categoria cat ON cat.id_categoria = p.id_categoria
+        GROUP BY p.id_producto, p.id_empresa, p.nombre, cat.nombre, s.id_sucursal, s.nombre, DATE(v.fecha_venta);
+        """
+        db.execute_query(v_rentabilidad, commit=True)
+
+        # 12. Vista de Rendimiento de Cajeros y Personal
+        v_personal = f"""
+        CREATE OR REPLACE VIEW {schema}.vw_rendimiento_personal_reporte AS
+        SELECT 
+            u.id_usuario,
+            v.id_empresa,
+            v.id_sucursal,
+            s.nombre AS sucursal,
+            u.nombre || ' ' || COALESCE(u.apellido, '') AS empleado_nombre,
+            COALESCE(r.nombre, 'PERSONAL') AS rol,
+            DATE(v.fecha_venta) AS fecha,
+            COUNT(v.id_venta) AS total_ventas,
+            SUM(v.total) AS total_recaudado,
+            ROUND(AVG(v.total), 2) AS ticket_promedio
+        FROM {schema}.t_venta v
+        JOIN {schema}.t_sucursal s ON s.id_sucursal = v.id_sucursal
+        JOIN {schema}.t_usuario u ON u.id_usuario = v.id_usuario
+        LEFT JOIN {schema}.t_rol r ON r.id_rol = u.id_rol
+        GROUP BY u.id_usuario, v.id_empresa, v.id_sucursal, s.nombre, u.nombre, u.apellido, r.nombre, DATE(v.fecha_venta);
+        """
+        db.execute_query(v_personal, commit=True)
+
+        # 13. Vista de Stock Inmovilizado / Baja Rotación
+        v_inmovilizado = f"""
+        CREATE OR REPLACE VIEW {schema}.vw_stock_inmovilizado_reporte AS
+        SELECT 
+            i.id_inventario,
+            s.id_empresa,
+            i.id_sucursal,
+            s.nombre AS sucursal,
+            p.id_producto,
+            p.nombre AS producto,
+            p.codigo_producto,
+            COALESCE(cat.nombre, 'Sin Categoría') AS categoria,
+            COALESCE(t.nombre, '') AS talla,
+            COALESCE(col.nombre, '') AS color,
+            i.stock_disponible,
+            p.precio,
+            ROUND(i.stock_disponible * p.precio, 2) AS capital_estancado_bs,
+            COALESCE(MAX(DATE(v.fecha_venta)), CURRENT_DATE - 45) AS ultima_venta
+        FROM {schema}.t_inventario i
+        JOIN {schema}.t_sucursal s ON s.id_sucursal = i.id_sucursal
+        JOIN {schema}.t_producto_talla_color ptc ON ptc.id_variante = i.id_variante
+        JOIN {schema}.t_producto p ON p.id_producto = ptc.id_producto
+        LEFT JOIN {schema}.t_categoria cat ON cat.id_categoria = p.id_categoria
+        LEFT JOIN {schema}.t_talla t ON t.id_talla = ptc.id_talla
+        LEFT JOIN {schema}.t_color col ON col.id_color = ptc.id_color
+        LEFT JOIN {schema}.t_detalle_venta dv ON dv.id_variante = i.id_variante
+        LEFT JOIN {schema}.t_venta v ON v.id_venta = dv.id_venta
+        WHERE i.stock_disponible > 0
+        GROUP BY i.id_inventario, s.id_empresa, i.id_sucursal, s.nombre, p.id_producto, p.nombre, p.codigo_producto, cat.nombre, t.nombre, col.nombre, i.stock_disponible, p.precio;
+        """
+        db.execute_query(v_inmovilizado, commit=True)
 
         return True
     finally:
         db.close_connection()
+

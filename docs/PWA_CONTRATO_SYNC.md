@@ -1,21 +1,21 @@
 # AuroraStore — Contrato Común de Sincronización Offline-First (Angular PWA + Flutter SQLite)
 
-**Fecha:** 2026-10-28  
+**Fecha:** 2026-10-31
 **Endpoints implementados:**  
 - `GET /api/sync/ping`  
 - `POST /api/sync/lote` *(endpoint canónico de procesamiento por lotes)*  
 - `POST /api/sync/operations` *(alias compatible 1:1 con `/api/sync/lote`)*  
 
 **Implementación en Backend:** `backend/app/modules/ecommerce/routes/sync_routes.py`  
-**Persistencia de Idempotencia y Auditoría:** Tabla `comercio.t_sync_operacion` (`backend/migrations/003_iter2_sync_idempotency.up.sql`) con respaldo automático en memoria thread-safe si la migración aún no se aplicó en el entorno.
+**Persistencia de Idempotencia y Auditoría:** PostgreSQL obligatorio, migraciones 003 y 004. No existe fallback en memoria. Sin persistencia verificable se rechaza la operación sin confirmarla. Ambas migraciones fueron autorizadas, aplicadas y verificadas en el destino real el 2026-10-31; su reaplicación no produce cambios. Ver [acta de aplicación](SYNC_MIGRACION_APLICADA_2026-10-31.md) e [informe transaccional](SYNC_IDEMPOTENCIA_TRANSACCIONAL.md).
 
 ---
 
 ## 1. Propósito y Compatibilidad Multiplataforma
 
 Este contrato fue diseñado e implementado en FastAPI para servir simultáneamente a:
-1. **Angular PWA (Iteración 2 — Implementado):** Cola local en `IndexedDB` (`pending_operations`, `sync_attempts` y `stock_snapshots` en `SyncQueueService` e `IndexedDbService`).
-2. **Flutter Mobile (Futura Iteración — Compatible sin cambios de backend):** Cola local en `SQLite` que enviará exactamente el mismo sobre JSON y procesará los mismos estados y códigos de conflicto (`CU10W`, `CU24W`, `CU37W`, `CU38W`, `CU39W`).
+1. **Angular PWA (Iteración 2 — Implementado):** Cola local en IndexedDB (`pending_operations`, `sync_attempts`, `sync_receipts` y `stock_snapshots`). La versión local 4 añade recibos conservando operaciones anteriores. Su retirada y el guardado del recibo/historial comparten una transacción; pendientes e historias críticas no usan fallback RAM ni se purgan en logout/401. Ver [resultados de retención](PWA_COLA_RETENCION_RESULTADOS.md).
+2. **Flutter Mobile (Futura Iteración):** Deberá conservar el sobre original y validar la confirmación durable descrita aquí. Su implementación offline no comienza hasta verificar las migraciones reales y conciliar el legado sin recibos.
 
 ---
 
@@ -39,7 +39,8 @@ Permite a Angular (`NetworkStatusService`) y a Flutter verificar si existe conex
 ### 3.1. Identificador Único (`operation_id`)
 - Cada operación generada offline lleva un **UUID v4 inmutable** (`operation_id`, p. ej. `f47ac10b-58cc-4372-a567-0e02b2c3d479`) generado en el cliente en el momento exacto de la acción.
 - El `operation_id` nunca cambia en reintentos ni al resolver un conflicto de cantidad o precio sobre la misma operación.
-- Para ventas de contado en efectivo (`VENTA_CONTADO`), se genera además un recibo provisional local (`OFFLINE-E{tenant_id}-S{branch_id}-{short_uuid}`) y la referencia externa persistida en `comercio.t_pago` es `OFFLINE-{operation_id[:8].upper()}`.
+- Para ventas de contado en efectivo (`VENTA_CONTADO`), el recibo provisional local se conserva; la referencia externa persistida usa `OFFLINE-{id_empresa}-{id_usuario}-{operation_id}` completo para evitar colisiones del prefijo de ocho caracteres.
+- `created_at` conserva la fecha original ISO con zona horaria. Ventas/reservas sin recibo deben ser posteriores a `t_sync_control.inicio_garantia`; las previas, sin fecha o inválidas quedan en `LEGACY_OPERATION_REQUIRES_REVIEW`, sin ejecución automática. No cambiar fecha/UUID para eludir esa revisión.
 
 ### 3.2. Estados Persistentes de Operación (`status`)
 
@@ -47,17 +48,21 @@ Permite a Angular (`NetworkStatusService`) y a Flutter verificar si existe conex
 | :--- | :--- | :--- | :--- |
 | `pending` | Operación registrada localmente en espera de conectividad. | Sí (FIFO por `created_at_ms`). | No. |
 | `syncing` | En tránsito hacia `POST /api/sync/lote`. | Bloqueada contra envíos concurrentes; si la app se cierra a mitad de vuelo, al reiniciar vuelve a `pending`. | No. |
-| `synced` | Confirmada y persistida transaccionalmente por PostgreSQL. | No (en caso de reenvío por caída de red en la respuesta, el servidor devuelve el resultado guardado con `idempotent_replay: true`). | Se elimina de `pending_operations` tras registrar la confirmación en `sync_attempts` y liberar el stock provisional local. |
-| `conflict` | Rechazada por regla de negocio (`STOCK_INSUFFICIENT`, `PRICE_CHANGED`, `PRODUCT_INACTIVE`, `BRANCH_INACTIVE`). | No; requiere decisión explícita del usuario en `CU39W`. | No hasta que el usuario ajuste/reintente o descarte (solo para carrito/reservas). |
+| `synced` | Efectos y recibo confirmados por el mismo COMMIT de PostgreSQL. | No; un reenvío recupera el resultado persistido con `idempotent_replay: true`. | Solo tras validar `confirmation_verified=true`, identidad de operación/usuario/empresa y resultado comercial, y conservar el recibo en historial local. HTTP 200 del lote no basta. |
+| `conflict` | Rechazada por regla de negocio o conservada para revisión local. | No; un parche requiere rechazo de negocio conocido. Si el resultado es incierto, reenviar el sobre original. | No. La revisión o el descarte local no sustituyen una confirmación. |
 | `reconciliation_required` | **Exclusivo de `VENTA_CONTADO` (CU24W)** cuando el servidor rechaza la venta en efectivo al reconectar (stock agotado, precio modificado, caja cerrada o producto inactivo). | No automático; permite reintentar (p. ej. tras abrir caja o aceptar precio/stock) o registrar nota de conciliación física de caja. | **Prohibido eliminar silenciosamente.** Se conserva como incidencia auditable tanto en `t_sync_operacion` (servidor) como en `IndexedDB` (cliente). |
 | `failed_retryable` | Error transitorio de red (`status 0`) o servidor (`5xx`, timeout). | Sí, con backoff exponencial (`next_retry_at_ms`). | No. |
 | `failed_permanent` | Rechazo definitivo de seguridad o contrato (`403 TENANT_FORBIDDEN`, `403 ROLE_FORBIDDEN`, `409 PAYMENT_REQUIRES_ONLINE`). | No. | Permanece visible para el usuario hasta su revisión. |
 
 ### 3.3. Garantía de Idempotencia en Servidor (`comercio.t_sync_operacion`)
-- Clave única compuesta: `UNIQUE (id_usuario, id_empresa, operation_id)`.
-- Antes de ejecutar cualquier mutación en `t_carrito`, `t_reserva`, `t_inventario`, `t_venta` o `t_pago`, el servidor consulta `_buscar_idempotencia(id_usuario, id_empresa, operation_id)`.
-- Si existe un registro previo con `status == "synced"`, el servidor **no vuelve a descontar inventario ni duplica reservas, ventas o pagos**: devuelve exactamente el payload original con `"idempotent_replay": true`.
-- Si una operación previa quedó en `conflict` o `reconciliation_required` y el usuario envía una resolución (por ejemplo `accept_price_change: true`, cantidad ajustada o tras reabrir su sesión de caja), el servidor reevalúa la operación y actualiza el registro en `t_sync_operacion` mediante `ON CONFLICT (id_usuario, id_empresa, operation_id) DO UPDATE`.
+- PK compuesta `(id_usuario, id_empresa, operation_id)` y bloqueo transaccional de esa clave en PostgreSQL, incluso antes de existir la fila. No reasignar una operación a otro usuario o tenant.
+- Autorización en servidor también antes de un replay; una transacción comparte repositorios, efectos comerciales y recibo. No hay commits intermedios ni compensación posterior del cobro. Se exige `synchronous_commit=on`.
+- Si existe recibo confirmado y la huella del contenido coincide, se devuelve su resultado con `idempotent_replay=true` sin repetir inventario, movimientos, reservas, ventas o pagos. Cambiar contenido confirmado o tipo produce `409 IDEMPOTENCY_KEY_REUSED`, sin modificar el recibo original.
+- Un conflicto puede resolverse con la misma clave y tipo porque sus efectos comerciales se revierten al savepoint antes de guardar la incidencia. Si falla el guardado del recibo, se revierte todo.
+- Respuesta confirmada: `confirmation_verified=true` y `confirmation: {operation_id, id_usuario, id_empresa, request_hash}`. La respuesta se entrega únicamente después del commit; el reenvío es el mecanismo de verificación si se pierde la respuesta HTTP. El campo confirma persistencia del servidor; no es una firma criptográfica.
+- Sin tabla, columna, control de transición, conexión o commit verificable: `failed_retryable`, `http_status=503`, `PERSISTENT_IDEMPOTENCY_UNAVAILABLE`, `confirmation_verified=false`. El HTTP exterior continúa siendo 200 por compatibilidad del lote; revisar cada resultado individual y conservar la cola local.
+- Un recibo legado sin huella devuelve `LEGACY_RECEIPT_REQUIRES_REVIEW`. Una operación anterior sin recibo devuelve `LEGACY_OPERATION_REQUIRES_REVIEW`. Ambos requieren revisión sin reejecución, purga o confirmación inventada. Un recibo confirmado no se modifica al recibir estos reenvíos.
+- Los recibos no tienen TTL. Las FKs de 004 impiden eliminarlos en cascada al borrar usuarios/empresas. Cualquier archivo o eliminación requiere un procedimiento explícito que preserve la evidencia.
 
 ---
 
@@ -200,7 +205,7 @@ Permite a Angular (`NetworkStatusService`) y a Flutter verificar si existe conex
 - **Stock Confirmado (`stock` / `stock_actual`):** Valor proveniente de PostgreSQL (`comercio.t_inventario`) en la última lectura online o tras una sincronización exitosa.
 - **Stock Provisional (`stock_snapshots` en `IndexedDB`):** Cada vez que se encola offline una `RESERVA_SOLICITUD` o `VENTA_CONTADO`, el cliente registra un descuento provisional por variante (`provisional_delta`) bajo la clave `u:{uid}|e:{tid}|b:{bid}_var_{id_variante}`.
 - **Visualización Diferenciada:** La interfaz muestra el stock disponible efectivo (`max(0, stock_confirmado - delta_provisional)`) e identifica explícitamente cuándo una prenda tiene unidades comprometidas en la cola local pendiente de confirmación.
-- **Reconciliación de Stock:** Cuando una operación pasa a `synced` o se descarta/concilia, su descuento provisional se libera de `stock_snapshots` y se refresca el stock confirmado del servidor.
+- **Reconciliación de Stock:** La confirmación verificable retira el pendiente y libera su stock provisional. Una venta/reserva incierta se conserva como compromiso provisional; una nota o petición de descarte no la confirma ni la elimina.
 
 ---
 

@@ -3,7 +3,7 @@ from fastapi import HTTPException, status
 from app.modules.catalogo.repos import productos_repos
 from app.modules.admin.services import bitacora_services
 from app.shared import cloudinary_service
-from app.core.postgres import PostgreSQL
+from app.core.postgres import PostgreSQL, atomic
 from app.core.config import Config
 
 def _get_schema() -> str:
@@ -153,6 +153,7 @@ def obtener_producto_service(id_producto: int, token_data: dict) -> Dict[str, An
     validar_acceso_recurso_tenant(token_data, producto.get("id_empresa"), "producto")
     return producto
 
+@atomic
 def crear_producto_service(datos: dict, token_data: dict, ip_cliente: str = "") -> Dict[str, Any]:
     """
     Registra un producto, sus variantes (Talla x Color) y sus imágenes en Cloudinary.
@@ -266,6 +267,7 @@ def crear_producto_service(datos: dict, token_data: dict, ip_cliente: str = "") 
         "variantes_generadas": info_variantes
     }
 
+@atomic
 def actualizar_producto_service(
     id_producto: int,
     datos: dict,

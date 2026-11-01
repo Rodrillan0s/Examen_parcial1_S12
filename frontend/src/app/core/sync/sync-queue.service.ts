@@ -5,6 +5,7 @@ import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth';
 import { IndexedDbService, CachedRecord } from '../storage/indexed-db.service';
 import { NetworkStatusService } from '../network/network-status.service';
+import { hasVerifiedConfirmation, sameOperationRequest, VerifiedSyncResult } from './sync-confirmation';
 
 export type SyncOperationKind =
   | 'CART_ADD_ITEM'
@@ -45,9 +46,10 @@ export interface PendingOperation {
   conflict_code?: string | null;
   conflict_detail?: Record<string, any> | null;
   client_version?: string | number | null;
+  outcome_known_rejected?: boolean;
 }
 
-export interface SyncBatchItemResult {
+export interface SyncBatchItemResult extends VerifiedSyncResult {
   operation_id: string;
   kind: SyncOperationKind;
   status: SyncOperationStatus;
@@ -87,13 +89,15 @@ export class SyncQueueService {
   private readonly network = inject(NetworkStatusService);
   private readonly syncLoteUrl = `${environment.apiUrl}/api/sync/lote`;
 
-  readonly operations = signal<PendingOperation[]>([]);
+  private readonly loadedOperations = signal<PendingOperation[]>([]);
+  readonly operations = computed(() => this.loadedOperations().filter(op => this.belongsToCurrentScope(op)));
   readonly activeOperations = computed(() => this.operations());
   readonly isSyncing = signal<boolean>(false);
   readonly lastSyncedAt = signal<string | null>(null);
   readonly lastSyncSummary = signal<string | null>(null);
   readonly lastSyncBannerMessage = signal<{ type: 'success' | 'warning' | 'error'; text: string } | null>(null);
-  readonly reconciledHistory = signal<Array<Record<string, any>>>([]);
+  private readonly loadedHistory = signal<Array<Record<string, any>>>([]);
+  readonly reconciledHistory = computed(() => this.loadedHistory().filter(op => this.belongsToCurrentScope(op)));
 
   /** Emitido cada vez que un lote termina de sincronizar operaciones */
   private readonly syncCompletedSubject = new Subject<SyncCompletedEvent>();
@@ -120,9 +124,11 @@ export class SyncQueueService {
   readonly totalActiveCount = computed(() => this.operations().length);
 
   private syncLock = false;
+  private readonly inFlightOperations = new Set<string>();
+  private refreshVersion = 0;
 
   constructor() {
-    void this.refreshCountFromDb();
+    void this.refreshOperationsSafely();
 
     this.network.reconnected$.subscribe((ts) => {
       if (ts > 0) {
@@ -131,11 +137,13 @@ export class SyncQueueService {
     });
 
     this.authService.companyChanged$.subscribe(() => {
-      void this.refreshCountFromDb();
+      this.loadedOperations.set([]);
+      this.loadedHistory.set([]);
+      void this.refreshOperationsSafely();
     });
 
     this.authService.branchChanged$.subscribe(() => {
-      void this.refreshCountFromDb();
+      void this.refreshOperationsSafely();
     });
   }
 
@@ -149,7 +157,7 @@ export class SyncQueueService {
     branchId: number | null;
   } {
     const user = this.authService.obtenerUsuario();
-    const userId = Number(user?.id_usuario ?? user?.nro_usuario ?? 0);
+    const userId = this.authService.estaAutenticado() ? Number(user?.id_usuario ?? user?.nro_usuario ?? 0) : 0;
     const tenantId = Number(
       overrideTenantId ??
         this.authService.getEffectiveCompanyId() ??
@@ -161,6 +169,28 @@ export class SyncQueueService {
         ? overrideBranchId
         : (this.authService.activeBranch()?.id ?? null);
     return { userId, tenantId, branchId };
+  }
+
+  private belongsToCurrentScope(op: { user_id?: number; tenant_id?: number; scope_key?: string }): boolean {
+    const scope = this.getCurrentScope();
+    return scope.userId > 0 && op.user_id === scope.userId && op.tenant_id === scope.tenantId &&
+      String(op.scope_key).startsWith(`u:${scope.userId}|e:${scope.tenantId}|`);
+  }
+
+  private async refreshOperationsSafely(): Promise<void> {
+    try { await this.refreshCountFromDb(); }
+    catch (error) {
+      this.loadedOperations.set([]);
+      this.loadedHistory.set([]);
+      this.lastSyncBannerMessage.set({ type: 'error', text: (error as Error).message });
+    }
+  }
+
+  private async getActiveOperation(operationId: string): Promise<PendingOperation | null> {
+    if (!this.getCurrentScope().userId) throw new Error('Reautentique la cuenta propietaria de la operación.');
+    const op = await this.idb.get<PendingOperation>('pending_operations', operationId);
+    if (op && !this.belongsToCurrentScope(op)) throw new Error('La operación pertenece a otro usuario o empresa.');
+    return op;
   }
 
   /**
@@ -187,22 +217,28 @@ export class SyncQueueService {
    * la restaura automáticamente a 'pending'.
    */
   async refreshCountFromDb(): Promise<void> {
+    const version = ++this.refreshVersion;
     const scope = this.getCurrentScope();
     if (!scope.userId) {
-      this.operations.set([]);
-      this.reconciledHistory.set([]);
+      this.loadedOperations.set([]);
+      this.loadedHistory.set([]);
       return;
     }
 
-    const prefix = `u:${scope.userId}|`;
+    const prefix = `u:${scope.userId}|e:${scope.tenantId}|`;
     const allUserOps = await this.idb.getAllByScope<PendingOperation>('pending_operations', prefix);
     const filteredOps = allUserOps.filter(
-      (op) => !scope.tenantId || !op.tenant_id || Number(op.tenant_id) === Number(scope.tenantId)
+      (op) => op.user_id === scope.userId && op.tenant_id === scope.tenantId
     );
 
     const normalizedOps: PendingOperation[] = [];
     for (const op of filteredOps) {
-      if (op.status === 'syncing') {
+      if (op.status === 'synced') {
+        const unverified: PendingOperation = { ...op, status: 'failed_retryable',
+          conflict_code: 'LOCAL_CONFIRMATION_MISSING', outcome_known_rejected: false };
+        await this.idb.put('pending_operations', unverified);
+        normalizedOps.push(unverified);
+      } else if (op.status === 'syncing' && !this.inFlightOperations.has(op.operation_id)) {
         const recovered: PendingOperation = { ...op, status: 'pending' };
         await this.idb.put('pending_operations', recovered);
         normalizedOps.push(recovered);
@@ -212,13 +248,21 @@ export class SyncQueueService {
     }
 
     normalizedOps.sort((a, b) => a.created_at_ms - b.created_at_ms);
-    this.operations.set(normalizedOps);
+    if (version !== this.refreshVersion || this.getCurrentScope().userId !== scope.userId ||
+        this.getCurrentScope().tenantId !== scope.tenantId) return;
+    this.loadedOperations.set(normalizedOps);
 
     await this.syncProvisionalStockSnapshots(normalizedOps, scope.userId, scope.tenantId || 1);
 
     const historyKey = `u:${scope.userId}|e:${scope.tenantId || 1}|reconciled_sales`;
-    const historyEntry = await this.idb.get<{ key: string; items: Array<Record<string, any>> }>('metadata', historyKey);
-    this.reconciledHistory.set(historyEntry?.items || []);
+    const [historyEntry, attempts] = await Promise.all([
+      this.idb.get<{ key: string; items: Array<Record<string, any>> }>('metadata', historyKey),
+      this.idb.getAllByScope<Record<string, any>>('sync_attempts', prefix),
+    ]);
+    if (version === this.refreshVersion) this.loadedHistory.set([
+      ...attempts.filter(item => item['status'] === 'reconciliation_note').reverse(),
+      ...(historyEntry?.items || []),
+    ].map(item => ({ ...item, user_id: item['user_id'] ?? scope.userId, scope_key: item['scope_key'] ?? prefix })));
   }
 
   /**
@@ -370,9 +414,26 @@ export class SyncQueueService {
   }): Promise<PendingOperation> {
     const scope = this.getCurrentScope(params.tenantId, params.branchId);
     const userId = scope.userId || 0;
+    if (!userId || scope.tenantId !== this.getCurrentScope().tenantId) {
+      throw new Error('Debe autenticar y seleccionar la cuenta y empresa de esta operación.');
+    }
     const tenantId = scope.tenantId || 1;
     const branchId = scope.branchId ?? null;
     const scopeKey = `u:${userId}|e:${tenantId}|b:${branchId ?? 'all'}`;
+
+    if (params.operationId) {
+      const prior = await this.getActiveOperation(params.operationId);
+      if (prior) {
+        if (!sameOperationRequest(prior, { ...prior, kind: params.kind, scope_key: scopeKey,
+          branch_id: branchId, entity_id: params.entityId ?? null, payload: params.payload })) {
+          throw new Error('La clave local ya pertenece a otra operación; se conserva su contenido original.');
+        }
+        return prior;
+      }
+      if (await this.idb.get('sync_receipts', params.operationId)) {
+        throw new Error('La operación ya tiene una confirmación guardada en este dispositivo.');
+      }
+    }
 
     await this.refreshCountFromDb();
     const currentOps = this.operations();
@@ -387,6 +448,7 @@ export class SyncQueueService {
         (op) =>
           op.scope_key === scopeKey &&
           op.status === 'pending' &&
+          op.attempt_count === 0 &&
           (op.kind === 'CART_ADD_ITEM' || op.kind === 'CART_UPDATE_QTY') &&
           String(op.entity_id) === String(params.entityId)
       );
@@ -414,14 +476,17 @@ export class SyncQueueService {
         (op) =>
           op.scope_key === scopeKey &&
           op.status === 'pending' &&
+          op.attempt_count === 0 &&
           op.kind === 'CART_ADD_ITEM' &&
           String(op.entity_id) === String(params.entityId)
       );
 
       if (pendingAdd && Number(params.payload['id_detalle_carrito'] || 0) < 0) {
-        await this.idb.delete('pending_operations', pendingAdd.operation_id);
+        const cancelled: PendingOperation = { ...pendingAdd, status: 'failed_permanent',
+          conflict_code: 'LOCAL_CANCELLED_BEFORE_SEND', last_error: 'Cancelada antes del primer envío; se conserva la evidencia local.' };
+        await this.idb.put('pending_operations', cancelled);
         await this.refreshCountFromDb();
-        return pendingAdd;
+        return cancelled;
       }
     }
 
@@ -451,6 +516,7 @@ export class SyncQueueService {
       client_version: params.clientVersion ?? nowIso,
     };
 
+    if (!this.belongsToCurrentScope(op)) throw new Error('La cuenta o empresa cambió antes de guardar la operación.');
     await this.idb.put('pending_operations', op);
     await this.refreshCountFromDb();
 
@@ -466,158 +532,116 @@ export class SyncQueueService {
    */
   async syncNow(force: boolean = false): Promise<SyncBatchResponse | null> {
     if (this.syncLock) return null;
-
-    await this.refreshCountFromDb();
-    const nowMs = Date.now();
-    const eligible = this.operations().filter((op) => {
-      if (op.status === 'pending') return true;
-      if (op.status === 'failed_retryable') {
-        if (force || !op.next_retry_at_ms) return true;
-        return nowMs >= op.next_retry_at_ms;
-      }
-      return false;
-    });
-
-    if (eligible.length === 0) {
-      return null;
-    }
-
-    const online = await this.network.verifyApiConnectivity(force);
-    if (!online) return null;
-
+    // Acquire before the first await: two reconnect callbacks cannot both send.
     this.syncLock = true;
-    this.isSyncing.set(true);
-    this.network.setSyncingState(true);
-
+    let eligible: PendingOperation[] = [];
+    const unresolved = new Set<string>();
+    const scope = this.getCurrentScope();
+    const token = this.authService.obtenerToken();
+    const sameContext = () => this.getCurrentScope().userId === scope.userId &&
+      this.getCurrentScope().tenantId === scope.tenantId && this.authService.obtenerToken() === token;
     try {
+      if (!scope.userId || !token) return null;
+      await this.refreshCountFromDb();
+      if (!sameContext()) return null;
+      const now = Date.now();
+      eligible = structuredClone(this.operations().filter(op => op.status === 'pending' ||
+        (op.status === 'failed_retryable' && (force || !op.next_retry_at_ms || now >= op.next_retry_at_ms)))).slice(0, 50);
+      if (!eligible.length || !await this.network.verifyApiConnectivity(force) || !sameContext()) return null;
+      this.isSyncing.set(true);
+      this.network.setSyncingState(true);
       for (const op of eligible) {
+        if (!sameContext()) return null;
+        unresolved.add(op.operation_id);
+        this.inFlightOperations.add(op.operation_id);
         op.status = 'syncing';
-        op.attempt_count = (op.attempt_count || 0) + 1;
+        op.attempt_count = Number.isSafeInteger(op.attempt_count) ? op.attempt_count + 1 : 1;
         await this.idb.put('pending_operations', op);
       }
-      await this.refreshCountFromDb();
-
-      const requestBody = {
-        operations: eligible.map((op) => ({
-          operation_id: op.operation_id,
-          kind: op.kind,
-          tenant_id: op.tenant_id,
-          branch_id: op.branch_id,
-          entity_id: op.entity_id,
-          client_version: op.client_version,
-          created_at: op.created_at,
-          payload: op.payload,
-        })),
-      };
-
-      const response = await firstValueFrom(
-        this.http.post<SyncBatchResponse>(this.syncLoteUrl, requestBody)
-      );
-
-      let latestCartData: any = undefined;
-
-      for (const res of response.results || []) {
-        const localOp = eligible.find((o) => o.operation_id === res.operation_id);
-        if (!localOp) continue;
-
-        const attemptNow = Date.now();
-        await this.idb.put('sync_attempts', {
-          attempt_id: `${res.operation_id}_${attemptNow}`,
-          scope_key: localOp.scope_key,
-          tenant_id: localOp.tenant_id,
-          fetched_at_ms: attemptNow,
-          operation_id: res.operation_id,
-          kind: res.kind,
-          status: res.status,
-          http_status: res.http_status,
-          conflict_code: res.conflict_code || null,
-          reconciliation_required: Boolean(res.reconciliation_required || res.status === 'reconciliation_required'),
-          message: res.message || null,
-          attempted_at: new Date(attemptNow).toISOString(),
-        });
-
-        if (res.status === 'synced') {
-          if (
-            res.data &&
-            (res.kind === 'CART_ADD_ITEM' ||
-              res.kind === 'CART_UPDATE_QTY' ||
-              res.kind === 'CART_REMOVE_ITEM' ||
-              res.kind === 'CART_CLEAR')
-          ) {
-            latestCartData = res.data;
-          }
-          // Solo eliminar de pending_operations cuando existe confirmación verificable del servidor
-          await this.idb.delete('pending_operations', localOp.operation_id);
-        } else if (
-          res.status === 'reconciliation_required' ||
-          res.reconciliation_required ||
-          (localOp.kind === 'VENTA_CONTADO' && res.status === 'conflict')
-        ) {
-          localOp.status = 'reconciliation_required';
-          localOp.reconciliation_required = true;
-          localOp.conflict_code = res.conflict_code || 'RECONCILIATION_REQUIRED';
-          localOp.last_error = res.message || 'Incidencia en venta en efectivo: requiere conciliación de caja.';
-          localOp.conflict_detail = res.conflict_detail || null;
-          localOp.next_retry_at_ms = null;
-          await this.idb.put('pending_operations', localOp);
-        } else if (res.status === 'conflict') {
-          localOp.status = 'conflict';
-          localOp.reconciliation_required = false;
-          localOp.conflict_code = res.conflict_code || 'CONFLICT';
-          localOp.last_error = res.message || 'Conflicto detectado con el servidor.';
-          localOp.conflict_detail = res.conflict_detail || null;
-          localOp.next_retry_at_ms = null;
-          await this.idb.put('pending_operations', localOp);
-        } else {
-          const isPermanent = res.status === 'failed_permanent';
-          localOp.status = isPermanent ? 'failed_permanent' : 'failed_retryable';
-          localOp.conflict_code = res.conflict_code || null;
-          localOp.last_error = res.message || 'Error al sincronizar operación.';
-          localOp.next_retry_at_ms = isPermanent
-            ? null
-            : Date.now() + Math.min(60_000, 2_000 * Math.pow(2, Math.max(0, (localOp.attempt_count || 1) - 1)));
-          await this.idb.put('pending_operations', localOp);
+      if (!sameContext()) return null;
+      const response = await firstValueFrom(this.http.post<SyncBatchResponse>(this.syncLoteUrl, {
+        operations: eligible.map(op => ({ operation_id: op.operation_id, kind: op.kind, tenant_id: op.tenant_id,
+          branch_id: op.branch_id, entity_id: op.entity_id, client_version: op.client_version,
+          created_at: op.created_at, payload: op.payload })),
+      }));
+      if (!sameContext()) return null;
+      const results: SyncBatchItemResult[] = [];
+      let latestCartData: any;
+      for (const localOp of eligible) {
+        if (!sameContext()) return null;
+        const matches = (Array.isArray(response?.results) ? response.results : [])
+          .filter(res => res.operation_id === localOp.operation_id);
+        let result = matches.length === 1 ? matches[0] : undefined;
+        if (!result || result.kind !== localOp.kind ||
+            (result.status === 'synced' && !hasVerifiedConfirmation(localOp, result))) {
+          result = { operation_id: localOp.operation_id, kind: localOp.kind, status: 'failed_retryable',
+            http_status: 503, confirmation_verified: false, conflict_code: 'SYNC_CONFIRMATION_MISSING',
+            message: 'Respuesta incompleta o sin recibo verificable. Se conserva la operación para reenviar.' };
         }
+        if (hasVerifiedConfirmation(localOp, result)) {
+          await this.idb.acknowledgeOperation(localOp, result);
+          unresolved.delete(localOp.operation_id);
+          if (localOp.kind.startsWith('CART_')) latestCartData = result.data;
+        } else {
+          const at = Date.now();
+          await this.idb.put('sync_attempts', {
+            attempt_id: `${localOp.operation_id}_${this.generateOperationId()}`, scope_key: localOp.scope_key,
+            user_id: localOp.user_id, tenant_id: localOp.tenant_id, operation_id: localOp.operation_id,
+            kind: localOp.kind, status: result.status, http_status: result.http_status,
+            conflict_code: result.conflict_code, message: result.message, fetched_at_ms: at,
+            attempted_at: new Date(at).toISOString(),
+          });
+          const retryable = result.status === 'failed_retryable';
+          const reconciliation = !retryable && (result.status === 'reconciliation_required' ||
+            result.reconciliation_required || (localOp.kind === 'VENTA_CONTADO' && result.status === 'conflict'));
+          const status: SyncOperationStatus = retryable ? 'failed_retryable' : reconciliation ? 'reconciliation_required' :
+            result.status === 'conflict' ? 'conflict' : result.status === 'failed_permanent' ? 'failed_permanent' : 'failed_retryable';
+          await this.idb.put('pending_operations', { ...localOp, status,
+            reconciliation_required: Boolean(reconciliation), conflict_code: result.conflict_code ?? null,
+            conflict_detail: result.conflict_detail ?? null, last_error: result.message ?? 'Operación sin confirmar.',
+            outcome_known_rejected: result.confirmation_verified === false &&
+              ['conflict', 'reconciliation_required'].includes(result.status) &&
+              ['STOCK_INSUFFICIENT', 'PRICE_CHANGED', 'PRODUCT_INACTIVE', 'BRANCH_INACTIVE',
+                'CAJA_CERRADA', 'DISCOUNT_FORBIDDEN', 'PAYMENT_REQUIRES_ONLINE', 'PAYMENT_REGISTRATION_ERROR'].includes(result.conflict_code ?? ''),
+            next_retry_at_ms: status === 'failed_retryable' ? at + Math.min(60_000, 2_000 * 2 ** (localOp.attempt_count - 1)) : null,
+          });
+          unresolved.delete(localOp.operation_id);
+          result = { ...result, status };
+        }
+        results.push(result);
       }
-
-      const nowStr = new Date().toISOString();
-      this.lastSyncedAt.set(nowStr);
-      if (response.synced_count > 0 || response.conflict_count > 0) {
-        const text =
-          response.synced_count > 0
-            ? `${response.synced_count} operación(es) sincronizada(s) con éxito` +
-              (response.conflict_count > 0 ? ` · ${response.conflict_count} incidencia(s)/conflicto(s)` : '')
-            : `Se detectaron ${response.conflict_count} incidencia(s)/conflicto(s) al sincronizar.`;
-        this.lastSyncSummary.set(text);
-        this.lastSyncBannerMessage.set({
-          type: response.conflict_count > 0 ? 'warning' : 'success',
-          text,
-        });
-      }
-
+      if (!sameContext()) return null;
+      const verified: SyncBatchResponse = { success: true, total: results.length, results,
+        synced_count: results.filter(res => res.status === 'synced').length,
+        conflict_count: results.filter(res => ['conflict', 'reconciliation_required'].includes(res.status)).length,
+        reconciliation_count: results.filter(res => res.status === 'reconciliation_required').length,
+        failed_count: results.filter(res => res.status.startsWith('failed_')).length };
+      this.lastSyncedAt.set(new Date().toISOString());
+      const message = `${verified.synced_count} operación(es) confirmada(s); ${verified.total - verified.synced_count} pendiente(s) o en revisión.`;
+      this.lastSyncSummary.set(message);
+      this.lastSyncBannerMessage.set({ type: verified.synced_count === verified.total ? 'success' : 'warning', text: message });
       await this.refreshCountFromDb();
-
-      if (response.synced_count > 0 || response.conflict_count > 0) {
-        this.syncCompletedSubject.next({
-          ...response,
-          syncedCount: response.synced_count,
-          conflictCount: response.conflict_count,
-          latestCartData,
-        });
+      if (sameContext()) this.syncCompletedSubject.next({ ...verified, syncedCount: verified.synced_count,
+        conflictCount: verified.conflict_count, latestCartData });
+      return sameContext() ? verified : null;
+    } catch (error) {
+      // A previous operation may already have been acknowledged in this batch.
+      // Never recreate it when a later HTTP/storage operation fails.
+      for (const op of eligible.filter(item => unresolved.has(item.operation_id))) {
+        try {
+          const current = await this.idb.get<PendingOperation>('pending_operations', op.operation_id);
+          if (current) await this.idb.put('pending_operations', { ...current, status: 'failed_retryable',
+            outcome_known_rejected: false, last_error: (error as Error).message,
+            next_retry_at_ms: Date.now() + 2_000 });
+        } catch { /* Keep the last durable envelope; recover syncing after reload. */ }
       }
-
-      return response;
-    } catch (err: any) {
-      for (const op of eligible) {
-        op.status = 'failed_retryable';
-        op.last_error = err?.error?.detail || err?.message || 'Error temporal de red al sincronizar.';
-        op.next_retry_at_ms =
-          Date.now() + Math.min(60_000, 2_000 * Math.pow(2, Math.max(0, (op.attempt_count || 1) - 1)));
-        await this.idb.put('pending_operations', op);
+      if (sameContext()) {
+        this.lastSyncBannerMessage.set({ type: 'error', text: (error as Error).message });
+        await this.refreshOperationsSafely();
       }
-      await this.refreshCountFromDb();
       return null;
     } finally {
+      this.inFlightOperations.clear();
       this.syncLock = false;
       this.isSyncing.set(false);
       this.network.setSyncingState(false);
@@ -632,9 +656,12 @@ export class SyncQueueService {
     updatedPayloadPatch: Record<string, any>,
     updatedSummaryLabel?: string
   ): Promise<SyncBatchResponse | null> {
-    const existing = await this.idb.get<PendingOperation>('pending_operations', operationId);
+    const existing = await this.getActiveOperation(operationId);
     if (!existing) return null;
 
+    if (Object.keys(updatedPayloadPatch).length && !existing.outcome_known_rejected) {
+      throw new Error('El resultado anterior es incierto. Reenvíe el contenido original antes de modificarlo.');
+    }
     const updated: PendingOperation = {
       ...existing,
       summary_label: updatedSummaryLabel || existing.summary_label,
@@ -667,7 +694,7 @@ export class SyncQueueService {
    * como para reservas (`RESERVA_SOLICITUD`) o ventas en efectivo (`VENTA_CONTADO`).
    */
   async acceptConflictPriceChange(operationId: string): Promise<SyncBatchResponse | null> {
-    const existing = await this.idb.get<PendingOperation>('pending_operations', operationId);
+    const existing = await this.getActiveOperation(operationId);
     if (!existing) return null;
 
     const detail = existing.conflict_detail || {};
@@ -718,7 +745,7 @@ export class SyncQueueService {
    * CU39W: Ajusta la cantidad solicitada al stock disponible real del servidor y reintenta la sincronización.
    */
   async adjustConflictQuantityToAvailable(operationId: string): Promise<SyncBatchResponse | null> {
-    const existing = await this.idb.get<PendingOperation>('pending_operations', operationId);
+    const existing = await this.getActiveOperation(operationId);
     if (!existing) return null;
 
     const detail = existing.conflict_detail || {};
@@ -758,15 +785,18 @@ export class SyncQueueService {
    * sin eliminar silenciosamente su trazabilidad. Conserva el historial auditable en IndexedDB (`metadata` y `sync_attempts`).
    */
   async reconcileCashSaleIncidence(operationId: string, resolutionNote: string): Promise<void> {
-    const existing = await this.idb.get<PendingOperation>('pending_operations', operationId);
+    const existing = await this.getActiveOperation(operationId);
     if (!existing) return;
 
     const nowMs = Date.now();
-    const noteClean = (resolutionNote || '').trim() || 'Conciliado manualmente en arqueo de caja.';
+    const noteClean = (resolutionNote || '').trim();
+    if (!noteClean) throw new Error('Ingrese una nota para guardar la incidencia.');
     const reconciledRecord = {
       operation_id: existing.operation_id,
       entity_id: existing.entity_id,
       summary_label: existing.summary_label,
+      user_id: existing.user_id,
+      scope_key: existing.scope_key,
       tenant_id: existing.tenant_id,
       branch_id: existing.branch_id,
       conflict_code: existing.conflict_code,
@@ -776,35 +806,16 @@ export class SyncQueueService {
       reconciled_at: new Date(nowMs).toISOString(),
     };
 
-    const scopeKeyPrefix = `u:${existing.user_id}|e:${existing.tenant_id}|`;
-    const historyKey = `${scopeKeyPrefix}reconciled_sales`;
-    const prevHistory = await this.idb.get<{ key: string; items: Array<Record<string, any>> }>('metadata', historyKey);
-    const items = [reconciledRecord, ...(prevHistory?.items || [])].slice(0, 50);
-
-    await this.idb.put('metadata', {
-      key: historyKey,
-      scope_key: existing.scope_key,
-      tenant_id: existing.tenant_id,
-      fetched_at_ms: nowMs,
-      items,
-      updated_at: new Date(nowMs).toISOString(),
+    // Append a durable note without rewriting/truncating the legacy history.
+    // A note never substitutes for a server receipt or removes a pending sale.
+    await this.idb.put('sync_attempts', { ...reconciledRecord,
+      attempt_id: `${existing.operation_id}_note_${this.generateOperationId()}`,
+      kind: existing.kind, status: 'reconciliation_note', http_status: 409,
+      fetched_at_ms: nowMs, attempted_at: new Date(nowMs).toISOString(),
     });
-
-    await this.idb.put('sync_attempts', {
-      attempt_id: `${existing.operation_id}_reconciled_${nowMs}`,
-      scope_key: existing.scope_key,
-      tenant_id: existing.tenant_id,
-      fetched_at_ms: nowMs,
-      operation_id: existing.operation_id,
-      kind: existing.kind,
-      status: 'reconciled_incidence',
-      http_status: 409,
-      conflict_code: existing.conflict_code || 'CASH_SALE_RECONCILED',
-      message: noteClean,
-      attempted_at: new Date(nowMs).toISOString(),
-    });
-
-    await this.idb.delete('pending_operations', operationId);
+    await this.idb.put('pending_operations', { ...existing, status: 'reconciliation_required',
+      reconciliation_required: true, reconciliation_note: noteClean, next_retry_at_ms: null,
+      last_error: 'Nota guardada; la operaci\u00f3n sigue pendiente de confirmaci\u00f3n verificable.' });
     await this.refreshCountFromDb();
   }
 
@@ -814,14 +825,11 @@ export class SyncQueueService {
    * redirige a `reconcileCashSaleIncidence` para garantizar que jamás se eliminen silenciosamente.
    */
   async discardOperation(operationId: string, reconciliationNote?: string): Promise<void> {
-    const existing = await this.idb.get<PendingOperation>('pending_operations', operationId);
+    const existing = await this.getActiveOperation(operationId);
     if (!existing) return;
 
     if (
-      existing.kind === 'VENTA_CONTADO' &&
-      (existing.status === 'reconciliation_required' ||
-        existing.reconciliation_required ||
-        existing.status === 'conflict')
+      existing.kind === 'VENTA_CONTADO'
     ) {
       await this.reconcileCashSaleIncidence(
         operationId,
@@ -830,7 +838,9 @@ export class SyncQueueService {
       return;
     }
 
-    await this.idb.delete('pending_operations', operationId);
+    await this.idb.put('pending_operations', { ...existing, status: 'conflict',
+      conflict_code: existing.conflict_code || 'LOCAL_REVIEW_REQUIRED',
+      last_error: 'Se conserva la operación: descartarla no verifica su resultado en el servidor.', next_retry_at_ms: null });
     await this.refreshCountFromDb();
   }
 }

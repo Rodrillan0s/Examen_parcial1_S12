@@ -91,6 +91,12 @@
 
         <!-- Edit Mode Toggle & Actions (View Mode Only) -->
         <div *ngIf="!modoEdicion()" class="mt-5 flex flex-wrap items-center justify-center gap-3">
+          <a routerLink="/mis-pedidos"
+            class="px-6 py-2.5 rounded-full bg-amber-500 text-zinc-950 hover:bg-amber-400 text-xs uppercase tracking-wider font-bold transition-all flex items-center space-x-2 active:scale-95 shadow-md shadow-amber-500/20 cursor-pointer">
+            <span>📦</span>
+            <span>Mis Pedidos & Compras</span>
+          </a>
+
           <a routerLink="/mis-reservas"
             class="px-6 py-2.5 rounded-full bg-zinc-900/90 border border-amber-500/30 text-amber-300 hover:bg-amber-500/10 hover:border-amber-400 text-xs uppercase tracking-wider font-semibold transition-all flex items-center space-x-2 active:scale-95 shadow-sm">
             <i class="ph ph-calendar-check text-amber-400 text-sm"></i>

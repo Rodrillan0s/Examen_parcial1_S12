@@ -12,7 +12,7 @@ from app.modules.inventario.repos import (
 from app.modules.ecommerce.repos import carrito_repos, pago_repos
 from app.modules.reservas.repos import reserva_repos, atender_reserva_repos
 from app.modules.pos.repos import pos_repos, caja_repos, caja_pago_repos
-from app.modules.pedidos.repos import pedido_repos, reportes_repos, kpis_repos
+from app.modules.pedidos.repos import pedido_repos, reportes_repos, kpis_repos, devoluciones_repos
 from app.modules.admin.repos import bitacora_repos, notificaciones_repos
 
 _REPOS = {
@@ -39,6 +39,7 @@ _REPOS = {
     'caja_repos': caja_repos,
     'caja_pago_repos': caja_pago_repos,
     'pedido_repos': pedido_repos,
+    'devoluciones_repos': devoluciones_repos,
     'reportes_repos': reportes_repos,
     'kpis_repos': kpis_repos,
     'bitacora_repos': bitacora_repos,

@@ -1,0 +1,856 @@
+<div class="min-h-screen py-6 sm:py-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 animate-fade-in text-zinc-900 dark:text-zinc-100">
+
+  <!-- ========================================================================= -->
+  <!-- HEADER ADMINISTRATIVO CU24W                                               -->
+  <!-- ========================================================================= -->
+  <div class="border-b border-zinc-200 dark:border-zinc-800 pb-5 space-y-3">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      
+      <div class="space-y-1">
+        <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800/80 text-amber-600 dark:text-amber-400 text-[10px] uppercase font-mono tracking-wider">
+          <span>🛡️</span>
+          <span>Gestión de Ventas & Post-Venta</span>
+          <span class="text-zinc-400 dark:text-zinc-600">•</span>
+          <span>CU24W Exclusivamente Online</span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-serif font-bold text-zinc-900 dark:text-white tracking-tight">
+          Devoluciones & <span class="text-gradient-gold font-light italic">Garantías</span>
+        </h1>
+        <p class="text-xs text-zinc-500 dark:text-zinc-400 max-w-2xl">
+          Bandeja de solicitudes de devolución online e inspección en tienda. Dictamen técnico, recepción física diferenciada e incorporación controlada a stock.
+        </p>
+      </div>
+
+      <!-- Acciones Superiores -->
+      <div class="flex items-center space-x-3 self-start sm:self-auto">
+        <button (click)="cargarDevoluciones(paginaActual)" 
+                class="px-3.5 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-semibold transition-colors flex items-center space-x-1.5 cursor-pointer">
+          <span>🔄</span>
+          <span>Actualizar</span>
+        </button>
+
+        <!-- Registro Presencial para Cajeros / Encargados -->
+        <button *ngIf="authService.hasPermission('devoluciones.crear_presencial')"
+                (click)="abrirModalPresencial()"
+                class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs uppercase tracking-wider transition-all shadow-md shadow-amber-500/20 flex items-center space-x-2 cursor-pointer">
+          <span>🏪</span>
+          <span>Nueva Devolución Presencial</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Toast Notification Feedback -->
+  <div *ngIf="mensajeToast" 
+       [class.bg-emerald-500/15]="mensajeToast.tipo === 'exito'"
+       [class.border-emerald-500/30]="mensajeToast.tipo === 'exito'"
+       [class.text-emerald-700]="mensajeToast.tipo === 'exito'"
+       [class.dark:text-emerald-300]="mensajeToast.tipo === 'exito'"
+       [class.bg-rose-500/15]="mensajeToast.tipo === 'error'"
+       [class.border-rose-500/30]="mensajeToast.tipo === 'error'"
+       [class.text-rose-700]="mensajeToast.tipo === 'error'"
+       [class.dark:text-rose-300]="mensajeToast.tipo === 'error'"
+       [class.bg-blue-500/15]="mensajeToast.tipo === 'info'"
+       [class.border-blue-500/30]="mensajeToast.tipo === 'info'"
+       [class.text-blue-700]="mensajeToast.tipo === 'info'"
+       [class.dark:text-blue-300]="mensajeToast.tipo === 'info'"
+       class="p-4 rounded-2xl border text-xs sm:text-sm flex items-center justify-between gap-3 animate-fade-in shadow-sm backdrop-blur-md">
+    <span>{{ mensajeToast.texto }}</span>
+    <button (click)="mensajeToast = null" class="font-bold opacity-60 hover:opacity-100">✕</button>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- BARRA DE FILTROS AVANZADA                                                 -->
+  <!-- ========================================================================= -->
+  <div class="p-4 sm:p-5 rounded-3xl bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4">
+    
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3">
+      
+      <!-- 1. Búsqueda libre (4 cols) -->
+      <div class="lg:col-span-4 space-y-1">
+        <label class="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 font-mono">Búsqueda rápida:</label>
+        <div class="relative">
+          <input type="text" 
+                 [(ngModel)]="filtroBusqueda"
+                 (keyup.enter)="aplicarFiltros()"
+                 placeholder="Código DEV-, venta o cliente..." 
+                 class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3.5 py-2 text-xs text-zinc-900 dark:text-white font-mono focus:outline-none focus:border-amber-500 transition-colors" />
+          <button *ngIf="filtroBusqueda" (click)="filtroBusqueda = ''; aplicarFiltros()" class="absolute right-2.5 top-2 text-xs text-zinc-400 hover:text-zinc-600">✕</button>
+        </div>
+      </div>
+
+      <!-- 2. Filtro por Estado (3 cols) -->
+      <div class="lg:col-span-3 space-y-1">
+        <label class="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 font-mono">Estado de Devolución:</label>
+        <select [(ngModel)]="filtroEstado" 
+                (ngModelChange)="aplicarFiltros()"
+                class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs text-zinc-900 dark:text-white font-semibold focus:outline-none focus:border-amber-500 cursor-pointer">
+          <option value="TODOS">Todos los estados</option>
+          <option value="SOLICITADA">Solicitada (Pendiente Dictamen)</option>
+          <option value="EN_REVISION">En Revisión Técnica</option>
+          <option value="APROBADA">Aprobada (Pendiente Recepción)</option>
+          <option value="RECIBIDA">Recibida en Sucursal</option>
+          <option value="PENDIENTE_REEMBOLSO">Pendiente de Reembolso</option>
+          <option value="COMPLETADA">Completada / Reembolsada</option>
+          <option value="RECHAZADA">Rechazada</option>
+          <option value="CANCELADA">Cancelada</option>
+        </select>
+      </div>
+
+      <!-- 3. Filtro por Sucursal (3 cols) -->
+      <div class="lg:col-span-3 space-y-1">
+        <label class="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 font-mono">Sucursal Asignada:</label>
+        <select [(ngModel)]="filtroSucursal" 
+                (ngModelChange)="aplicarFiltros()"
+                class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs text-zinc-900 dark:text-white font-semibold focus:outline-none focus:border-amber-500 cursor-pointer">
+          <option [ngValue]="null">Todas las sucursales</option>
+          <option *ngFor="let suc of sucursales" [ngValue]="suc.id_sucursal">{{ suc.nombre }}</option>
+        </select>
+      </div>
+
+      <!-- 4. Botones de Acción (2 cols) -->
+      <div class="lg:col-span-2 flex items-end space-x-2">
+        <button (click)="aplicarFiltros()" 
+                class="flex-1 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:hover:bg-white dark:text-zinc-950 font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer">
+          Filtrar
+        </button>
+        <button (click)="limpiarFiltros()" 
+                class="px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs text-zinc-600 dark:text-zinc-300 transition-colors cursor-pointer" title="Limpiar filtros">
+          ✕
+        </button>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- LISTA / TABLA DE BANDEJA DE DEVOLUCIONES                                  -->
+  <!-- ========================================================================= -->
+  <div class="p-4 sm:p-6 rounded-3xl bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4">
+    
+    <!-- Spinner Cargando -->
+    <div *ngIf="cargando" class="py-16 text-center space-y-3">
+      <div class="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+      <p class="text-xs text-zinc-500">Cargando bandeja de devoluciones...</p>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="!cargando && devoluciones.length === 0" 
+         class="py-12 text-center space-y-3">
+      <div class="text-3xl">📭</div>
+      <h3 class="text-sm font-bold text-zinc-800 dark:text-zinc-200">No se encontraron devoluciones registradas</h3>
+      <p class="text-xs text-zinc-500 max-w-sm mx-auto">
+        No hay registros que coincidan con los filtros aplicados. Puedes registrar una devolución presencial en mostrador.
+      </p>
+    </div>
+
+    <!-- Tabla de Devoluciones -->
+    <div *ngIf="!cargando && devoluciones.length > 0" class="overflow-x-auto">
+      <table class="w-full text-left border-collapse text-xs">
+        <thead>
+          <tr class="border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 font-mono text-[10px] uppercase">
+            <th class="py-3 px-3">Código / Tipo</th>
+            <th class="py-3 px-3">Venta Original</th>
+            <th class="py-3 px-3">Cliente</th>
+            <th class="py-3 px-3">Sucursal</th>
+            <th class="py-3 px-3">Motivo</th>
+            <th class="py-3 px-3 text-center">Prendas</th>
+            <th class="py-3 px-3 text-right">Reembolso</th>
+            <th class="py-3 px-3 text-center">Estado</th>
+            <th class="py-3 px-3 text-right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800/60">
+          <tr *ngFor="let dev of devoluciones" class="hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30 transition-colors">
+            
+            <!-- Código & Tipo -->
+            <td class="py-3 px-3">
+              <div class="font-mono font-bold text-zinc-900 dark:text-white flex items-center space-x-1.5">
+                <span>{{ dev.codigo_devolucion }}</span>
+                <button (click)="copiarCodigo(dev.codigo_devolucion)" class="text-zinc-400 hover:text-amber-500 text-[10px]">📋</button>
+              </div>
+              <span class="inline-block mt-0.5 text-[9px] px-2 py-0.2 rounded font-mono uppercase"
+                    [class.bg-purple-500/15]="dev.tipo_devolucion === 'PRESENCIAL'"
+                    [class.text-purple-700]="dev.tipo_devolucion === 'PRESENCIAL'"
+                    [class.dark:text-purple-300]="dev.tipo_devolucion === 'PRESENCIAL'"
+                    [class.bg-blue-500/15]="dev.tipo_devolucion !== 'PRESENCIAL'"
+                    [class.text-blue-700]="dev.tipo_devolucion !== 'PRESENCIAL'">
+                {{ dev.tipo_devolucion }}
+              </span>
+            </td>
+
+            <!-- Venta Original & Fecha -->
+            <td class="py-3 px-3">
+              <div class="font-mono font-bold text-zinc-800 dark:text-zinc-200">{{ dev.numero_venta }}</div>
+              <span class="text-[10px] text-zinc-400 font-mono">{{ dev.fecha_devolucion | date:'dd/MM/yy HH:mm' }}</span>
+            </td>
+
+            <!-- Cliente -->
+            <td class="py-3 px-3">
+              <div class="font-semibold text-zinc-800 dark:text-zinc-200">{{ dev.cliente_nombre || 'Cliente Final' }}</div>
+              <span class="text-[10px] text-zinc-400 font-mono">{{ dev.cliente_correo || 'En Mostrador' }}</span>
+            </td>
+
+            <!-- Sucursal -->
+            <td class="py-3 px-3 text-zinc-600 dark:text-zinc-400">
+              {{ dev.nombre_sucursal || 'Central' }}
+            </td>
+
+            <!-- Motivo -->
+            <td class="py-3 px-3 max-w-[150px] truncate" [title]="dev.motivo">
+              {{ dev.motivo }}
+            </td>
+
+            <!-- Prendas -->
+            <td class="py-3 px-3 text-center font-mono">
+              {{ dev.total_prendas }}
+            </td>
+
+            <!-- Reembolso -->
+            <td class="py-3 px-3 text-right font-mono font-bold text-amber-600 dark:text-amber-400">
+              Bs. {{ dev.monto_reembolso | number:'1.2-2' }}
+            </td>
+
+            <!-- Estado -->
+            <td class="py-3 px-3 text-center">
+              <span [class]="getEstadoClase(dev.estado)" class="px-2.5 py-0.5 rounded-full border text-[10px] font-bold">
+                {{ getEstadoLabel(dev.estado) }}
+              </span>
+            </td>
+
+            <!-- Acciones -->
+            <td class="py-3 px-3 text-right">
+              <div class="flex items-center justify-end space-x-1.5">
+                
+                <!-- Ver Detalle -->
+                <button (click)="abrirDetalle(dev.id_devolucion)" 
+                        class="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 transition-colors"
+                        title="Ver Detalle Completo">
+                  🔍
+                </button>
+
+                <!-- Dictaminar (Aprobar/Rechazar) para Encargado / Administrador -->
+                <button *ngIf="(dev.estado === 'SOLICITADA' || dev.estado === 'EN_REVISION') && (authService.hasPermission('devoluciones.revisar') || authService.hasPermission('devoluciones.aprobar'))"
+                        (click)="abrirModalDictamen(dev)"
+                        class="px-2 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-[10px] uppercase tracking-wider transition-colors"
+                        title="Emitir Dictamen">
+                  ⚖️ Dictamen
+                </button>
+
+                <!-- Recepcionar Prendas en Sucursal -->
+                <button *ngIf="dev.estado === 'APROBADA' && authService.hasPermission('devoluciones.recibir')"
+                        (click)="abrirDetalle(dev.id_devolucion)"
+                        class="px-2 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[10px] uppercase tracking-wider transition-colors"
+                        title="Recepción Física">
+                  📦 Recepcionar
+                </button>
+
+                <!-- Liquidar Reembolso Financiero -->
+                <button *ngIf="(dev.estado === 'RECIBIDA' || dev.estado === 'PENDIENTE_REEMBOLSO') && authService.hasPermission('devoluciones.reembolsar')"
+                        (click)="abrirModalReembolso(dev)"
+                        class="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] uppercase tracking-wider transition-colors"
+                        title="Liquidar Reembolso">
+                  💳 Reembolsar
+                </button>
+
+              </div>
+            </td>
+
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Paginación -->
+    <div *ngIf="totalPaginas > 1" class="flex flex-col sm:flex-row justify-between items-center gap-3 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+      <span class="text-xs text-zinc-500 font-mono">Mostrando {{ devoluciones.length }} de {{ total }} registros</span>
+      <div class="flex items-center space-x-2">
+        <button (click)="cargarDevoluciones(paginaActual - 1)" [disabled]="paginaActual <= 1" class="px-3 py-1.5 rounded-xl border border-zinc-300 dark:border-zinc-700 text-xs disabled:opacity-40">
+          ← Prev
+        </button>
+        <span class="px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-bold text-xs">
+          {{ paginaActual }} / {{ totalPaginas }}
+        </span>
+        <button (click)="cargarDevoluciones(paginaActual + 1)" [disabled]="paginaActual >= totalPaginas" class="px-3 py-1.5 rounded-xl border border-zinc-300 dark:border-zinc-700 text-xs disabled:opacity-40">
+          Sig →
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: DETALLE COMPLETO DE DEVOLUCIÓN                                     -->
+  <!-- ========================================================================= -->
+  <div *ngIf="mostrarModalDetalle" 
+       class="fixed inset-0 z-50 overflow-y-auto bg-black/80 dark:bg-zinc-950/90 backdrop-blur-md animate-fade-in">
+    <div class="flex min-h-full items-center justify-center p-2 sm:p-4 md:p-6 text-center">
+      <div (click)="cerrarDetalle()" class="fixed inset-0 -z-10 cursor-pointer"></div>
+
+      <div class="relative w-full max-w-3xl max-h-[calc(100vh-2.5rem)] rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl text-zinc-900 dark:text-zinc-100 flex flex-col overflow-hidden text-left animate-slide-up">
+        
+        <!-- Header -->
+        <div class="px-5 sm:px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-950/60 flex items-center justify-between shrink-0">
+          <div>
+            <div class="flex items-center space-x-2">
+              <h3 class="text-base sm:text-lg font-serif font-bold text-zinc-900 dark:text-white">
+                Devolución {{ devolucionDetalle?.codigo_devolucion }}
+              </h3>
+              <span *ngIf="devolucionDetalle" [class]="getEstadoClase(devolucionDetalle.estado)" class="px-2.5 py-0.5 rounded-full border text-[10px] font-bold">
+                {{ getEstadoLabel(devolucionDetalle.estado) }}
+              </span>
+            </div>
+            <p class="text-[11px] text-zinc-500 font-mono">
+              Venta ref: {{ devolucionDetalle?.numero_venta }} • Solicitado: {{ devolucionDetalle?.fecha_devolucion | date:'dd/MM/yyyy HH:mm' }}
+            </p>
+          </div>
+          <button (click)="cerrarDetalle()" class="p-2 rounded-xl text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors">
+            ✕
+          </button>
+        </div>
+
+        <!-- Body -->
+        <div class="p-5 sm:p-6 overflow-y-auto space-y-5" *ngIf="devolucionDetalle">
+          
+          <!-- Metadata Cards -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+            <div class="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+              <span class="text-[10px] text-zinc-400 uppercase font-mono block">Cliente</span>
+              <span class="font-bold text-zinc-800 dark:text-zinc-200 truncate block">{{ devolucionDetalle.cliente_nombre || 'Cliente Final' }}</span>
+              <span class="text-[10px] text-zinc-500 font-mono truncate block">{{ devolucionDetalle.cliente_correo }}</span>
+            </div>
+
+            <div class="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+              <span class="text-[10px] text-zinc-400 uppercase font-mono block">Sucursal</span>
+              <span class="font-bold text-zinc-800 dark:text-zinc-200 block">{{ devolucionDetalle.nombre_sucursal || 'Central' }}</span>
+              <span class="text-[10px] text-zinc-500 font-mono block">Tipo: {{ devolucionDetalle.tipo_devolucion }}</span>
+            </div>
+
+            <div class="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+              <span class="text-[10px] text-zinc-400 uppercase font-mono block">Total Venta Ref</span>
+              <span class="font-bold font-mono text-zinc-800 dark:text-zinc-200 block">Bs. {{ devolucionDetalle.total_venta | number:'1.2-2' }}</span>
+              <span class="text-[10px] text-zinc-500 font-mono block">{{ devolucionDetalle.fecha_venta | date:'dd/MM/yyyy' }}</span>
+            </div>
+
+            <div class="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30">
+              <span class="text-[10px] text-amber-700 dark:text-amber-400 uppercase font-mono block">Reembolso Total</span>
+              <span class="font-bold font-mono text-amber-600 dark:text-amber-400 text-sm block">Bs. {{ devolucionDetalle.monto_reembolso | number:'1.2-2' }}</span>
+              <span class="text-[10px] text-zinc-500 font-mono block">{{ devolucionDetalle.total_prendas }} prendas</span>
+            </div>
+          </div>
+
+          <!-- Motivo y Explicación del Cliente -->
+          <div class="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 space-y-1.5 text-xs">
+            <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-wider font-mono block">Motivo Declarado: {{ devolucionDetalle.motivo }}</span>
+            <p *ngIf="devolucionDetalle.descripcion_cliente" class="text-zinc-700 dark:text-zinc-300 italic">
+              "{{ devolucionDetalle.descripcion_cliente }}"
+            </p>
+            <div *ngIf="devolucionDetalle.evidencia_url" class="pt-1">
+              <a [href]="devolucionDetalle.evidencia_url" target="_blank" class="text-amber-600 hover:underline flex items-center space-x-1">
+                <span>📎 Ver evidencia o fotografía adjunta</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- Prendas de la Devolución -->
+          <div class="space-y-2">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-zinc-500 font-mono">Prendas Sujetas a Devolución:</h4>
+            <div class="divide-y divide-zinc-200 dark:divide-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden text-xs">
+              <div *ngFor="let it of devolucionDetalle.items" class="p-3.5 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-950/30">
+                <div>
+                  <h5 class="font-bold text-zinc-900 dark:text-white">{{ it.producto_nombre }}</h5>
+                  <p class="text-[10px] text-zinc-500 font-mono">
+                    Talla: {{ it.talla }} • Color: {{ it.color }} • SKU: {{ it.sku }} • Cantidad: <b>{{ it.cantidad }}</b>
+                  </p>
+                  <span class="inline-block mt-0.5 text-[9px] px-2 py-0.5 rounded font-mono"
+                        [class.bg-emerald-500/15]="it.condicion === 'REVENDIBLE'"
+                        [class.text-emerald-700]="it.condicion === 'REVENDIBLE'"
+                        [class.bg-rose-500/15]="it.condicion !== 'REVENDIBLE'"
+                        [class.text-rose-700]="it.condicion !== 'REVENDIBLE'">
+                    Condición: {{ it.condicion }}
+                  </span>
+                </div>
+                <div class="text-right font-mono">
+                  <span class="text-[10px] text-zinc-400 block">Reembolso Neto</span>
+                  <span class="font-bold text-amber-600 dark:text-amber-400">Bs. {{ it.monto_reembolso | number:'1.2-2' }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dictamen Técnico / Resolución si existe -->
+          <div *ngIf="devolucionDetalle.observaciones_resolucion" class="p-4 rounded-2xl bg-zinc-100 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-1.5 text-xs">
+            <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-wider font-mono block">Dictamen del Revisor:</span>
+            <p class="text-zinc-800 dark:text-zinc-200">{{ devolucionDetalle.observaciones_resolucion }}</p>
+            <p class="text-[10px] text-zinc-400 font-mono mt-1" *ngIf="devolucionDetalle.revisor_nombre">
+              Dictaminado por: {{ devolucionDetalle.revisor_nombre }} {{ devolucionDetalle.revisor_apellido || '' }}
+              <span *ngIf="devolucionDetalle.fecha_resolucion"> • {{ devolucionDetalle.fecha_resolucion | date:'dd/MM/yyyy HH:mm' }}</span>
+            </p>
+          </div>
+
+          <!-- Reembolso si existe -->
+          <div *ngIf="devolucionDetalle.metodo_reembolso" class="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-xs space-y-2">
+            <div class="flex items-center space-x-2 text-emerald-800 dark:text-emerald-300 font-bold">
+              <span>💳</span>
+              <span>Liquidación de Reembolso Financiero</span>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px] text-zinc-700 dark:text-zinc-300">
+              <div>Método: <b class="font-mono">{{ devolucionDetalle.metodo_reembolso }}</b></div>
+              <div>Referencia: <b class="font-mono">{{ devolucionDetalle.referencia_reembolso || 'S/N' }}</b></div>
+              <div *ngIf="devolucionDetalle.fecha_reembolso">Fecha: {{ devolucionDetalle.fecha_reembolso | date:'dd/MM/yyyy HH:mm' }}</div>
+            </div>
+          </div>
+
+          <!-- Shortcuts a siguientes pasos -->
+          <div class="pt-2 flex flex-wrap gap-2 justify-end border-t border-zinc-100 dark:border-zinc-800">
+            
+            <!-- Botón Dictaminar -->
+            <button *ngIf="(devolucionDetalle.estado === 'SOLICITADA' || devolucionDetalle.estado === 'EN_REVISION') && (authService.hasPermission('devoluciones.revisar') || authService.hasPermission('devoluciones.aprobar'))"
+                    (click)="abrirModalDictamen(devolucionDetalle)"
+                    class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs uppercase tracking-wider transition-colors">
+              ⚖️ Emitir Dictamen
+            </button>
+
+            <!-- Botón Recepcionar -->
+            <button *ngIf="devolucionDetalle.estado === 'APROBADA' && authService.hasPermission('devoluciones.recibir')"
+                    (click)="abrirModalRecepcion(devolucionDetalle)"
+                    class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider transition-colors">
+              📦 Registrar Recepción Física
+            </button>
+
+            <!-- Botón Reembolsar -->
+            <button *ngIf="(devolucionDetalle.estado === 'RECIBIDA' || devolucionDetalle.estado === 'PENDIENTE_REEMBOLSO') && authService.hasPermission('devoluciones.reembolsar')"
+                    (click)="abrirModalReembolso(devolucionDetalle)"
+                    class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider transition-colors">
+              💳 Liquidar Reembolso
+            </button>
+
+          </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="px-5 sm:px-6 py-3.5 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50/90 dark:bg-zinc-950/80 flex items-center justify-between shrink-0">
+          <button (click)="copiarCodigo(devolucionDetalle?.codigo_devolucion || '')" class="text-xs text-zinc-500 hover:text-amber-500 font-mono cursor-pointer flex items-center space-x-1">
+            <span>📋 Copiar Código</span>
+          </button>
+          <button (click)="cerrarDetalle()" class="px-5 py-2 rounded-xl bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-200 font-semibold text-xs transition-colors cursor-pointer">
+            Cerrar
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: NUEVA DEVOLUCIÓN PRESENCIAL (CU24W)                                -->
+  <!-- ========================================================================= -->
+  <div *ngIf="mostrarModalPresencial" 
+       class="fixed inset-0 z-50 overflow-y-auto bg-black/80 dark:bg-zinc-950/90 backdrop-blur-md animate-fade-in">
+    <div class="flex min-h-full items-center justify-center p-2 sm:p-4 md:p-6 text-center">
+      <div (click)="cerrarModalPresencial()" class="fixed inset-0 -z-10 cursor-pointer"></div>
+
+      <div class="relative w-full max-w-2xl max-h-[calc(100vh-2.5rem)] rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl text-zinc-900 dark:text-zinc-100 flex flex-col overflow-hidden text-left animate-slide-up">
+        
+        <!-- Header -->
+        <div class="px-5 sm:px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-950/60 flex items-center justify-between shrink-0">
+          <div class="space-y-0.5">
+            <h3 class="text-base sm:text-lg font-serif font-bold text-zinc-900 dark:text-white flex items-center space-x-2">
+              <span>🏪</span>
+              <span>Nueva Devolución Presencial en Mostrador</span>
+            </h3>
+            <p class="text-[11px] text-zinc-500 font-mono">
+              Atención directa sin requerir solicitud previa del cliente
+            </p>
+          </div>
+          <button (click)="cerrarModalPresencial()" class="p-2 rounded-xl text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors">
+            ✕
+          </button>
+        </div>
+
+        <!-- Body -->
+        <div class="p-5 sm:p-6 overflow-y-auto space-y-5">
+          
+          <!-- Búsqueda de venta -->
+          <div class="space-y-1.5">
+            <label class="text-xs font-bold text-zinc-700 dark:text-zinc-300">ID de Venta / Pedido Original:</label>
+            <div class="flex space-x-2">
+              <input type="number" 
+                     [(ngModel)]="idVentaBusqueda" 
+                     (keyup.enter)="buscarVentaParaPresencial()"
+                     placeholder="Ej. 102" 
+                     class="flex-1 bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500" />
+              <button (click)="buscarVentaParaPresencial()" 
+                      [disabled]="cargandoVentaPresencial"
+                      class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs uppercase tracking-wider transition-all disabled:opacity-40 cursor-pointer">
+                <span>{{ cargandoVentaPresencial ? 'Buscando...' : 'Consultar Venta' }}</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Si la venta no es elegible -->
+          <div *ngIf="ventaElegiblePresencial && !ventaElegiblePresencial.es_elegible" class="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs">
+            <p class="font-bold">⚠️ Venta No Elegible</p>
+            <p class="text-[11px] mt-1">{{ ventaElegiblePresencial.motivo_bloqueo || 'No cuenta con prendas disponibles para devolver.' }}</p>
+          </div>
+
+          <!-- Si es elegible: Selección de Prendas -->
+          <div *ngIf="ventaElegiblePresencial?.es_elegible" class="space-y-4">
+            
+            <div class="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-xs flex justify-between items-center">
+              <div>
+                <span class="font-bold text-zinc-800 dark:text-zinc-200">Venta: {{ ventaElegiblePresencial?.venta?.numero_venta }}</span>
+                <span class="text-[10px] text-zinc-500 font-mono block">Total original: Bs. {{ ventaElegiblePresencial?.venta?.total | number:'1.2-2' }}</span>
+              </div>
+              <span class="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-bold">
+                ✓ Elegible
+              </span>
+            </div>
+
+            <!-- Prendas -->
+            <div class="space-y-2">
+              <label class="text-xs font-bold text-zinc-700 dark:text-zinc-300 block">Prendas a Devolver e Inspección:</label>
+              
+              <div class="space-y-2">
+                <div *ngFor="let it of (ventaElegiblePresencial?.items || [])" 
+                     [class.border-amber-500]="itemsPresenciales[it.id_detalle_venta]?.seleccionado"
+                     class="p-3 rounded-2xl border border-zinc-200 dark:border-zinc-800 space-y-2">
+                  
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2.5">
+                      <input type="checkbox" 
+                             [checked]="itemsPresenciales[it.id_detalle_venta]?.seleccionado"
+                             (change)="toggleItemPresencial(it.id_detalle_venta)"
+                             class="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 cursor-pointer" />
+                      <div>
+                        <h5 class="font-bold text-xs text-zinc-900 dark:text-white">{{ it.producto_nombre }}</h5>
+                        <p class="text-[10px] text-zinc-500 font-mono">Talla: {{ it.talla }} • Color: {{ it.color }} • Disp: {{ it.cantidad_elegible }}</p>
+                      </div>
+                    </div>
+
+                    <div class="font-mono text-xs font-bold text-amber-600 dark:text-amber-400">
+                      Bs. {{ it.precio_neto_unitario | number:'1.2-2' }}/u
+                    </div>
+                  </div>
+
+                  <!-- Controles si está seleccionado -->
+                  <div *ngIf="itemsPresenciales[it.id_detalle_venta]?.seleccionado" 
+                       class="pt-2 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between gap-3 text-xs bg-zinc-50/50 dark:bg-zinc-950/40 p-2 rounded-xl">
+                    <div class="flex items-center space-x-2">
+                      <span class="text-[10px] text-zinc-500">Cantidad:</span>
+                      <input type="number" 
+                             min="1" 
+                             [max]="it.cantidad_elegible" 
+                             [(ngModel)]="itemsPresenciales[it.id_detalle_venta].cantidad"
+                             (ngModelChange)="ajustarCantidadPresencial(it.id_detalle_venta, itemsPresenciales[it.id_detalle_venta].cantidad, it.cantidad_elegible)"
+                             class="w-16 px-2 py-0.5 text-xs font-mono font-bold text-center rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white" />
+                    </div>
+
+                    <div class="flex items-center space-x-2">
+                      <span class="text-[10px] text-zinc-500">Condición:</span>
+                      <select [(ngModel)]="itemsPresenciales[it.id_detalle_venta].condicion" 
+                              class="px-2 py-0.5 text-xs font-semibold rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white cursor-pointer">
+                        <option value="REVENDIBLE">✓ Revendible (Reincorporar a Stock)</option>
+                        <option value="DEFECTUOSO">✕ Defectuoso (Retener en Merma/No vender)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
+            <!-- Sucursal de Recepción -->
+            <div class="space-y-1">
+              <label class="text-xs font-bold text-zinc-700 dark:text-zinc-300">Sucursal donde se recibe:</label>
+              <select [(ngModel)]="idSucursalPresencial" class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs text-zinc-900 dark:text-white font-semibold cursor-pointer">
+                <option *ngFor="let s of sucursales" [ngValue]="s.id_sucursal">{{ s.nombre }}</option>
+              </select>
+            </div>
+
+            <!-- Motivo -->
+            <div class="space-y-1">
+              <label class="text-xs font-bold text-zinc-700 dark:text-zinc-300">Motivo de Devolución:</label>
+              <select [(ngModel)]="motivoPresencial" class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs text-zinc-900 dark:text-white font-semibold cursor-pointer">
+                <option value="DEFECTO_FABRICA">Defecto de Fábrica / Costura</option>
+                <option value="TALLA_INCORRECTA">Talla Incorrecta / Cambio de Medida</option>
+                <option value="PRODUCTO_EQUIVOCADO">Producto Entregado No Correspondía</option>
+                <option value="OTRO">Otro Motivo</option>
+              </select>
+            </div>
+
+            <!-- Observaciones -->
+            <div class="space-y-1">
+              <label class="text-xs font-bold text-zinc-700 dark:text-zinc-300">Observaciones Técnicas / Estado de la Prenda:</label>
+              <textarea [(ngModel)]="observacionesPresenciales" rows="2" placeholder="Detalles de la inspección física..." class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl p-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500"></textarea>
+            </div>
+
+            <!-- Reembolso Inmediato en Mostrador -->
+            <div class="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2">
+              <label class="flex items-center space-x-2 text-xs font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer">
+                <input type="checkbox" [(ngModel)]="reembolsoInmediatoPresencial" class="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 cursor-pointer" />
+                <span>Registrar reembolso inmediato en mostrador (Cajero)</span>
+              </label>
+
+              <div *ngIf="reembolsoInmediatoPresencial" class="grid grid-cols-2 gap-2 pt-2">
+                <div>
+                  <span class="text-[10px] text-zinc-500 font-mono block">Método de Reembolso:</span>
+                  <select [(ngModel)]="metodoReembolsoPresencial" class="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-lg p-1.5 text-xs">
+                    <option value="EFECTIVO">Efectivo en Caja</option>
+                    <option value="VALE_TIENDA">Vale de Tienda / Crédito</option>
+                  </select>
+                </div>
+                <div>
+                  <span class="text-[10px] text-zinc-500 font-mono block">Comprobante / Recibo:</span>
+                  <input type="text" [(ngModel)]="referenciaReembolsoPresencial" placeholder="Nro de Recibo" class="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-lg p-1.5 text-xs font-mono" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Resumen Total -->
+            <div class="p-3 rounded-2xl bg-zinc-100 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex justify-between items-center text-xs">
+              <span class="font-bold text-zinc-800 dark:text-zinc-200">Reembolso Total a Efectuar:</span>
+              <span class="font-mono text-base font-bold text-amber-600 dark:text-amber-400">
+                Bs. {{ calcularReembolsoPresencial() | number:'1.2-2' }}
+              </span>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="px-5 sm:px-6 py-3.5 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50/90 dark:bg-zinc-950/80 flex items-center justify-between shrink-0">
+          <button (click)="cerrarModalPresencial()" class="px-4 py-2 rounded-xl bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-200 font-semibold text-xs transition-colors cursor-pointer">
+            Cancelar
+          </button>
+
+          <button (click)="confirmarDevolucionPresencial()" 
+                  [disabled]="!hayItemsPresenciales() || guardandoPresencial"
+                  class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs uppercase tracking-wider transition-all disabled:opacity-40 cursor-pointer flex items-center space-x-2">
+            <span>{{ guardandoPresencial ? 'Registrando...' : 'Confirmar Devolución Presencial' }}</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: DICTAMEN FORMAL (APROBAR / RECHAZAR)                              -->
+  <!-- ========================================================================= -->
+  <div *ngIf="mostrarModalDictamen" 
+       class="fixed inset-0 z-50 overflow-y-auto bg-black/80 dark:bg-zinc-950/90 backdrop-blur-md animate-fade-in">
+    <div class="flex min-h-full items-center justify-center p-2 sm:p-4 text-center">
+      <div (click)="cerrarModalDictamen()" class="fixed inset-0 -z-10 cursor-pointer"></div>
+
+      <div class="relative w-full max-w-lg rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl text-zinc-900 dark:text-zinc-100 flex flex-col overflow-hidden text-left animate-slide-up">
+        
+        <div class="px-5 sm:px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-950/60 flex items-center justify-between">
+          <h3 class="text-sm sm:text-base font-bold text-zinc-900 dark:text-white flex items-center space-x-2">
+            <span>⚖️</span>
+            <span>Dictaminar Solicitud {{ codigoDevolucionDictamen }}</span>
+          </h3>
+          <button (click)="cerrarModalDictamen()" class="text-zinc-400 hover:text-zinc-600">✕</button>
+        </div>
+
+        <div class="p-5 sm:p-6 space-y-4 text-xs">
+          <div class="space-y-1.5">
+            <label class="font-bold text-zinc-700 dark:text-zinc-300">Resolución / Decisión:</label>
+            <div class="grid grid-cols-2 gap-3">
+              <button type="button" 
+                      (click)="accionDictamen = 'APROBAR'"
+                      [class.bg-emerald-500]="accionDictamen === 'APROBAR'"
+                      [class.text-white]="accionDictamen === 'APROBAR'"
+                      [class.border-emerald-600]="accionDictamen === 'APROBAR'"
+                      [class.border-zinc-300]="accionDictamen !== 'APROBAR'"
+                      [class.dark:border-zinc-700]="accionDictamen !== 'APROBAR'"
+                      class="p-3 rounded-2xl border text-center font-bold uppercase tracking-wider transition-all cursor-pointer">
+                ✓ APROBAR
+              </button>
+
+              <button type="button" 
+                      (click)="accionDictamen = 'RECHAZAR'"
+                      [class.bg-rose-600]="accionDictamen === 'RECHAZAR'"
+                      [class.text-white]="accionDictamen === 'RECHAZAR'"
+                      [class.border-rose-700]="accionDictamen === 'RECHAZAR'"
+                      [class.border-zinc-300]="accionDictamen !== 'RECHAZAR'"
+                      [class.dark:border-zinc-700]="accionDictamen !== 'RECHAZAR'"
+                      class="p-3 rounded-2xl border text-center font-bold uppercase tracking-wider transition-all cursor-pointer">
+                ✕ RECHAZAR
+              </button>
+            </div>
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="font-bold text-zinc-700 dark:text-zinc-300">
+              Justificación Técnica / Motivo del Dictamen <span class="text-rose-500">*</span>:
+            </label>
+            <textarea [(ngModel)]="observacionesDictamen" 
+                      rows="3" 
+                      placeholder="Explica las razones de la aprobación o rechazo..."
+                      class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl p-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500"></textarea>
+          </div>
+        </div>
+
+        <div class="px-5 sm:px-6 py-3.5 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50/90 dark:bg-zinc-950/80 flex justify-end space-x-2">
+          <button (click)="cerrarModalDictamen()" class="px-4 py-2 rounded-xl bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-xs font-semibold">
+            Cancelar
+          </button>
+          <button (click)="confirmarDictamen()" 
+                  [disabled]="!observacionesDictamen.trim() || guardandoDictamen"
+                  class="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs uppercase tracking-wider disabled:opacity-40 transition-colors">
+            {{ guardandoDictamen ? 'Guardando...' : 'Confirmar Dictamen' }}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: RECEPCIÓN FÍSICA E INSPECCIÓN EN SUCURSAL                          -->
+  <!-- ========================================================================= -->
+  <div *ngIf="mostrarModalRecepcion" 
+       class="fixed inset-0 z-50 overflow-y-auto bg-black/80 dark:bg-zinc-950/90 backdrop-blur-md animate-fade-in">
+    <div class="flex min-h-full items-center justify-center p-2 sm:p-4 text-center">
+      <div (click)="cerrarModalRecepcion()" class="fixed inset-0 -z-10 cursor-pointer"></div>
+
+      <div class="relative w-full max-w-xl rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl text-zinc-900 dark:text-zinc-100 flex flex-col overflow-hidden text-left animate-slide-up">
+        
+        <div class="px-5 sm:px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-950/60 flex items-center justify-between">
+          <h3 class="text-sm sm:text-base font-bold text-zinc-900 dark:text-white flex items-center space-x-2">
+            <span>📦</span>
+            <span>Recepción Física de Prendas — {{ codigoDevolucionRecepcion }}</span>
+          </h3>
+          <button (click)="cerrarModalRecepcion()" class="text-zinc-400 hover:text-zinc-600">✕</button>
+        </div>
+
+        <div class="p-5 sm:p-6 space-y-4 text-xs">
+          
+          <div class="p-3 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-800 dark:text-indigo-300 leading-relaxed text-[11px]">
+            ⚠️ <b>Control de Inventario:</b> Solo las unidades marcadas como <b>REVENDIBLE</b> se reincorporarán automáticamente al stock disponible para la venta. Las defectuosas quedarán retenidas en merma sin inflar el inventario activo.
+          </div>
+
+          <!-- Sucursal -->
+          <div class="space-y-1">
+            <label class="font-bold text-zinc-700 dark:text-zinc-300">Sucursal donde ingresan las prendas:</label>
+            <select [(ngModel)]="idSucursalRecepcion" class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-semibold cursor-pointer">
+              <option *ngFor="let s of sucursales" [ngValue]="s.id_sucursal">{{ s.nombre }}</option>
+            </select>
+          </div>
+
+          <!-- Items y condición -->
+          <div class="space-y-2">
+            <label class="font-bold text-zinc-700 dark:text-zinc-300">Inspección por Prenda:</label>
+            <div class="space-y-2">
+              <div *ngFor="let it of devolucionDetalle?.items" class="p-3 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-3 bg-zinc-50/50 dark:bg-zinc-950/30">
+                <div>
+                  <h5 class="font-bold text-zinc-900 dark:text-white">{{ it.producto_nombre }}</h5>
+                  <p class="text-[10px] text-zinc-500 font-mono">Talla: {{ it.talla }} • Color: {{ it.color }} • Cantidad: <b>{{ it.cantidad }}</b></p>
+                </div>
+
+                <div *ngIf="itemsRecepcion[it.id_detalle_devolucion]">
+                  <select [(ngModel)]="itemsRecepcion[it.id_detalle_devolucion].condicion" class="px-2 py-1 text-xs font-semibold rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 cursor-pointer">
+                    <option value="REVENDIBLE">✓ Revendible (Aumenta Stock)</option>
+                    <option value="DEFECTUOSO">✕ Defectuoso (No Vendible)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Observaciones -->
+          <div class="space-y-1">
+            <label class="font-bold text-zinc-700 dark:text-zinc-300">Observaciones de Recepción:</label>
+            <textarea [(ngModel)]="observacionesRecepcion" rows="2" placeholder="Estado del empaque, etiquetas o detalles..." class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl p-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500"></textarea>
+          </div>
+
+        </div>
+
+        <div class="px-5 sm:px-6 py-3.5 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50/90 dark:bg-zinc-950/80 flex justify-end space-x-2">
+          <button (click)="cerrarModalRecepcion()" class="px-4 py-2 rounded-xl bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-xs font-semibold">
+            Cancelar
+          </button>
+          <button (click)="confirmarRecepcion()" 
+                  [disabled]="guardandoRecepcion"
+                  class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider disabled:opacity-40 transition-colors">
+            {{ guardandoRecepcion ? 'Procesando...' : 'Confirmar Recepción & Stock' }}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: LIQUIDACIÓN DE REEMBOLSO FINANCIERO                                -->
+  <!-- ========================================================================= -->
+  <div *ngIf="mostrarModalReembolso" 
+       class="fixed inset-0 z-50 overflow-y-auto bg-black/80 dark:bg-zinc-950/90 backdrop-blur-md animate-fade-in">
+    <div class="flex min-h-full items-center justify-center p-2 sm:p-4 text-center">
+      <div (click)="cerrarModalReembolso()" class="fixed inset-0 -z-10 cursor-pointer"></div>
+
+      <div class="relative w-full max-w-lg rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl text-zinc-900 dark:text-zinc-100 flex flex-col overflow-hidden text-left animate-slide-up">
+        
+        <div class="px-5 sm:px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-950/60 flex items-center justify-between">
+          <h3 class="text-sm sm:text-base font-bold text-zinc-900 dark:text-white flex items-center space-x-2">
+            <span>💳</span>
+            <span>Liquidar Reembolso — {{ codigoDevolucionReembolso }}</span>
+          </h3>
+          <button (click)="cerrarModalReembolso()" class="text-zinc-400 hover:text-zinc-600">✕</button>
+        </div>
+
+        <div class="p-5 sm:p-6 space-y-4 text-xs">
+          
+          <div class="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-300 flex justify-between items-center">
+            <span class="font-bold">Monto Total a Reembolsar:</span>
+            <span class="font-mono text-base font-bold">Bs. {{ montoReembolsoLiquidacion | number:'1.2-2' }}</span>
+          </div>
+
+          <!-- Método de Reembolso -->
+          <div class="space-y-1">
+            <label class="font-bold text-zinc-700 dark:text-zinc-300">Método de Liquidación:</label>
+            <select [(ngModel)]="metodoReembolso" class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-semibold cursor-pointer">
+              <option value="EFECTIVO">Efectivo en Mostrador</option>
+              <option value="TRANSFERENCIA">Transferencia Bancaria QR / ACH</option>
+              <option value="VALE_TIENDA">Vale de Tienda / Crédito Aurora</option>
+              <option value="TARJETA_PASARELA">Devolución a Tarjeta (Pasarela)</option>
+            </select>
+          </div>
+
+          <!-- Referencia / Comprobante -->
+          <div class="space-y-1">
+            <label class="font-bold text-zinc-700 dark:text-zinc-300">
+              Nro. de Comprobante / Voucher / Referencia <span class="text-rose-500">*</span>:
+            </label>
+            <input type="text" [(ngModel)]="referenciaReembolso" placeholder="Ej. TRANSF-98231 o REC-0021" class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500" />
+          </div>
+
+          <!-- Observaciones -->
+          <div class="space-y-1">
+            <label class="font-bold text-zinc-700 dark:text-zinc-300">Observaciones Contables:</label>
+            <textarea [(ngModel)]="observacionesReembolso" rows="2" placeholder="Detalles del desembolso o recibo firmado..." class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl p-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500"></textarea>
+          </div>
+
+        </div>
+
+        <div class="px-5 sm:px-6 py-3.5 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50/90 dark:bg-zinc-950/80 flex justify-end space-x-2">
+          <button (click)="cerrarModalReembolso()" class="px-4 py-2 rounded-xl bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-xs font-semibold">
+            Cancelar
+          </button>
+          <button (click)="confirmarReembolso()" 
+                  [disabled]="!referenciaReembolso.trim() || guardandoReembolso"
+                  class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider disabled:opacity-40 transition-colors">
+            {{ guardandoReembolso ? 'Liquidando...' : 'Confirmar Liquidación' }}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>

@@ -289,7 +289,9 @@ class PostgreSQL:
             
             return self.cur.rowcount
         except Exception as e:
-            if self.conn:
+            # The owner keeps locks until its boundary (or explicit savepoint).
+            # An inner rollback would release the idempotency lock too early.
+            if self.conn and _transaction_db.get() is None:
                 try:
                     if not self.conn.autocommit or self.conn.info.transaction_status != psycopg2.extensions.TRANSACTION_STATUS_IDLE:
                         self.conn.rollback()
@@ -312,3 +314,10 @@ class PostgreSQL:
     def commit(self):
         if self.conn and _transaction_db.get() is None and not self.conn.autocommit:
             self.conn.commit()
+
+    def rollback(self):
+        shared = _transaction_db.get()
+        if shared is not None:
+            shared._rollback_only = True
+        elif self.conn:
+            self.conn.rollback()

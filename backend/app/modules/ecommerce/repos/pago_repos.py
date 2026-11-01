@@ -1,7 +1,10 @@
 import json
 import logging
+from decimal import Decimal, InvalidOperation
 from typing import Dict, Any, Optional
-from app.core.postgres import PostgreSQL
+from app.core.postgres import PostgreSQL, atomic
+from app.core.inventory_integrity import lock_items
+from fastapi import HTTPException
 from app.core.config import Config
 
 logger = logging.getLogger(__name__)
@@ -69,6 +72,8 @@ def validar_pedido_para_pago(id_pedido: int, id_usuario: int, id_empresa: Option
             raise ValueError("El pedido no pertenece a la tienda (Tenant) activa.")
 
         estado_pago = row[6]
+        if estado_pago == 'PAGADO' and row[13] is None:
+            raise HTTPException(409, 'PAYMENT_RECONCILIATION_REQUIRED: pedido pagado sin venta comprobable.')
         if estado_pago == 'PAGADO' or row[13] is not None:
             raise ValueError(f"El pedido {row[1]} ya se encuentra pagado.")
 
@@ -130,6 +135,7 @@ def validar_pedido_para_pago(id_pedido: int, id_usuario: int, id_empresa: Option
     finally:
         db.close_connection()
 
+@atomic
 def ejecutar_confirmacion_pago(
     id_pedido: int,
     tipo_metodo: str,
@@ -150,6 +156,28 @@ def ejecutar_confirmacion_pago(
     db.create_connection()
     try:
         schema = _get_schema()
+        order = db.execute_query(f'''SELECT p.id_sucursal,p.id_empresa,p.estado_pago,p.id_venta,c.id_usuario,p.total
+            FROM {schema}.t_pedido p JOIN {schema}.t_cliente c ON c.id_cliente=p.id_cliente
+            WHERE p.id_pedido=%s FOR UPDATE OF p''', (id_pedido,), fetchone=True)
+        if not order or order[4] != id_usuario:
+            raise HTTPException(403, 'Pedido ajeno a la cuenta autenticada.')
+        if order[2] == 'PAGADO' or order[3] is not None:
+            raise HTTPException(409, 'PAYMENT_RECONCILIATION_REQUIRED: pago ya registrado; consulte la venta, no repita el cobro.')
+        try:
+            paid = Decimal(str(monto))
+            valid_amount = paid.is_finite() and paid > 0 and paid == order[5]
+        except (InvalidOperation,TypeError):
+            valid_amount = False
+        if not valid_amount:
+            raise HTTPException(400, 'El importe del pago debe coincidir exactamente con el total comprobado del pedido.')
+        rows = db.execute_query(f'''SELECT id_variante,cantidad FROM {schema}.t_detalle_pedido
+            WHERE id_pedido=%s ORDER BY id_variante FOR UPDATE''', (id_pedido,), fetchall=True) or []
+        items = [dict(id_variante=r[0],cantidad=r[1]) for r in rows]
+        if not items:
+            raise HTTPException(409, 'El pedido no tiene prendas verificables.')
+        totals, positions = lock_items(db,schema,order[0],items,order[1])
+        if any(totals[v] > positions[v][3] for v in totals):
+            raise HTTPException(409, 'Stock insuficiente para confirmar el pedido.')
         q = f"""
             SELECT {schema}.fn_confirmar_pago_pedido(
                 %s, %s, %s, %s, %s, %s, %s, %s
@@ -179,6 +207,20 @@ def ejecutar_confirmacion_pago(
             msg = data.get("message", "Error al confirmar el pago en la base de datos.")
             raise ValueError(f"[{error_code}] {msg}")
 
+        confirmed = db.execute_query(f'''SELECT p.id_venta,v.id_empresa,v.id_sucursal,
+            EXISTS(SELECT 1 FROM {schema}.t_pago pay WHERE pay.id_venta=v.id_venta AND pay.estado='APROBADO')
+            FROM {schema}.t_pedido p LEFT JOIN {schema}.t_venta v ON v.id_venta=p.id_venta
+            WHERE p.id_pedido=%s AND p.estado_pago='PAGADO' ''', (id_pedido,), fetchone=True)
+        if not confirmed or not confirmed[0] or confirmed[1:3] != (order[1],order[0]) or not confirmed[3]:
+            raise HTTPException(409, 'PAYMENT_RECONCILIATION_REQUIRED: confirmación incompleta; transacción revertida.')
+        lock_items(db,schema,order[0],items,order[1])
+        try:
+            from app.modules.ia.services.ml_preferencias_services import aprender_preferencias_cliente
+            row_cli = db.execute_query(f"SELECT id_cliente FROM {schema}.t_pedido WHERE id_pedido = %s", (id_pedido,), fetchone=True)
+            if row_cli and row_cli[0]:
+                aprender_preferencias_cliente(row_cli[0], order[1])
+        except Exception as ml_err:
+            logger.warning(f"Aviso no bloqueante: error aprendiendo preferencias tras pago de pedido {id_pedido}: {ml_err}")
         return data
     finally:
         db.close_connection()

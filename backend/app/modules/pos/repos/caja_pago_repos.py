@@ -2,7 +2,7 @@ import logging
 import random
 from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
-from app.core.postgres import PostgreSQL
+from app.core.postgres import PostgreSQL, atomic
 from app.core.config import Config
 from app.modules.pos.repos import caja_repos
 logger = logging.getLogger(__name__)
@@ -82,7 +82,7 @@ def validar_venta_para_pago_caja(
             FROM {schema}.t_venta v
             JOIN {schema}.t_sucursal s ON s.id_sucursal = v.id_sucursal
             LEFT JOIN {schema}.t_usuario u_cajero ON u_cajero.id_usuario = v.id_usuario
-            WHERE v.id_venta = %s;
+            WHERE v.id_venta = %s FOR UPDATE OF v;
         """
         row = db.execute_query(q_vta, (id_venta,), fetchone=True)
         if not row:
@@ -248,6 +248,7 @@ def calcular_desglose_cambio_optimo(
 
     return desglose
 
+@atomic
 def ejecutar_pago_caja(
     id_venta: int,
     id_usuario: int,
@@ -278,6 +279,16 @@ def ejecutar_pago_caja(
 
         # 1. Validar la venta de forma previa
         venta_validada = validar_venta_para_pago_caja(id_venta, id_usuario, id_sucursal, id_empresa)
+        active = venta_validada['sesion_caja_activa']
+        if id_sesion_caja is not None and int(id_sesion_caja) != int(active['id_sesion_caja']):
+            from fastapi import HTTPException
+            raise HTTPException(403, 'La sesión de caja del pago no es la sesión autorizada del cajero.')
+        locked_session = db.execute_query(f'''SELECT id_usuario,id_sucursal,id_empresa,estado
+            FROM {schema}.t_caja_sesion WHERE id_sesion_caja=%s FOR UPDATE''',
+            (active['id_sesion_caja'],), fetchone=True)
+        if not locked_session or tuple(locked_session) != (id_usuario, venta_validada['id_sucursal'], venta_validada['id_empresa'], 'ABIERTA'):
+            from fastapi import HTTPException
+            raise HTTPException(403, 'La sesión de caja ya no corresponde al contexto del pago.')
         total_venta = venta_validada["total"]
 
         # 2. Validar método de pago
@@ -456,7 +467,7 @@ def ejecutar_pago_caja(
         )
 
         # 7. Confirmar transacción
-        db.conn.commit()
+        db.commit()
         logger.info(f"✅ Pago en caja registrado: id_pago={id_pago}, id_venta={id_venta}, total=Bs.{total_venta:.2f}, metodo={metodo_nombre}")
 
         return {
@@ -477,7 +488,7 @@ def ejecutar_pago_caja(
         }
     except Exception as e:
         if db.conn:
-            db.conn.rollback()
+            db.rollback()
         logger.error(f"[ERROR EJECUTAR PAGO CAJA] {e}")
         raise
     finally:

@@ -1,5 +1,6 @@
 import re
 from datetime import datetime, timedelta
+import calendar
 from typing import Tuple, Optional
 from app.modules.pedidos.services.reports.parser.normalizer import eliminar_tildes
 
@@ -77,7 +78,52 @@ def interpretar_fechas(texto: str) -> Tuple[Optional[str], Optional[str], str]:
         fecha_hasta = ultimo_dia_mes_pasado.strftime('%Y-%m-%d')
         texto_restante = re.sub(r'\bmes\s+pasado\b', ' ', texto_restante)
 
-    # 8. Rangos explícitos: "del 1 al 15 [de mes] [de año]"
+    # 8. "este ano" / "ano en curso"
+    elif re.search(r'\b(?:este\s+a[nñ]o|a[nñ]o\s+en\s+curso)\b', t):
+        fecha_desde = f"{ahora.year}-01-01"
+        fecha_hasta = hoy_str
+        texto_restante = re.sub(r'\b(?:este\s+a[nñ]o|a[nñ]o\s+en\s+curso)\b', ' ', texto_restante)
+
+    # 9. "ano pasado"
+    elif re.search(r'\ba[nñ]o\s+pasado\b', t):
+        anio_prev = ahora.year - 1
+        fecha_desde = f"{anio_prev}-01-01"
+        fecha_hasta = f"{anio_prev}-12-31"
+        texto_restante = re.sub(r'\ba[nñ]o\s+pasado\b', ' ', texto_restante)
+
+    # 10. Trimestres (Q1, Q2, Q3, Q4)
+    elif re.search(r'\b(?:primer\s+trimestre|1er\s+trimestre|q1)\b', t):
+        fecha_desde = f"{ahora.year}-01-01"
+        fecha_hasta = f"{ahora.year}-03-31"
+        texto_restante = re.sub(r'\b(?:primer\s+trimestre|1er\s+trimestre|q1)\b', ' ', texto_restante)
+    elif re.search(r'\b(?:segundo\s+trimestre|2do\s+trimestre|q2)\b', t):
+        fecha_desde = f"{ahora.year}-04-01"
+        fecha_hasta = f"{ahora.year}-06-30"
+        texto_restante = re.sub(r'\b(?:segundo\s+trimestre|2do\s+trimestre|q2)\b', ' ', texto_restante)
+    elif re.search(r'\b(?:tercer\s+trimestre|3er\s+trimestre|q3)\b', t):
+        fecha_desde = f"{ahora.year}-07-01"
+        fecha_hasta = f"{ahora.year}-09-30"
+        texto_restante = re.sub(r'\b(?:tercer\s+trimestre|3er\s+trimestre|q3)\b', ' ', texto_restante)
+    elif re.search(r'\b(?:cuarto\s+trimestre|4to\s+trimestre|q4)\b', t):
+        fecha_desde = f"{ahora.year}-10-01"
+        fecha_hasta = f"{ahora.year}-12-31"
+        texto_restante = re.sub(r'\b(?:cuarto\s+trimestre|4to\s+trimestre|q4)\b', ' ', texto_restante)
+    elif re.search(r'\b(?:ultimo\s+trimestre|ultimos\s+3\s+meses)\b', t):
+        fecha_desde = (ahora - timedelta(days=90)).strftime('%Y-%m-%d')
+        fecha_hasta = hoy_str
+        texto_restante = re.sub(r'\b(?:ultimo\s+trimestre|ultimos\s+3\s+meses)\b', ' ', texto_restante)
+
+    # 11. "en [mes] [de anio]" o "del mes de [mes]"
+    match_mes = re.search(r'\b(?:en\s+|de\s+|del\s+mes\s+de\s+)([a-z]+)(?:\s+de\s+(\d{4}))?\b', t)
+    if match_mes and match_mes.group(1) in MESES:
+        m_num = MESES[match_mes.group(1)]
+        y_val = int(match_mes.group(2)) if match_mes.group(2) else ahora.year
+        _, last_day = calendar.monthrange(y_val, m_num)
+        fecha_desde = f"{y_val:04d}-{m_num:02d}-01"
+        fecha_hasta = f"{y_val:04d}-{m_num:02d}-{last_day:02d}"
+        texto_restante = texto_restante.replace(match_mes.group(0), ' ')
+
+    # 12. Rangos explícitos: "del 1 al 15 [de mes] [de año]"
     match_rango_dias = re.search(r'\b(?:del|desde)\s+(\d{1,2})\s+(?:al|hasta)\s+(\d{1,2})(?:\s+de\s+([a-z]+))?(?:\s+de\s+(\d{4}))?\b', t)
     if match_rango_dias:
         d1 = int(match_rango_dias.group(1))
@@ -97,7 +143,7 @@ def interpretar_fechas(texto: str) -> Tuple[Optional[str], Optional[str], str]:
         except Exception:
             pass
 
-    # 9. Fechas ISO explícitas: YYYY-MM-DD
+    # 13. Fechas ISO explícitas: YYYY-MM-DD
     fechas_iso = re.findall(r'\b\d{4}-\d{2}-\d{2}\b', t)
     if len(fechas_iso) >= 2:
         fecha_desde = fechas_iso[0]

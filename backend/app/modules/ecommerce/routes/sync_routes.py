@@ -1,6 +1,6 @@
 import json
 import logging
-import threading
+import hashlib
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException
@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 from app.core.config import Config
-from app.core.postgres import PostgreSQL
+from app.core.postgres import PostgreSQL, transaction
 from app.core.security import verificar_token, tiene_permiso
 from app.core.commerce_tenant import resolver_empresa_compra
 from app.modules.ecommerce.repos import carrito_repos
@@ -16,41 +16,6 @@ from app.modules.reservas.repos import reserva_repos
 from app.modules.pos.repos import pos_repos, caja_repos, caja_pago_repos
 
 router = APIRouter(prefix="/api/sync", tags=["Sincronización Offline-First (PWA & Mobile)"])
-
-# Registro en memoria de respaldo por (schema, id_usuario, id_empresa, operation_id)
-# usado automáticamente si la tabla opcional t_sync_operacion aún no ha sido migrada.
-_SYNC_MEMORY_LOCK = threading.Lock()
-_SYNC_IDEMPOTENCY_MEMORY: Dict[tuple, Dict[str, Any]] = {}
-_TABLA_SYNC_DISPONIBLE: Optional[bool] = None
-
-
-def _tabla_sync_operacion_existe(schema: str) -> bool:
-    global _TABLA_SYNC_DISPONIBLE
-    if _TABLA_SYNC_DISPONIBLE is not None:
-        return _TABLA_SYNC_DISPONIBLE
-    db = PostgreSQL()
-    db.create_connection()
-    if not db.conn:
-        return False
-    try:
-        row = db.execute_query(
-            "SELECT 1 FROM information_schema.tables WHERE table_schema = %s AND table_name = 't_sync_operacion' LIMIT 1;",
-            (schema,),
-            fetchone=True,
-        )
-        _TABLA_SYNC_DISPONIBLE = bool(row)
-        return _TABLA_SYNC_DISPONIBLE
-    except Exception:
-        _TABLA_SYNC_DISPONIBLE = False
-        return False
-    finally:
-        db.close_connection()
-
-
-def limpiar_cache_sync_memoria() -> None:
-    with _SYNC_MEMORY_LOCK:
-        _SYNC_IDEMPOTENCY_MEMORY.clear()
-
 
 class SyncOperationItemDTO(BaseModel):
     operation_id: str = Field(..., min_length=6, max_length=64, description="UUID idempotente único por operación")
@@ -70,100 +35,142 @@ class SyncBatchRequestDTO(BaseModel):
     operations: List[SyncOperationItemDTO] = Field(..., min_length=1, max_length=50)
 
 
-def _buscar_operacion_idempotente(schema: str, id_usuario: int, id_empresa: int, operation_id: str) -> Optional[Dict[str, Any]]:
-    mem_key = (schema, int(id_usuario), int(id_empresa), str(operation_id))
-    with _SYNC_MEMORY_LOCK:
-        cached = _SYNC_IDEMPOTENCY_MEMORY.get(mem_key)
-        if cached and cached.get("status") == "synced":
-            res_copy = dict(cached)
-            res_copy["idempotent_replay"] = True
-            return res_copy
+def _resultado_no_confirmado(op, code, message, http_status=503):
+    return {
+        "operation_id": op.operation_id,
+        "kind": op.kind.strip().upper(),
+        "status": "failed_retryable",
+        "http_status": http_status,
+        "conflict_code": code,
+        "message": message,
+        "confirmation_verified": False,
+        "reconciliation_required": op.kind.strip().upper() == "VENTA_CONTADO",
+    }
 
-    if not _tabla_sync_operacion_existe(schema):
-        return None
 
-    db = PostgreSQL()
-    db.create_connection()
-    if not db.conn:
-        return None
+def _procesar_operacion_individual(op: SyncOperationItemDTO, token_data: dict) -> Dict[str, Any]:
+    """One durable receipt and all business effects share a single commit.
+
+    The transaction lock covers absent rows too, across processes and servers.
+    The savepoint rolls back rejected business effects without releasing that lock.
+    A reply is constructed inside the transaction but returned only after COMMIT.
+    """
+    schema = Config.SCHEMA or "comercio"
+    kind = op.kind.strip().upper()
+    user_id = int(token_data.get("nro_usuario") or token_data.get("id_usuario") or 0)
     try:
-        row = db.execute_query(
-            f"""
-            SELECT response_json
-            FROM {schema}.t_sync_operacion
-            WHERE id_usuario = %s AND id_empresa = %s AND operation_id = %s
-            LIMIT 1;
-            """,
-            (id_usuario, id_empresa, operation_id),
-            fetchone=True,
-        )
-        if row and row[0]:
-            stored = row[0] if isinstance(row[0], dict) else json.loads(row[0])
-            if stored.get("status") == "synced":
-                stored["idempotent_replay"] = True
-                with _SYNC_MEMORY_LOCK:
-                    _SYNC_IDEMPOTENCY_MEMORY[mem_key] = dict(stored)
-            return stored
-    except Exception:
-        # Si t_sync_operacion no existe aún, operar con el registro en memoria sin romper la petición
-        pass
-    finally:
-        db.close_connection()
-    return None
+        with transaction() as db:
+            requested = op.tenant_id or op.payload.get("id_empresa")
+            empresa = resolver_empresa_compra(token_data, int(requested) if requested is not None else None)
+            # Recheck current authority even for a replay; client tenant is only context.
+            if kind in ("VENTA_CONTADO", "RESERVA_SOLICITUD"):
+                from app.modules.saas.services.saas_services import exigir_vigencia
+                exigir_vigencia(empresa)
+            if kind == "VENTA_CONTADO":
+                from app.core.tenant_guard import obtener_sucursales_autorizadas
+                roles = {str(r).upper() for r in token_data.get("roles", [])}
+                roles.add(str(token_data.get("nombre_rol") or token_data.get("rol") or "").upper())
+                allowed = (tiene_permiso(token_data, "pos.vender") or tiene_permiso(token_data, "pos.cobrar")
+                           or tiene_permiso(token_data, "caja.ver") or bool(roles.intersection(
+                               {"ADMIN_EMPRESA", "ADMINISTRADOR", "SUPERADMIN", "CAJERO", "VENDEDOR", "ENCARGADO"})))
+                if not allowed or roles == {"CLIENTE"}:
+                    return {**_resultado_no_confirmado(op, "ROLE_FORBIDDEN", "Acceso POS denegado.", 403), "status": "conflict"}
+                branch = int(op.payload.get("id_sucursal") or op.branch_id or token_data.get("id_sucursal") or 0)
+                permitted = obtener_sucursales_autorizadas(token_data)
+                if permitted is not None and branch not in permitted:
+                    raise HTTPException(403, "Sucursal no autorizada.")
 
-
-def _guardar_operacion_idempotente(
-    schema: str,
-    id_usuario: int,
-    id_empresa: int,
-    operation_id: str,
-    kind: str,
-    result_obj: Dict[str, Any],
-) -> None:
-    mem_key = (schema, int(id_usuario), int(id_empresa), str(operation_id))
-    with _SYNC_MEMORY_LOCK:
-        if len(_SYNC_IDEMPOTENCY_MEMORY) > 2000:
-            _SYNC_IDEMPOTENCY_MEMORY.clear()
-        _SYNC_IDEMPOTENCY_MEMORY[mem_key] = dict(result_obj)
-
-    if not _tabla_sync_operacion_existe(schema):
-        return
-
-    db = PostgreSQL()
-    db.create_connection()
-    if not db.conn:
-        return
-    try:
-        db.execute_query(
-            f"""
-            INSERT INTO {schema}.t_sync_operacion (
-                operation_id, id_usuario, id_empresa, kind, status, http_status, conflict_code, response_json, updated_at
+            db.execute_query("SET LOCAL lock_timeout = '5s'; SET LOCAL synchronous_commit = on")
+            scope = json.dumps([schema, user_id, empresa, op.operation_id], separators=(",", ":"))
+            db.execute_query("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (scope,))
+            # Selecting request_hash also checks that BOTH required migrations exist.
+            previous = db.execute_query(
+                f"SELECT kind, status, request_hash, response_json FROM {schema}.t_sync_operacion "
+                "WHERE id_usuario=%s AND id_empresa=%s AND operation_id=%s FOR UPDATE",
+                (user_id, empresa, op.operation_id), fetchone=True,
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s::jsonb, now())
-            ON CONFLICT (id_usuario, id_empresa, operation_id)
-            DO UPDATE SET
-                status = EXCLUDED.status,
-                http_status = EXCLUDED.http_status,
-                conflict_code = EXCLUDED.conflict_code,
-                response_json = EXCLUDED.response_json,
-                updated_at = now();
-            """,
-            (
-                operation_id,
-                id_usuario,
-                id_empresa,
-                kind,
-                result_obj.get("status", "synced"),
-                int(result_obj.get("http_status", 200)),
-                result_obj.get("conflict_code"),
-                json.dumps(result_obj),
-            ),
-            commit=True,
-        )
+            boundary = db.execute_query(
+                f"SELECT inicio_garantia FROM {schema}.t_sync_control WHERE id=1", fetchone=True,
+            )
+            if not boundary:
+                raise RuntimeError("Falta el control de inicio de la garantía persistente.")
+            canonical = json.dumps({"kind": kind, "branch_id": op.branch_id, "entity_id": op.entity_id,
+                                    "payload": op.payload}, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False)
+            fingerprint = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+            if previous:
+                if previous[0] != kind or (previous[1] == "synced" and previous[2] and previous[2] != fingerprint):
+                    return {**_resultado_no_confirmado(op, "IDEMPOTENCY_KEY_REUSED",
+                            "La clave pertenece a otra operación o contenido confirmado.", 409), "status": "conflict"}
+                if not previous[2]:
+                    return {**_resultado_no_confirmado(op, "LEGACY_RECEIPT_REQUIRES_REVIEW",
+                            "Registro previo sin huella verificable; conservar y conciliar antes de reenviar.", 409), "status": "conflict"}
+                if previous[1] == "synced":
+                    receipt = previous[3] if isinstance(previous[3], dict) else json.loads(previous[3])
+                    return {**receipt, "idempotent_replay": True, "confirmation_verified": True}
+
+            if not previous and kind in ("VENTA_CONTADO", "RESERVA_SOLICITUD"):
+                try:
+                    created = datetime.fromisoformat((op.created_at or "").replace("Z", "+00:00"))
+                    if created.tzinfo is None or created < boundary[0]:
+                        raise ValueError("Operación anterior al inicio de la garantía.")
+                except (ValueError, TypeError):
+                    return {**_resultado_no_confirmado(op, "LEGACY_OPERATION_REQUIRES_REVIEW",
+                            "No hay recibo verificable de esta operación previa o sin fecha válida. Conserve y concilie la operación.", 409), "status": "conflict"}
+
+            db.cur.execute("SAVEPOINT sync_effects")
+            # Lock inventory in stable order before validation, including across
+            # different operation IDs. Tenant join prevents cross-company locks.
+            if kind in ("VENTA_CONTADO", "RESERVA_SOLICITUD"):
+                branch = int(op.payload.get("id_sucursal") or op.branch_id or token_data.get("id_sucursal") or 0)
+                items = op.payload.get("items") or []
+                variants = [int(it.get("id_variante") or 0) for it in items]
+                if len(variants) != len(set(variants)):
+                    result = {**_resultado_no_confirmado(op, "INVALID_PAYLOAD", "Combine las cantidades de variantes repetidas.", 400), "status": "failed_permanent"}
+                else:
+                    if kind == "VENTA_CONTADO":
+                        db.execute_query(
+                            f"SELECT id_sesion_caja FROM {schema}.t_caja_sesion "
+                            "WHERE id_usuario=%s AND id_empresa=%s AND id_sucursal=%s AND estado='ABIERTA' "
+                            "ORDER BY id_sesion_caja FOR UPDATE", (user_id, empresa, branch), fetchall=True,
+                        )
+                    db.execute_query(
+                        f"SELECT inv.id_inventario FROM {schema}.t_inventario inv "
+                        f"JOIN {schema}.t_sucursal s ON s.id_sucursal=inv.id_sucursal "
+                        "WHERE s.id_empresa=%s AND inv.id_sucursal=%s AND inv.id_variante=ANY(%s) "
+                        "ORDER BY inv.id_variante, inv.id_inventario FOR UPDATE OF inv",
+                        (empresa, branch, variants), fetchall=True,
+                    )
+                    result = _aplicar_operacion(op, token_data, empresa)
+            else:
+                result = _aplicar_operacion(op, token_data, empresa)
+            if result.get("status") != "synced":
+                db.cur.execute("ROLLBACK TO SAVEPOINT sync_effects")
+                db._rollback_only = False
+                result["confirmation_verified"] = False
+            elif getattr(db, "_rollback_only", False):
+                raise RuntimeError("No se puede confirmar una operación con errores de persistencia.")
+            else:
+                result["confirmation_verified"] = True
+                result["confirmation"] = {"operation_id": op.operation_id, "id_usuario": user_id,
+                                          "id_empresa": empresa, "request_hash": fingerprint}
+            db.cur.execute("RELEASE SAVEPOINT sync_effects")
+            db.execute_query(
+                f"INSERT INTO {schema}.t_sync_operacion "
+                "(operation_id,id_usuario,id_empresa,kind,status,http_status,conflict_code,response_json,request_hash) "
+                "VALUES (%s,%s,%s,%s,%s,%s,%s,%s::jsonb,%s) "
+                "ON CONFLICT (id_usuario,id_empresa,operation_id) DO UPDATE SET "
+                "status=EXCLUDED.status,http_status=EXCLUDED.http_status,conflict_code=EXCLUDED.conflict_code,"
+                "response_json=EXCLUDED.response_json,request_hash=EXCLUDED.request_hash,updated_at=now()",
+                (op.operation_id, user_id, empresa, kind, result["status"], result["http_status"],
+                 result.get("conflict_code"), json.dumps(result), fingerprint),
+            )
+        return result
+    except HTTPException as exc:
+        return {**_resultado_no_confirmado(op, "TENANT_FORBIDDEN", str(exc.detail), exc.status_code), "status": "conflict"}
     except Exception:
-        pass
-    finally:
-        db.close_connection()
+        logger.exception("Sync sin confirmación persistente: %s", op.operation_id)
+        return _resultado_no_confirmado(op, "PERSISTENT_IDEMPOTENCY_UNAVAILABLE",
+                                      "No hay confirmación durable. Conserve la operación y reintente con la misma clave.")
 
 
 def _obtener_stock_sucursal_variante(schema: str, id_variante: int, id_sucursal: int, id_empresa: int) -> int:
@@ -303,7 +310,7 @@ def _resolver_metodo_pago_efectivo(schema: str, requested_id_metodo: Optional[in
         db.close_connection()
 
 
-def _procesar_operacion_individual(op: SyncOperationItemDTO, token_data: dict) -> Dict[str, Any]:
+def _aplicar_operacion(op: SyncOperationItemDTO, token_data: dict, empresa_id: int) -> Dict[str, Any]:
     schema = Config.SCHEMA or "comercio"
     id_usuario = int(token_data.get("nro_usuario") or token_data.get("id_usuario") or 0)
     if not id_usuario:
@@ -319,40 +326,7 @@ def _procesar_operacion_individual(op: SyncOperationItemDTO, token_data: dict) -
     kind = (op.kind or "").strip().upper()
     payload = op.payload or {}
 
-    # 1. Resolver y autorizar empresa (el tenant_id del cliente NUNCA sustituye la autoridad del servidor)
-    requested_tenant = op.tenant_id or payload.get("id_empresa")
-    if requested_tenant is not None:
-        try:
-            requested_tenant = int(requested_tenant)
-        except (TypeError, ValueError):
-            requested_tenant = None
-
-    try:
-        empresa_id = resolver_empresa_compra(token_data, requested_tenant)
-    except HTTPException as he:
-        return {
-            "operation_id": op.operation_id,
-            "kind": kind or op.kind,
-            "status": "conflict" if he.status_code in (403, 409) else "failed_permanent",
-            "http_status": he.status_code,
-            "conflict_code": "TENANT_FORBIDDEN",
-            "message": str(he.detail),
-        }
-    except Exception as e:
-        logger.warning(f"Error resolviendo tenant en sync: {e}")
-        return {
-            "operation_id": op.operation_id,
-            "kind": kind or op.kind,
-            "status": "failed_permanent",
-            "http_status": 400,
-            "conflict_code": "INVALID_TENANT",
-            "message": str(e),
-        }
-
-    # 2. Verificar idempotencia (si ya se sincronizó con éxito antes, devolver resultado previo sin re-ejecutar)
-    prev = _buscar_operacion_idempotente(schema, id_usuario, empresa_id, op.operation_id)
-    if prev and prev.get("status") == "synced":
-        return prev
+    requested_tenant = empresa_id
 
     try:
         # ======================================================================
@@ -384,7 +358,6 @@ def _procesar_operacion_individual(op: SyncOperationItemDTO, token_data: dict) -
                     "conflict_code": "PRODUCT_INACTIVE",
                     "message": "La prenda seleccionada no existe o no pertenece a esta tienda.",
                 }
-                _guardar_operacion_idempotente(schema, id_usuario, empresa_id, op.operation_id, kind, res_conf)
                 return res_conf
 
             if not var_data["producto_activo"] or not var_data["variante_activa"]:
@@ -397,7 +370,6 @@ def _procesar_operacion_individual(op: SyncOperationItemDTO, token_data: dict) -
                     "message": f"La prenda '{var_data['producto_nombre']}' fue desactivada mientras estabas sin conexión.",
                     "conflict_detail": {"id_variante": id_variante, "producto_nombre": var_data["producto_nombre"]},
                 }
-                _guardar_operacion_idempotente(schema, id_usuario, empresa_id, op.operation_id, kind, res_conf)
                 return res_conf
 
             if expected_price is not None:
@@ -419,7 +391,6 @@ def _procesar_operacion_individual(op: SyncOperationItemDTO, token_data: dict) -
                                 "current_unit_price": cur_p,
                             },
                         }
-                        _guardar_operacion_idempotente(schema, id_usuario, empresa_id, op.operation_id, kind, res_conf)
                         return res_conf
                 except (TypeError, ValueError):
                     pass
@@ -443,7 +414,6 @@ def _procesar_operacion_individual(op: SyncOperationItemDTO, token_data: dict) -
                         "available_stock": stock_disp,
                     },
                 }
-                _guardar_operacion_idempotente(schema, id_usuario, empresa_id, op.operation_id, kind, res_conf)
                 return res_conf
 
             # Si mode == 'SET', fijar la cantidad exacta para evitar duplicar en reintentos
@@ -488,7 +458,6 @@ def _procesar_operacion_individual(op: SyncOperationItemDTO, token_data: dict) -
                             "available_stock": stock_disp,
                         },
                     }
-                    _guardar_operacion_idempotente(schema, id_usuario, empresa_id, op.operation_id, kind, res_conf)
                     return res_conf
 
             res_ok = {
@@ -502,7 +471,6 @@ def _procesar_operacion_individual(op: SyncOperationItemDTO, token_data: dict) -
                 "synced_at": datetime.now(timezone.utc).isoformat(),
                 "idempotent_replay": False,
             }
-            _guardar_operacion_idempotente(schema, id_usuario, empresa_id, op.operation_id, kind, res_ok)
             return res_ok
 
         # ======================================================================
@@ -539,7 +507,10 @@ def _procesar_operacion_individual(op: SyncOperationItemDTO, token_data: dict) -
                         tenant_id=empresa_id,
                         payload={"id_variante": id_variante, "cantidad": cantidad, "mode": "SET"},
                     )
-                    return _procesar_operacion_individual(sub_op, token_data)
+                    # Reuse business logic, keeping the original receipt identity
+                    # and the coordinator's single transaction/savepoint.
+                    result = _aplicar_operacion(sub_op, token_data, empresa_id)
+                    return {**result, "kind": kind}
 
             try:
                 carrito = carrito_repos.actualizar_cantidad_item(
@@ -564,7 +535,6 @@ def _procesar_operacion_individual(op: SyncOperationItemDTO, token_data: dict) -
                         "available_stock": stock_disp,
                     },
                 }
-                _guardar_operacion_idempotente(schema, id_usuario, empresa_id, op.operation_id, kind, res_conf)
                 return res_conf
 
             res_ok = {
@@ -578,7 +548,6 @@ def _procesar_operacion_individual(op: SyncOperationItemDTO, token_data: dict) -
                 "synced_at": datetime.now(timezone.utc).isoformat(),
                 "idempotent_replay": False,
             }
-            _guardar_operacion_idempotente(schema, id_usuario, empresa_id, op.operation_id, kind, res_ok)
             return res_ok
 
         # ======================================================================
@@ -617,7 +586,6 @@ def _procesar_operacion_individual(op: SyncOperationItemDTO, token_data: dict) -
                 "synced_at": datetime.now(timezone.utc).isoformat(),
                 "idempotent_replay": False,
             }
-            _guardar_operacion_idempotente(schema, id_usuario, empresa_id, op.operation_id, kind, res_ok)
             return res_ok
 
         # ======================================================================
@@ -636,7 +604,6 @@ def _procesar_operacion_individual(op: SyncOperationItemDTO, token_data: dict) -
                 "synced_at": datetime.now(timezone.utc).isoformat(),
                 "idempotent_replay": False,
             }
-            _guardar_operacion_idempotente(schema, id_usuario, empresa_id, op.operation_id, kind, res_ok)
             return res_ok
 
         # ======================================================================
@@ -690,7 +657,6 @@ def _procesar_operacion_individual(op: SyncOperationItemDTO, token_data: dict) -
                     "message": "La sucursal seleccionada para la reserva no está activa o no pertenece a esta tienda.",
                     "conflict_detail": {"id_sucursal": id_sucursal},
                 }
-                _guardar_operacion_idempotente(schema, id_usuario, empresa_id, op.operation_id, kind, res_conf)
                 return res_conf
 
             accept_price_change_global = bool(payload.get("accept_price_change"))
@@ -721,7 +687,6 @@ def _procesar_operacion_individual(op: SyncOperationItemDTO, token_data: dict) -
                         "message": f"La prenda '{nombre_p}' ya no se encuentra disponible para reserva.",
                         "conflict_detail": {"id_variante": id_var, "producto_nombre": nombre_p},
                     }
-                    _guardar_operacion_idempotente(schema, id_usuario, empresa_id, op.operation_id, kind, res_conf)
                     return res_conf
 
                 exp_price = raw_item.get("expected_unit_price", payload.get("expected_unit_price"))
@@ -748,7 +713,6 @@ def _procesar_operacion_individual(op: SyncOperationItemDTO, token_data: dict) -
                                     "current_unit_price": cur_p,
                                 },
                             }
-                            _guardar_operacion_idempotente(schema, id_usuario, empresa_id, op.operation_id, kind, res_conf)
                             return res_conf
                     except (TypeError, ValueError):
                         pass
@@ -773,7 +737,6 @@ def _procesar_operacion_individual(op: SyncOperationItemDTO, token_data: dict) -
                             "available_stock": stock_suc,
                         },
                     }
-                    _guardar_operacion_idempotente(schema, id_usuario, empresa_id, op.operation_id, kind, res_conf)
                     return res_conf
 
                 items_limpios.append({"id_variante": id_var, "cantidad": cant})
@@ -800,7 +763,6 @@ def _procesar_operacion_individual(op: SyncOperationItemDTO, token_data: dict) -
                     "conflict_code": "STOCK_INSUFFICIENT",
                     "message": str(ve),
                 }
-                _guardar_operacion_idempotente(schema, id_usuario, empresa_id, op.operation_id, kind, res_conf)
                 return res_conf
             except HTTPException as he:
                 return {
@@ -823,7 +785,6 @@ def _procesar_operacion_individual(op: SyncOperationItemDTO, token_data: dict) -
                 "synced_at": datetime.now(timezone.utc).isoformat(),
                 "idempotent_replay": False,
             }
-            _guardar_operacion_idempotente(schema, id_usuario, empresa_id, op.operation_id, kind, res_ok)
             return res_ok
 
         # ======================================================================
@@ -881,7 +842,6 @@ def _procesar_operacion_individual(op: SyncOperationItemDTO, token_data: dict) -
                     "message": "La sucursal de la venta en efectivo no está activa o no pertenece a la empresa.",
                     "conflict_detail": {"id_sucursal": id_sucursal, "reconciliation_required": True},
                 }
-                _guardar_operacion_idempotente(schema, id_usuario, empresa_pos, op.operation_id, kind, res_inc)
                 return res_inc
 
             suc_permitidas = obtener_sucursales_autorizadas(token_data)
@@ -913,7 +873,6 @@ def _procesar_operacion_individual(op: SyncOperationItemDTO, token_data: dict) -
                     ),
                     "conflict_detail": {"reconciliation_required": True, "tipo_detectado": metodo_tipo},
                 }
-                _guardar_operacion_idempotente(schema, id_usuario, empresa_pos, op.operation_id, kind, res_qr)
                 return res_qr
 
             # 4. Validar descuento manual si existe
@@ -934,7 +893,6 @@ def _procesar_operacion_individual(op: SyncOperationItemDTO, token_data: dict) -
                     "message": "Incidencia en venta offline: el usuario no posee permiso 'pos.descuento' para aplicar descuento.",
                     "conflict_detail": {"descuento": descuento, "reconciliation_required": True},
                 }
-                _guardar_operacion_idempotente(schema, id_usuario, empresa_pos, op.operation_id, kind, res_inc)
                 return res_inc
 
             # 5. Validar ítems, vigencia de prendas, precios y stock físico en la sucursal
@@ -986,7 +944,6 @@ def _procesar_operacion_individual(op: SyncOperationItemDTO, token_data: dict) -
                             "reconciliation_required": True,
                         },
                     }
-                    _guardar_operacion_idempotente(schema, id_usuario, empresa_pos, op.operation_id, kind, res_inc)
                     return res_inc
 
                 cur_p = round(float(var_data["precio_vigente"]), 2)
@@ -1015,7 +972,6 @@ def _procesar_operacion_individual(op: SyncOperationItemDTO, token_data: dict) -
                                     "reconciliation_required": True,
                                 },
                             }
-                            _guardar_operacion_idempotente(schema, id_usuario, empresa_pos, op.operation_id, kind, res_inc)
                             return res_inc
                     except (TypeError, ValueError):
                         pass
@@ -1043,7 +999,6 @@ def _procesar_operacion_individual(op: SyncOperationItemDTO, token_data: dict) -
                             "reconciliation_required": True,
                         },
                     }
-                    _guardar_operacion_idempotente(schema, id_usuario, empresa_pos, op.operation_id, kind, res_inc)
                     return res_inc
 
                 subtotal_servidor = round(subtotal_servidor + round(cur_p * cant, 2), 2)
@@ -1065,7 +1020,6 @@ def _procesar_operacion_individual(op: SyncOperationItemDTO, token_data: dict) -
                         "reconciliation_required": True,
                     },
                 }
-                _guardar_operacion_idempotente(schema, id_usuario, empresa_pos, op.operation_id, kind, res_inc)
                 return res_inc
 
             monto_recibido_raw = payload.get("monto_recibido")
@@ -1088,7 +1042,6 @@ def _procesar_operacion_individual(op: SyncOperationItemDTO, token_data: dict) -
                         "reconciliation_required": True,
                     },
                 }
-                _guardar_operacion_idempotente(schema, id_usuario, empresa_pos, op.operation_id, kind, res_inc)
                 return res_inc
 
             # 6. Resolver sesión activa de caja para el cajero en la sucursal
@@ -1111,7 +1064,6 @@ def _procesar_operacion_individual(op: SyncOperationItemDTO, token_data: dict) -
                         "reconciliation_required": True,
                     },
                 }
-                _guardar_operacion_idempotente(schema, id_usuario, empresa_pos, op.operation_id, kind, res_inc)
                 return res_inc
 
             id_sesion_activa = int(sesion_activa["id_sesion_caja"])
@@ -1144,11 +1096,10 @@ def _procesar_operacion_individual(op: SyncOperationItemDTO, token_data: dict) -
                     "message": f"Incidencia en venta en efectivo: {str(ve)}",
                     "conflict_detail": {"id_sucursal": id_sucursal, "reconciliation_required": True},
                 }
-                _guardar_operacion_idempotente(schema, id_usuario, empresa_pos, op.operation_id, kind, res_inc)
                 return res_inc
 
             try:
-                ref_offline = f"OFFLINE-{op.operation_id[:8].upper()}"
+                ref_offline = f"OFFLINE-{empresa_id}-{id_usuario}-{op.operation_id}"
                 pago_res = caja_pago_repos.ejecutar_pago_caja(
                     id_venta=int(venta_res["id_venta"]),
                     id_usuario=id_usuario,
@@ -1163,17 +1114,7 @@ def _procesar_operacion_individual(op: SyncOperationItemDTO, token_data: dict) -
                     desglose_cambio=payload.get("desglose_cambio") or [],
                 )
             except Exception as pago_err:
-                # Compensación transaccional: si el cobro falla, revertir la venta pendiente para no dejar stock descontado
-                try:
-                    pos_repos.anular_venta_pendiente_pos(
-                        id_venta=int(venta_res["id_venta"]),
-                        id_usuario=id_usuario,
-                        id_sucursal=id_sucursal,
-                        id_empresa=empresa_pos,
-                        motivo=f"Reversión automática por fallo al asentar cobro offline: {str(pago_err)}",
-                    )
-                except Exception:
-                    pass
+                # The coordinator rolls back sale, stock and payment to its savepoint.
                 res_inc = {
                     "operation_id": op.operation_id,
                     "kind": kind,
@@ -1184,7 +1125,6 @@ def _procesar_operacion_individual(op: SyncOperationItemDTO, token_data: dict) -
                     "message": f"Incidencia al registrar cobro en efectivo: {str(pago_err)}",
                     "conflict_detail": {"reconciliation_required": True},
                 }
-                _guardar_operacion_idempotente(schema, id_usuario, empresa_pos, op.operation_id, kind, res_inc)
                 return res_inc
 
             combined_data = {
@@ -1192,7 +1132,7 @@ def _procesar_operacion_individual(op: SyncOperationItemDTO, token_data: dict) -
                 **pago_res,
                 "estado_venta": "PAGADO",
                 "estado": "PAGADO",
-                "referencia_offline": f"OFFLINE-{op.operation_id[:8].upper()}",
+                "referencia_offline": f"OFFLINE-{empresa_id}-{id_usuario}-{op.operation_id}",
             }
             res_ok = {
                 "operation_id": op.operation_id,
@@ -1206,7 +1146,6 @@ def _procesar_operacion_individual(op: SyncOperationItemDTO, token_data: dict) -
                 "synced_at": datetime.now(timezone.utc).isoformat(),
                 "idempotent_replay": False,
             }
-            _guardar_operacion_idempotente(schema, id_usuario, empresa_pos, op.operation_id, kind, res_ok)
             return res_ok
 
         else:

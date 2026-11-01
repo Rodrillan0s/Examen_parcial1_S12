@@ -1,5 +1,11 @@
 # AuroraStore — Iteración 2 (Fase Avanzada): Informe de Pruebas PWA Offline-First y Sincronización Transaccional
 
+> Estado final 2026-10-31: 003/004 autorizadas, aplicadas en PostgreSQL real y verificadas por lectura de catálogo/checksums y reaplicación sin cambios. Se restableció el backend local y se limpiaron artefactos generados; no se ejecutaron ventas de prueba reales. [Acta y evidencia](SYNC_MIGRACION_APLICADA_2026-10-31.md).
+
+> Cola Angular, excepción autorizada el 2026-10-31: 40 pruebas nuevas de almacenamiento/retención aprobadas. La ejecución general tuvo 46/47 aprobadas y un fallo ajeno de mock en `permission-guard.spec.ts`; compilación de producción correcta. Se usó IndexedDB emulado, no un navegador físico. [Resultados y pendientes](PWA_COLA_RETENCION_RESULTADOS.md).
+
+> Endurecimiento 2026-10-31: la auditoría inicial detectó la ausencia de la tabla sync, subsanada mediante la aplicación autorizada posterior. El [informe transaccional](SYNC_IDEMPOTENCIA_TRANSACCIONAL.md) documenta 15 pruebas nuevas de integración aislada y una regresión individual adicional aprobadas, además de las ocho PWA y las 29 Iteración 1. Incluyen concurrencia, muerte de procesos, respuesta HTTP perdida, movimientos reales y reinicio de PostgreSQL con WAL/fsync. La suite histórica de rendimiento tiene cuatro errores preexistentes de configuración; no se declara aprobada. Flutter permanece sin modificar.
+
 **Fecha:** 2026-10-28  
 **Comandos ejecutados:**
 - `python -B -m unittest discover -s tests -p "test_*.py" -v`

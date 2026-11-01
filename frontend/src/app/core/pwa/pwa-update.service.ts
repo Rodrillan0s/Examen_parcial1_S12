@@ -120,8 +120,20 @@ export class PwaUpdateService {
     const now = Date.now();
     if (!lastReload || now - Number(lastReload) > 5000) {
       sessionStorage.setItem('aurora_last_chunk_reload', String(now));
-      console.warn('[PWA] Recargando automáticamente para resolver chunk desactualizado...');
-      window.location.reload();
+      console.warn('[PWA] Purgando caches estáticas y recargando automáticamente para resolver chunk desactualizado...');
+      const globalWin = window as any;
+      if (globalWin && globalWin.caches) {
+        globalWin.caches.keys().then((keys: string[]) => {
+          const staleKeys = keys.filter(k => k.includes('static') || k.includes('shell'));
+          Promise.all(staleKeys.map(k => globalWin.caches.delete(k))).finally(() => {
+            globalWin.location.reload();
+          });
+        }).catch(() => {
+          globalWin.location.reload();
+        });
+      } else if (globalWin && globalWin.location) {
+        globalWin.location.reload();
+      }
     }
   }
 

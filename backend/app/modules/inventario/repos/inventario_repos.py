@@ -1,6 +1,8 @@
 import logging
 from typing import Optional, Dict, Any, List
-from app.core.postgres import PostgreSQL
+from app.core.postgres import PostgreSQL, atomic
+from app.core.inventory_integrity import lock_position
+from fastapi import HTTPException
 from app.core.config import Config
 
 logger = logging.getLogger(__name__)
@@ -80,6 +82,7 @@ def validar_pertenencia_tenant(id_sucursal: int, id_variante: int, id_empresa: O
     finally:
         db.close_connection()
 
+@atomic
 def registrar_movimiento_inventario(
     id_sucursal: int,
     id_variante: int,
@@ -109,6 +112,7 @@ def registrar_movimiento_inventario(
         if not db.conn:
             return {"success": False, "error": "ERROR_CONEXION_BD", "message": "No se pudo conectar a la base de datos."}
 
+        lock_position(db, schema, id_sucursal, id_variante, id_empresa, allow_missing=True)
         # 2. Invocación de la función PostgreSQL transaccional
         query_fn = f"""
             SELECT {schema}.fn_movimiento_inventario(
@@ -126,8 +130,15 @@ def registrar_movimiento_inventario(
             return {"success": False, "error": "RESPUESTA_VACIA", "message": "La función no devolvió resultado."}
 
         resultado_json = res[0]
+        if not resultado_json.get('success'):
+            raise HTTPException(400, resultado_json.get('message') or 'Movimiento rechazado; no se modificó el inventario.')
+        lock_position(db, schema, id_sucursal, id_variante, id_empresa)
         return resultado_json
+    except HTTPException:
+        db.rollback()
+        raise
     except Exception as e:
+        db.rollback()
         logger.error(f"Excepción en registrar_movimiento_inventario: {e}")
         return {"success": False, "error": "EXCEPCION_BD", "message": str(e)}
     finally:

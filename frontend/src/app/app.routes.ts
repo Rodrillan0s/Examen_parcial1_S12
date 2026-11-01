@@ -41,6 +41,7 @@ export const routes: Routes = [
   { path: 'proveedores', redirectTo: 'admin/proveedores', pathMatch: 'full' },
   { path: 'planes', redirectTo: 'admin/planes', pathMatch: 'full' },
   { path: 'suscripciones', redirectTo: 'admin/suscripciones', pathMatch: 'full' },
+  { path: 'devoluciones', redirectTo: 'admin/devoluciones', pathMatch: 'full' },
 
   // RUTAS DE ADMINISTRACIÓN INTERNA (REQUIEREN AUTENTICACIÓN, PERMISOS RBAC Y CONTROL DE ALCANCE)
   {
@@ -79,7 +80,8 @@ export const routes: Routes = [
       { path: 'triaje-chat', loadComponent: () => import('./pages/triaje-chat/triaje-chat').then(m => m.TriajeChatComponent), canActivate: [permissionGuard('admin.acceder')] },
       { path: 'catalogo', loadComponent: () => import('./pages/catalogo/catalogo').then(m => m.CatalogoComponent), canActivate: [permissionGuard('productos.ver')] },
       { path: 'proveedores', loadComponent: () => import('./pages/proveedores/proveedores').then(m => m.ProveedoresComponent), canActivate: [permissionGuard('compras.ver')] },
-      { path: 'atender-reserva', loadComponent: () => import('./pages/atender-reserva/atender-reserva').then(m => m.AtenderReservaComponent), canActivate: [permissionGuard('ventas.ver')] }   
+      { path: 'atender-reserva', loadComponent: () => import('./pages/atender-reserva/atender-reserva').then(m => m.AtenderReservaComponent), canActivate: [permissionGuard('ventas.ver')] },
+      { path: 'devoluciones', loadComponent: () => import('./pages/devoluciones/devoluciones').then(m => m.DevolucionesComponent), canActivate: [permissionGuard('devoluciones.ver')] }   
     ]
   },
 

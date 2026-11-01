@@ -11,6 +11,9 @@ import psycopg2
 
 
 class LocalPostgres:
+    def __init__(self, durable=False):
+        self.durable = durable
+
     def __enter__(self):
         configured = os.getenv('ITER1_PG_BIN')
         candidates = [Path(configured)] if configured else sorted(Path('C:/Program Files/PostgreSQL').glob('*/bin'), reverse=True)
@@ -34,7 +37,7 @@ class LocalPostgres:
                 sock.bind(('127.0.0.1', 0))
                 port = sock.getsockname()[1]
             self.params = dict(host='127.0.0.1', port=port, user='iter1_test', dbname='postgres', connect_timeout=1)
-            self.proc = subprocess.Popen([str(self.bin / 'postgres'), '-D', str(self.data), '-h', '127.0.0.1', '-p', str(port), '-F'],
+            self.proc = subprocess.Popen([str(self.bin / 'postgres'), '-D', str(self.data), '-h', '127.0.0.1', '-p', str(port)] + ([] if self.durable else ['-F']),
                                          stdout=self.log, stderr=self.log, creationflags=self.flags)
             for _ in range(100):
                 try:
@@ -49,6 +52,26 @@ class LocalPostgres:
         except BaseException:
             self.__exit__(None, None, None)
             raise
+
+    def crash_restart(self):
+        assert self.durable and self.params['host'] == '127.0.0.1'
+        subprocess.run([str(self.bin / 'pg_ctl'), '-D', str(self.data), '-m', 'immediate', '-w', 'stop'],
+                       check=True, stdout=self.log, stderr=self.log, creationflags=self.flags)
+        self.proc.wait(timeout=15)
+        self.proc = subprocess.Popen([str(self.bin / 'postgres'), '-D', str(self.data), '-h', '127.0.0.1',
+                                      '-p', str(self.params['port'])],
+                                     stdout=self.log, stderr=self.log, creationflags=self.flags)
+        for _ in range(100):
+            try:
+                conn = psycopg2.connect(**self.params)
+                conn.close()
+                return
+            except psycopg2.OperationalError:
+                if self.proc.poll() is not None:
+                    break
+                time.sleep(.1)
+        raise RuntimeError('No se pudo reiniciar PostgreSQL aislado: ' +
+                           (self.data.parent / 'server.log').read_text(errors='replace')[-4000:])
 
     def __exit__(self, *args):
         if self.proc is not None and self.proc.poll() is None:

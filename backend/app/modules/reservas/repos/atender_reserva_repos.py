@@ -1,8 +1,10 @@
+from app.core.inventory_integrity import lock_items, lock_position
 import logging
 import random
 from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
-from app.core.postgres import PostgreSQL
+from fastapi import HTTPException
+from app.core.postgres import PostgreSQL, atomic
 from app.core.config import Config
 from app.modules.pos.repos import caja_repos
 from app.modules.pos.repos import caja_pago_repos
@@ -432,6 +434,7 @@ def obtener_reserva_para_atender(
         db.close_connection()
 
 
+@atomic
 def cobrar_y_atender_reserva_pos(
     id_reserva: int,
     id_empresa: int,
@@ -519,6 +522,11 @@ def cobrar_y_atender_reserva_pos(
         detalles_rows = db.execute_query(q_detalles, (id_reserva,), fetchall=True) or []
         if not detalles_rows:
             raise ValueError("La reserva no contiene prendas asociadas.")
+
+        stock_items = [dict(id_variante=r[1],cantidad=r[2]) for r in detalles_rows]
+        totals, positions = lock_items(db,schema,id_sucursal,stock_items,id_empresa)
+        if any(totals[v] > positions[v][2] for v in totals):
+            raise ValueError('INVENTORY_RECONCILIATION_REQUIRED: cantidad sin respaldo reservado.')
 
         # Mapa de selección desde frontend: id_detalle_reserva -> bool (True=Llevar, False=Devolver)
         items_payload = datos_cobro.get("items_seleccionados") or []
@@ -622,7 +630,8 @@ def cobrar_y_atender_reserva_pos(
                 """,
                 (id_reserva,)
             )
-            db.conn.commit()
+            lock_items(db,schema,id_sucursal,stock_items,id_empresa)
+            db.commit()
             return {
                 "success": True,
                 "accion": "LIBERADA_COMPLETA",
@@ -640,7 +649,7 @@ def cobrar_y_atender_reserva_pos(
             id_sesion_caja = sesion_act["id_sesion_caja"]
 
         q_sesion = f"""
-            SELECT estado, id_sucursal
+            SELECT estado, id_sucursal, id_empresa, id_usuario
             FROM {schema}.t_caja_sesion
             WHERE id_sesion_caja = %s
             FOR UPDATE;
@@ -650,6 +659,8 @@ def cobrar_y_atender_reserva_pos(
             raise ValueError("La sesión de caja especificada no se encuentra ABIERTA.")
         if ses_row[1] != id_sucursal:
             raise ValueError("La sesión de caja pertenece a una sucursal distinta a la de la reserva.")
+        if ses_row[2:] != (id_empresa,id_usuario):
+            raise HTTPException(403,'La sesión de caja no corresponde al tenant y cajero autorizados.')
 
         # 6. Procesar inventario para prendas ACEPTADAS
         for it_acep in items_aceptados:
@@ -885,7 +896,8 @@ def cobrar_y_atender_reserva_pos(
             (id_venta, id_reserva)
         )
 
-        db.conn.commit()
+        lock_items(db,schema,id_sucursal,stock_items,id_empresa)
+        db.commit()
         logger.info(f"✅ Venta y Atención de Reserva completada: id_reserva={id_reserva}, id_venta={id_venta}, total={total_venta}")
 
         return {
@@ -914,16 +926,16 @@ def cobrar_y_atender_reserva_pos(
 
     except Exception as e:
         if db.conn:
-            db.conn.rollback()
+            db.rollback()
         logger.error(f"[ERROR COBRAR POS RESERVA] {e}")
-        return {
-            "success": False,
-            "message": f"Error al procesar la atención POS de la reserva: {str(e)}"
-        }
+        if isinstance(e,HTTPException):
+            raise
+        raise HTTPException(400,f'Error al procesar la atención POS de la reserva: {e}') from e
     finally:
         db.close_connection()
 
 
+@atomic
 def atender_reserva_pagada(
     id_reserva: int,
     id_empresa: int,
@@ -979,6 +991,10 @@ def atender_reserva_pagada(
             return {"success": False, "message": f"La reserva no puede ser atendida (estado: {estado})."}
 
         pagada_online = con_pago and (estado_pago == "PAGADO")
+        if not id_venta and pagada_online:
+            raise ValueError('PAYMENT_RECONCILIATION_REQUIRED: declaración de pago sin venta/evidencia; no se formalizó una venta ficticia.')
+        if any(not it.get('aceptado', True) for it in (items_seleccionados or [])):
+            raise ValueError('REFUND_EVIDENCE_REQUIRED: entrega pagada con rechazo requiere conciliacion financiera.')
         if not id_venta and not pagada_online:
             return {"success": False, "message": "La reserva no ha sido pagada previamente. Debe cobrarse mediante el POS."}
         if id_venta and venta_estado not in ("PAGADO", "COMPLETADA"):
@@ -999,6 +1015,11 @@ def atender_reserva_pagada(
             FOR UPDATE;
         """
         det_rows = db.execute_query(q_det, (id_reserva,), fetchall=True) or []
+
+        stock_items = [dict(id_variante=r[1],cantidad=r[2]) for r in det_rows]
+        totals, positions = lock_items(db,schema,id_sucursal,stock_items,id_empresa)
+        if any(totals[v] > positions[v][2] for v in totals):
+            raise ValueError('INVENTORY_RECONCILIATION_REQUIRED: cantidad sin respaldo reservado.')
 
         items_entregados_count = 0
         items_devueltos_count = 0
@@ -1101,7 +1122,8 @@ def atender_reserva_pagada(
             (id_reserva,)
         )
 
-        db.conn.commit()
+        lock_items(db,schema,id_sucursal,stock_items,id_empresa)
+        db.commit()
 
         return {
             "success": True,
@@ -1119,12 +1141,11 @@ def atender_reserva_pagada(
 
     except Exception as e:
         if db.conn:
-            db.conn.rollback()
+            db.rollback()
         logger.error(f"[ERROR ATENDER RESERVA PAGADA] {e}")
-        return {
-            "success": False,
-            "message": f"Error al atender la reserva: {str(e)}"
-        }
+        if isinstance(e,HTTPException):
+            raise
+        raise HTTPException(400,f'Error al atender la reserva: {e}') from e
     finally:
         db.close_connection()
 

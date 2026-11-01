@@ -70,6 +70,7 @@ export interface PedidoData {
   costo_envio: number;
   descuento: number;
   total: number;
+  id_venta?: number;
   total_items: number;
   items: DetallePedidoData[];
 }
@@ -104,6 +105,7 @@ export interface PedidoResumen {
   costo_envio: number;
   descuento: number;
   total: number;
+  id_venta?: number;
   total_items: number;
   items_resumen: PedidoItemResumen[];
 }

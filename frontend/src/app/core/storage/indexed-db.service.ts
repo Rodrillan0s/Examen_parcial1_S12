@@ -1,5 +1,6 @@
 import { Injectable, PLATFORM_ID, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
+import { hasVerifiedConfirmation, OperationIdentity, sameOperationRequest, VerifiedSyncResult } from '../sync/sync-confirmation';
 
 export type StoreName =
   | 'products'
@@ -10,6 +11,7 @@ export type StoreName =
   | 'cart_drafts'
   | 'pending_operations'
   | 'sync_attempts'
+  | 'sync_receipts'
   | 'metadata';
 
 export interface CachedRecord<T = any> {
@@ -30,7 +32,8 @@ export interface CachedRecord<T = any> {
 export type StorageHealthStatus = 'OK' | 'QUOTA_WARNING' | 'FALLBACK_MEMORY';
 
 const DB_NAME = 'aurora_store_pwa_db';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
+const DURABLE_STORES: ReadonlySet<StoreName> = new Set(['pending_operations', 'sync_attempts', 'sync_receipts']);
 
 const MAX_PAGES_PER_SCOPE = 20;
 const MAX_DETAILS_PER_SCOPE = 60;
@@ -43,8 +46,8 @@ export class IndexedDbService {
   private dbPromise: Promise<IDBDatabase | null> | null = null;
 
   /**
-   * Fallback seguro en memoria cuando IndexedDB está bloqueado (modo incógnito estricto,
-   * cuota agotada o entorno de pruebas sin IDB nativo).
+   * Fallback para cachés descartables. Las operaciones e historias críticas
+   * requieren confirmación de IndexedDB y nunca dependen de esta memoria.
    */
   private memoryFallback = new Map<StoreName, Map<string, any>>();
 
@@ -61,6 +64,7 @@ export class IndexedDbService {
       'cart_drafts',
       'pending_operations',
       'sync_attempts',
+      'sync_receipts',
       'metadata'
     ];
     for (const s of stores) {
@@ -94,73 +98,40 @@ export class IndexedDbService {
     }
 
     this.dbPromise = new Promise<IDBDatabase | null>((resolve) => {
-      try {
-        const req = indexedDB.open(DB_NAME, DB_VERSION);
-
-        req.onupgradeneeded = (event: IDBVersionChangeEvent) => {
-          const db = (event.target as IDBOpenDBRequest).result;
-          const tx = (event.target as IDBOpenDBRequest).transaction;
-          this.applySchemaMigrations(db, event.oldVersion, event.newVersion || DB_VERSION, tx);
-        };
-
-        req.onsuccess = () => {
-          const db = req.result;
-          const requiredStores: StoreName[] = [
-            'products',
-            'product_details',
-            'catalog_filters',
-            'branches',
-            'stock_snapshots',
-            'cart_drafts',
-            'pending_operations',
-            'sync_attempts',
-            'metadata'
-          ];
-          const missing = requiredStores.filter((s) => !db.objectStoreNames.contains(s));
-          if (missing.length > 0) {
-            console.warn('[IndexedDB] Almacenes faltantes detectados en versión ' + db.version + ':', missing);
-            db.close();
-            this.dbPromise = null;
-            const nextVersion = db.version + 1;
-            const upReq = indexedDB.open(DB_NAME, nextVersion);
-            upReq.onupgradeneeded = (ev) => {
-              this.applySchemaMigrations(upReq.result, ev.oldVersion, nextVersion, upReq.transaction);
-            };
-            upReq.onsuccess = () => {
-              this.storageStatus.set('OK');
-              resolve(upReq.result);
-            };
-            upReq.onerror = () => {
-              this.storageStatus.set('FALLBACK_MEMORY');
-              resolve(null);
-            };
-            return;
-          }
-
-          db.onversionchange = () => {
-            db.close();
-            this.dbPromise = null;
-          };
-          this.storageStatus.set('OK');
-          resolve(db);
-        };
-
-        req.onerror = () => {
-          this.storageStatus.set('FALLBACK_MEMORY');
-          this.storageWarningMessage.set(
-            'El almacenamiento local del navegador está restringido. AuroraStore continuará operando en modo online con memoria temporal.'
-          );
-          resolve(null);
-        };
-
-        req.onblocked = () => {
-          this.storageStatus.set('FALLBACK_MEMORY');
-          resolve(null);
-        };
-      } catch {
+      const unavailable = () => {
         this.storageStatus.set('FALLBACK_MEMORY');
         resolve(null);
-      }
+      };
+      const open = (version?: number) => {
+        try {
+          const req = indexedDB.open(DB_NAME, version);
+          req.onupgradeneeded = event => {
+            this.applySchemaMigrations(req.result, event.oldVersion, event.newVersion || DB_VERSION, req.transaction);
+          };
+          req.onsuccess = () => {
+            const db = req.result;
+            const required: StoreName[] = ['products', 'product_details', 'catalog_filters', 'branches',
+              'stock_snapshots', 'cart_drafts', 'pending_operations', 'sync_attempts', 'sync_receipts', 'metadata'];
+            if (required.some(store => !db.objectStoreNames.contains(store))) {
+              const next = db.version + 1;
+              db.close();
+              open(next);
+              return;
+            }
+            db.onversionchange = () => { db.close(); this.dbPromise = null; };
+            this.storageStatus.set('OK');
+            resolve(db);
+          };
+          req.onerror = () => {
+            // Earlier releases could repair stores using a higher physical
+            // version. Reopen that version, preserving every pending record.
+            if (req.error?.name === 'VersionError' && version !== undefined) open();
+            else unavailable();
+          };
+          req.onblocked = unavailable;
+        } catch { unavailable(); }
+      };
+      open(DB_VERSION);
     });
 
     return this.dbPromise;
@@ -181,6 +152,7 @@ export class IndexedDbService {
       { name: 'cart_drafts', keyPath: 'key' },
       { name: 'pending_operations', keyPath: 'operation_id' },
       { name: 'sync_attempts', keyPath: 'attempt_id' },
+      { name: 'sync_receipts', keyPath: 'operation_id' },
       { name: 'metadata', keyPath: 'key' }
     ];
 
@@ -217,39 +189,52 @@ export class IndexedDbService {
     }
   }
 
+  private storageFailure(error?: unknown): Error {
+    const quota = (error as DOMException | undefined)?.name === 'QuotaExceededError';
+    this.storageStatus.set(quota ? 'QUOTA_WARNING' : 'FALLBACK_MEMORY');
+    const message = 'No se pudo confirmar el almacenamiento local. La operación no se ha dado por guardada; conserve sus datos y reintente.';
+    this.storageWarningMessage.set(message);
+    return new Error(message, { cause: error });
+  }
+
   public async put<T = any>(storeName: StoreName, value: T): Promise<void> {
-    const keyField = storeName === 'pending_operations' ? 'operation_id' : storeName === 'sync_attempts' ? 'attempt_id' : 'key';
+    const durable = DURABLE_STORES.has(storeName);
+    const keyField = storeName === 'pending_operations' || storeName === 'sync_receipts'
+      ? 'operation_id' : storeName === 'sync_attempts' ? 'attempt_id' : 'key';
     const recordKey = String((value as any)?.[keyField] || '');
-    if (recordKey) {
-      this.memoryFallback.get(storeName)?.set(recordKey, structuredClone ? structuredClone(value) : JSON.parse(JSON.stringify(value)));
-    }
-
+    const cache = () => {
+      if (recordKey) this.memoryFallback.get(storeName)?.set(recordKey, structuredClone(value));
+    };
+    if (!durable) cache();
     const db = await this.openDb();
-    if (!db) return;
-
-    await new Promise<void>((resolve) => {
+    if (!db) {
+      if (durable) throw this.storageFailure();
+      return;
+    }
+    await new Promise<void>((resolve, reject) => {
+      let failure: Error | undefined;
       try {
-        const tx = db.transaction(storeName, 'readwrite');
-        const store = tx.objectStore(storeName);
-        store.put(value);
+        const tx = db.transaction(storeName === 'pending_operations' ? [storeName, 'sync_receipts'] : storeName,
+          'readwrite', durable ? { durability: 'strict' } : undefined);
         tx.oncomplete = () => resolve();
-        tx.onerror = () => {
-          const errName = tx.error?.name || '';
-          if (errName === 'QuotaExceededError') {
-            this.storageStatus.set('QUOTA_WARNING');
-            this.storageWarningMessage.set(
-              'Espacio local casi lleno. Se limpiaron cachés antiguos automáticamente; tus operaciones pendientes están protegidas.'
-            );
-            this.evictOldestCatalogCache().finally(() => resolve());
-          } else {
-            resolve();
-          }
-        };
-      } catch {
-        resolve();
+        tx.onabort = () => durable ? reject(failure ?? this.storageFailure(tx.error)) : resolve();
+        tx.onerror = () => { /* onabort reports failure after the rollback. */ };
+        if (storeName === 'pending_operations') {
+          const receipt = tx.objectStore('sync_receipts').get(recordKey);
+          receipt.onsuccess = () => {
+            try {
+              if (receipt.result) {
+                failure = new Error('La operación ya tiene un recibo durable; no se vuelve a crear el pendiente.');
+                tx.abort();
+              } else tx.objectStore(storeName).put(value);
+            } catch (error) { failure = this.storageFailure(error); tx.abort(); }
+          };
+        } else tx.objectStore(storeName).put(value);
+      } catch (error) {
+        if (durable) reject(this.storageFailure(error));
+        else resolve();
       }
     });
-
     if (storeName === 'products') {
       await this.enforceBoundedStore('products', (value as any)?.scope_key, MAX_PAGES_PER_SCOPE);
     } else if (storeName === 'product_details') {
@@ -257,82 +242,87 @@ export class IndexedDbService {
     }
   }
 
+  /** Persist evidence and retire the exact request in one durable transaction. */
+  public async acknowledgeOperation(op: OperationIdentity, result: VerifiedSyncResult): Promise<void> {
+    if (!hasVerifiedConfirmation(op, result)) throw new Error('La respuesta no contiene una confirmación verificable.');
+    const db = await this.openDb();
+    if (!db) throw this.storageFailure();
+    await new Promise<void>((resolve, reject) => {
+      let failure: Error | undefined;
+      const tx = db.transaction(['pending_operations', 'sync_receipts', 'sync_attempts'], 'readwrite', { durability: 'strict' });
+      tx.oncomplete = () => resolve();
+      tx.onabort = () => reject(failure ?? this.storageFailure(tx.error));
+      tx.onerror = () => { /* Wait for rollback. */ };
+      const pending = tx.objectStore('pending_operations');
+      const request = pending.get(op.operation_id);
+      request.onsuccess = () => {
+        try {
+          const current = request.result as OperationIdentity | undefined;
+          if (!current || !sameOperationRequest(current, op)) {
+            failure = new Error('La operación local cambió durante el envío; se conserva para revisión.');
+            tx.abort();
+            return;
+          }
+          const now = Date.now();
+          const evidence = { ...result, scope_key: op.scope_key, user_id: op.user_id, tenant_id: op.tenant_id,
+            request: op, fetched_at_ms: now, confirmed_at: new Date(now).toISOString() };
+          tx.objectStore('sync_receipts').put(evidence);
+          tx.objectStore('sync_attempts').put({ ...evidence, attempt_id: `${op.operation_id}_confirmed_${now}` });
+          pending.delete(op.operation_id);
+        } catch (error) {
+          failure = this.storageFailure(error);
+          tx.abort();
+        }
+      };
+    });
+  }
+
   public async get<T = any>(storeName: StoreName, key: string): Promise<T | null> {
+    const durable = DURABLE_STORES.has(storeName);
+    const fallback = () => structuredClone(this.memoryFallback.get(storeName)?.get(key) ?? null);
     const db = await this.openDb();
     if (!db) {
-      const item = this.memoryFallback.get(storeName)?.get(key) || null;
-      return item ? JSON.parse(JSON.stringify(item)) : null;
+      if (durable) throw this.storageFailure();
+      return fallback();
     }
-
-    return new Promise<T | null>((resolve) => {
+    return new Promise<T | null>((resolve, reject) => {
+      const fail = (error?: unknown) => durable ? reject(this.storageFailure(error)) : resolve(fallback());
       try {
         const tx = db.transaction(storeName, 'readonly');
-        const store = tx.objectStore(storeName);
-        const req = store.get(key);
-        req.onsuccess = () => {
-          resolve(req.result ?? this.memoryFallback.get(storeName)?.get(key) ?? null);
-        };
-        req.onerror = () => {
-          resolve(this.memoryFallback.get(storeName)?.get(key) ?? null);
-        };
-      } catch {
-        resolve(this.memoryFallback.get(storeName)?.get(key) ?? null);
-      }
+        const req = tx.objectStore(storeName).get(key);
+        req.onsuccess = () => resolve(req.result ?? (durable ? null : fallback()));
+        req.onerror = () => fail(req.error);
+        tx.onabort = () => fail(tx.error);
+      } catch (error) { fail(error); }
     });
   }
 
   public async getAllByScope<T = any>(storeName: StoreName, scopePrefix: string): Promise<T[]> {
+    const durable = DURABLE_STORES.has(storeName);
+    const filter = (items: any[]) => items.filter(item => String(item?.scope_key || '').startsWith(scopePrefix));
+    const fallback = () => structuredClone(filter(Array.from(this.memoryFallback.get(storeName)?.values() ?? [])));
     const db = await this.openDb();
     if (!db) {
-      const map = this.memoryFallback.get(storeName);
-      if (!map) return [];
-      const results: T[] = [];
-      for (const val of map.values()) {
-        if (String(val?.scope_key || '').startsWith(scopePrefix)) {
-          results.push(JSON.parse(JSON.stringify(val)));
-        }
-      }
-      return results;
+      if (durable) throw this.storageFailure();
+      return fallback();
     }
-
-    return new Promise<T[]>((resolve) => {
+    return new Promise<T[]>((resolve, reject) => {
+      const fail = (error?: unknown) => durable ? reject(this.storageFailure(error)) : resolve(fallback());
       try {
         const tx = db.transaction(storeName, 'readonly');
-        const store = tx.objectStore(storeName);
-        const req = store.getAll();
+        const req = tx.objectStore(storeName).getAll();
         req.onsuccess = () => {
-          const all = (req.result || []) as any[];
-          const filtered = all.filter((item) => String(item?.scope_key || '').startsWith(scopePrefix));
-          if (!filtered.length && this.memoryFallback.get(storeName)?.size) {
-            const map = this.memoryFallback.get(storeName)!;
-            const memFiltered: T[] = [];
-            for (const val of map.values()) {
-              if (String(val?.scope_key || '').startsWith(scopePrefix)) {
-                memFiltered.push(JSON.parse(JSON.stringify(val)));
-              }
-            }
-            if (memFiltered.length) return resolve(memFiltered);
-          }
-          resolve(filtered);
+          const records = filter(req.result || []);
+          resolve(durable || records.length ? records : fallback());
         };
-        req.onerror = () => {
-          const map = this.memoryFallback.get(storeName);
-          if (!map) return resolve([]);
-          const results: T[] = [];
-          for (const val of map.values()) {
-            if (String(val?.scope_key || '').startsWith(scopePrefix)) {
-              results.push(JSON.parse(JSON.stringify(val)));
-            }
-          }
-          resolve(results);
-        };
-      } catch {
-        resolve([]);
-      }
+        req.onerror = () => fail(req.error);
+        tx.onabort = () => fail(tx.error);
+      } catch (error) { fail(error); }
     });
   }
 
   public async delete(storeName: StoreName, key: string): Promise<void> {
+    if (DURABLE_STORES.has(storeName)) throw new Error('La evidencia y las operaciones pendientes requieren confirmación; no se pueden borrar directamente.');
     this.memoryFallback.get(storeName)?.delete(key);
     const db = await this.openDb();
     if (!db) return;
@@ -350,14 +340,12 @@ export class IndexedDbService {
   }
 
   /**
-   * Purga rigurosamente todos los datos privados de usuario/tenant al cerrar sesión,
-   * cambiar de cuenta o recibir 401, impidiendo cualquier fuga entre tenants o usuarios.
+   * Purga cachés privados. Conserva pendientes, intentos y recibos particionados;
+   * la cola solo los muestra/envía tras autenticar al mismo usuario y empresa.
    */
   public async purgePrivateData(scopePrefix?: string): Promise<void> {
     const privateStores: StoreName[] = [
       'cart_drafts',
-      'pending_operations',
-      'sync_attempts',
       'products',
       'product_details',
       'branches',
@@ -371,7 +359,7 @@ export class IndexedDbService {
           const sk = String(v?.scope_key || '');
           const isPrivateRecord = sk.startsWith('u:');
           if (!scopePrefix) {
-            if (isPrivateRecord || storeName === 'cart_drafts' || storeName === 'pending_operations' || storeName === 'sync_attempts') {
+            if (isPrivateRecord || storeName === 'cart_drafts') {
               mem.delete(k);
             }
           } else if (sk.startsWith(scopePrefix)) {
@@ -397,7 +385,7 @@ export class IndexedDbService {
             const sk = String(val?.scope_key || '');
             const isPrivateRecord = sk.startsWith('u:');
             if (!scopePrefix) {
-              if (isPrivateRecord || storeName === 'cart_drafts' || storeName === 'pending_operations' || storeName === 'sync_attempts') {
+              if (isPrivateRecord || storeName === 'cart_drafts') {
                 cursor.delete();
               }
             } else if (sk.startsWith(scopePrefix)) {

@@ -6,6 +6,13 @@ import { PedidoService, PedidoResumen, PedidoData, PedidoFiltros } from '../../.
 import { PagoService } from '../../../services/pago';
 import { AuthService } from '../../../services/auth';
 import { ThemeService } from '../../../services/theme';
+import {
+  DevolucionesService,
+  DevolucionResumen,
+  DevolucionDetalleCompleto,
+  ElegibilidadVentaResponse,
+  SolicitarDevolucionPayload
+} from '../../../services/devoluciones';
 
 @Component({
   selector: 'app-mis-pedidos',
@@ -17,12 +24,16 @@ import { ThemeService } from '../../../services/theme';
 export class MisPedidosComponent implements OnInit {
   private pedidoService = inject(PedidoService);
   private pagoService = inject(PagoService);
+  private devolucionesService = inject(DevolucionesService);
   public authService = inject(AuthService);
   public themeService = inject(ThemeService);
   public router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
 
-  // Listado y Paginación
+  // Pestañas (CU11 Mis Pedidos / CU25W Mis Devoluciones)
+  tabActiva: 'PEDIDOS' | 'DEVOLUCIONES' = 'PEDIDOS';
+
+  // --- Listado y Paginación de Pedidos ---
   pedidos: PedidoResumen[] = [];
   total: number = 0;
   paginaActual: number = 1;
@@ -31,20 +42,43 @@ export class MisPedidosComponent implements OnInit {
   cargando: boolean = true;
   opcionesLimite: number[] = [5, 10, 20, 50];
 
-  // Filtros
+  // Filtros Pedidos
   filtroEstado: string = 'TODOS';
   filtroEstadoPago: string = 'TODOS';
   filtroFechaInicio: string = '';
   filtroFechaFin: string = '';
   filtroCodigo: string = '';
 
-  // Modal de Detalle
+  // Modal Detalle Pedido
   pedidoDetalle: PedidoData | null = null;
   mostrarModalDetalle: boolean = false;
   cargandoDetalle: boolean = false;
-
-  // Estado descarga comprobante
   descargandoPdfId: number | null = null;
+
+  // --- CU25W: Mis Devoluciones Solicitadas ---
+  misDevoluciones: DevolucionResumen[] = [];
+  totalDevoluciones: number = 0;
+  paginaDevoluciones: number = 1;
+  limiteDevoluciones: number = 10;
+  totalPaginasDevoluciones: number = 1;
+  cargandoDevoluciones: boolean = false;
+
+  // Modal Solicitud Devolución (CU25W)
+  mostrarModalSolicitud: boolean = false;
+  cargandoElegibilidad: boolean = false;
+  datosElegibilidad: ElegibilidadVentaResponse | null = null;
+  idVentaDevolucion: number | null = null;
+  idEmpresaDevolucion: number | null = null;
+  itemsSeleccionados: { [id_detalle_venta: number]: { seleccionado: boolean; cantidad: number } } = {};
+  motivoDevolucion: string = 'DEFECTO_FABRICA';
+  descripcionDevolucion: string = '';
+  evidenciaUrlDevolucion: string = '';
+  enviandoSolicitud: boolean = false;
+
+  // Modal Detalle Devolución (CU25W)
+  mostrarModalDetalleDevolucion: boolean = false;
+  devolucionDetalle: DevolucionDetalleCompleto | null = null;
+  cargandoDetalleDevolucion: boolean = false;
 
   // Toast Feedback
   mensajeToast: { tipo: 'exito' | 'error' | 'info'; texto: string } | null = null;
@@ -57,6 +91,18 @@ export class MisPedidosComponent implements OnInit {
     }
     this.cargarPedidos(1);
   }
+
+  cambiarTab(tab: 'PEDIDOS' | 'DEVOLUCIONES'): void {
+    this.tabActiva = tab;
+    if (tab === 'DEVOLUCIONES' && this.misDevoluciones.length === 0) {
+      this.cargarDevoluciones(1);
+    }
+    this.cdr.markForCheck();
+  }
+
+  // =========================================================================
+  // GESTIÓN DE PEDIDOS (CU11)
+  // =========================================================================
 
   cargarPedidos(pagina: number = 1): void {
     this.paginaActual = pagina;
@@ -162,6 +208,189 @@ export class MisPedidosComponent implements OnInit {
     });
   }
 
+  // =========================================================================
+  // CU25W: GESTIÓN DE DEVOLUCIONES CLIENTE
+  // =========================================================================
+
+  cargarDevoluciones(pagina: number = 1): void {
+    this.paginaDevoluciones = pagina;
+    this.cargandoDevoluciones = true;
+    this.cdr.markForCheck();
+
+    this.devolucionesService.listarMisDevoluciones(this.paginaDevoluciones, this.limiteDevoluciones).subscribe({
+      next: (res: any) => {
+        this.misDevoluciones = res.data || [];
+        this.totalDevoluciones = res.total || 0;
+        this.totalPaginasDevoluciones = res.total_paginas || 1;
+        this.cargandoDevoluciones = false;
+        this.cdr.markForCheck();
+      },
+      error: (err: any) => {
+        this.cargandoDevoluciones = false;
+        this.mostrarToast('error', err?.error?.detail || 'Error al consultar tus devoluciones.');
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  iniciarSolicitudDevolucion(idVenta: number, idEmpresa?: number): void {
+    this.idVentaDevolucion = idVenta;
+    this.idEmpresaDevolucion = idEmpresa || null;
+    this.cargandoElegibilidad = true;
+    this.mostrarModalSolicitud = true;
+    this.datosElegibilidad = null;
+    this.itemsSeleccionados = {};
+    this.motivoDevolucion = 'DEFECTO_FABRICA';
+    this.descripcionDevolucion = '';
+    this.evidenciaUrlDevolucion = '';
+    this.cdr.markForCheck();
+
+    this.devolucionesService.consultarElegibilidadVenta(idVenta, idEmpresa).subscribe({
+      next: (res) => {
+        this.cargandoElegibilidad = false;
+        this.datosElegibilidad = res;
+        if (res.es_elegible && res.items?.length) {
+          res.items.forEach(it => {
+            if (it.cantidad_elegible > 0) {
+              this.itemsSeleccionados[it.id_detalle_venta] = {
+                seleccionado: false,
+                cantidad: it.cantidad_elegible
+              };
+            }
+          });
+        }
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.cargandoElegibilidad = false;
+        this.mostrarToast('error', err?.error?.detail || 'No se pudo verificar la elegibilidad de la venta.');
+        this.mostrarModalSolicitud = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  cerrarModalSolicitud(): void {
+    this.mostrarModalSolicitud = false;
+    this.datosElegibilidad = null;
+    this.idVentaDevolucion = null;
+    this.itemsSeleccionados = {};
+    this.cdr.markForCheck();
+  }
+
+  toggleSeleccionItem(idDetalleVenta: number): void {
+    if (this.itemsSeleccionados[idDetalleVenta]) {
+      this.itemsSeleccionados[idDetalleVenta].seleccionado = !this.itemsSeleccionados[idDetalleVenta].seleccionado;
+      this.cdr.markForCheck();
+    }
+  }
+
+  ajustarCantidadItem(idDetalleVenta: number, cant: number, max: number): void {
+    if (this.itemsSeleccionados[idDetalleVenta]) {
+      const val = Math.max(1, Math.min(cant, max));
+      this.itemsSeleccionados[idDetalleVenta].cantidad = val;
+      this.cdr.markForCheck();
+    }
+  }
+
+  hayItemsSeleccionados(): boolean {
+    return Object.values(this.itemsSeleccionados).some(it => it.seleccionado && it.cantidad > 0);
+  }
+
+  calcularMontoEstimadoReembolso(): number {
+    if (!this.datosElegibilidad?.items) return 0;
+    let total = 0;
+    for (const item of this.datosElegibilidad.items) {
+      const sel = this.itemsSeleccionados[item.id_detalle_venta];
+      if (sel?.seleccionado && sel.cantidad > 0) {
+        total += item.precio_neto_unitario * sel.cantidad;
+      }
+    }
+    return Math.round(total * 100) / 100;
+  }
+
+  enviarSolicitudDevolucion(): void {
+    if (!this.hayItemsSeleccionados()) {
+      this.mostrarToast('info', 'Debes seleccionar al menos una prenda para devolver.');
+      return;
+    }
+    if (!this.idVentaDevolucion) return;
+
+    if (this.motivoDevolucion === 'OTRO' && !this.descripcionDevolucion.trim()) {
+      this.mostrarToast('info', 'Por favor ingresa una descripción para el motivo seleccionado.');
+      return;
+    }
+
+    const itemsPayload = Object.entries(this.itemsSeleccionados)
+      .filter(([_, val]) => val.seleccionado && val.cantidad > 0)
+      .map(([idDet, val]) => ({
+        id_detalle_venta: Number(idDet),
+        cantidad: val.cantidad
+      }));
+
+    const payload: SolicitarDevolucionPayload = {
+      id_venta: this.idVentaDevolucion,
+      id_empresa: this.idEmpresaDevolucion || undefined,
+      motivo: this.motivoDevolucion,
+      descripcion: this.descripcionDevolucion.trim() || undefined,
+      evidencia_url: this.evidenciaUrlDevolucion.trim() || undefined,
+      items: itemsPayload
+    };
+
+    this.enviandoSolicitud = true;
+    this.cdr.markForCheck();
+
+    this.devolucionesService.solicitarDevolucion(payload).subscribe({
+      next: (res) => {
+        this.enviandoSolicitud = false;
+        this.cerrarModalSolicitud();
+        if (this.mostrarModalDetalle) {
+          this.cerrarDetalle();
+        }
+        this.mostrarToast('exito', `Solicitud ${res?.data?.codigo_devolucion || ''} enviada correctamente.`);
+        this.cambiarTab('DEVOLUCIONES');
+        this.cargarDevoluciones(1);
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.enviandoSolicitud = false;
+        this.mostrarToast('error', err?.error?.detail || 'No fue posible registrar la solicitud de devolución. Se conservan tus datos.');
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  abrirDetalleDevolucion(idDevolucion: number): void {
+    this.cargandoDetalleDevolucion = true;
+    this.mostrarModalDetalleDevolucion = true;
+    this.devolucionDetalle = null;
+    this.cdr.markForCheck();
+
+    this.devolucionesService.verMiDevolucion(idDevolucion).subscribe({
+      next: (res: any) => {
+        this.devolucionDetalle = res.data;
+        this.cargandoDetalleDevolucion = false;
+        this.cdr.markForCheck();
+      },
+      error: (err: any) => {
+        this.cargandoDetalleDevolucion = false;
+        this.mostrarModalDetalleDevolucion = false;
+        this.mostrarToast('error', err?.error?.detail || 'No se pudo obtener el detalle de la devolución.');
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  cerrarDetalleDevolucion(): void {
+    this.mostrarModalDetalleDevolucion = false;
+    this.devolucionDetalle = null;
+    this.cdr.markForCheck();
+  }
+
+  // =========================================================================
+  // HELPERS UI Y ESTILOS
+  // =========================================================================
+
   copiarCodigo(codigo: string): void {
     if (navigator?.clipboard) {
       navigator.clipboard.writeText(codigo).then(() => {
@@ -182,10 +411,9 @@ export class MisPedidosComponent implements OnInit {
     setTimeout(() => {
       this.mensajeToast = null;
       this.cdr.markForCheck();
-    }, 4000);
+    }, 4500);
   }
 
-  // --- Helpers de Estilo para Estados ---
   getEstadoClase(estado: string): string {
     switch (estado?.toUpperCase()) {
       case 'PENDIENTE_PAGO':
@@ -240,6 +468,43 @@ export class MisPedidosComponent implements OnInit {
       case 'RECHAZADO': return 'Pago Rechazado';
       case 'CANCELADO': return 'Anulado';
       default: return estadoPago || 'Pendiente';
+    }
+  }
+
+  getEstadoDevolucionClase(estado: string): string {
+    switch (estado?.toUpperCase()) {
+      case 'SOLICITADA':
+        return 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30';
+      case 'EN_REVISION':
+        return 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30';
+      case 'APROBADA':
+        return 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30';
+      case 'RECHAZADA':
+        return 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30';
+      case 'RECIBIDA':
+        return 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-500/30';
+      case 'PENDIENTE_REEMBOLSO':
+        return 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border-cyan-500/30';
+      case 'COMPLETADA':
+        return 'bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-500/30';
+      case 'CANCELADA':
+        return 'bg-zinc-500/15 text-zinc-700 dark:text-zinc-300 border-zinc-500/30';
+      default:
+        return 'bg-zinc-500/15 text-zinc-700 dark:text-zinc-300 border-zinc-500/30';
+    }
+  }
+
+  getEstadoDevolucionLabel(estado: string): string {
+    switch (estado?.toUpperCase()) {
+      case 'SOLICITADA': return 'Solicitada (En Espera)';
+      case 'EN_REVISION': return 'En Revisión Técnica';
+      case 'APROBADA': return 'Aprobada ✓';
+      case 'RECHAZADA': return 'Rechazada ✕';
+      case 'RECIBIDA': return 'Prendas Recibidas';
+      case 'PENDIENTE_REEMBOLSO': return 'Pendiente de Reembolso';
+      case 'COMPLETADA': return 'Devolución Completada';
+      case 'CANCELADA': return 'Cancelada';
+      default: return estado || 'En Proceso';
     }
   }
 }

@@ -60,3 +60,8 @@ Las pruebas crean un cluster PostgreSQL temporal local con conexión limitada a 
 Verificaciones: aislamiento por empresa/sucursal, permisos revocados, límites 2/10 y reactivación, concurrencia, vigencia, reportes Profesional, renovación/solapamiento, cancelación, rollback de usuario/asignaciones/auditoría, migración/reversión/idempotencia/checksum y arranque sin conexiones ni DDL con registro de rutas P1.
 
 Pendiente: clon completo P1 con funciones almacenadas, pagos/entregas/caja de extremo a extremo y pruebas de navegación Angular. La migración real autorizada se aplicó y verificó el 2026-10-24; no se ejecutaron pruebas comerciales de escritura ni pruebas visuales de navegador sobre esa base.
+
+
+## Endurecimiento sync (2026-10-31)
+
+La auditoría inicial detectó que faltaban la tabla sync y su registro de migraciones. Tras autorización explícita, **003 y 004 se aplicaron y verificaron en la base real el 2026-10-31**, sin cambios al contenido de 003. La reaplicación devuelve «Sin cambios». Revisar el [acta de aplicación](SYNC_MIGRACION_APLICADA_2026-10-31.md), [informe transaccional](SYNC_IDEMPOTENCIA_TRANSACCIONAL.md) y [contrato actualizado](PWA_CONTRATO_SYNC.md) para permisos, reversibilidad y conciliación de operaciones anteriores. No ejecutar 003 DOWN cuando existan recibos reales. Flutter offline permanece pendiente de conciliación y validación en dispositivos reales.

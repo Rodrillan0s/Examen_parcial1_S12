@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
@@ -40,6 +40,8 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   private cdr            = inject(ChangeDetectorRef);
   private searchTimer: any = null;
 
+  @ViewChild(CatalogoFiltrosComponent) filtrosComponentRef?: CatalogoFiltrosComponent;
+
   // Tenants / Tiendas
   tenants: TenantPublico[] = [];
   selectedTenantId: number | null = null;
@@ -63,6 +65,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   // Valores de filtros activos
   searchQuery: string = '';
   selectedCategory: number | null = null;
+  categoriaNombreFiltro: string = '';
   selectedTalla: number | null = null;
   selectedColor: number | null = null;
   selectedTemporada: string = 'Todas';
@@ -94,10 +97,22 @@ export class CatalogoComponent implements OnInit, OnDestroy {
       }
     });
 
-    // 2. Escuchar queryParams (tenant / empresa / producto)
+    // 2. Escuchar queryParams (tenant / empresa / producto / búsqueda / categoría)
     this.route.queryParams.subscribe(params => {
       const urlTenant = params['empresa'] || params['tenant'];
       const initialTenantId = urlTenant ? parseInt(urlTenant, 10) : null;
+      if (params['q'] || params['busqueda']) {
+        this.searchQuery = params['q'] || params['busqueda'];
+      }
+      if (params['categoria']) {
+        const catId = parseInt(params['categoria'], 10);
+        if (!isNaN(catId)) {
+          this.selectedCategory = catId;
+        }
+      }
+      if (params['categoria_nombre']) {
+        this.categoriaNombreFiltro = params['categoria_nombre'];
+      }
       if (params['producto'] || params['id_producto']) {
         const prodId = parseInt(params['producto'] || params['id_producto'], 10);
         if (!isNaN(prodId)) {
@@ -198,6 +213,16 @@ export class CatalogoComponent implements OnInit, OnDestroy {
         this.filtrosDisponibles = res.data;
         if (res.empresa) {
           this.selectedTenant = res.empresa;
+        }
+        if (this.categoriaNombreFiltro && this.filtrosDisponibles.categorias) {
+          const match = this.filtrosDisponibles.categorias.find(
+            c => c.nombre.toLowerCase().includes(this.categoriaNombreFiltro.toLowerCase())
+          );
+          if (match) {
+            this.selectedCategory = match.id_categoria;
+            this.categoriaNombreFiltro = '';
+            this.aplicarFiltros();
+          }
         }
         this.cargandoFiltros = false;
         this.cdr.markForCheck();
@@ -352,6 +377,12 @@ export class CatalogoComponent implements OnInit, OnDestroy {
     this.precioMax = max;
     this.paginaActual = 1;
     this.aplicarFiltros();
+  }
+
+  getCategoriaNombre(): string {
+    if (!this.selectedCategory) return '';
+    const cat = this.filtrosDisponibles?.categorias?.find(c => c.id_categoria === this.selectedCategory);
+    return cat ? cat.nombre : '';
   }
 
   limpiarFiltros(recargar: boolean = true): void {

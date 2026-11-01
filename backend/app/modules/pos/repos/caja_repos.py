@@ -1,6 +1,6 @@
 import logging
 from typing import Dict, Any, List, Optional
-from app.core.postgres import PostgreSQL
+from app.core.postgres import PostgreSQL, atomic
 from app.core.config import Config
 
 logger = logging.getLogger(__name__)
@@ -164,6 +164,7 @@ def verificar_caja_ocupada(id_caja: int) -> Optional[int]:
     finally:
         db.close_connection()
 
+@atomic
 def abrir_caja_sesion(
     id_usuario: int,
     id_sucursal: int,
@@ -204,6 +205,16 @@ def abrir_caja_sesion(
     db.create_connection()
     try:
         schema = _get_schema()
+
+        # The existing user/cash-box rows serialize absent sessions too.
+        user = db.execute_query(f'SELECT id_empresa FROM {schema}.t_usuario WHERE id_usuario=%s FOR UPDATE',
+                                (id_usuario,), fetchone=True)
+        box = db.execute_query(f'''SELECT c.id_sucursal,c.id_empresa,s.id_empresa FROM {schema}.t_caja c
+            JOIN {schema}.t_sucursal s ON s.id_sucursal=c.id_sucursal WHERE c.id_caja=%s FOR UPDATE OF c''',
+            (id_caja,), fetchone=True)
+        if not user or (user[0] is not None and user[0] != id_empresa) or not box or tuple(box) != (id_sucursal,id_empresa,id_empresa):
+            from fastapi import HTTPException
+            raise HTTPException(403, 'La caja, sucursal, empresa o usuario no coinciden con el contexto autorizado.')
 
         # Verificar que el usuario no tenga OTRA caja abierta en esta sucursal
         q_check_user = f"""
@@ -264,7 +275,7 @@ def abrir_caja_sesion(
             """
             db.execute_query(q_conteo, (id_sesion, id_denom, val, cant, subtot))
 
-        db.conn.commit()
+        db.commit()
 
         # Retornar sesión completa
         return {
@@ -283,7 +294,7 @@ def abrir_caja_sesion(
             ]
         }
     except Exception as e:
-        db.conn.rollback()
+        db.rollback()
         raise e
     finally:
         db.close_connection()

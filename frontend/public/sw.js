@@ -181,6 +181,10 @@ self.addEventListener('fetch', (event) => {
 
   // 2. Bundles estáticos de la aplicación (Cache-First + actualización en caché)
   if (isHashedStaticAsset(url)) {
+    // En desarrollo local (localhost), omitir intercepción de chunks dinámicos de Vite HMR
+    if (url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.port === '4200') {
+      return;
+    }
     event.respondWith(
       (async () => {
         const cached = await caches.match(request);
@@ -194,6 +198,10 @@ self.addEventListener('fetch', (event) => {
             staticCache.put(request, networkResponse.clone());
           } else if (networkResponse && networkResponse.status === 404 && /\.js$/i.test(url.pathname)) {
             // Un chunk con hash no se encontró en el servidor: nueva versión desplegada
+            try {
+              await caches.delete(STATIC_CACHE);
+              await caches.delete(SHELL_CACHE);
+            } catch (_) {}
             const clientsList = await self.clients.matchAll({ type: 'window' });
             for (const client of clientsList) {
               client.postMessage({

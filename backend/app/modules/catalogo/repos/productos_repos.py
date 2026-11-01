@@ -1,5 +1,5 @@
 from typing import Optional, List, Dict, Any, Tuple
-from app.core.postgres import PostgreSQL
+from app.core.postgres import PostgreSQL, atomic
 from app.core.config import Config
 
 def _get_schema() -> str:
@@ -494,6 +494,7 @@ def verificar_nombre_duplicado(nombre: str, id_empresa: Optional[int], id_produc
 # ESCRITURA Y MUTACIONES
 # ==============================================================================
 
+@atomic
 def crear_producto(
     id_empresa: int,
     id_categoria: int,
@@ -517,6 +518,10 @@ def crear_producto(
     db.create_connection()
     try:
         schema = _get_schema()
+        from app.core.tenant_guard import validar_relaciones_tenant
+        db.execute_query('SELECT pg_advisory_xact_lock(hashtextextended(%s,0))',
+                         (f'catalog-sku:{schema}:{id_empresa}',))
+        validar_relaciones_tenant(id_empresa, id_categoria=id_categoria)
         query = f"""
             INSERT INTO {schema}.t_producto (
                 id_empresa, id_categoria, nombre, descripcion, precio,
@@ -549,6 +554,7 @@ def crear_producto(
     finally:
         db.close_connection()
 
+@atomic
 def actualizar_producto(
     id_producto: int,
     id_categoria: int,
@@ -572,6 +578,15 @@ def actualizar_producto(
     db.create_connection()
     try:
         schema = _get_schema()
+        from app.core.tenant_guard import validar_relaciones_tenant
+        owner = db.execute_query(f'SELECT id_empresa FROM {schema}.t_producto WHERE id_producto=%s', (id_producto,), fetchone=True)
+        if not owner:
+            from fastapi import HTTPException
+            raise HTTPException(404, 'Producto no encontrado.')
+        db.execute_query('SELECT pg_advisory_xact_lock(hashtextextended(%s,0))',
+                         (f'catalog-sku:{schema}:{owner[0]}',))
+        db.execute_query(f'SELECT id_producto FROM {schema}.t_producto WHERE id_producto=%s FOR UPDATE', (id_producto,), fetchone=True)
+        validar_relaciones_tenant(owner[0], id_categoria=id_categoria)
         query = f"""
             UPDATE {schema}.t_producto 
             SET 
@@ -626,6 +641,7 @@ def cambiar_estado_producto(id_producto: int, activo: bool) -> bool:
 # GESTIÓN DE VARIANTES (TALLA x COLOR)
 # ==============================================================================
 
+@atomic
 def sincronizar_variantes_producto(
     id_producto: int,
     tallas_ids: List[int],
@@ -672,6 +688,15 @@ def sincronizar_variantes_producto(
             (id_producto,),
             fetchone=True
         )
+        if not prod_row:
+            from fastapi import HTTPException
+            raise HTTPException(404, 'Producto no encontrado.')
+        from app.core.tenant_guard import validar_relaciones_tenant
+        validar_relaciones_tenant(prod_row[1], tallas_ids=tallas_ids, colores_ids=colores_ids)
+        # Serialize every generated SKU within its real tenant, including absent variants.
+        db.execute_query('SELECT pg_advisory_xact_lock(hashtextextended(%s,0))',
+                         (f'catalog-sku:{schema}:{prod_row[1]}',))
+        db.execute_query(f'SELECT id_producto FROM {schema}.t_producto WHERE id_producto=%s FOR UPDATE', (id_producto,), fetchone=True)
         codigo_prod = prod_row[0] if prod_row and prod_row[0] else f"PRD-{id_producto}"
 
         # 1. Combinaciones deseadas: set de tuplas (id_talla, id_color)
@@ -740,12 +765,17 @@ def sincronizar_variantes_producto(
                 c_str = c_raw.replace(" ", "").upper()[:4] if c_raw else str(c_id)
                 sku = f"{codigo_prod}-{t_str}-{c_str}"
 
+                collision = db.execute_query(f"""SELECT v.id_variante FROM {schema}.t_producto_talla_color v
+                    JOIN {schema}.t_producto p ON p.id_producto=v.id_producto
+                    WHERE p.id_empresa=%s AND lower(trim(v.sku))=lower(trim(%s)) LIMIT 1""",
+                    (prod_row[1], sku), fetchone=True)
+                if collision:
+                    from fastapi import HTTPException
+                    raise HTTPException(409, 'SKU_COLLISION: el codigo generado coincide con otra variante; no se modificaron SKU historicos.')
                 db.execute_query(f"""
                     INSERT INTO {schema}.t_producto_talla_color (
                         id_producto, id_talla, id_color, sku, precio, activo, estado, created_at
                     ) VALUES (%s, %s, %s, %s, %s, TRUE, TRUE, NOW())
-                    ON CONFLICT (id_producto, id_talla, id_color) DO UPDATE 
-                    SET activo = TRUE, estado = TRUE, precio = EXCLUDED.precio;
                 """, (id_producto, t_id, c_id, sku, p_especifico), commit=True)
                 creadas += 1
 
@@ -798,6 +828,7 @@ def sincronizar_variantes_producto(
         db.close_connection()
 
 
+@atomic
 def actualizar_precios_variantes_producto(
     id_producto: int,
     precios_por_talla: Optional[Dict[Any, float]] = None,

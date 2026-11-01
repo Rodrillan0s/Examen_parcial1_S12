@@ -3,7 +3,7 @@ from pathlib import Path
 import sys
 import unittest
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import psycopg2
 from fastapi.testclient import TestClient
@@ -16,7 +16,6 @@ from isolated_postgres import LocalPostgres
 from app.core.config import Config
 from app.core.postgres import PostgreSQL, _invalidar_caches_seguridad
 from app.core.security import _contexto_vigente
-from app.modules.ecommerce.routes.sync_routes import limpiar_cache_sync_memoria
 from migrate import render
 
 
@@ -480,6 +479,7 @@ class PwaOfflineIter2Suite(unittest.TestCase):
                 cur.execute(PWA_SYNC_SCHEMA_SQL)
                 cur.execute(render(ROOT / "backend/migrations/002_iter1_perf_indexes.up.sql", cls.schema))
                 cur.execute(render(ROOT / "backend/migrations/003_iter2_sync_idempotency.up.sql", cls.schema))
+                cur.execute(render(ROOT / "backend/migrations/004_iter2_sync_transactional.up.sql", cls.schema))
 
                 # Suscripción activa para Empresa 1 y Empresa 2
                 cur.execute(
@@ -561,7 +561,6 @@ class PwaOfflineIter2Suite(unittest.TestCase):
 
     def setUp(self):
         _invalidar_caches_seguridad()
-        limpiar_cache_sync_memoria()
 
     def _headers_for_user(self, user_id: int, id_empresa: int = 1, id_rol: int = 103, rol: str = "ADMIN_EMPRESA"):
         import jwt
@@ -584,6 +583,7 @@ class PwaOfflineIter2Suite(unittest.TestCase):
     def test_01_reversible_sync_migration_003(self):
         with psycopg2.connect(**self.pg.params) as conn:
             with conn.cursor() as cur:
+                cur.execute(render(ROOT / "backend/migrations/004_iter2_sync_transactional.down.sql", self.schema))
                 cur.execute(render(ROOT / "backend/migrations/003_iter2_sync_idempotency.down.sql", self.schema))
                 cur.execute(
                     "SELECT to_regclass(%s);",
@@ -592,6 +592,7 @@ class PwaOfflineIter2Suite(unittest.TestCase):
                 self.assertIsNone(cur.fetchone()[0])
 
                 cur.execute(render(ROOT / "backend/migrations/003_iter2_sync_idempotency.up.sql", self.schema))
+                cur.execute(render(ROOT / "backend/migrations/004_iter2_sync_transactional.up.sql", self.schema))
                 cur.execute(
                     "SELECT to_regclass(%s);",
                     (f"{self.schema}.t_sync_operacion",),
@@ -619,12 +620,14 @@ class PwaOfflineIter2Suite(unittest.TestCase):
             json={
                 "operations": [
                     {
+                        "created_at": datetime.now(timezone.utc).isoformat(),
                         "operation_id": op_id_1,
                         "kind": "CART_ADD_ITEM",
                         "tenant_id": 1,
                         "payload": {"id_variante": 100, "cantidad": 2, "expected_unit_price": 150.00},
                     },
                     {
+                        "created_at": datetime.now(timezone.utc).isoformat(),
                         "operation_id": op_id_2,
                         "kind": "CART_ADD_ITEM",
                         "tenant_id": 1,
@@ -646,6 +649,7 @@ class PwaOfflineIter2Suite(unittest.TestCase):
             json={
                 "operations": [
                     {
+                        "created_at": datetime.now(timezone.utc).isoformat(),
                         "operation_id": op_id_1,
                         "kind": "CART_ADD_ITEM",
                         "tenant_id": 1,
@@ -678,6 +682,7 @@ class PwaOfflineIter2Suite(unittest.TestCase):
             json={
                 "operations": [
                     {
+                        "created_at": datetime.now(timezone.utc).isoformat(),
                         "operation_id": op_stock,
                         "kind": "CART_ADD_ITEM",
                         "tenant_id": 1,
@@ -699,6 +704,7 @@ class PwaOfflineIter2Suite(unittest.TestCase):
             json={
                 "operations": [
                     {
+                        "created_at": datetime.now(timezone.utc).isoformat(),
                         "operation_id": op_stock,
                         "kind": "CART_ADD_ITEM",
                         "tenant_id": 1,
@@ -717,6 +723,7 @@ class PwaOfflineIter2Suite(unittest.TestCase):
             json={
                 "operations": [
                     {
+                        "created_at": datetime.now(timezone.utc).isoformat(),
                         "operation_id": op_price,
                         "kind": "CART_ADD_ITEM",
                         "tenant_id": 1,
@@ -741,6 +748,7 @@ class PwaOfflineIter2Suite(unittest.TestCase):
             json={
                 "operations": [
                     {
+                        "created_at": datetime.now(timezone.utc).isoformat(),
                         "operation_id": op_price,
                         "kind": "CART_ADD_ITEM",
                         "tenant_id": 1,
@@ -768,6 +776,7 @@ class PwaOfflineIter2Suite(unittest.TestCase):
             json={
                 "operations": [
                     {
+                        "created_at": datetime.now(timezone.utc).isoformat(),
                         "operation_id": op_paid_res,
                         "kind": "RESERVA_SOLICITUD",
                         "tenant_id": 1,
@@ -795,6 +804,7 @@ class PwaOfflineIter2Suite(unittest.TestCase):
             json={
                 "operations": [
                     {
+                        "created_at": datetime.now(timezone.utc).isoformat(),
                         "operation_id": op_free_res,
                         "kind": "RESERVA_SOLICITUD",
                         "tenant_id": 1,
@@ -820,6 +830,7 @@ class PwaOfflineIter2Suite(unittest.TestCase):
             json={
                 "operations": [
                     {
+                        "created_at": datetime.now(timezone.utc).isoformat(),
                         "operation_id": op_free_res,
                         "kind": "RESERVA_SOLICITUD",
                         "tenant_id": 1,
@@ -845,6 +856,7 @@ class PwaOfflineIter2Suite(unittest.TestCase):
             json={
                 "operations": [
                     {
+                        "created_at": datetime.now(timezone.utc).isoformat(),
                         "operation_id": f"op-cross-{uuid.uuid4().hex[:10]}",
                         "kind": "CART_ADD_ITEM",
                         "tenant_id": 2,
@@ -875,6 +887,7 @@ class PwaOfflineIter2Suite(unittest.TestCase):
             json={
                 "operations": [
                     {
+                        "created_at": datetime.now(timezone.utc).isoformat(),
                         "operation_id": f"op-vta-cli-{uuid.uuid4().hex[:10]}",
                         "kind": "VENTA_CONTADO",
                         "tenant_id": 1,
@@ -903,6 +916,7 @@ class PwaOfflineIter2Suite(unittest.TestCase):
             json={
                 "operations": [
                     {
+                        "created_at": datetime.now(timezone.utc).isoformat(),
                         "operation_id": op_qr,
                         "kind": "VENTA_CONTADO",
                         "tenant_id": 1,
@@ -930,6 +944,7 @@ class PwaOfflineIter2Suite(unittest.TestCase):
             json={
                 "operations": [
                     {
+                        "created_at": datetime.now(timezone.utc).isoformat(),
                         "operation_id": op_cash_sale,
                         "kind": "VENTA_CONTADO",
                         "tenant_id": 1,
@@ -983,6 +998,7 @@ class PwaOfflineIter2Suite(unittest.TestCase):
             json={
                 "operations": [
                     {
+                        "created_at": datetime.now(timezone.utc).isoformat(),
                         "operation_id": op_cash_sale,
                         "kind": "VENTA_CONTADO",
                         "tenant_id": 1,
@@ -1014,6 +1030,7 @@ class PwaOfflineIter2Suite(unittest.TestCase):
             json={
                 "operations": [
                     {
+                        "created_at": datetime.now(timezone.utc).isoformat(),
                         "operation_id": op_cash_sale,
                         "kind": "VENTA_CONTADO",
                         "tenant_id": 1,
@@ -1076,6 +1093,7 @@ class PwaOfflineIter2Suite(unittest.TestCase):
             json={
                 "operations": [
                     {
+                        "created_at": datetime.now(timezone.utc).isoformat(),
                         "operation_id": op_vta_price,
                         "kind": "VENTA_CONTADO",
                         "tenant_id": 1,
@@ -1104,6 +1122,7 @@ class PwaOfflineIter2Suite(unittest.TestCase):
             json={
                 "operations": [
                     {
+                        "created_at": datetime.now(timezone.utc).isoformat(),
                         "operation_id": op_vta_stock,
                         "kind": "VENTA_CONTADO",
                         "tenant_id": 1,
@@ -1143,6 +1162,7 @@ class PwaOfflineIter2Suite(unittest.TestCase):
             json={
                 "operations": [
                     {
+                        "created_at": datetime.now(timezone.utc).isoformat(),
                         "operation_id": op_vta_stock,
                         "kind": "VENTA_CONTADO",
                         "tenant_id": 1,

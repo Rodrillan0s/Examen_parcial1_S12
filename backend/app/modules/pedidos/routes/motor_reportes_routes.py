@@ -36,8 +36,27 @@ class ReporteEjecucionIn(BaseModel):
 
 
 def _contexto_reporte(payload, empresa):
-    from app.core.tenant_guard import resolver_tenant_operacion
+    from app.core.tenant_guard import resolver_tenant_operacion, es_administrador_global
     from app.modules.saas.services.saas_services import exigir_vigencia
+
+    # Para Administrador Global, si no se envió una empresa específica en el payload,
+    # resolver automáticamente la primera empresa activa en lugar de arrojar error 400.
+    if not empresa and es_administrador_global(payload):
+        from app.core.postgres import PostgreSQL
+        from app.core.config import Config
+        db = PostgreSQL()
+        db.create_connection()
+        try:
+            schema = Config.SCHEMA or 'comercio'
+            row = db.execute_query(
+                f"SELECT id_empresa FROM {schema}.empresa WHERE estado = 'ACTIVO' ORDER BY id_empresa LIMIT 1;",
+                fetchone=True
+            )
+            if row:
+                empresa = row[0]
+        finally:
+            db.close_connection()
+
     empresa = resolver_tenant_operacion(payload, empresa)
     exigir_vigencia(empresa, reportes=True)
     return {**payload, '_empresa_reporte': empresa}

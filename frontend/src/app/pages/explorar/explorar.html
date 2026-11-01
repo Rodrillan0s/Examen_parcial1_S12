@@ -1,191 +1,311 @@
-<!-- Hero Section: Fashion Editorial Banner -->
-<section
-  class="relative min-h-[90vh] flex items-center justify-center overflow-hidden pt-12 pb-24 border-b border-stone-200 dark:border-white/10">
+<!-- ========================================================================= -->
+<!-- HERO EDITORIAL LUMINOSO (Inspirado en la Maqueta de Alta Costura)          -->
+<!-- ========================================================================= -->
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-4">
+  
+  <div class="relative rounded-3xl overflow-hidden bg-stone-100 dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 shadow-md min-h-[460px] sm:min-h-[520px] flex items-center">
+    
+    <!-- Fotografía Editorial de Fondo (Modelo en arquitectura clásica soleada) -->
+    <img 
+      src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1600&q=85" 
+      alt="Nueva Colección AURORA Store" 
+      class="absolute right-0 top-0 bottom-0 w-full md:w-3/5 h-full object-cover object-top filter brightness-[0.98] contrast-105" 
+    />
 
-  <!-- Background Image with Gradient Mask & High Contrast Dark Backing -->
-  <div class="absolute inset-0 z-0">
-    <img src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=2000&q=80"
-      alt="AURORA Store Luxury Fashion"
-      class="w-full h-full object-cover object-center opacity-35 scale-105 filter brightness-75 contrast-125" />
-    <div class="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/80 to-zinc-950/90"></div>
-    <div class="absolute inset-0 bg-black/40"></div>
-  </div>
+    <!-- Máscara de Degradado Luminoso para Máximo Contraste y Legibilidad -->
+    <div class="absolute inset-0 bg-gradient-to-r from-stone-50 via-stone-50/95 to-transparent dark:from-zinc-950 dark:via-zinc-950/90 dark:to-transparent/40 w-full md:w-2/3 pointer-events-none"></div>
 
-  <div class="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 text-center space-y-8 animate-fade-in">
+    <!-- Contenido Editorial Izquierdo -->
+    <div class="relative z-10 max-w-xl px-6 sm:px-12 py-12 space-y-6">
+      
+      <!-- Eyebrow Tag Dorado -->
+      <span class="inline-block text-[11px] font-mono uppercase tracking-[0.25em] text-amber-700 dark:text-amber-400 font-bold">
+        NUEVA COLECCIÓN
+      </span>
 
-    <!-- Eyebrow Pill Badge -->
-    <div
-      class="inline-flex items-center space-x-2.5 px-4 py-1.5 rounded-full bg-zinc-900/90 border border-amber-500/40 text-amber-300 text-xs uppercase tracking-[0.25em] font-medium backdrop-blur-xl shadow-xl">
-      <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-      <span>Cadena de Tiendas & Alta Costura Bolivia</span>
+      <!-- Título de Alto Contraste -->
+      <h1 class="text-4xl sm:text-6xl lg:text-7xl font-editorial font-bold text-zinc-950 dark:text-white leading-[1.08] tracking-tight">
+        Elegancia <br />
+        <span class="font-normal italic text-amber-800 dark:text-amber-300">que inspira</span>
+      </h1>
+
+      <!-- Subtítulo -->
+      <p class="text-sm sm:text-base text-zinc-700 dark:text-zinc-300 max-w-md leading-relaxed font-sans">
+        Descubre prendas únicas, diseñadas para cada momento de tu vida.
+      </p>
+
+      <!-- Botón de Acción Principal -->
+      <div class="pt-2 flex flex-wrap items-center gap-3">
+        <a routerLink="/catalogo" 
+           class="px-7 py-3.5 rounded-full bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs sm:text-sm inline-flex items-center space-x-2 shadow-md hover:shadow-lg transition-all hover:scale-102 active:scale-98 cursor-pointer">
+          <span>Explorar catálogo</span>
+          <span class="text-base font-normal">→</span>
+        </a>
+
+        <!-- Si está autenticado, enlace rápido a sus pedidos -->
+        <a *ngIf="authService.currentUser()" 
+           routerLink="/mis-pedidos" 
+           class="px-5 py-3 rounded-full bg-white/90 dark:bg-zinc-800/90 border border-stone-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 font-medium text-xs sm:text-sm hover:border-amber-500/50 transition-colors shadow-sm">
+          📦 Mis Compras
+        </a>
+      </div>
+
     </div>
 
-    <!-- Main Editorial Headline (Alto Contraste y Legibilidad) -->
-    <h1 class="text-4xl sm:text-6xl md:text-7xl font-editorial font-bold text-white tracking-tight leading-[1.1] drop-shadow-sm">
-      Elegancia Redefinida. <br />
-      <span class="text-amber-400 dark:text-amber-300 font-light italic drop-shadow">Colección Otoño 2026</span>
-    </h1>
+  </div>
 
-    <!-- Subtitle -->
-    <p class="max-w-2xl mx-auto text-sm sm:text-base text-zinc-200 font-normal leading-relaxed drop-shadow-sm">
-      Explora nuestras colecciones exclusivas de ropa, sastrería y accesorios. Conoce todas las prendas libremente
-      y accede a tu cuenta para pedidos y reservas privadas.
-    </p>
-
-    <!-- CTAs Adaptativos según Rol y Autenticación -->
-    <div class="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-
-      <!-- Primary CTA: Catalog -->
-      <a routerLink="/catalogo" class="double-bezel group cursor-pointer w-full sm:w-auto active:scale-98">
-        <div
-          class="double-bezel-inner px-8 py-3.5 text-xs uppercase tracking-wider font-bold text-black bg-amber-400 hover:bg-amber-300 flex items-center justify-center space-x-3 transition-colors shadow-md">
-          <span>Explorar Catálogo Completo</span>
-          <div
-            class="w-7 h-7 rounded-full bg-black/10 flex items-center justify-center group-hover:translate-x-1 transition-transform">
-            <i class="ph ph-arrow-right text-sm"></i>
-          </div>
+  <!-- ======================================================================= -->
+  <!-- BARRA DE HISTORIAS CIRCULARES DE CATEGORÍAS (8 ÍCONOS EDITORIALES)      -->
+  <!-- ======================================================================= -->
+  <div class="mt-4 p-4 sm:p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 shadow-sm overflow-x-auto scrollbar-none">
+    <div class="flex items-center justify-between min-w-[700px] sm:min-w-0 sm:justify-around gap-4 px-2">
+      
+      <a *ngFor="let cat of categoriasHistorias" 
+         [routerLink]="['/catalogo']" 
+         [queryParams]="{ categoria_nombre: cat.nombre }"
+         class="flex flex-col items-center space-y-2 group cursor-pointer text-center shrink-0">
+        
+        <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-full p-[2px] bg-stone-200 dark:bg-zinc-800 group-hover:bg-amber-500 transition-colors shadow-sm overflow-hidden">
+          <img 
+            [src]="cat.imagen" 
+            [alt]="cat.nombre" 
+            class="w-full h-full rounded-full object-cover group-hover:scale-110 transition-transform duration-300" 
+          />
         </div>
+        
+        <span class="text-xs font-medium text-zinc-700 dark:text-zinc-300 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+          {{ cat.nombre }}
+        </span>
       </a>
 
-      <!-- Secondary CTA: Adaptado a Clientes Autenticados o Invitados -->
-      <ng-container *ngIf="authService.currentUser() as user; else guestHeroCtas">
-        <!-- Si es cliente autenticado -->
-        <ng-container *ngIf="authService.esCliente()">
-          <a routerLink="/mis-pedidos"
-            class="w-full sm:w-auto px-7 py-3.5 rounded-2xl bg-amber-500/20 border border-amber-500/50 hover:bg-amber-500/30 text-xs uppercase tracking-wider font-bold text-amber-300 hover:text-white backdrop-blur-xl transition-all flex items-center justify-center space-x-2 shadow-sm">
-            <i class="ph ph-package text-base"></i>
-            <span>✦ Ver Mis Pedidos</span>
-          </a>
-          <a routerLink="/mis-reservas"
-            class="w-full sm:w-auto px-7 py-3.5 rounded-2xl bg-zinc-900/80 border border-zinc-700 hover:border-amber-500/40 text-xs uppercase tracking-wider font-semibold text-zinc-200 hover:text-white backdrop-blur-xl transition-all flex items-center justify-center space-x-2">
-            <i class="ph ph-calendar-check text-base text-amber-400"></i>
-            <span>✦ Mis Reservas</span>
-          </a>
-        </ng-container>
-
-        <!-- Si es empleado / admin -->
-        <ng-container *ngIf="!authService.esCliente()">
-          <a routerLink="/admin"
-            class="w-full sm:w-auto px-7 py-3.5 rounded-2xl bg-amber-500/20 border border-amber-500/50 hover:bg-amber-500/30 text-xs uppercase tracking-wider font-bold text-amber-300 hover:text-white backdrop-blur-xl transition-all flex items-center justify-center space-x-2 shadow-sm">
-            <i class="ph ph-sliders text-base"></i>
-            <span>✦ Panel de Control</span>
-          </a>
-        </ng-container>
-      </ng-container>
-
-      <ng-template #guestHeroCtas>
-        <button (click)="openAuth('login')"
-          class="w-full sm:w-auto px-8 py-4 rounded-2xl bg-zinc-900/80 border border-white/20 hover:border-amber-500/40 text-xs uppercase tracking-wider font-semibold text-zinc-100 hover:text-white backdrop-blur-xl transition-all shadow-md">
-          ✦ Acceder a Mi Cuenta
-        </button>
-      </ng-template>
-
     </div>
+  </div>
 
-    <!-- Multi-Tienda Stores Bar Indicator -->
-    <div class="pt-12 grid grid-cols-2 md:grid-cols-3 gap-4 max-w-3xl mx-auto text-left">
-      <div class="p-3.5 rounded-2xl glass-panel border border-white/5 flex items-center space-x-3">
-        <div
-          class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center font-bold">
-          01
-        </div>
-        <div>
-          <div class="text-xs font-bold text-white">Santa Cruz</div>
-          <div class="text-[10px] text-zinc-400">Equipetrol Central</div>
+</section>
+
+<!-- ========================================================================= -->
+<!-- SECCIÓN: PRODUCTOS DESTACADOS (6 TARJETAS EXACTAS DE ALTA GAMA)           -->
+<!-- ========================================================================= -->
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+  
+  <div class="flex items-center justify-between border-b border-stone-200 dark:border-zinc-800/80 pb-4">
+    <h2 class="text-2xl sm:text-3xl font-editorial font-bold text-zinc-900 dark:text-white">
+      Productos destacados
+    </h2>
+    
+    <a routerLink="/catalogo" class="text-xs sm:text-sm font-semibold text-amber-600 dark:text-amber-400 hover:text-amber-700 flex items-center space-x-1 transition-colors">
+      <span>Ver todo</span>
+      <span>→</span>
+    </a>
+  </div>
+
+  <!-- Cuadrícula de 6 Productos de Moda -->
+  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-5">
+    
+    <div *ngFor="let prod of productosDestacados" 
+         (click)="openQuickView(prod)"
+         class="group rounded-2xl bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 hover:border-amber-500/50 p-2.5 transition-all duration-300 shadow-sm hover:shadow-md flex flex-col justify-between cursor-pointer">
+      
+      <!-- Contenedor Imagen con Botón Favorito Flotante -->
+      <div class="relative aspect-[3/4] rounded-xl overflow-hidden bg-stone-100 dark:bg-zinc-950 mb-2.5">
+        <img 
+          [src]="prod.imagenPrincipal" 
+          [alt]="prod.nombre" 
+          class="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500" 
+        />
+        
+        <!-- Botón Wishlist / Favorito Circular -->
+        <button 
+          type="button" 
+          (click)="toggleFavorito(prod, $event)" 
+          [title]="esFavorito(prod.id) ? 'Quitar de favoritos' : 'Guardar en mi lista de deseos'"
+          class="absolute top-2 right-2 w-7 h-7 rounded-full bg-white/90 dark:bg-zinc-900/90 shadow-sm border border-stone-200 dark:border-zinc-700 flex items-center justify-center text-zinc-500 hover:text-rose-500 transition-colors cursor-pointer z-10 backdrop-blur-xs">
+          
+          <svg *ngIf="esFavorito(prod.id)" class="w-4 h-4 text-rose-500 fill-rose-500" viewBox="0 0 24 24">
+            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+          </svg>
+          
+          <svg *ngIf="!esFavorito(prod.id)" class="w-4 h-4 text-zinc-500 hover:text-rose-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Datos Principales de la Prenda -->
+      <div class="space-y-1">
+        <h3 class="text-xs font-semibold text-zinc-900 dark:text-zinc-100 truncate group-hover:text-amber-600 transition-colors">
+          {{ prod.nombre }}
+        </h3>
+        
+        <div class="text-xs font-bold font-mono text-zinc-900 dark:text-zinc-100">
+          Bs. {{ prod.precio | number:'1.0-0' }}
         </div>
       </div>
 
-      <div class="p-3.5 rounded-2xl glass-panel border border-white/5 flex items-center space-x-3">
-        <div
-          class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center font-bold">
-          02
+      <!-- Fila Inferior: Swatches de Colores + Rating de Estrellas -->
+      <div class="pt-2 mt-1.5 border-t border-stone-100 dark:border-zinc-800 flex items-center justify-between text-[11px]">
+        
+        <!-- Swatches de Color -->
+        <div class="flex items-center space-x-1">
+          <span 
+            *ngFor="let col of prod.colores.slice(0, 3)" 
+            class="w-2.5 h-2.5 rounded-full border border-black/15 dark:border-white/20" 
+            [style.backgroundColor]="col.hex"
+            [title]="col.nombre">
+          </span>
         </div>
-        <div>
-          <div class="text-xs font-bold text-white">La Paz</div>
-          <div class="text-[10px] text-zinc-400">Calacoto Luxury</div>
+
+        <!-- Rating con Estrellas Doradas y Conteo -->
+        <div class="flex items-center space-x-0.5 text-amber-600 dark:text-amber-400 font-mono text-[10px]">
+          <span>★</span>
+          <span>{{ prod.rating || '4.8' }}</span>
+          <span class="text-zinc-400">({{ prod.reviews || '28' }})</span>
         </div>
+
       </div>
 
-      <div
-        class="p-3.5 rounded-2xl glass-panel border border-white/5 flex items-center space-x-3 col-span-2 md:col-span-1">
-        <div
-          class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center font-bold">
-          03
-        </div>
-        <div>
-          <div class="text-xs font-bold text-white">Cochabamba</div>
-          <div class="text-[10px] text-zinc-400">Av. Pando Jardín</div>
-        </div>
-      </div>
     </div>
 
   </div>
+
 </section>
 
-<!-- Bento Grid: Colección & Universos de Moda -->
-<section id="colecciones" class="py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+<!-- ========================================================================= -->
+<!-- MACHINE LEARNING: RECOMENDADO PARA TI SEGÚN PREFERENCIAS Y COMPRAS        -->
+<!-- ========================================================================= -->
+<section *ngIf="recomendacionesML.length > 0" class="py-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
 
-  <div
-    class="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-stone-200 dark:border-zinc-900 pb-8">
-    <div class="space-y-2">
-      <span
-        class="text-xs font-mono uppercase tracking-[0.25em] text-amber-600 dark:text-amber-400 font-bold">Colecciones
-        2026</span>
-      <h2 class="text-3xl sm:text-4xl font-editorial font-bold text-zinc-900 dark:text-white">Universos de Alta Costura
+  <div class="flex items-center justify-between border-b border-stone-200 dark:border-zinc-800/80 pb-4">
+    <div class="space-y-1">
+      <div class="flex items-center space-x-2">
+        <span class="px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 text-[10px] font-mono uppercase tracking-wider font-bold border border-amber-500/30 flex items-center space-x-1">
+          <span>★</span>
+          <span>Inteligencia de Estilo & Machine Learning</span>
+        </span>
+      </div>
+      <h2 class="text-2xl sm:text-3xl font-editorial font-bold text-zinc-900 dark:text-white">
+        Recomendado para ti
       </h2>
+      <p class="text-xs text-zinc-500 dark:text-zinc-400">
+        Prendas seleccionadas por afinidad basada en tus compras, tallas habituales y paleta cromática preferida.
+      </p>
     </div>
-    <p class="max-w-md text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
-      Diseños concebidos para destacar en cualquier ocasión. Navega por nuestras líneas públicas sin restricciones.
+    
+    <a routerLink="/catalogo" class="text-xs sm:text-sm font-semibold text-amber-600 dark:text-amber-400 hover:text-amber-700 flex items-center space-x-1 transition-colors">
+      <span>Ver catálogo</span>
+      <span>→</span>
+    </a>
+  </div>
+
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+    <div 
+      *ngFor="let rec of recomendacionesML"
+      (click)="openQuickView({ id: rec.id_producto, nombre: rec.nombre, precio: rec.precio, categoria: rec.categoria, imagenPrincipal: rec.imagen_url, descripcion: rec.descripcion })"
+      class="group cursor-pointer rounded-2xl bg-white dark:bg-zinc-900 border border-stone-200/90 dark:border-zinc-800 p-3 sm:p-4 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between relative">
+      
+      <!-- Imagen con Badge de Afinidad -->
+      <div class="relative w-full aspect-[3/4] rounded-xl overflow-hidden bg-stone-100 dark:bg-zinc-800 mb-3">
+        <img 
+          [src]="rec.imagen_url" 
+          [alt]="rec.nombre"
+          class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500" 
+          loading="lazy" 
+        />
+        <span class="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-full bg-zinc-900/85 backdrop-blur-md text-amber-300 text-[10px] font-mono font-bold border border-amber-400/30 shadow-sm flex items-center space-x-1">
+          <span>★</span>
+          <span>{{ rec.afinidad_porcentaje }}% afinidad</span>
+        </span>
+      </div>
+
+      <!-- Info de la Prenda -->
+      <div class="space-y-1.5 flex-1 flex flex-col justify-between">
+        <div>
+          <span class="text-[10px] font-mono uppercase tracking-wider text-amber-700 dark:text-amber-400 font-bold block">
+            {{ rec.categoria }}
+          </span>
+          <h3 class="text-sm font-serif font-bold text-zinc-900 dark:text-white line-clamp-1 group-hover:text-amber-600 transition-colors">
+            {{ rec.nombre }}
+          </h3>
+          <p class="text-[11px] text-zinc-500 dark:text-zinc-400 italic line-clamp-2 mt-1">
+            "{{ rec.motivo }}"
+          </p>
+        </div>
+
+        <div class="pt-2 border-t border-stone-100 dark:border-zinc-800 flex items-center justify-between">
+          <span class="text-sm font-bold font-sans text-zinc-900 dark:text-white">
+            Bs. {{ rec.precio | number:'1.0-0' }}
+          </span>
+          <span class="text-[10px] text-amber-600 dark:text-amber-400 font-bold hover:underline">
+            Ver detalle →
+          </span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</section>
+
+<!-- ========================================================================= -->
+<!-- BENTO GRID: UNIVERSOS DE ALTA COSTURA & COLECCIONES                       -->
+<!-- ========================================================================= -->
+<section id="colecciones" class="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+
+  <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-stone-200 dark:border-zinc-800 pb-6">
+    <div class="space-y-1.5">
+      <span class="text-xs font-mono uppercase tracking-[0.25em] text-amber-700 dark:text-amber-400 font-bold">Colecciones 2026</span>
+      <h2 class="text-3xl font-editorial font-bold text-zinc-900 dark:text-white">Universos de Alta Costura</h2>
+    </div>
+    <p class="max-w-md text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed font-sans">
+      Diseños concebidos para destacar en cualquier ocasión. Navega por nuestras líneas exclusivas con stock en tienda.
     </p>
   </div>
 
-  <!-- Asymmetrical Bento Layout -->
+  <!-- Layout Asimétrico Bento -->
   <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
 
-    <!-- Big Bento 1: Sastrería & Abrigos -->
-    <div
-      class="md:col-span-7 relative group rounded-3xl overflow-hidden min-h-[420px] border border-stone-200 dark:border-white/10 bg-zinc-900 flex flex-col justify-end p-8 shadow-md">
-      <img src="https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&w=1200&q=80"
-        alt="Sastrería Alpaca"
-        class="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 opacity-60" />
+    <!-- Big Bento 1: Sastrería & Alpaca Pure -->
+    <div class="md:col-span-7 relative group rounded-3xl overflow-hidden min-h-[380px] border border-stone-200 dark:border-zinc-800 bg-zinc-900 flex flex-col justify-end p-8 shadow-sm">
+      <img 
+        src="https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&w=1200&q=80"
+        alt="Colección Alpaca Pure"
+        class="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 opacity-65" 
+      />
       <div class="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent"></div>
 
-      <div class="relative z-10 space-y-3">
-        <span
-          class="px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-mono uppercase tracking-widest border border-amber-500/30">
+      <div class="relative z-10 space-y-2.5">
+        <span class="px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-mono uppercase tracking-widest border border-amber-500/30">
           Fibra Noble Boliviana
         </span>
         <h3 class="text-2xl sm:text-3xl font-editorial font-bold text-white">Colección Alpaca Pure</h3>
         <p class="text-xs text-zinc-300 max-w-lg leading-relaxed">
           Abrigos, capas y sacos confeccionados a mano con fibras de alta montaña.
         </p>
-        <a routerLink="/catalogo"
-          class="inline-flex items-center space-x-2 text-xs font-bold text-amber-400 hover:text-amber-300 pt-2">
+        <a routerLink="/catalogo" class="inline-flex items-center space-x-2 text-xs font-bold text-amber-400 hover:text-amber-300 pt-1">
           <span>Ver prendas de esta colección</span>
           <i class="ph ph-arrow-right"></i>
         </a>
       </div>
     </div>
 
-    <!-- Bento 2: Alta Costura Femenina -->
-    <div
-      class="md:col-span-5 relative group rounded-3xl overflow-hidden min-h-[420px] border border-stone-200 dark:border-white/10 bg-zinc-900 flex flex-col justify-end p-8 shadow-md">
-      <img src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1000&q=80"
+    <!-- Bento 2: Alta Costura Femenina Seda & Gala -->
+    <div class="md:col-span-5 relative group rounded-3xl overflow-hidden min-h-[380px] border border-stone-200 dark:border-zinc-800 bg-zinc-900 flex flex-col justify-end p-8 shadow-sm">
+      <img 
+        src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1000&q=80"
         alt="Alta Costura Femenina"
-        class="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 opacity-60" />
+        class="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 opacity-65" 
+      />
       <div class="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent"></div>
 
-      <div class="relative z-10 space-y-3">
-        <span
-          class="px-3 py-1 rounded-full bg-zinc-800 text-zinc-300 text-[10px] font-mono uppercase tracking-widest border border-zinc-700">
+      <div class="relative z-10 space-y-2.5">
+        <span class="px-3 py-1 rounded-full bg-zinc-800/90 text-zinc-300 text-[10px] font-mono uppercase tracking-widest border border-zinc-700">
           Seda & Gala
         </span>
         <h3 class="text-2xl font-editorial font-bold text-white">Noche & Ceremonia</h3>
         <p class="text-xs text-zinc-300 leading-relaxed">
           Siluetas sofisticadas con caídas fluidas y acabados de alta costura.
         </p>
-        <a routerLink="/catalogo"
-          class="inline-flex items-center space-x-2 text-xs font-bold text-amber-400 hover:text-amber-300 pt-2">
+        <a routerLink="/catalogo" class="inline-flex items-center space-x-2 text-xs font-bold text-amber-400 hover:text-amber-300 pt-1">
           <span>Explorar vestidos</span>
           <i class="ph ph-arrow-right"></i>
         </a>
@@ -196,79 +316,115 @@
 
 </section>
 
-<!-- Section: Vistazo de Productos Destacados -->
-<section
-  class="py-20 bg-stone-100/70 dark:bg-zinc-900/40 border-t border-b border-stone-200 dark:border-white/10 transition-colors">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+<!-- Section: Nuestras Sucursales & Boutiques Físicas (Destino ancla #sucursales) -->
+<section id="sucursales" class="py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+  <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-stone-200 dark:border-zinc-800 pb-8">
+    <div class="space-y-2">
+      <span class="text-xs font-mono uppercase tracking-[0.25em] text-amber-600 dark:text-amber-400 font-bold">
+        Presencia Nacional
+      </span>
+      <h2 class="text-3xl sm:text-4xl font-editorial font-bold text-zinc-900 dark:text-white">
+        Nuestras Boutiques Exclusivas
+      </h2>
+    </div>
+    <p class="max-w-md text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed font-sans">
+      Visita nuestros espacios de alta costura para asesoría de imagen personalizada, probadores privados y retiro de compras realizadas en línea.
+    </p>
+  </div>
 
-    <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-      <div>
-        <span class="text-xs font-mono uppercase tracking-[0.25em] text-amber-600 dark:text-amber-400 font-bold">Vistazo
-          Rápido</span>
-        <h2 class="text-3xl font-editorial font-bold text-zinc-900 dark:text-white">Prendas Ícono de la Temporada</h2>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+    <!-- Sucursal 1: Santa Cruz -->
+    <div class="rounded-3xl bg-white dark:bg-zinc-900/90 border border-stone-200 dark:border-zinc-800 p-6 space-y-5 shadow-sm hover:border-amber-500/50 transition-all flex flex-col justify-between">
+      <div class="space-y-4">
+        <div class="flex items-center justify-between">
+          <span class="px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-mono text-[10px] uppercase font-bold tracking-wider border border-emerald-500/30">
+            ● Abierta Hoy
+          </span>
+          <span class="text-xs font-mono text-zinc-400">01</span>
+        </div>
+        <h3 class="text-xl font-editorial font-bold text-zinc-900 dark:text-white">Santa Cruz de la Sierra</h3>
+        <p class="text-xs text-amber-700 dark:text-amber-400 font-medium">Boutique Equipetrol Central</p>
+        <div class="space-y-2 text-xs text-zinc-600 dark:text-zinc-400 pt-2 border-t border-stone-100 dark:border-zinc-800">
+          <div class="flex items-start space-x-2">
+            <span>📍</span>
+            <span>Av. San Martín #450, Barrio Equipetrol</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <span>🕒</span>
+            <span>Lun - Sáb: 09:30 - 20:30 | Dom: 11:00 - 18:00</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <span>📞</span>
+            <span>+591 3 344-8890</span>
+          </div>
+        </div>
       </div>
-      <a routerLink="/catalogo"
-        class="text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-amber-600 dark:hover:text-amber-300 flex items-center space-x-1">
-        <span>Ver catálogo completo (24 prendas)</span>
-        <i class="ph ph-arrow-right"></i>
+      <a routerLink="/catalogo" class="w-full py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-amber-500 hover:text-black text-xs font-bold uppercase tracking-wider text-center transition-colors">
+        Ver Catálogo de Santa Cruz
       </a>
     </div>
 
-    <!-- Grid de Productos (4 Columnas) -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-
-      <div *ngFor="let prod of productosDestacados"
-        class="group double-bezel transition-all duration-300 hover:-translate-y-1">
-        <div class="double-bezel-inner p-4 space-y-4 flex flex-col justify-between h-full">
-
-          <!-- Image Container -->
-          <div class="relative aspect-[3/4] rounded-2xl overflow-hidden bg-stone-100 dark:bg-zinc-900">
-            <img [src]="prod.imagenPrincipal" [alt]="prod.nombre"
-              class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500" />
-
-            <div *ngIf="prod.etiqueta"
-              class="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-amber-500 text-black text-[9px] font-bold uppercase tracking-wider">
-              {{ prod.etiqueta }}
-            </div>
-
-            <!-- Quick View Overlay Button -->
-            <button (click)="openQuickView(prod)"
-              class="absolute bottom-3 left-3 right-3 py-2.5 rounded-xl bg-zinc-950/85 backdrop-blur-md text-xs font-semibold text-white opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center space-x-2 border border-white/10 hover:bg-amber-500 hover:text-black hover:border-transparent shadow-lg">
-              <i class="ph ph-eye text-sm"></i>
-              <span>Vista Rápida</span>
-            </button>
+    <!-- Sucursal 2: La Paz -->
+    <div class="rounded-3xl bg-white dark:bg-zinc-900/90 border border-stone-200 dark:border-zinc-800 p-6 space-y-5 shadow-sm hover:border-amber-500/50 transition-all flex flex-col justify-between">
+      <div class="space-y-4">
+        <div class="flex items-center justify-between">
+          <span class="px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-mono text-[10px] uppercase font-bold tracking-wider border border-emerald-500/30">
+            ● Abierta Hoy
+          </span>
+          <span class="text-xs font-mono text-zinc-400">02</span>
+        </div>
+        <h3 class="text-xl font-editorial font-bold text-zinc-900 dark:text-white">La Paz</h3>
+        <p class="text-xs text-amber-700 dark:text-amber-400 font-medium">Calacoto Luxury Atelier</p>
+        <div class="space-y-2 text-xs text-zinc-600 dark:text-zinc-400 pt-2 border-t border-stone-100 dark:border-zinc-800">
+          <div class="flex items-start space-x-2">
+            <span>📍</span>
+            <span>Calle 15 esq. Av. Ballivián, Zona Sur</span>
           </div>
-
-          <!-- Product Data -->
-          <div class="space-y-2">
-            <div class="flex items-center justify-between text-[10px] text-zinc-500 dark:text-zinc-400 font-mono">
-              <span>{{ prod.categoria }}</span>
-              <span class="text-amber-600 dark:text-amber-400">★ {{ prod.popularidad }}% recomendación</span>
-            </div>
-
-            <h4
-              class="text-base font-editorial font-bold text-zinc-900 dark:text-white group-hover:text-amber-500 transition-colors line-clamp-1">
-              {{ prod.nombre }}
-            </h4>
-            <p class="text-[11px] text-zinc-500 dark:text-zinc-400 line-clamp-1 italic">{{ prod.subtitulo }}</p>
-
-            <div class="flex items-center justify-between pt-2 border-t border-stone-200 dark:border-zinc-800">
-              <div class="font-mono text-sm font-bold text-zinc-900 dark:text-white">
-                Bs. {{ prod.precio }}
-              </div>
-
-              <button (click)="openQuickView(prod)"
-                class="w-8 h-8 rounded-full bg-white dark:bg-zinc-900 border border-stone-300 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:text-amber-500 hover:border-amber-500/50 flex items-center justify-center transition-all shadow-sm">
-                <i class="ph ph-shopping-bag text-base"></i>
-              </button>
-            </div>
+          <div class="flex items-center space-x-2">
+            <span>🕒</span>
+            <span>Lun - Sáb: 10:00 - 20:00</span>
           </div>
-
+          <div class="flex items-center space-x-2">
+            <span>📞</span>
+            <span>+591 2 279-5500</span>
+          </div>
         </div>
       </div>
-
+      <a routerLink="/catalogo" class="w-full py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-amber-500 hover:text-black text-xs font-bold uppercase tracking-wider text-center transition-colors">
+        Ver Catálogo de La Paz
+      </a>
     </div>
 
+    <!-- Sucursal 3: Cochabamba -->
+    <div class="rounded-3xl bg-white dark:bg-zinc-900/90 border border-stone-200 dark:border-zinc-800 p-6 space-y-5 shadow-sm hover:border-amber-500/50 transition-all flex flex-col justify-between">
+      <div class="space-y-4">
+        <div class="flex items-center justify-between">
+          <span class="px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-mono text-[10px] uppercase font-bold tracking-wider border border-emerald-500/30">
+            ● Abierta Hoy
+          </span>
+          <span class="text-xs font-mono text-zinc-400">03</span>
+        </div>
+        <h3 class="text-xl font-editorial font-bold text-zinc-900 dark:text-white">Cochabamba</h3>
+        <p class="text-xs text-amber-700 dark:text-amber-400 font-medium">Boutique Av. Pando Jardín</p>
+        <div class="space-y-2 text-xs text-zinc-600 dark:text-zinc-400 pt-2 border-t border-stone-100 dark:border-zinc-800">
+          <div class="flex items-start space-x-2">
+            <span>📍</span>
+            <span>Av. Pando #1120, Edificio Jardín PB</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <span>🕒</span>
+            <span>Lun - Sáb: 09:30 - 20:00</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <span>📞</span>
+            <span>+591 4 425-6677</span>
+          </div>
+        </div>
+      </div>
+      <a routerLink="/catalogo" class="w-full py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-amber-500 hover:text-black text-xs font-bold uppercase tracking-wider text-center transition-colors">
+        Ver Catálogo de Cochabamba
+      </a>
+    </div>
   </div>
 </section>
 

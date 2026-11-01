@@ -1,5 +1,6 @@
 from typing import Optional, Dict, Any, List
-from app.core.postgres import PostgreSQL
+from app.core.postgres import PostgreSQL, atomic
+from fastapi import HTTPException
 from app.core.config import Config
 
 def _get_schema() -> str:
@@ -14,12 +15,34 @@ def obtener_o_crear_cliente(id_usuario: int) -> int:
     db.create_connection()
     try:
         schema = _get_schema()
-        q_find = f"SELECT id_cliente FROM {schema}.t_cliente WHERE id_usuario = %s LIMIT 1;"
-        res = db.execute_query(q_find, (id_usuario,), fetchone=True)
+        q_find = f"SELECT id_cliente FROM {schema}.t_cliente WHERE id_usuario = %s ORDER BY id_cliente LIMIT 2;"
+        rows = db.execute_query(q_find, (id_usuario,), fetchall=True) or []
+        if len(rows) > 1:
+            raise HTTPException(409, 'CLIENT_PROFILE_RECONCILIATION_REQUIRED: varios perfiles; no se eligió ni fusionó ninguno.')
+        res = rows[0] if rows else None
         if res:
             return res[0]
 
-        # Crear nuevo cliente
+        db.close_connection()
+        return _crear_cliente_serializado(id_usuario)
+    finally:
+        db.close_connection()
+
+
+@atomic
+def _crear_cliente_serializado(id_usuario):
+    db = PostgreSQL()
+    db.create_connection()
+    try:
+        schema = _get_schema()
+        db.execute_query('SELECT pg_advisory_xact_lock(hashtextextended(%s,0))',
+                         (f'client-profile:{schema}:{id_usuario}',))
+        rows = db.execute_query(f'SELECT id_cliente FROM {schema}.t_cliente WHERE id_usuario=%s ORDER BY id_cliente LIMIT 2',
+                                (id_usuario,), fetchall=True) or []
+        if len(rows) > 1:
+            raise HTTPException(409, 'CLIENT_PROFILE_RECONCILIATION_REQUIRED: varios perfiles; requiere conciliación.')
+        if rows:
+            return rows[0][0]
         q_ins = f"""
             INSERT INTO {schema}.t_cliente (id_usuario, fecha_registro)
             VALUES (%s, NOW())
@@ -117,6 +140,8 @@ def obtener_datos_variante_tenant(id_variante: int, id_empresa: int) -> Optional
             JOIN {schema}.t_talla t ON t.id_talla = v.id_talla AND t.activo = TRUE
             JOIN {schema}.t_color col ON col.id_color = v.id_color AND col.activo = TRUE
             WHERE v.id_variante = %s AND p.id_empresa = %s
+              AND (t.id_empresa IS NULL OR t.id_empresa=p.id_empresa)
+              AND (col.id_empresa IS NULL OR col.id_empresa=p.id_empresa)
             LIMIT 1;
         """
         r = db.execute_query(q, (id_variante, id_empresa), fetchone=True)

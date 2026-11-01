@@ -1,6 +1,7 @@
 import { Injectable, inject, PLATFORM_ID, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { isPlatformBrowser } from '@angular/common';
+import { Router } from '@angular/router';
 import { BehaviorSubject, Observable, map, shareReplay, catchError } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 
@@ -41,6 +42,7 @@ export class AuthService {
   private http = inject(HttpClient);
   private apiUrl = environment.apiUrl || 'http://127.0.0.1:5000';
   private platformId = inject(PLATFORM_ID);
+  private router = inject(Router);
 
   // Signals para reactividad en Angular 17/18
   currentUser = signal<Usuario | null>(this.obtenerUsuarioInicial());
@@ -350,10 +352,12 @@ export class AuthService {
     this.permisosCache$ = null;
     this.permisosCacheTimestamp = 0;
     
-    // Force a full reload to clear any remaining in-memory state in the SPA
-    if (isPlatformBrowser(this.platformId)) {
-      window.location.href = '/';
-    }
+    // Navegación limpia de SPA a la página pública sin recargar destructivamente el navegador
+    this.router.navigate(['/']).then(() => {
+      if (isPlatformBrowser(this.platformId)) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    });
   }
 
   obtenerToken(): string | null {
@@ -725,7 +729,18 @@ export class AuthService {
     if (u && u.id_empresa && u.id_empresa > 0) {
       return u.id_empresa;
     }
-    return this.selectedCompany()?.id_empresa ?? null;
+    const sel = this.selectedCompany();
+    if (sel && sel.id_empresa) return sel.id_empresa;
+    if (typeof localStorage !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('tenant_seleccionado');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed && parsed.id_empresa) return Number(parsed.id_empresa);
+        }
+      } catch {}
+    }
+    return null;
   }
 
   getEffectiveCompanyName(): string {
