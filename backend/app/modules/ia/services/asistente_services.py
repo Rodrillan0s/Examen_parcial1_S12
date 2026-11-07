@@ -330,16 +330,16 @@ ADMIN_TOOLS = [
 # =====================================================================
 
 def _ejecutar_buscar_prendas(args: dict, id_empresa: int) -> dict:
-    termino = args.get("termino", "").strip()
-    categoria = args.get("categoria", "").strip()
-    genero = args.get("genero", "").strip()
+    termino = str(args.get("termino") or "").strip()
+    categoria = str(args.get("categoria") or "").strip()
+    genero = str(args.get("genero") or "").strip()
     precio_max = args.get("precio_max")
 
     conn = get_db_connection()
     try:
         cur = conn.cursor()
         sql = """
-            SELECT DISTINCT
+            SELECT
                 p.id_producto,
                 p.nombre,
                 p.codigo_producto,
@@ -419,9 +419,9 @@ def _ejecutar_buscar_prendas(args: dict, id_empresa: int) -> dict:
 
 
 def _ejecutar_recomendar_outfit(args: dict, id_empresa: int) -> dict:
-    ocasion = (args.get("ocasion") or "evento especial").strip().lower()
-    genero = args.get("genero", "").strip()
-    estilo = (args.get("estilo_preferido") or "elegante y refinado").strip()
+    ocasion = str(args.get("ocasion") or "evento especial").strip().lower()
+    genero = str(args.get("genero") or "").strip()
+    estilo = str(args.get("estilo_preferido") or "elegante y refinado").strip()
 
     conn = get_db_connection()
     try:
@@ -587,19 +587,19 @@ def _ejecutar_consultar_politicas(args: dict) -> dict:
 
 
 def _ejecutar_buscar_prendas_avanzada(args: dict, id_empresa: int) -> dict:
-    termino = (args.get("termino") or "").strip()
-    categoria = (args.get("categoria") or "").strip()
-    talla = (args.get("talla") or "").strip()
-    color = (args.get("color") or "").strip()
+    termino = str(args.get("termino") or "").strip()
+    categoria = str(args.get("categoria") or "").strip()
+    talla = str(args.get("talla") or "").strip()
+    color = str(args.get("color") or "").strip()
     precio_min = args.get("precio_min")
     precio_max = args.get("precio_max")
-    sucursal = (args.get("sucursal") or "").strip()
+    sucursal = str(args.get("sucursal") or "").strip()
 
     conn = get_db_connection()
     try:
         cur = conn.cursor()
         sql = """
-            SELECT DISTINCT
+            SELECT
                 p.id_producto,
                 p.nombre,
                 p.codigo_producto,
@@ -696,7 +696,7 @@ def _ejecutar_buscar_prendas_avanzada(args: dict, id_empresa: int) -> dict:
 
 def _ejecutar_detalle_prenda(args: dict, id_empresa: int) -> dict:
     id_prod = args.get("id_producto")
-    nom_prenda = args.get("nombre_prenda", "").strip()
+    nom_prenda = str(args.get("nombre_prenda") or "").strip()
 
     conn = get_db_connection()
     try:
@@ -859,8 +859,8 @@ def _ejecutar_consultar_mis_reservas(id_usuario: Optional[int], limite: int = 5)
 
 
 def _ejecutar_consultar_ventas(args: dict, id_empresa: int) -> dict:
-    periodo = args.get("periodo", "hoy")
-    sucursal = args.get("sucursal", "").strip()
+    periodo = str(args.get("periodo") or "hoy").strip()
+    sucursal = str(args.get("sucursal") or "").strip()
 
     hoy = date.today()
     if periodo == "hoy":
@@ -931,8 +931,8 @@ def _ejecutar_consultar_ventas(args: dict, id_empresa: int) -> dict:
 
 
 def _ejecutar_consultar_inventario_alertas(args: dict, id_empresa: int) -> dict:
-    filtro = args.get("filtro", "bajo_stock")
-    sucursal = args.get("sucursal", "").strip()
+    filtro = str(args.get("filtro") or "bajo_stock").strip()
+    sucursal = str(args.get("sucursal") or "").strip()
 
     conn = get_db_connection()
     try:
@@ -1181,8 +1181,8 @@ def _ejecutar_motor_reportes(args: dict, id_empresa: int, token_data: Optional[d
 
 
 def _ejecutar_consultar_ventas_pendientes(args: dict, id_empresa: int) -> dict:
-    sucursal = args.get("sucursal", "").strip()
-    canal = args.get("canal", "todos")
+    sucursal = str(args.get("sucursal") or "").strip()
+    canal = str(args.get("canal") or "todos").strip()
 
     conn = get_db_connection()
     try:
@@ -1196,7 +1196,11 @@ def _ejecutar_consultar_ventas_pendientes(args: dict, id_empresa: int) -> dict:
                 canal,
                 total,
                 dias_pendiente,
-                alerta_antiguedad
+                CASE
+                    WHEN COALESCE(dias_pendiente, 0) >= 7 THEN 'CRÍTICA'
+                    WHEN COALESCE(dias_pendiente, 0) >= 3 THEN 'ATENCIÓN'
+                    ELSE 'NORMAL'
+                END AS alerta_antiguedad
             FROM comercio.vw_ventas_pendientes_reporte
             WHERE id_empresa = %s
         """
@@ -1206,7 +1210,7 @@ def _ejecutar_consultar_ventas_pendientes(args: dict, id_empresa: int) -> dict:
             sql += " AND sucursal ILIKE %s"
             params.append(f"%{sucursal}%")
 
-        if canal != "todos":
+        if canal and canal.lower() != "todos":
             sql += " AND canal ILIKE %s"
             params.append(f"%{canal}%")
 
@@ -1235,8 +1239,8 @@ def _ejecutar_consultar_ventas_pendientes(args: dict, id_empresa: int) -> dict:
 
 
 def _ejecutar_consultar_reservas_empresa(args: dict, id_empresa: int) -> dict:
-    sucursal = args.get("sucursal", "").strip()
-    vigencia = args.get("vigencia", "todas")
+    sucursal = str(args.get("sucursal") or "").strip()
+    vigencia = str(args.get("vigencia") or "todas").strip()
 
     conn = get_db_connection()
     try:
@@ -1290,8 +1294,8 @@ def _ejecutar_consultar_reservas_empresa(args: dict, id_empresa: int) -> dict:
 
 
 def _ejecutar_consultar_auditoria_pos(args: dict, id_empresa: int) -> dict:
-    sucursal = args.get("sucursal", "").strip()
-    solo_alertas = args.get("solo_alertas", False)
+    sucursal = str(args.get("sucursal") or "").strip()
+    solo_alertas = bool(args.get("solo_alertas", False))
 
     conn = get_db_connection()
     try:
@@ -1677,146 +1681,53 @@ def _procesar_intencion_local(mensaje: str, token_data: Optional[dict], id_empre
 
 
 # =====================================================================
-# SERVICIO PRINCIPAL DE CHAT CON DEEPSEEK + RBAC + FALLBACK ELEGANTE
+# SERVICIO PRINCIPAL DE CHAT CON ORQUESTADOR MULTIMODELO + RBAC + MEMORIA
 # =====================================================================
 
-def procesar_mensaje_chat(mensaje: str, historial: Optional[List[dict]] = None, token_data: Optional[dict] = None) -> dict:
-    if not mensaje or not mensaje.strip():
+def procesar_mensaje_chat(
+    mensaje: str,
+    historial: Optional[List[dict]] = None,
+    token_data: Optional[dict] = None,
+    conversation_id: Optional[str] = None,
+    slug_tienda: Optional[str] = None,
+    id_empresa_solicitado: Optional[int] = None,
+    rate_limit_key: Optional[str] = None,
+    orchestrator: Optional[Any] = None,
+    modelo: Optional[str] = None,
+) -> dict:
+    """
+    Punto de entrada principal de Aurora Advisor (Iteraciones 2/3 modernizadas).
+    Delega en ConversationalOrchestrator aplicando:
+    - Aislamiento multitenant estricto y verificación RBAC desde PostgreSQL
+    - Anti-prompt injection y sanitización de historial/salidas
+    - Memoria conversacional con extracción de preferencias y referencias anafóricas
+    - Orquestación multi-herramienta agnóstica al proveedor (DeepSeek, OpenAI, Gemini)
+    - Integración con CU23W (proyección de demanda y reposición de stock)
+    - Fallback inteligente multi-intención cuando el proveedor externo no está disponible
+    """
+    from app.modules.ia.orchestrator.conversational_orchestrator import GLOBAL_ORCHESTRATOR
+
+    if not mensaje or not str(mensaje).strip():
         return {
+            "success": False,
+            "conversation_id": conversation_id or "empty",
+            "mensaje": "Por favor escribe tu consulta o requerimiento para poder asistirte.",
             "respuesta": "Por favor escribe tu consulta o requerimiento para poder asistirte.",
             "tipo": "texto",
-            "datos": None
+            "datos": None,
+            "herramientas_usadas": [],
+            "metadata": {},
         }
 
-    id_empresa = (token_data.get("id_empresa") if token_data else None) or 1
-    roles = [str(r).upper() for r in (token_data.get("roles", []) if token_data else [])]
-    id_rol = token_data.get("id_rol") if token_data else 2
-    es_admin = (id_rol == 1 or "ADMINISTRADOR" in roles or "ADMINISTRADOR_TIENDA" in roles or 
-                "ENCARGADO" in roles or "EMPLEADO" in roles)
+    active_orchestrator = orchestrator or GLOBAL_ORCHESTRATOR
+    return active_orchestrator.process_turn(
+        mensaje=mensaje,
+        token_data=token_data,
+        historial=historial,
+        conversation_id=conversation_id,
+        slug_tienda=slug_tienda,
+        id_empresa_solicitado=id_empresa_solicitado,
+        rate_limit_key=rate_limit_key,
+        modelo=modelo,
+    )
 
-    herramientas = list(CLIENT_TOOLS)
-    if es_admin:
-        herramientas.extend(ADMIN_TOOLS)
-
-    fecha_hoy = datetime.now().strftime("%d de %B de %Y")
-    nombre_usuario = token_data.get("nombre") if token_data else "estimado cliente"
-    empresa_nombre = token_data.get("nombre_empresa") if token_data else "Aurora Store"
-
-    rol_desc = "un miembro directivo y administrativo" if es_admin else "un cliente distinguido"
-    system_prompt = f"""Eres 'Aurora Advisor', la asesora de imagen de alta costura y consultora integral de {empresa_nombre}.
-Hoy es {fecha_hoy}. Estás atendiendo a {nombre_usuario}, quien es {rol_desc}.
-
-Directrices de conversación y tono:
-1. Naturalidad y elegancia: Exprésate con un lenguaje fluido, cordial, sofisticado y sumamente cálido, propio de una firma de moda de lujo. Evita tecnicismos de programación o respuestas secas.
-2. Recomendaciones de estilo proactivas: Cuando hables de prendas o eventos, ofrece consejos sobre armonía de color, siluetas, textura y complementos a juego.
-3. Uso estricto de herramientas: Utiliza SIEMPRE las funciones disponibles para consultar datos reales de inventario, productos, precios, políticas y reportes.
-4. Redacción limpia: Emplea negritas para nombres y precios (ej. Bs. 499), viñetas ordenadas y comentarios que deleiten al lector."""
-
-    messages = [{"role": "system", "content": system_prompt}]
-    if historial and isinstance(historial, list):
-        for h in historial[-6:]:
-            if isinstance(h, dict) and "role" in h and "content" in h:
-                if h["role"] in ["user", "assistant"]:
-                    messages.append({"role": h["role"], "content": str(h["content"])})
-
-    messages.append({"role": "user", "content": mensaje.strip()})
-
-    api_key = Config.DEEPSEEK_API_KEY
-    base_url = Config.DEEPSEEK_BASE_URL.rstrip("/")
-    model = Config.DEEPSEEK_MODEL
-
-    if not api_key or "your_" in api_key.lower():
-        return _procesar_intencion_local(mensaje, token_data, id_empresa, es_admin)
-
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
-
-    payload = {
-        "model": model,
-        "messages": messages,
-        "tools": herramientas,
-        "tool_choice": "auto",
-        "temperature": 0.3,
-        "max_tokens": 1200
-    }
-
-    try:
-        response = requests.post(f"{base_url}/chat/completions", headers=headers, json=payload, timeout=25)
-        if response.status_code != 200:
-            logger.warning(f"DeepSeek API respondió con estado {response.status_code}. Aplicando fallback local.")
-            return _procesar_intencion_local(mensaje, token_data, id_empresa, es_admin)
-
-        res_json = response.json()
-        choice = res_json["choices"][0]["message"]
-
-        if choice.get("tool_calls"):
-            tool_call = choice["tool_calls"][0]
-            func_name = tool_call["function"]["name"]
-            func_args_str = tool_call["function"].get("arguments", "{}")
-            try:
-                func_args = json.loads(func_args_str) if isinstance(func_args_str, str) else func_args_str
-            except Exception:
-                func_args = {}
-
-            tool_result, tipo_sugerido = despachar_herramienta(func_name, func_args, token_data, id_empresa)
-
-            messages.append(choice)
-            messages.append({
-                "role": "tool",
-                "tool_call_id": tool_call["id"],
-                "name": func_name,
-                "content": json.dumps(tool_result, ensure_ascii=False)
-            })
-
-            followup_payload = {
-                "model": model,
-                "messages": messages,
-                "temperature": 0.4,
-                "max_tokens": 900
-            }
-
-            try:
-                followup_resp = requests.post(f"{base_url}/chat/completions", headers=headers, json=followup_payload, timeout=20)
-                if followup_resp.status_code == 200:
-                    followup_choice = followup_resp.json()["choices"][0]["message"]
-                    texto_respuesta = followup_choice.get("content", "")
-                else:
-                    texto_respuesta = _formatear_respuesta_natural(func_name, tool_result, nombre_usuario)
-            except Exception:
-                texto_respuesta = _formatear_respuesta_natural(func_name, tool_result, nombre_usuario)
-
-            datos_salida = None
-            if tipo_sugerido == "productos" and "productos" in tool_result:
-                datos_salida = tool_result["productos"]
-            elif tipo_sugerido == "productos" and "variantes_stock" in tool_result:
-                datos_salida = [tool_result]
-            elif tipo_sugerido == "tabla" and "items" in tool_result:
-                datos_salida = tool_result["items"]
-            elif tipo_sugerido == "tabla" and "sucursales" in tool_result:
-                datos_salida = tool_result["sucursales"]
-            elif tipo_sugerido == "tabla" and "pedidos" in tool_result:
-                datos_salida = tool_result["pedidos"]
-            elif tipo_sugerido == "tabla" and "reservas" in tool_result:
-                datos_salida = tool_result["reservas"]
-            elif tipo_sugerido == "indicadores":
-                datos_salida = tool_result
-            elif tipo_sugerido == "reporte":
-                datos_salida = tool_result
-
-            return {
-                "respuesta": texto_respuesta,
-                "tipo": tipo_sugerido if datos_salida else "texto",
-                "datos": datos_salida
-            }
-
-        return {
-            "respuesta": choice.get("content", "¿En qué puedo colaborarte hoy?"),
-            "tipo": "texto",
-            "datos": None
-        }
-
-    except Exception as e:
-        logger.warning(f"Excepción en DeepSeek API ({e}). Empleando fallback local.")
-        return _procesar_intencion_local(mensaje, token_data, id_empresa, es_admin)

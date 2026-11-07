@@ -1,8 +1,24 @@
 import { Injectable, inject, PLATFORM_ID, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { isPlatformBrowser } from '@angular/common';
+import { Subscription } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { AuthService } from '../../auth/services/auth';
+
+export type AssistantResponseType =
+  | 'texto'
+  | 'productos'
+  | 'tabla'
+  | 'indicadores'
+  | 'reporte'
+  | 'comparacion'
+  | 'grafico'
+  | 'outfit'
+  | 'alertas'
+  | 'predicciones'
+  | 'recomendaciones'
+  | 'seguimiento_pedido'
+  | 'error';
 
 export interface AssistantProduct {
   id_producto: number;
@@ -11,11 +27,30 @@ export interface AssistantProduct {
   precio: number;
   categoria?: string;
   genero?: string;
+  imagen?: string;
   imagen_url?: string;
   descripcion?: string;
   stock_disponible?: number;
+  stock_total?: number;
   tallas?: string[];
+  tallas_disponibles?: string;
   colores?: string[];
+  colores_disponibles?: string;
+  motivo_recomendacion?: string;
+  afinidad_porcentaje?: number | null;
+}
+
+export interface AssistantMetadata {
+  provider?: string;
+  model?: string;
+  alcance?: string;
+  id_empresa?: number;
+  id_sucursal?: number | null;
+  latency_ms?: number;
+  used_fallback?: boolean;
+  intenciones_detectadas?: string[];
+  es_inicio_frio?: boolean | null;
+  referencia_contextual?: string | null;
 }
 
 export interface AssistantMessage {
@@ -23,15 +58,22 @@ export interface AssistantMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
-  tipo?: 'texto' | 'productos' | 'tabla' | 'indicadores' | 'reporte';
+  tipo?: AssistantResponseType;
   datos?: any;
+  herramientas_usadas?: string[];
+  metadata?: AssistantMetadata;
+  isError?: boolean;
 }
 
 export interface ChatApiResponse {
   success: boolean;
+  conversation_id?: string;
+  mensaje?: string;
   respuesta: string;
-  tipo: 'texto' | 'productos' | 'tabla' | 'indicadores' | 'reporte';
+  tipo: AssistantResponseType;
   datos?: any;
+  herramientas_usadas?: string[];
+  metadata?: AssistantMetadata;
   error?: string;
 }
 
@@ -47,10 +89,16 @@ export class AssistantService {
   public isOpen = signal<boolean>(false);
   public isLoading = signal<boolean>(false);
   public isListening = signal<boolean>(false);
+  public speechSupported = signal<boolean>(false);
   public speechError = signal<string | null>(null);
+  public transcripcionPrevia = signal<string>('');
+  public conversationId = signal<string | null>(null);
+  public ultimoMensajeUsuario = signal<string>('');
+  public selectedModel = signal<'deepseek-chat' | 'deepseek-reasoner'>('deepseek-chat');
   public messages = signal<AssistantMessage[]>([]);
 
   private recognition: any = null;
+  private activeSubscription: Subscription | null = null;
 
   constructor() {
     this.inicializarSpeechRecognition();
@@ -77,21 +125,68 @@ export class AssistantService {
   }
 
   public limpiarConversacion(): void {
+    this.detenerRespuesta();
+    this.conversationId.set(null);
+    this.ultimoMensajeUsuario.set('');
+    this.transcripcionPrevia.set('');
     this.messages.set([]);
     this.agregarMensajeInicial();
   }
 
-  public agregarMensajeInicial(): void {
-    const user = this.authService.currentUser();
-    const roles = this.authService.roles().map(r => r.toUpperCase());
-    const esAdmin = roles.includes('ADMINISTRADOR') || roles.includes('SUPERADMIN') || 
-                    roles.includes('ADMINISTRADOR_TIENDA') || roles.includes('ENCARGADO');
+  public detenerRespuesta(): void {
+    if (this.activeSubscription) {
+      this.activeSubscription.unsubscribe();
+      this.activeSubscription = null;
+    }
+    if (this.isLoading()) {
+      this.isLoading.set(false);
+      const cancelMsg: AssistantMessage = {
+        id: 'msg_cancel_' + Date.now(),
+        role: 'assistant',
+        content: '⏹️ Consulta detenida por el usuario. Puedes escribir o dictar una nueva pregunta cuando gustes.',
+        timestamp: new Date(),
+        tipo: 'texto'
+      };
+      this.messages.update(prev => [...prev, cancelMsg]);
+    }
+  }
 
-    let saludo = 'Hola 👋\n\nSoy el asistente inteligente de **Aurora Store**.\n';
+  public reintentarUltimoMensaje(): void {
+    const ultimo = this.ultimoMensajeUsuario();
+    if (!ultimo || this.isLoading()) return;
+    this.enviarMensaje(ultimo);
+  }
+
+  public cambiarModeloDeepSeek(modelo: 'deepseek-chat' | 'deepseek-reasoner'): void {
+    this.selectedModel.set(modelo);
+  }
+
+  public alternarModeloDeepSeek(): void {
+    this.selectedModel.update(actual =>
+      actual === 'deepseek-chat' ? 'deepseek-reasoner' : 'deepseek-chat'
+    );
+  }
+
+  public esUsuarioAdmin(): boolean {
+    const roles = this.authService.roles().map(r => r.toUpperCase());
+    return (
+      roles.includes('ADMINISTRADOR') ||
+      roles.includes('SUPERADMIN') ||
+      roles.includes('ADMINISTRADOR_TIENDA') ||
+      roles.includes('ENCARGADO')
+    );
+  }
+
+  public agregarMensajeInicial(): void {
+    const esAdmin = this.esUsuarioAdmin();
+
+    let saludo = 'Hola 👋\n\nSoy **Aurora Advisor**, tu copiloto e inteligencia conversacional de **Aurora Store**.\n';
     if (esAdmin) {
-      saludo += `Puedo ayudarte a consultar ventas en tiempo real, inventario crítico, indicadores de gestión y reportes ejecutivos.\n\n¿En qué métrica o consulta puedo asistirte hoy?`;
+      saludo +=
+        'Puedo analizar **ventas por periodo**, **productos más vendidos**, **capital sin rotación**, **alertas de stock**, **sugerencias de reposición** y **proyecciones de demanda IA (CU23W)**.\n\n¿Qué indicador o análisis deseas consultar hoy?';
     } else {
-      saludo += `Puedo ayudarte a buscar prendas exclusivas, consultar disponibilidad de tallas y colores, tiendas físicas o el estado de tus compras y reservas.\n\n¿Qué deseas descubrir hoy?`;
+      saludo +=
+        'Puedo ayudarte a buscar prendas por **ocasión, talla, color o presupuesto**, **armar outfits**, **comparar productos**, revisar **disponibilidad por sucursal** o consultar el **estado de tus pedidos y reservas**.\n\n¿Qué te gustaría descubrir hoy?';
     }
 
     this.messages.set([
@@ -105,11 +200,24 @@ export class AssistantService {
     ]);
   }
 
+  private detectarSlugTiendaActual(): string | null {
+    if (!isPlatformBrowser(this.platformId)) return null;
+    try {
+      const path = window.location.pathname || '';
+      const match = path.match(/\/tienda\/([^/?#]+)/i);
+      return match ? decodeURIComponent(match[1]) : null;
+    } catch {
+      return null;
+    }
+  }
+
   public enviarMensaje(texto: string): void {
-    const mensajeLimpio = texto.trim();
+    const mensajeLimpio = (texto || '').trim();
     if (!mensajeLimpio || this.isLoading()) return;
 
-    // Agregar mensaje del usuario
+    this.ultimoMensajeUsuario.set(mensajeLimpio);
+    this.transcripcionPrevia.set('');
+
     const userMsg: AssistantMessage = {
       id: 'msg_u_' + Date.now(),
       role: 'user',
@@ -122,9 +230,9 @@ export class AssistantService {
     this.isLoading.set(true);
     this.speechError.set(null);
 
-    // Preparar historial breve para contexto (últimos 6)
     const historial = this.messages()
-      .slice(-6)
+      .filter(m => !m.isError)
+      .slice(-8)
       .map(m => ({ role: m.role, content: m.content }));
 
     const token = this.authService.obtenerToken();
@@ -135,39 +243,72 @@ export class AssistantService {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    this.http.post<ChatApiResponse>(`${this.apiUrl}/api/asistente/chat`, {
+    const payload: Record<string, any> = {
       mensaje: mensajeLimpio,
-      historial: historial
-    }, { headers }).subscribe({
-      next: (resp) => {
-        this.isLoading.set(false);
-        const botMsg: AssistantMessage = {
-          id: 'msg_a_' + Date.now(),
-          role: 'assistant',
-          content: resp.respuesta || 'He procesado tu consulta.',
-          timestamp: new Date(),
-          tipo: resp.tipo || 'texto',
-          datos: resp.datos
-        };
-        this.messages.update(prev => [...prev, botMsg]);
-      },
-      error: (err) => {
-        this.isLoading.set(false);
-        console.error('Error asistente chat:', err);
-        const errorMsg: AssistantMessage = {
-          id: 'msg_err_' + Date.now(),
-          role: 'assistant',
-          content: 'No pude procesar la solicitud en este momento. Las demás funciones de Aurora Store continúan funcionando normalmente.',
-          timestamp: new Date(),
-          tipo: 'texto'
-        };
-        this.messages.update(prev => [...prev, errorMsg]);
-      }
-    });
+      historial: historial,
+      modelo: this.selectedModel()
+    };
+    if (this.conversationId()) {
+      payload['conversation_id'] = this.conversationId();
+    }
+    const slugTienda = this.detectarSlugTiendaActual();
+    if (slugTienda) {
+      payload['slug_tienda'] = slugTienda;
+    }
+    const user = this.authService.currentUser();
+    const selectedComp = this.authService.selectedCompany();
+    if (user?.alcance === 'PLATAFORMA' && selectedComp?.id_empresa) {
+      payload['id_empresa'] = selectedComp.id_empresa;
+    }
+
+    this.activeSubscription = this.http
+      .post<ChatApiResponse>(`${this.apiUrl}/api/asistente/chat`, payload, { headers })
+      .subscribe({
+        next: (resp) => {
+          this.isLoading.set(false);
+          this.activeSubscription = null;
+          if (resp.conversation_id) {
+            this.conversationId.set(resp.conversation_id);
+          }
+          const contenido = resp.mensaje || resp.respuesta || 'He procesado tu consulta.';
+          const botMsg: AssistantMessage = {
+            id: 'msg_a_' + Date.now(),
+            role: 'assistant',
+            content: contenido,
+            timestamp: new Date(),
+            tipo: resp.tipo || 'texto',
+            datos: resp.datos,
+            herramientas_usadas: resp.herramientas_usadas || [],
+            metadata: resp.metadata,
+            isError: resp.success === false || resp.tipo === 'error'
+          };
+          this.messages.update(prev => [...prev, botMsg]);
+        },
+        error: (err) => {
+          this.isLoading.set(false);
+          this.activeSubscription = null;
+          const backendDetail = err?.error?.detail;
+          const textoError =
+            (typeof backendDetail === 'object' && (backendDetail?.mensaje || backendDetail?.respuesta)) ||
+            (typeof backendDetail === 'string' ? backendDetail : null) ||
+            err?.error?.respuesta ||
+            'No pude procesar la solicitud en este momento. Puedes reintentar o continuar usando Aurora Store con normalidad.';
+
+          const errorMsg: AssistantMessage = {
+            id: 'msg_err_' + Date.now(),
+            role: 'assistant',
+            content: textoError,
+            timestamp: new Date(),
+            tipo: 'error',
+            isError: true
+          };
+          this.messages.update(prev => [...prev, errorMsg]);
+        }
+      });
   }
 
   // =====================================================================
-  // RECONOCIMIENTO DE VOZ MEDIANTE NATIVE WEB SPEECH API
+  // RECONOCIMIENTO DE VOZ MEDIANTE NATIVE WEB SPEECH API (es-BO / es-ES)
   // =====================================================================
 
   private inicializarSpeechRecognition(): void {
@@ -177,15 +318,16 @@ export class AssistantService {
     const SpeechRecognition = windowAny.SpeechRecognition || windowAny.webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      console.warn('Web Speech API no soportada en este navegador.');
+      this.speechSupported.set(false);
       return;
     }
 
+    this.speechSupported.set(true);
     try {
       this.recognition = new SpeechRecognition();
-      this.recognition.lang = 'es-ES';
+      this.recognition.lang = 'es-BO';
       this.recognition.continuous = false;
-      this.recognition.interimResults = false;
+      this.recognition.interimResults = true;
 
       this.recognition.onstart = () => {
         this.isListening.set(true);
@@ -198,17 +340,22 @@ export class AssistantService {
 
       this.recognition.onerror = (event: any) => {
         this.isListening.set(false);
-        console.warn('Speech recognition error:', event.error);
-        if (event.error !== 'no-speech') {
-          this.speechError.set('No se pudo capturar audio del micrófono.');
+        if (event.error === 'language-not-supported' && this.recognition.lang !== 'es-ES') {
+          this.recognition.lang = 'es-ES';
+          return;
+        }
+        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+          this.speechError.set('Permiso de micrófono denegado. Habilita el micrófono en tu navegador.');
+        } else if (event.error !== 'no-speech' && event.error !== 'aborted') {
+          this.speechError.set('No se pudo capturar el audio del micrófono.');
         }
       };
-    } catch (e) {
-      console.error('Error inicializando SpeechRecognition:', e);
+    } catch {
+      this.speechSupported.set(false);
     }
   }
 
-  public alternarVoz(onTextoDetectado: (texto: string) => void): void {
+  public alternarVoz(onTextoDetectado: (texto: string, esFinal: boolean) => void): void {
     if (this.isListening()) {
       this.detenerVoz();
     } else {
@@ -216,7 +363,7 @@ export class AssistantService {
     }
   }
 
-  public iniciarVoz(onTextoDetectado: (texto: string) => void): void {
+  public iniciarVoz(onTextoDetectado: (texto: string, esFinal: boolean) => void): void {
     if (!isPlatformBrowser(this.platformId)) return;
 
     if (!this.recognition) {
@@ -224,20 +371,33 @@ export class AssistantService {
     }
 
     if (!this.recognition) {
-      this.speechError.set('Reconocimiento por voz no disponible en tu navegador.');
+      this.speechError.set('Reconocimiento por voz no disponible en este navegador.');
       return;
     }
 
     try {
       this.recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        if (transcript) {
-          onTextoDetectado(transcript);
+        let interimTranscript = '';
+        let finalTranscript = '';
+
+        for (let i = event.resultIndex || 0; i < event.results.length; i++) {
+          const res = event.results[i];
+          const text = res[0]?.transcript || '';
+          if (res.isFinal) {
+            finalTranscript += text;
+          } else {
+            interimTranscript += text;
+          }
+        }
+
+        const currentText = (finalTranscript || interimTranscript).trim();
+        this.transcripcionPrevia.set(currentText);
+        if (currentText) {
+          onTextoDetectado(currentText, Boolean(finalTranscript));
         }
       };
       this.recognition.start();
-    } catch (e) {
-      console.warn('No se pudo iniciar el micrófono:', e);
+    } catch {
       this.isListening.set(false);
     }
   }
@@ -246,8 +406,8 @@ export class AssistantService {
     if (this.recognition && this.isListening()) {
       try {
         this.recognition.stop();
-      } catch (e) {
-        // Ignorar
+      } catch {
+        // Ignore stop errors
       }
       this.isListening.set(false);
     }

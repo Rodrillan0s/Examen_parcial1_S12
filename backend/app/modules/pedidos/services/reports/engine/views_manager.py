@@ -1,18 +1,26 @@
 from app.core.postgres import PostgreSQL
 from app.core.config import Config
 
+_VISTAS_INICIALIZADAS = False
+
 def _crear_vista(db, schema: str, name: str, sql: str):
     try:
-        db.execute_query(f"DROP VIEW IF EXISTS {schema}.{name} CASCADE;", commit=True)
+        db.execute_query(sql, commit=True)
     except Exception:
-        pass
-    db.execute_query(sql, commit=True)
+        try:
+            db.execute_query(f"DROP VIEW IF EXISTS {schema}.{name} CASCADE;", commit=True)
+        except Exception:
+            pass
+        db.execute_query(sql, commit=True)
 
-def asegurar_vistas_sql():
+def asegurar_vistas_sql(force: bool = False):
     """
     Crea o actualiza las vistas SQL en PostgreSQL que sirven como
     fuentes de datos limpias y reutilizables para el Motor de Reportes.
     """
+    global _VISTAS_INICIALIZADAS
+    if _VISTAS_INICIALIZADAS and not force:
+        return
     db = PostgreSQL()
     db.create_connection()
     try:
@@ -473,6 +481,7 @@ def asegurar_vistas_sql():
         """
         _crear_vista(db, schema, 'vw_stock_inmovilizado_reporte', v_inmovilizado)
 
+        _VISTAS_INICIALIZADAS = True
         return True
     finally:
         db.close_connection()

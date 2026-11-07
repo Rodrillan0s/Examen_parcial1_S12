@@ -436,11 +436,19 @@ def entrenar_modelo_todos_los_clientes(id_empresa: int = 1) -> Dict[str, Any]:
         conn.close()
 
 
-def obtener_recomendaciones_cliente(id_usuario: Optional[int], id_empresa: int = 1, limite: int = 6) -> List[Dict[str, Any]]:
+def obtener_recomendaciones_cliente(
+    id_usuario: Optional[int],
+    id_empresa: int = 1,
+    limite: int = 6,
+    preferencias_sesion: Optional[Dict[str, Any]] = None
+) -> List[Dict[str, Any]]:
     """
-    Recupera las prendas recomendadas para el usuario actual.
-    Si el usuario tiene compras pero no recomendaciones generadas, las entrena bajo demanda.
-    Si es usuario nuevo o visitante anónimo, entrega recomendaciones destacadas de tendencia.
+    Recupera las prendas recomendadas para el usuario actual combinando:
+    1. Historial de compras y afinidad vectorial (si el cliente tiene historial).
+    2. Señales de carrito activo y reservas recientes del cliente.
+    3. Preferencias expresadas durante la conversación actual (categoría, talla, colores, presupuesto).
+    4. Disponibilidad real de stock y popularidad verificable en la tienda (para inicio en frío honesto,
+       sin inventar porcentajes fijos de afinidad como si fueran predicciones reales).
     """
     conn = _get_db_connection()
     try:
@@ -452,8 +460,18 @@ def obtener_recomendaciones_cliente(id_usuario: Optional[int], id_empresa: int =
             if row_cli:
                 id_cliente = row_cli[0]
 
-        # 1. Si hay cliente identificado, consultar t_recomendacion
-        if id_cliente:
+        prefs = preferencias_sesion or {}
+        cat_pref = (prefs.get("categoria") or "").strip()
+        talla_pref = (prefs.get("talla") or "").strip()
+        colores_pref = [c.lower() for c in (prefs.get("colores") or []) if c]
+        colores_excl = [c.lower() for c in (prefs.get("colores_excluidos") or []) if c]
+        precio_max = prefs.get("precio_max") or prefs.get("presupuesto_max")
+
+        # Si el usuario expresó restricciones en la sesión actual, priorizar el ranking contextual híbrido
+        tiene_contexto_conversacional = bool(cat_pref or talla_pref or colores_pref or colores_excl or precio_max)
+
+        # 1. Si hay cliente identificado y no pidió algo radicalmente distinto en la sesión, revisar perfil histórico
+        if id_cliente and not tiene_contexto_conversacional:
             cur.execute("""
                 SELECT 
                     r.id_producto,
@@ -474,15 +492,13 @@ def obtener_recomendaciones_cliente(id_usuario: Optional[int], id_empresa: int =
             rows = cur.fetchall()
 
             if rows:
-                return _formatear_recomendaciones(cur, rows)
+                return _formatear_recomendaciones(cur, rows, es_inicio_frio=False)
 
-            # Si no había en t_recomendacion, intentar aprender sobre la marcha
             perfil = MiniMLPreferenceEngine.extraer_vector_cliente(cur, id_cliente, id_empresa=id_empresa)
             if perfil:
                 MiniMLPreferenceEngine.actualizar_tabla_preferencias(cur, perfil)
-                recs = MiniMLPreferenceEngine.generar_recomendaciones(cur, perfil, id_empresa=id_empresa, top_k=limite)
+                MiniMLPreferenceEngine.generar_recomendaciones(cur, perfil, id_empresa=id_empresa, top_k=limite)
                 conn.commit()
-                # Volver a consultar formateado
                 cur.execute("""
                     SELECT 
                         r.id_producto,
@@ -500,9 +516,36 @@ def obtener_recomendaciones_cliente(id_usuario: Optional[int], id_empresa: int =
                     ORDER BY r.puntuacion DESC
                     LIMIT %s;
                 """, (id_cliente, id_empresa, limite))
-                return _formatear_recomendaciones(cur, cur.fetchall())
+                return _formatear_recomendaciones(cur, cur.fetchall(), es_inicio_frio=False)
 
-        # 2. Recomendaciones de Tendencia / Baseline (visitantes o clientes sin compras)
+        # 2. Ranking multicriterio verificable (combina popularidad real, disponibilidad, reservas/carrito y preferencias de sesión)
+        # Obtener popularidad real de ventas en la empresa
+        cur.execute("""
+            SELECT ptc.id_producto, COALESCE(SUM(dv.cantidad), 0) as vendidos
+            FROM comercio.t_detalle_venta dv
+            JOIN comercio.t_venta v ON dv.id_venta = v.id_venta
+            JOIN comercio.t_producto_talla_color ptc ON dv.id_variante = ptc.id_variante
+            WHERE v.id_empresa = %s AND UPPER(COALESCE(v.estado, '')) NOT IN ('CANCELADA', 'ANULADA')
+            GROUP BY ptc.id_producto;
+        """, (id_empresa,))
+        pop_map = {r[0]: int(r[1] or 0) for r in cur.fetchall()}
+        max_pop = max(pop_map.values(), default=1) or 1
+
+        # Señales de carrito y reservas del cliente (si está autenticado)
+        cats_interes_reciente = set()
+        if id_cliente:
+            cur.execute("""
+                SELECT DISTINCT p.id_categoria
+                FROM comercio.t_reserva r
+                JOIN comercio.t_detalle_reserva dr ON r.id_reserva = dr.id_reserva
+                JOIN comercio.t_producto_talla_color ptc ON dr.id_variante = ptc.id_variante
+                JOIN comercio.t_producto p ON ptc.id_producto = p.id_producto
+                WHERE r.id_cliente = %s AND p.id_empresa = %s
+            """, (id_cliente, id_empresa))
+            for rc in cur.fetchall():
+                if rc[0]:
+                    cats_interes_reciente.add(rc[0])
+
         cur.execute("""
             SELECT 
                 p.id_producto,
@@ -510,21 +553,114 @@ def obtener_recomendaciones_cliente(id_usuario: Optional[int], id_empresa: int =
                 COALESCE(c.nombre, 'Colección') as categoria,
                 COALESCE(p.precio, 0) as precio,
                 p.imagen_url,
-                0.88 as puntuacion,
-                'Prenda destacada de temporada con alta preferencia en boutiques' as motivo,
-                p.descripcion
+                p.descripcion,
+                p.id_categoria,
+                COALESCE(SUM(inv.stock_disponible), 0) as stock_total
             FROM comercio.t_producto p
             LEFT JOIN comercio.t_categoria c ON p.id_categoria = c.id_categoria
+            LEFT JOIN comercio.t_producto_talla_color ptc ON p.id_producto = ptc.id_producto
+            LEFT JOIN comercio.t_inventario inv ON ptc.id_variante = inv.id_variante
             WHERE p.id_empresa = %s AND p.activo = true
-            ORDER BY p.id_producto DESC
-            LIMIT %s;
-        """, (id_empresa, limite))
-        return _formatear_recomendaciones(cur, cur.fetchall())
+            GROUP BY p.id_producto, p.nombre, c.nombre, p.precio, p.imagen_url, p.descripcion, p.id_categoria
+            ORDER BY stock_total DESC, p.id_producto DESC
+            LIMIT 40;
+        """, (id_empresa,))
+        candidatos = cur.fetchall()
+
+        scored_rows = []
+        for cand in candidatos:
+            id_p, nom, cat_nom, precio_raw, img, desc, id_cat, stock_tot = cand
+            precio_f = float(precio_raw or 0)
+            stock_int = int(stock_tot or 0)
+
+            # Respetar filtro duro de presupuesto máximo si fue indicado
+            if precio_max and precio_f > float(precio_max):
+                continue
+
+            cur.execute("""
+                SELECT DISTINCT t.nombre, col.nombre
+                FROM comercio.t_producto_talla_color ptc
+                LEFT JOIN comercio.t_talla t ON ptc.id_talla = t.id_talla
+                LEFT JOIN comercio.t_color col ON ptc.id_color = col.id_color
+                WHERE ptc.id_producto = %s
+            """, (id_p,))
+            vars_data = cur.fetchall()
+            tallas_p = [str(v[0]) for v in vars_data if v[0]]
+            colores_p = [str(v[1]) for v in vars_data if v[1]]
+            colores_p_lower = [c.lower() for c in colores_p]
+
+            # Si todos los colores del producto están excluidos, omitir
+            if colores_excl and colores_p_lower and all(any(ex in cl for ex in colores_excl) for cl in colores_p_lower):
+                continue
+
+            # Calcular score de ranking verificable
+            score_rank = 0.40
+            razones = []
+
+            if stock_int > 0:
+                score_rank += 0.15
+            else:
+                score_rank -= 0.25
+
+            unidades_vend = pop_map.get(id_p, 0)
+            if unidades_vend > 0:
+                score_rank += 0.15 * min(1.0, unidades_vend / max_pop)
+                razones.append(f"alta demanda en tienda ({unidades_vend} uds. vendidas)")
+
+            if cat_pref and cat_pref.lower() in cat_nom.lower():
+                score_rank += 0.20
+                razones.append(f"coincide con tu búsqueda en {cat_nom}")
+            elif id_cat in cats_interes_reciente:
+                score_rank += 0.15
+                razones.append(f"relacionado con tus reservas recientes en {cat_nom}")
+
+            if talla_pref and any(t.upper() == talla_pref.upper() for t in tallas_p):
+                score_rank += 0.15
+                razones.append(f"disponible en talla {talla_pref.upper()}")
+
+            if colores_pref and any(any(cp in cl for cp in colores_pref) for cl in colores_p_lower):
+                score_rank += 0.15
+                razones.append("tono acorde a tu preferencia cromática")
+
+            if precio_max:
+                razones.append(f"dentro de tu presupuesto (Bs. {precio_f:.2f})")
+
+            if not razones:
+                razones.append(f"destacado de la colección {cat_nom} con disponibilidad en tienda")
+
+            motivo_final = "Seleccionado por " + ", ".join(razones[:3]) + "."
+            scored_rows.append((
+                id_p, nom, cat_nom, precio_f, img,
+                round(min(0.96, max(0.50, score_rank)), 3),
+                motivo_final, desc, tallas_p, colores_p, stock_int
+            ))
+
+        scored_rows.sort(key=lambda x: x[5], reverse=True)
+        resultado = []
+        for sr in scored_rows[:limite]:
+            id_p, nom, cat, precio_f, img, punt, motivo, desc, tallas, colores, stock_int = sr
+            resultado.append({
+                "id_producto": id_p,
+                "nombre": nom,
+                "categoria": cat,
+                "precio": float(precio_f),
+                "imagen_url": img or "assets/images/default-fashion.jpg",
+                "puntuacion": float(punt),
+                "puntuacion_ranking": float(punt),
+                "afinidad_porcentaje": None if not id_cliente else int(float(punt) * 100),
+                "es_inicio_frio": not bool(id_cliente),
+                "motivo": motivo,
+                "descripcion": desc or "",
+                "tallas": sorted(list(set(tallas))),
+                "colores": sorted(list(set(colores))),
+                "stock_disponible": stock_int
+            })
+        return resultado
     finally:
         conn.close()
 
 
-def _formatear_recomendaciones(cur, rows) -> List[Dict[str, Any]]:
+def _formatear_recomendaciones(cur, rows, es_inicio_frio: bool = False) -> List[Dict[str, Any]]:
     resultado = []
     for r in rows:
         id_p, nom, cat, precio, img, punt, motivo, desc = r
@@ -539,6 +675,15 @@ def _formatear_recomendaciones(cur, rows) -> List[Dict[str, Any]]:
         tallas = sorted(list({v[0] for v in vars_data if v[0]}))
         colores = sorted(list({v[1] for v in vars_data if v[1]}))
 
+        cur.execute("""
+            SELECT COALESCE(SUM(inv.stock_disponible), 0)
+            FROM comercio.t_producto_talla_color ptc
+            JOIN comercio.t_inventario inv ON ptc.id_variante = inv.id_variante
+            WHERE ptc.id_producto = %s
+        """, (id_p,))
+        row_stk = cur.fetchone()
+        stock_disp = int(row_stk[0] or 0) if row_stk else 0
+
         resultado.append({
             "id_producto": id_p,
             "nombre": nom,
@@ -546,10 +691,13 @@ def _formatear_recomendaciones(cur, rows) -> List[Dict[str, Any]]:
             "precio": float(precio),
             "imagen_url": img or "assets/images/default-fashion.jpg",
             "puntuacion": float(punt),
-            "afinidad_porcentaje": int(float(punt) * 100),
+            "puntuacion_ranking": float(punt),
+            "afinidad_porcentaje": None if es_inicio_frio else int(float(punt) * 100),
+            "es_inicio_frio": es_inicio_frio,
             "motivo": motivo,
             "descripcion": desc or "",
             "tallas": tallas,
-            "colores": colores
+            "colores": colores,
+            "stock_disponible": stock_disp
         })
     return resultado
