@@ -114,11 +114,8 @@
         <div class="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/80 border border-zinc-200 dark:border-zinc-800 text-left text-xs space-y-2.5 max-w-md mx-auto">
           <div class="flex items-center justify-between">
             <span class="text-zinc-500">Modalidad:</span>
-            <span *ngIf="modalidadReserva === 'CON_PAGO'" class="text-emerald-600 dark:text-emerald-400 font-bold">
-              ✓ Pagada Online (Bs. {{ montoReservaPagado | number:'1.2-2' }})
-            </span>
-            <span *ngIf="modalidadReserva !== 'CON_PAGO'" class="text-amber-600 dark:text-amber-400 font-bold">
-              Gratuita (Pago en boutique al probarte)
+            <span class="text-amber-600 dark:text-amber-400 font-bold">
+              Gratuita (Pago en mostrador POS tras probarte)
             </span>
           </div>
           <div class="flex items-center justify-between">
@@ -509,38 +506,16 @@
             <label class="font-bold text-xs text-zinc-800 dark:text-zinc-200">
               2. Modalidad de la Cita:
             </label>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              <button type="button"
-                      (click)="modalidadReserva = 'SIN_PAGO'"
-                      [class.border-amber-500]="modalidadReserva === 'SIN_PAGO'"
-                      [class.bg-amber-500/10]="modalidadReserva === 'SIN_PAGO'"
-                      class="p-3 rounded-xl border border-zinc-300 dark:border-zinc-800 text-left transition-all cursor-pointer">
-                <div class="flex items-start space-x-2.5">
-                  <span class="text-lg">🛍️</span>
-                  <div>
-                    <strong class="text-xs block text-zinc-900 dark:text-white">Sin Pago Anticipado</strong>
-                    <span class="text-[10px] text-zinc-500 dark:text-zinc-400 leading-tight block mt-0.5">
-                      Pruébatela gratis en vestidor y paga en caja solo lo que decidas llevarte.
-                    </span>
-                  </div>
+            <div class="p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-left">
+              <div class="flex items-start space-x-2.5">
+                <span class="text-lg">🛍️</span>
+                <div>
+                  <strong class="text-xs block text-zinc-900 dark:text-white">Cita Presencial Gratuita en Boutique</strong>
+                  <span class="text-[11px] text-zinc-600 dark:text-zinc-300 leading-tight block mt-0.5">
+                    Apartamos tus prendas en el vestidor de la sucursal elegida sin costo anticipado. Pruébatelas cómodamente y abona en la caja registradora únicamente lo que decidas llevarte.
+                  </span>
                 </div>
-              </button>
-
-              <button type="button"
-                      (click)="modalidadReserva = 'CON_PAGO'"
-                      [class.border-emerald-500]="modalidadReserva === 'CON_PAGO'"
-                      [class.bg-emerald-500/10]="modalidadReserva === 'CON_PAGO'"
-                      class="p-3 rounded-xl border border-zinc-300 dark:border-zinc-800 text-left transition-all cursor-pointer">
-                <div class="flex items-start space-x-2.5">
-                  <span class="text-lg">💳</span>
-                  <div>
-                    <strong class="text-xs block text-zinc-900 dark:text-white">Pago Online Previo</strong>
-                    <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold leading-tight block mt-0.5">
-                      Prenda 100% asegurada y pagada (Bs. {{ (getPrecioActual() * quantity) | number:'1.2-2' }}).
-                    </span>
-                  </div>
-                </div>
-              </button>
+              </div>
             </div>
           </div>
 
@@ -604,8 +579,8 @@
                     [disabled]="cargandoReserva || !sucursalReservaSeleccionada || getStockSucursalSeleccionada() <= 0"
                     class="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs uppercase tracking-wider transition-all shadow-md shadow-amber-500/20 flex items-center space-x-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
               <span *ngIf="cargandoReserva" class="w-3.5 h-3.5 border-2 border-zinc-950/30 border-t-zinc-950 rounded-full animate-spin"></span>
-              <span *ngIf="!cargandoReserva">{{ modalidadReserva === 'CON_PAGO' ? '💳' : '📅' }}</span>
-              <span>{{ cargandoReserva ? 'Confirmando...' : (modalidadReserva === 'CON_PAGO' ? 'Pagar & Confirmar Cita' : 'Confirmar Cita en Boutique') }}</span>
+              <span *ngIf="!cargandoReserva">📅</span>
+              <span>{{ cargandoReserva ? 'Confirmando...' : 'Confirmar Cita en Boutique' }}</span>
             </button>
           </div>
 

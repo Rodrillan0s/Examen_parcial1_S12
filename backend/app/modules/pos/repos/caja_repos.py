@@ -275,6 +275,20 @@ def abrir_caja_sesion(
             """
             db.execute_query(q_conteo, (id_sesion, id_denom, val, cant, subtot))
 
+        # Asignar automáticamente cuotas de contingencia offline para la sesión de caja
+        cuotas_contingencia = []
+        try:
+            from app.modules.pos.repos import contingencia_repos
+            cuotas_contingencia = contingencia_repos.calcular_y_asignar_cuotas_sesion(
+                id_sesion_caja=id_sesion,
+                id_caja=id_caja,
+                id_sucursal=id_sucursal,
+                id_empresa=id_empresa,
+                db=db
+            )
+        except Exception as e_cont:
+            logger.warning(f"Aviso no bloqueante: no se pudieron precargar cuotas de contingencia: {e_cont}")
+
         db.commit()
 
         # Retornar sesión completa
@@ -291,7 +305,8 @@ def abrir_caja_sesion(
             "conteo_items": [
                 {"id_denominacion": d[0], "valor": d[1], "cantidad": d[2], "subtotal": d[3]}
                 for d in detalles_para_insertar
-            ]
+            ],
+            "cuotas_contingencia": cuotas_contingencia
         }
     except Exception as e:
         db.rollback()
@@ -371,7 +386,16 @@ def calcular_resumen_caja(id_sesion_caja: int) -> Dict[str, Any]:
             elif 'QR' in tipo or 'PAYPAL' in tipo:
                 ventas_qr += monto
 
-        efectivo_esperado = round(monto_inicial + ventas_efectivo, 2)
+        # Reembolsos en efectivo emitidos en esta sesión de caja (egresos de caja)
+        q_reembolsos = f"""
+            SELECT COALESCE(SUM(monto_reembolso), 0.00)
+            FROM {schema}.t_devolucion
+            WHERE id_sesion_caja = %s AND estado = 'COMPLETADA' AND metodo_reembolso = 'EFECTIVO';
+        """
+        r_row = db.execute_query(q_reembolsos, (id_sesion_caja,), fetchone=True)
+        reembolsos_efectivo = float(r_row[0]) if r_row else 0.00
+
+        efectivo_esperado = round(monto_inicial + ventas_efectivo - reembolsos_efectivo, 2)
 
         # Cálculo de Efectivo Esperado por Denominación
         # 1. Denominaciones activas
@@ -461,6 +485,7 @@ def calcular_resumen_caja(id_sesion_caja: int) -> Dict[str, Any]:
             "fecha_cierre": s_row[7].isoformat() if s_row[7] else None,
             "monto_inicial": monto_inicial,
             "ventas_efectivo": round(ventas_efectivo, 2),
+            "reembolsos_efectivo": round(reembolsos_efectivo, 2),
             "ventas_tarjeta": round(ventas_tarjeta, 2),
             "ventas_electronicas": round(ventas_qr, 2),
             "desglose_pagos": desglose_pagos,
@@ -562,6 +587,14 @@ def cerrar_caja_sesion(
             """
             db.execute_query(q_conteo, (id_sesion_caja, id_denom, val, cant, subtot))
 
+        # Liberar cuotas de contingencia no consumidas de regreso al inventario vendible
+        cuotas_liberadas = 0
+        try:
+            from app.modules.pos.repos import contingencia_repos
+            cuotas_liberadas = contingencia_repos.liberar_cuotas_sesion_caja(id_sesion_caja, db=db)
+        except Exception as e_lib:
+            logger.warning(f"Aviso no bloqueante: no se pudieron liberar cuotas de contingencia al cerrar caja: {e_lib}")
+
         db.conn.commit()
 
         return {
@@ -577,6 +610,7 @@ def cerrar_caja_sesion(
             "diferencia": diferencia,
             "estado_diferencia": estado_diferencia,
             "observacion_cierre": observacion,
+            "cuotas_contingencia_liberadas": cuotas_liberadas,
             "conteo_items": [
                 {"id_denominacion": d[0], "valor": d[1], "cantidad": d[2], "subtotal": d[3]}
                 for d in detalles_para_insertar

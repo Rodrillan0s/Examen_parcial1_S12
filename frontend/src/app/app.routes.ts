@@ -4,8 +4,21 @@ import { permissionGuard } from './guards/permission-guard';
 import { scopeGuard } from './guards/scope-guard';
 
 export const routes: Routes = [
-  // RUTAS PÚBLICAS Y DE CLIENTE DE LA TIENDA E-COMMERCE DE ROPA (Lazy Loaded)
+  // =========================================================================
+  // 1. SITIO COMERCIAL SAAS DE AURORASTORE (SUPERFICIE INDEPENDIENTE)
+  // =========================================================================
+  { path: 'saas', loadComponent: () => import('./pages/saas-comercial/saas-comercial').then(m => m.SaasComercialComponent) },
+  { path: 'saas/planes', loadComponent: () => import('./pages/saas-comercial/saas-comercial').then(m => m.SaasComercialComponent) },
+  { path: 'saas/registro', loadComponent: () => import('./pages/saas-comercial/saas-comercial').then(m => m.SaasComercialComponent) },
+  { path: 'saas/contratacion/:codigo', loadComponent: () => import('./pages/saas-comercial/saas-comercial').then(m => m.SaasComercialComponent) },
+
+  // =========================================================================
+  // 2. STOREFRONT DEL TENANT (CONSUMIDOR FINAL - MULTITENANT DINÁMICO)
+  // =========================================================================
   { path: '', loadComponent: () => import('./pages/explorar/explorar').then(m => m.ExplorarComponent) },
+  { path: 'explorar', loadComponent: () => import('./pages/explorar/explorar').then(m => m.ExplorarComponent) },
+  { path: 't/:slug', loadComponent: () => import('./pages/explorar/explorar').then(m => m.ExplorarComponent) },
+  { path: 't/:slug/catalogo', loadComponent: () => import('./pages/catalogo/catalogo').then(m => m.CatalogoComponent) },
   { path: 'catalogo', loadComponent: () => import('./pages/catalogo/catalogo').then(m => m.CatalogoComponent) },
   { path: 'catalogo/:id', loadComponent: () => import('./pages/catalogo/catalogo').then(m => m.CatalogoComponent) },
   { path: 'login', loadComponent: () => import('./pages/explorar/explorar').then(m => m.ExplorarComponent) },
@@ -41,9 +54,12 @@ export const routes: Routes = [
   { path: 'proveedores', redirectTo: 'admin/proveedores', pathMatch: 'full' },
   { path: 'planes', redirectTo: 'admin/planes', pathMatch: 'full' },
   { path: 'suscripciones', redirectTo: 'admin/suscripciones', pathMatch: 'full' },
+  { path: 'mi-tienda', redirectTo: 'admin/mi-tienda', pathMatch: 'full' },
   { path: 'devoluciones', redirectTo: 'admin/devoluciones', pathMatch: 'full' },
 
-  // RUTAS DE ADMINISTRACIÓN INTERNA (REQUIEREN AUTENTICACIÓN, PERMISOS RBAC Y CONTROL DE ALCANCE)
+  // =========================================================================
+  // 3. PANEL ADMINISTRATIVO INTERNO (DISEÑO NEUTRAL INDEPENDIENTE DEL TENANT)
+  // =========================================================================
   {
     path: 'admin',
     loadComponent: () => import('./layouts/admin-layout/admin-layout').then(m => m.AdminLayoutComponent),
@@ -54,6 +70,7 @@ export const routes: Routes = [
       { path: 'reportes', loadComponent: () => import('./pages/reportes/reportes').then(m => m.ReportesComponent), canActivate: [permissionGuard('reportes.ver')] },
       { path: 'planes', loadComponent: () => import('./pages/planes/planes').then(m => m.PlanesComponent), canActivate: [permissionGuard('planes.ver')] },
       { path: 'suscripciones', loadComponent: () => import('./pages/suscripciones/suscripciones').then(m => m.SuscripcionesComponent), canActivate: [permissionGuard('suscripciones.ver')] },
+      { path: 'mi-tienda', loadComponent: () => import('./pages/mi-tienda/mi-tienda').then(m => m.MiTiendaComponent), canActivate: [permissionGuard(['storefront.configurar', 'sucursales.ver', 'admin.acceder'])] },
       { path: 'usuarios', loadComponent: () => import('./pages/usuarios/lista-usuarios/lista-usuarios').then(m => m.ListaUsuariosComponent), canActivate: [permissionGuard('usuarios.ver')] },
       { 
         path: 'empresas', 

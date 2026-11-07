@@ -1,36 +1,66 @@
 <!-- ========================================================================= -->
-<!-- SIDEBAR DE FILTROS DESKTOP (Inspirado exactamente en la Maqueta)          -->
+<!-- SIDEBAR DE FILTROS DINÁMICOS MULTITENANT                                 -->
 <!-- ========================================================================= -->
 <aside class="hidden lg:block w-full rounded-2xl bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800/90 shadow-xs p-5 space-y-6 text-zinc-900 dark:text-zinc-100 transition-colors">
   
   <!-- Encabezado de Filtros -->
   <div class="flex items-center justify-between pb-3 border-b border-stone-100 dark:border-zinc-800">
     <h3 class="text-sm font-bold tracking-tight text-zinc-900 dark:text-white">
-      Filtros
+      Filtros de Tienda
     </h3>
     <button 
       *ngIf="contarFiltrosActivos() > 0"
       (click)="onLimpiar()" 
       class="text-xs font-medium text-amber-600 dark:text-amber-400 hover:underline cursor-pointer">
-      Limpiar filtros
+      Limpiar ({{ contarFiltrosActivos() }})
     </button>
   </div>
 
-  <!-- Grupo 1: Categoría (Lista de Checkboxes con Conteos) -->
-  <div class="space-y-3">
+  <!-- Grupo 0: Público Objetivo (Mujer, Hombre, Unisex, Niños, Niñas, Bebés) -->
+  <div *ngIf="listaPublicos.length > 0" class="space-y-3">
+    <div class="flex items-center justify-between cursor-pointer select-none" (click)="toggleColapso('publico')">
+      <span class="text-xs font-bold text-zinc-900 dark:text-zinc-200">Público objetivo</span>
+      <i class="ph text-zinc-400 text-xs" [class.ph-caret-up]="!colapsados.publico" [class.ph-caret-down]="colapsados.publico"></i>
+    </div>
+
+    <div *ngIf="!colapsados.publico" class="flex flex-wrap gap-1.5 pt-1 animate-fade-in">
+      <button
+        type="button"
+        (click)="publicoChange.emit('Todos')"
+        class="px-2.5 py-1.5 rounded-xl text-xs font-medium border transition-all cursor-pointer"
+        [ngClass]="selectedPublico === 'Todos'
+          ? 'bg-zinc-900 text-white border-zinc-900 dark:bg-white dark:text-zinc-900 dark:border-white font-bold'
+          : 'bg-stone-50 dark:bg-zinc-950 border-stone-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'">
+        Todos
+      </button>
+      <button
+        *ngFor="let pub of listaPublicos"
+        type="button"
+        (click)="togglePublico(pub.nombre)"
+        class="px-2.5 py-1.5 rounded-xl text-xs font-medium border transition-all cursor-pointer flex items-center gap-1.5"
+        [ngClass]="selectedPublico === pub.nombre
+          ? 'bg-amber-600 text-white border-amber-600 font-bold'
+          : 'bg-stone-50 dark:bg-zinc-950 border-stone-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300'">
+        <span>{{ pub.nombre }}</span>
+        <span class="text-[10px] opacity-75 font-mono">({{ pub.total_prendas }})</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Grupo 1: Categoría de Producto (Separada del Público Objetivo) -->
+  <div *ngIf="listaCategorias.length > 0" class="space-y-3 pt-3 border-t border-stone-100 dark:border-zinc-800">
     <div class="flex items-center justify-between cursor-pointer select-none" (click)="toggleColapso('categoria')">
       <span class="text-xs font-bold text-zinc-900 dark:text-zinc-200">Categoría</span>
       <i class="ph text-zinc-400 text-xs" [class.ph-caret-up]="!colapsados.categoria" [class.ph-caret-down]="colapsados.categoria"></i>
     </div>
 
-    <div *ngIf="!colapsados.categoria" class="space-y-2 pt-1 animate-fade-in">
+    <div *ngIf="!colapsados.categoria" class="space-y-2 pt-1 animate-fade-in max-h-60 overflow-y-auto pr-1">
       <div 
         *ngFor="let cat of listaCategorias" 
         (click)="toggleCategoria(cat.id_categoria)"
         class="flex items-center justify-between text-xs py-1 px-1 rounded-lg hover:bg-stone-50 dark:hover:bg-zinc-800/50 cursor-pointer group">
         
         <div class="flex items-center space-x-2.5">
-          <!-- Checkbox cuadrado estilizado -->
           <div 
             class="w-4 h-4 rounded border flex items-center justify-center transition-colors"
             [class.bg-amber-600]="selectedCategory === cat.id_categoria"
@@ -57,14 +87,14 @@
         </div>
 
         <span class="text-[11px] font-mono text-zinc-400 dark:text-zinc-500">
-          {{ cat.total_prendas || 18 }}
+          {{ cat.total_prendas }}
         </span>
       </div>
     </div>
   </div>
 
   <!-- Grupo 2: Color (Swatches Circulares) -->
-  <div class="space-y-3 pt-3 border-t border-stone-100 dark:border-zinc-800">
+  <div *ngIf="listaColores.length > 0" class="space-y-3 pt-3 border-t border-stone-100 dark:border-zinc-800">
     <div class="flex items-center justify-between cursor-pointer select-none" (click)="toggleColapso('color')">
       <span class="text-xs font-bold text-zinc-900 dark:text-zinc-200">Color</span>
       <i class="ph text-zinc-400 text-xs" [class.ph-caret-up]="!colapsados.color" [class.ph-caret-down]="colapsados.color"></i>
@@ -80,8 +110,6 @@
         [class.ring-2]="selectedColor === col.id_color"
         [class.ring-amber-500]="selectedColor === col.id_color"
         [class.ring-offset-2]="selectedColor === col.id_color"
-        [class.ring-offset-white]="selectedColor === col.id_color"
-        [class.dark:ring-offset-zinc-900]="selectedColor === col.id_color"
         [class.scale-110]="selectedColor === col.id_color"
         [class.border-stone-300]="selectedColor !== col.id_color"
         [class.dark:border-zinc-700]="selectedColor !== col.id_color"
@@ -89,7 +117,6 @@
         <span *ngIf="selectedColor === col.id_color" class="absolute inset-0 flex items-center justify-center text-[10px] text-white mix-blend-difference font-bold">✓</span>
       </button>
 
-      <!-- Botón limpiar color -->
       <button 
         *ngIf="selectedColor !== null" 
         (click)="toggleColor(null)"
@@ -100,8 +127,8 @@
     </div>
   </div>
 
-  <!-- Grupo 3: Talla (Botones Cuadrados XS, S, M, L, XL) -->
-  <div class="space-y-3 pt-3 border-t border-stone-100 dark:border-zinc-800">
+  <!-- Grupo 3: Talla -->
+  <div *ngIf="listaTallas.length > 0" class="space-y-3 pt-3 border-t border-stone-100 dark:border-zinc-800">
     <div class="flex items-center justify-between cursor-pointer select-none" (click)="toggleColapso('talla')">
       <span class="text-xs font-bold text-zinc-900 dark:text-zinc-200">Talla</span>
       <i class="ph text-zinc-400 text-xs" [class.ph-caret-up]="!colapsados.talla" [class.ph-caret-down]="colapsados.talla"></i>
@@ -123,24 +150,21 @@
         [class.border-stone-200]="selectedTalla !== t.id_talla"
         [class.dark:border-zinc-800]="selectedTalla !== t.id_talla"
         [class.text-zinc-700]="selectedTalla !== t.id_talla"
-        [class.dark:text-zinc-300]="selectedTalla !== t.id_talla"
-        [class.hover:border-stone-400]="selectedTalla !== t.id_talla">
+        [class.dark:text-zinc-300]="selectedTalla !== t.id_talla">
         {{ t.nombre }}
       </button>
     </div>
   </div>
 
-  <!-- Grupo 4: Temporada (Dropdown) -->
-  <div class="space-y-2 pt-3 border-t border-stone-100 dark:border-zinc-800">
-    <span class="text-xs font-bold text-zinc-900 dark:text-zinc-200 block">Temporada</span>
+  <!-- Grupo 4: Colección (Agrupación comercial) -->
+  <div *ngIf="(filtrosDisponibles.colecciones.length || 0) > 0" class="space-y-2 pt-3 border-t border-stone-100 dark:border-zinc-800">
+    <span class="text-xs font-bold text-zinc-900 dark:text-zinc-200 block">Colección</span>
     <select 
-      [ngModel]="selectedTemporada" 
-      (ngModelChange)="onTemporadaSelect($event)"
+      [ngModel]="selectedColeccion" 
+      (ngModelChange)="onColeccionSelect($event)"
       class="w-full bg-stone-50 dark:bg-zinc-950 border border-stone-300 dark:border-zinc-700/80 rounded-xl px-3 py-2 text-xs text-zinc-800 dark:text-zinc-200 focus:outline-none focus:border-amber-500 cursor-pointer">
-      <option value="Todas">Otoño / Invierno 2026</option>
-      <option value="Primavera / Verano 2026">Primavera / Verano 2026</option>
-      <option value="Atemporal">Atemporal & Clásicos</option>
-      <option *ngFor="let temp of filtrosDisponibles.temporadas" [value]="temp">{{ temp }}</option>
+      <option value="Todas">Todas las colecciones</option>
+      <option *ngFor="let col of filtrosDisponibles.colecciones" [value]="col">{{ col }}</option>
     </select>
   </div>
 
@@ -152,13 +176,6 @@
     </div>
 
     <div *ngIf="!colapsados.precio" class="space-y-2.5 pt-1 animate-fade-in">
-      <!-- Indicador visual slider -->
-      <div class="relative py-1">
-        <div class="h-1.5 w-full bg-stone-200 dark:bg-zinc-800 rounded-full overflow-hidden">
-          <div class="h-full bg-amber-500 rounded-full w-3/4"></div>
-        </div>
-      </div>
-
       <div class="flex items-center justify-between text-xs font-mono text-zinc-600 dark:text-zinc-400">
         <div class="flex items-center space-x-1">
           <span>Bs.</span>
@@ -166,7 +183,7 @@
             type="number" 
             [ngModel]="precioMin" 
             (ngModelChange)="onPrecioMinChange($event)"
-            placeholder="100" 
+            [placeholder]="(filtrosDisponibles.precio_min || 100).toString()" 
             class="w-16 bg-stone-50 dark:bg-zinc-950 border border-stone-300 dark:border-zinc-700 rounded-lg px-1.5 py-1 text-center text-xs text-zinc-900 dark:text-white"
           />
         </div>
@@ -177,7 +194,7 @@
             type="number" 
             [ngModel]="precioMax" 
             (ngModelChange)="onPrecioMaxChange($event)"
-            placeholder="1.000" 
+            [placeholder]="(filtrosDisponibles.precio_max || 1500).toString()" 
             class="w-16 bg-stone-50 dark:bg-zinc-950 border border-stone-300 dark:border-zinc-700 rounded-lg px-1.5 py-1 text-center text-xs text-zinc-900 dark:text-white"
           />
         </div>
@@ -185,16 +202,16 @@
     </div>
   </div>
 
-  <!-- Grupo 6: Sucursal / Tienda Física -->
-  <div class="space-y-2 pt-3 border-t border-stone-100 dark:border-zinc-800">
-    <span class="text-xs font-bold text-zinc-900 dark:text-zinc-200 block">Sucursal</span>
+  <!-- Grupo 6: Disponibilidad por Sucursal Física del Tenant -->
+  <div *ngIf="listaSucursales.length > 0" class="space-y-2 pt-3 border-t border-stone-100 dark:border-zinc-800">
+    <span class="text-xs font-bold text-zinc-900 dark:text-zinc-200 block">Disponibilidad en Sucursal</span>
     <select 
-      [ngModel]="selectedTenantId" 
-      (change)="onTenantSelect($event)"
+      [ngModel]="selectedSucursal" 
+      (ngModelChange)="onSucursalSelect($event)"
       class="w-full bg-stone-50 dark:bg-zinc-950 border border-stone-300 dark:border-zinc-700/80 rounded-xl px-3 py-2 text-xs text-zinc-800 dark:text-zinc-200 focus:outline-none focus:border-amber-500 cursor-pointer">
-      <option [value]="null">Todas las sucursales</option>
-      <option *ngFor="let t of tenants" [value]="t.id_empresa">
-        {{ t.nombre_empresa }} ({{ t.ciudad || 'Bolivia' }})
+      <option [ngValue]="null">Todas las sucursales</option>
+      <option *ngFor="let s of listaSucursales" [ngValue]="s.id_sucursal">
+        {{ s.nombre }} {{ s.ciudad ? '(' + s.ciudad + ')' : '' }}
       </option>
     </select>
   </div>
@@ -202,57 +219,74 @@
 </aside>
 
 <!-- ========================================================================= -->
-<!-- DRAWER DE FILTROS MÓVIL (Para teléfonos y tablets)                        -->
+<!-- BARRA MÓVIL DE FILTROS (< lg)                                             -->
 <!-- ========================================================================= -->
-<div *ngIf="mostrarDrawerMovil" class="fixed inset-0 z-50 lg:hidden flex justify-end animate-fade-in">
-  <!-- Backdrop -->
-  <div class="fixed inset-0 bg-black/60 backdrop-blur-sm" (click)="toggleDrawer()"></div>
+<div class="lg:hidden flex items-center justify-between gap-3 mb-4">
+  <button 
+    type="button" 
+    (click)="toggleDrawer()" 
+    class="px-4 py-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 text-xs font-bold text-zinc-800 dark:text-zinc-200 flex items-center space-x-2 shadow-xs">
+    <i class="ph ph-sliders-horizontal text-amber-600 text-sm"></i>
+    <span>Filtros</span>
+    <span *ngIf="contarFiltrosActivos() > 0" class="px-1.5 py-0.5 rounded-full bg-amber-500 text-white text-[10px]">
+      {{ contarFiltrosActivos() }}
+    </span>
+  </button>
 
-  <!-- Panel Deslizable -->
-  <div class="relative w-full max-w-xs bg-white dark:bg-zinc-950 h-full p-6 space-y-6 overflow-y-auto shadow-2xl z-10 flex flex-col justify-between">
-    <div class="space-y-6">
-      <div class="flex items-center justify-between pb-3 border-b border-stone-200 dark:border-zinc-800">
-        <h3 class="text-base font-bold text-zinc-900 dark:text-white">Filtros de Catálogo</h3>
-        <button (click)="toggleDrawer()" class="text-zinc-400 hover:text-zinc-600 text-lg">✕</button>
-      </div>
+  <button 
+    *ngIf="contarFiltrosActivos() > 0" 
+    type="button" 
+    (click)="onLimpiar()" 
+    class="text-xs font-semibold text-amber-600 dark:text-amber-400 underline">
+    Limpiar filtros
+  </button>
+</div>
 
-      <!-- Categorías Móvil -->
-      <div class="space-y-2">
-        <span class="text-xs font-bold text-zinc-900 dark:text-zinc-200 block">Categoría</span>
-        <div class="space-y-1.5">
-          <div *ngFor="let cat of listaCategorias" 
-               (click)="toggleCategoria(cat.id_categoria); toggleDrawer()"
-               class="flex items-center justify-between text-xs py-1.5 px-2 rounded-lg hover:bg-stone-100 dark:hover:bg-zinc-900 cursor-pointer"
-               [class.bg-amber-500/10]="selectedCategory === cat.id_categoria"
-               [class.text-amber-600]="selectedCategory === cat.id_categoria">
-            <span>{{ cat.nombre }}</span>
-            <span class="text-zinc-400 font-mono">{{ cat.total_prendas || 18 }}</span>
-          </div>
-        </div>
-      </div>
+<!-- Drawer Móvil Desplegable -->
+<div *ngIf="mostrarDrawerMovil" class="lg:hidden mb-6 p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 shadow-lg space-y-4">
+  <div class="flex items-center justify-between border-b border-stone-100 dark:border-zinc-800 pb-2">
+    <span class="text-xs font-bold uppercase tracking-wider text-zinc-500">Filtrar Catálogo</span>
+    <button (click)="toggleDrawer()" class="text-xs text-zinc-400 hover:text-zinc-700">✕ Cerrar</button>
+  </div>
 
-      <!-- Tallas Móvil -->
-      <div class="space-y-2">
-        <span class="text-xs font-bold text-zinc-900 dark:text-zinc-200 block">Talla</span>
-        <div class="flex flex-wrap gap-1.5">
-          <button *ngFor="let t of listaTallas" 
-                  (click)="toggleTalla(t.id_talla); toggleDrawer()"
-                  class="px-3 py-1.5 text-xs rounded-lg border"
-                  [class.bg-amber-500]="selectedTalla === t.id_talla"
-                  [class.text-black]="selectedTalla === t.id_talla"
-                  [class.border-amber-500]="selectedTalla === t.id_talla">
-            {{ t.nombre }}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div class="pt-4 border-t border-stone-200 dark:border-zinc-800 flex gap-2">
-      <button (click)="onLimpiar()" class="w-1/2 py-2.5 rounded-xl border border-stone-300 dark:border-zinc-700 text-xs font-semibold">
-        Limpiar
+  <!-- Público Objetivo Móvil -->
+  <div *ngIf="listaPublicos.length > 0" class="space-y-1.5">
+    <span class="text-xs font-bold">Público objetivo</span>
+    <div class="flex flex-wrap gap-1.5">
+      <button *ngFor="let pub of listaPublicos" 
+              (click)="togglePublico(pub.nombre)"
+              [class.bg-amber-600]="selectedPublico === pub.nombre"
+              [class.text-white]="selectedPublico === pub.nombre"
+              class="px-2.5 py-1 rounded-lg border border-stone-200 dark:border-zinc-800 text-xs">
+        {{ pub.nombre }}
       </button>
-      <button (click)="toggleDrawer()" class="w-1/2 py-2.5 rounded-xl bg-amber-500 text-black text-xs font-bold">
-        Aplicar
+    </div>
+  </div>
+
+  <!-- Categorías Móvil -->
+  <div *ngIf="listaCategorias.length > 0" class="space-y-1.5">
+    <span class="text-xs font-bold">Categoría</span>
+    <div class="flex flex-wrap gap-1.5">
+      <button *ngFor="let cat of listaCategorias" 
+              (click)="toggleCategoria(cat.id_categoria)"
+              [class.bg-amber-600]="selectedCategory === cat.id_categoria"
+              [class.text-white]="selectedCategory === cat.id_categoria"
+              class="px-2.5 py-1 rounded-lg border border-stone-200 dark:border-zinc-800 text-xs">
+        {{ cat.nombre }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Tallas Móvil -->
+  <div *ngIf="listaTallas.length > 0" class="space-y-1.5">
+    <span class="text-xs font-bold">Talla</span>
+    <div class="flex flex-wrap gap-1.5">
+      <button *ngFor="let t of listaTallas" 
+              (click)="toggleTalla(t.id_talla)"
+              [class.bg-amber-600]="selectedTalla === t.id_talla"
+              [class.text-white]="selectedTalla === t.id_talla"
+              class="px-2.5 py-1 rounded-lg border border-stone-200 dark:border-zinc-800 text-xs">
+        {{ t.nombre }}
       </button>
     </div>
   </div>

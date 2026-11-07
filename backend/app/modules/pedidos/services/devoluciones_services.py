@@ -67,6 +67,26 @@ def consultar_elegibilidad_venta(
         sucursales_autorizadas=sucursales
     )
 
+def buscar_ventas_presencial(
+    criterio: str,
+    token_data: dict,
+    id_empresa_solicitado: Optional[int] = None
+) -> List[Dict[str, Any]]:
+    """
+    Búsqueda rápida y flexible de ventas en mostrador/POS para iniciar devoluciones.
+    Aplica filtro multitenant estricto por empresa.
+    """
+    id_empresa = resolver_tenant_operacion(token_data, id_empresa_solicitado)
+    sucursales = obtener_sucursales_autorizadas(token_data)
+    id_usuario = token_data.get('nro_usuario') or token_data.get('id_usuario')
+
+    return devoluciones_repos.buscar_ventas_presencial(
+        criterio=criterio,
+        id_empresa=id_empresa,
+        id_usuario=id_usuario,
+        sucursales_autorizadas=sucursales
+    )
+
 @atomic
 def solicitar_devolucion_cliente(
     datos: dict,
@@ -84,6 +104,7 @@ def solicitar_devolucion_cliente(
     descripcion = datos.get("descripcion")
     evidencia_url = datos.get("evidencia_url")
     items = datos.get("items") or []
+    tipo_resolucion = (datos.get("tipo_resolucion") or "REEMBOLSO_DINERO").strip().upper()
 
     if not id_venta or id_venta <= 0:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="ID de venta inválido.")
@@ -101,7 +122,8 @@ def solicitar_devolucion_cliente(
         motivo=motivo,
         descripcion=descripcion,
         evidencia_url=evidencia_url,
-        items_solicitados=items
+        items_solicitados=items,
+        tipo_resolucion=tipo_resolucion
     )
 
     if res.get('idempotent_replay'):
@@ -162,6 +184,9 @@ def registrar_devolucion_presencial_mostrador(
     reembolso_inmediato = bool(datos.get("registrar_reembolso_inmediato", False))
     metodo_reembolso = datos.get("metodo_reembolso")
     referencia_reembolso = datos.get("referencia_reembolso")
+    tipo_resolucion = (datos.get("tipo_resolucion") or "REEMBOLSO_DINERO").strip().upper()
+    id_sesion_caja = datos.get("id_sesion_caja")
+    items_cambio = datos.get("items_cambio")
 
     if not id_venta or id_venta <= 0:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="ID de venta inválido.")
@@ -171,12 +196,6 @@ def registrar_devolucion_presencial_mostrador(
 
     if not items:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Debe indicar los artículos a devolver.")
-
-    if reembolso_inmediato and (not metodo_reembolso or not referencia_reembolso):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Si registra reembolso inmediato debe ingresar el método y comprobante/referencia."
-        )
 
     devoluciones_repos.consultar_venta_elegible(id_venta,id_usuario,id_empresa,True,sucursales_aut)
     if reembolso_inmediato:
@@ -191,7 +210,10 @@ def registrar_devolucion_presencial_mostrador(
         items_recibidos=items,
         registrar_reembolso_inmediato=reembolso_inmediato,
         metodo_reembolso=metodo_reembolso,
-        referencia_reembolso=referencia_reembolso
+        referencia_reembolso=referencia_reembolso,
+        tipo_resolucion=tipo_resolucion,
+        id_sesion_caja=id_sesion_caja,
+        items_cambio=items_cambio
     )
 
     if res.get('idempotent_replay'):
@@ -316,13 +338,15 @@ def resolver_solicitud(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Debe ingresar las observaciones y justificación del dictamen.")
 
     nuevo_estado = {"APROBAR":"APROBADA","RECHAZAR":"RECHAZADA","EN_REVISION":"EN_REVISION"}[accion]
+    tipo_resolucion = datos.get("tipo_resolucion")
 
     res = devoluciones_repos.resolver_solicitud_devolucion(
         id_devolucion=id_devolucion,
         id_usuario_revisor=id_usuario,
         id_empresa=id_empresa,
         nuevo_estado=nuevo_estado,
-        observaciones=observaciones
+        observaciones=observaciones,
+        tipo_resolucion=tipo_resolucion
     )
 
     _critical_audit(
@@ -426,12 +450,8 @@ def liquidar_reembolso(
     metodo = (datos.get("metodo_reembolso") or "").strip()
     referencia = (datos.get("referencia_reembolso") or "").strip()
     observaciones = datos.get("observaciones")
-
-    if not metodo:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Debe especificar el método de reembolso.")
-
-    if not referencia:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Debe especificar el comprobante o referencia de la transacción de reembolso.")
+    tipo_resolucion = datos.get("tipo_resolucion")
+    id_sesion_caja = datos.get("id_sesion_caja")
 
     res = devoluciones_repos.registrar_reembolso_financiero(
         id_devolucion=id_devolucion,
@@ -439,7 +459,9 @@ def liquidar_reembolso(
         id_empresa=id_empresa,
         metodo_reembolso=metodo,
         referencia_reembolso=referencia,
-        observaciones=observaciones
+        observaciones=observaciones,
+        tipo_resolucion=tipo_resolucion,
+        id_sesion_caja=id_sesion_caja
     )
 
     _critical_audit(
@@ -452,7 +474,7 @@ def liquidar_reembolso(
         accion="LIQUIDAR_REEMBOLSO_DEVOLUCION",
         entidad="t_devolucion",
         id_entidad=str(id_devolucion),
-        descripcion=f"Reembolso liquidado para devolución #{id_devolucion}. Monto: Bs. {res['monto_reembolsado']}, Método: {res['metodo_reembolso']}, Ref: {res['referencia_reembolso']}.",
+        descripcion=f"Resolución liquidada para devolución #{id_devolucion} como {res['tipo_resolucion']}. Monto: Bs. {res['monto_reembolsado']}, Método: {res['metodo_reembolso']}, Ref: {res['referencia_reembolso']}.",
         resultado="EXITO",
         nivel="INFO",
         ip=None,
@@ -464,4 +486,56 @@ def liquidar_reembolso(
     )
 
     return res
+
+def consultar_politicas_tienda(id_empresa: int) -> Dict[str, Any]:
+    """
+    Retorna la política de devoluciones activa de una empresa.
+    """
+    return devoluciones_repos.obtener_politica_devolucion(id_empresa)
+
+def actualizar_politicas_tienda(datos: dict, token_data: dict) -> Dict[str, Any]:
+    """
+    Actualiza la configuración de políticas de devolución del tenant (requiere permisos).
+    """
+    _require_permission(token_data, "devoluciones.politicas")
+    id_empresa = resolver_tenant_operacion(token_data, datos.get("id_empresa"))
+    id_usuario = token_data.get('nro_usuario') or token_data.get('id_usuario')
+
+    politica_actualizada = devoluciones_repos.guardar_politica_devolucion(id_empresa, datos.get("politica", {}))
+
+    _critical_audit(
+        id_usuario=id_usuario,
+        usuario_nombre=token_data.get('username') or 'Administrador',
+        usuario_email=token_data.get('correo') or token_data.get('sub'),
+        id_empresa=id_empresa,
+        id_sucursal=None,
+        modulo="devoluciones",
+        accion="ACTUALIZAR_POLITICAS_DEVOLUCION",
+        entidad="empresa",
+        id_entidad=str(id_empresa),
+        descripcion="Actualización de plazos y reglas de devolución y garantía Ley 453.",
+        resultado="EXITO",
+        nivel="INFO",
+        ip=None,
+        user_agent=None,
+        datos_anteriores=None,
+        datos_nuevos=politica_actualizada,
+        metadatos={"id_empresa": id_empresa},
+        request_id=None
+    )
+
+    return {"success": True, "politica": politica_actualizada}
+
+def listar_mis_creditos_cliente(token_data: dict, id_empresa: Optional[int] = None) -> List[Dict[str, Any]]:
+    """
+    Lista el saldo a favor y créditos del cliente autenticado.
+    """
+    id_usuario = token_data.get('nro_usuario') or token_data.get('id_usuario')
+    return devoluciones_repos.listar_creditos_cliente(id_usuario, id_empresa)
+
+def verificar_credito_cliente(codigo_credito: str, id_empresa: int) -> Dict[str, Any]:
+    """
+    Verifica la validez y saldo disponible de un crédito de tienda para canje en checkout o mostrador.
+    """
+    return devoluciones_repos.verificar_saldo_credito(codigo_credito, id_empresa)
 

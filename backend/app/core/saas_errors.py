@@ -9,8 +9,8 @@ BUSINESS_ERRORS = {
     'EMPRESA_INACTIVA': (403, 'La empresa está inactiva.'),
     'TRASLADO_EMPRESA_NO_PERMITIDO': (409, 'No se permite trasladar una entidad entre empresas.'),
     'ASIGNACION_SUCURSAL_NO_AUTORIZADA': (403, 'Usuario y sucursales deben pertenecer a la misma empresa activa.'),
-    'PERIODO_SOLAPADO': (409, 'Ya existe una suscripción para ese periodo.'),
-    'SUSCRIPCION_INMUTABLE': (409, 'El historial de suscripciones es inmutable.'),
+    'PERIODO_SOLAPADO': (409, 'Ya existe una suscripción para ese periodo. Puedes programar el cambio para el siguiente ciclo.'),
+    'SUSCRIPCION_INMUTABLE': (409, 'El historial de suscripciones está protegido y no permite modificaciones retroactivas. Si deseas cambiar de plan, puedes programarlo para el siguiente ciclo o cancelarlo conforme a las políticas comerciales.'),
     'PLAN_INACTIVO': (409, 'El plan está inactivo.'),
 }
 

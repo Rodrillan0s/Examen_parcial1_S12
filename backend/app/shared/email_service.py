@@ -8,8 +8,84 @@ from email.mime.multipart import MIMEMultipart
 from app.core.config import Config
 
 # Servicio de envío de correo transaccional utilizando la API v3 y SMTP de Brevo (Sendinblue)
+def enviar_correo_html_brevo(
+    destinatario_email: str,
+    destinatario_nombre: str,
+    asunto: str,
+    html_content: str,
+    sender_name: str = "AuroraStore"
+) -> bool:
+    """
+    Envía un correo HTML mediante la API REST v3 de Brevo con fallback a SMTP Relay.
+    """
+    api_key = os.getenv("BREVO_API_KEY") or os.getenv("MAIL_PASSWORD")
+    sender_email = os.getenv("MAIL_DEFAULT_SENDER", "toledoquirogaeddy@gmail.com")
+
+    # 1. Intentar mediante la API HTTP v3 de Brevo (Inmune a bloqueos de puertos SMTP en nubes/hosts)
+    if api_key:
+        try:
+            url = "https://api.brevo.com/v3/smtp/email"
+            payload = {
+                "sender": {
+                    "name": sender_name,
+                    "email": sender_email
+                },
+                "to": [
+                    {
+                        "email": destinatario_email,
+                        "name": destinatario_nombre or destinatario_email
+                    }
+                ],
+                "subject": asunto,
+                "htmlContent": html_content
+            }
+
+            data_bytes = json.dumps(payload).encode('utf-8')
+            req = urllib.request.Request(url, data=data_bytes, method='POST')
+            req.add_header('Accept', 'application/json')
+            req.add_header('Content-Type', 'application/json')
+            req.add_header('api-key', api_key)
+
+            ctx = ssl.create_default_context()
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+
+            with urllib.request.urlopen(req, timeout=8, context=ctx) as response:
+                if response.status in (200, 201, 202):
+                    print(f"[BREVO API SUCCESS] Correo enviado exitosamente a {destinatario_email}")
+                    return True
+        except Exception as api_err:
+            print(f"[BREVO API WARNING] Falló API REST de Brevo: {api_err}. Intentando SMTP Relay...")
+
+    # 2. Fallback por SMTP Relay de Brevo
+    try:
+        mail_server = os.getenv("MAIL_SERVER", "smtp-relay.brevo.com")
+        mail_port = int(os.getenv("MAIL_PORT", 587))
+        mail_user = os.getenv("MAIL_USERNAME") or sender_email
+        mail_pass = os.getenv("MAIL_PASSWORD") or api_key
+
+        if mail_user and mail_pass:
+            msg = MIMEMultipart("alternative")
+            msg['Subject'] = asunto
+            msg['From'] = f"{sender_name} <{sender_email}>"
+            msg['To'] = destinatario_email
+
+            part_html = MIMEText(html_content, 'html', 'utf-8')
+            msg.attach(part_html)
+
+            with smtplib.SMTP(mail_server, mail_port, timeout=10) as server:
+                server.starttls()
+                server.login(mail_user, mail_pass)
+                server.sendmail(sender_email, [destinatario_email], msg.as_string())
+                print(f"[BREVO SMTP] Correo enviado exitosamente vía SMTP a {destinatario_email}")
+                return True
+    except Exception as smtp_err:
+        print(f"[BREVO SMTP ERROR] No se pudo enviar el correo por SMTP: {smtp_err}")
+
+    return False
+
+
 def enviar_correo_recuperacion_brevo(destinatario_email: str, destinatario_nombre: str, codigo_recuperacion: str) -> bool:
-    api_key = os.getenv("MAIL_PASSWORD") or os.getenv("BREVO_API_KEY")
     sender_email = os.getenv("MAIL_DEFAULT_SENDER", "toledoquirogaeddy@gmail.com")
     
     html_content = f"""
@@ -53,66 +129,13 @@ def enviar_correo_recuperacion_brevo(destinatario_email: str, destinatario_nombr
     </html>
     """
 
-    # 1. Intentar mediante la API HTTP v3 de Brevo (Rápido e inmune a bloqueos de puertos SMTP)
-    try:
-        url = "https://api.brevo.com/v3/smtp/email"
-        payload = {
-            "sender": {
-                "name": "AURA Atelier Security",
-                "email": sender_email
-            },
-            "to": [
-                {
-                    "email": destinatario_email,
-                    "name": destinatario_nombre
-                }
-            ],
-            "subject": f"✦ {codigo_recuperacion} es tu Código de Recuperación — AURA Atelier",
-            "htmlContent": html_content
-        }
-
-        data_bytes = json.dumps(payload).encode('utf-8')
-        req = urllib.request.Request(url, data=data_bytes, method='POST')
-        req.add_header('Accept', 'application/json')
-        req.add_header('Content-Type', 'application/json')
-        req.add_header('api-key', api_key)
-
-        ctx = ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
-
-        with urllib.request.urlopen(req, timeout=5, context=ctx) as response:
-            if response.status in (200, 201, 202):
-                print(f"[BREVO API SUCCESS] Correo enviado a {destinatario_email}")
-                return True
-
-    except Exception as api_err:
-        print(f"[BREVO API WARNING] Falló API REST: {api_err}. Intentando SMTP Relay...")
-
-    # 2. Fallback por SMTP Relay de Brevo
-    try:
-        mail_server = os.getenv("MAIL_SERVER", "smtp-relay.brevo.com")
-        mail_port = int(os.getenv("MAIL_PORT", 587))
-        mail_user = os.getenv("MAIL_USERNAME")
-        mail_pass = os.getenv("MAIL_PASSWORD")
-
-        msg = MIMEMultipart("alternative")
-        msg['Subject'] = f"✦ {codigo_recuperacion} es tu Código de Recuperación — AURA Atelier"
-        msg['From'] = f"AURA Atelier <{sender_email}>"
-        msg['To'] = destinatario_email
-
-        part_html = MIMEText(html_content, 'html')
-        msg.attach(part_html)
-
-        with smtplib.SMTP(mail_server, mail_port, timeout=10) as server:
-            server.starttls()
-            server.login(mail_user, mail_pass)
-            server.sendmail(sender_email, [destinatario_email], msg.as_string())
-            print(f"[BREVO SMTP] Correo enviado exitosamente a {destinatario_email}")
-            return True
-    except Exception as smtp_err:
-        print(f"[BREVO SMTP ERROR] No se pudo enviar el correo por SMTP: {smtp_err}")
-        return False
+    return enviar_correo_html_brevo(
+        destinatario_email=destinatario_email,
+        destinatario_nombre=destinatario_nombre,
+        asunto=f"✦ {codigo_recuperacion} es tu Código de Recuperación — AURA Atelier",
+        html_content=html_content,
+        sender_name="AURA Atelier Security"
+    )
 
 def enviar_correo_comprobante(
     destinatario_email: str,

@@ -546,7 +546,14 @@ export class SyncQueueService {
       if (!sameContext()) return null;
       const now = Date.now();
       eligible = structuredClone(this.operations().filter(op => op.status === 'pending' ||
-        (op.status === 'failed_retryable' && (force || !op.next_retry_at_ms || now >= op.next_retry_at_ms)))).slice(0, 50);
+        (op.status === 'failed_retryable' && (force || !op.next_retry_at_ms || now >= op.next_retry_at_ms))))
+        .sort((a, b) => {
+          // Prioridad P0: Ventas presenciales en efectivo POS antes de carritos o reservas online
+          if (a.kind === 'VENTA_CONTADO' && b.kind !== 'VENTA_CONTADO') return -1;
+          if (b.kind === 'VENTA_CONTADO' && a.kind !== 'VENTA_CONTADO') return 1;
+          return 0;
+        })
+        .slice(0, 50);
       if (!eligible.length || !await this.network.verifyApiConnectivity(force) || !sameContext()) return null;
       this.isSyncing.set(true);
       this.network.setSyncingState(true);

@@ -79,26 +79,62 @@ def listar_tenants_publicos():
             detail=f"Error al consultar tiendas activas: {str(e)}"
         )
 
+
+@router.get('/tenant-by-slug/{slug}', summary="Resolver tienda activa por slug único")
+def resolver_tenant_por_slug(slug: str):
+    """
+    Resuelve la tienda activa correspondiente al slug o subdominio.
+    """
+    try:
+        info = catalogo_repos.obtener_info_tenant_por_slug(slug)
+        if not info:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No se encontró una tienda activa con ese identificador."
+            )
+        filtros = _obtener_filtros_cached(info["id_empresa"])
+        return {
+            "success": True,
+            "empresa": info,
+            "filtros": filtros
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al resolver tienda por slug: {str(e)}"
+        )
+
+
 @router.get('/filtros', summary="Obtener filtros disponibles para el catálogo del Tenant")
 def obtener_filtros_catalogo(
-    id_empresa: Optional[int] = Query(None, description="ID del Tenant")
+    id_empresa: Optional[int] = Query(None, description="ID del Tenant"),
+    slug: Optional[str] = Query(None, description="Slug opcional del Tenant")
 ):
     """
-    Retorna dinámicamente las categorías, tallas, colores, temporadas y colecciones
+    Retorna dinámicamente las categorías, públicos, sucursales, tallas, colores, temporadas y colecciones
     disponibles en el Tenant indicado. Si no se especifica, toma la primera tienda activa.
     """
     try:
+        info_empresa = None
+        if slug and slug.strip():
+            info_empresa = catalogo_repos.obtener_info_tenant_por_slug(slug)
+            if info_empresa:
+                id_empresa = info_empresa["id_empresa"]
+
         if not id_empresa:
             tenants = _obtener_tenants_cached()
             if not tenants:
                 return {
                     "success": True,
                     "empresa": None,
-                    "data": {"categorias": [], "tallas": [], "colores": [], "temporadas": [], "colecciones": []}
+                    "data": {"categorias": [], "publicos": [], "sucursales": [], "tallas": [], "colores": [], "temporadas": [], "colecciones": []}
                 }
             id_empresa = tenants[0]["id_empresa"]
 
-        info_empresa = _obtener_info_tenant_cached(id_empresa)
+        if not info_empresa:
+            info_empresa = _obtener_info_tenant_cached(id_empresa)
         filtros = _obtener_filtros_cached(id_empresa)
 
         return {
@@ -115,8 +151,11 @@ def obtener_filtros_catalogo(
 @router.get('/productos', summary="Consultar productos activos del catálogo público")
 def listar_productos_catalogo(
     id_empresa: Optional[int] = Query(None, description="ID del Tenant (empresa)"),
+    slug: Optional[str] = Query(None, description="Slug opcional del Tenant"),
     busqueda: Optional[str] = Query(None, description="Buscar por nombre, código o marca"),
     id_categoria: Optional[int] = Query(None, description="Filtrar por categoría"),
+    publico: Optional[str] = Query(None, description="Filtrar por público objetivo (Mujer, Hombre, Unisex, Niños, Niñas, Bebés)"),
+    id_sucursal: Optional[int] = Query(None, description="Filtrar por sucursal con stock"),
     id_talla: Optional[int] = Query(None, description="Filtrar por talla disponible"),
     id_color: Optional[int] = Query(None, description="Filtrar por color disponible"),
     temporada: Optional[str] = Query(None, description="Filtrar por temporada"),
@@ -132,6 +171,12 @@ def listar_productos_catalogo(
     No requiere autenticación. Cumple aislamiento estricto por empresa.
     """
     try:
+        info_empresa = None
+        if slug and slug.strip():
+            info_empresa = catalogo_repos.obtener_info_tenant_por_slug(slug)
+            if info_empresa:
+                id_empresa = info_empresa["id_empresa"]
+
         # Resolver Tenant si no fue provisto
         if not id_empresa:
             tenants = _obtener_tenants_cached()
@@ -144,11 +189,14 @@ def listar_productos_catalogo(
                 }
             id_empresa = tenants[0]["id_empresa"]
 
-        info_empresa = _obtener_info_tenant_cached(id_empresa)
+        if not info_empresa:
+            info_empresa = _obtener_info_tenant_cached(id_empresa)
         resultado = catalogo_repos.listar_catalogo_publico(
             id_empresa=id_empresa,
             busqueda=busqueda,
             id_categoria=id_categoria,
+            publico=publico,
+            id_sucursal=id_sucursal,
             id_talla=id_talla,
             id_color=id_color,
             temporada=temporada,

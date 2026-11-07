@@ -135,13 +135,28 @@
     </div>
   </header>
 
-  <!-- Aviso de Protección POS Sin Conexión (CU24W) -->
-  <div *ngIf="!networkStatus.isOnline()" role="status" class="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800/80 text-amber-900 dark:text-amber-200 text-xs font-medium flex items-start gap-2.5 shadow-sm">
-    <span class="text-base shrink-0">⚠️</span>
-    <div>
-      <strong class="font-bold">Punto de Venta (CU24W) requiere conexión activa:</strong>
-      <p class="mt-0.5 opacity-90">
-        Por integridad contable y para impedir descuadres de inventario físico o doble venta en sucursal, la confirmación de cobros y emisión de tickets POS están bloqueadas hasta restablecer la conexión con el servidor.
+  <!-- ========================================================================= -->
+  <!-- BANNER: MODO CONTINGENCIA OFFLINE POS (MIGRACIÓN 008 / PRIORIDAD P0) -->
+  <!-- ========================================================================= -->
+  <div *ngIf="!networkStatus.isOnline()" role="status" 
+       class="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-800 text-amber-950 dark:text-amber-200 text-xs shadow-sm flex items-start gap-3">
+    <div class="p-2 rounded-xl bg-amber-500 text-white shrink-0 shadow-sm">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+      </svg>
+    </div>
+    <div class="flex-1 space-y-1">
+      <div class="flex items-center gap-2 flex-wrap">
+        <strong class="text-sm font-black text-amber-900 dark:text-amber-100">
+          Modo Contingencia POS Activo (Solo Efectivo)
+        </strong>
+        <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-200 dark:bg-amber-900/80 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700">
+          PRIORIDAD P0
+        </span>
+      </div>
+      <p class="text-amber-800 dark:text-amber-300 leading-relaxed">
+        Operando sin conexión. Las ventas presenciales en efectivo continúan funcionando con el inventario de contingencia preasignado a tu sesión de caja para proteger la atención presencial sin afectar el StoreFront online.
+        Los comprobantes emitidos son <strong>provisionales de contingencia</strong> y se sincronizarán con prioridad máxima (P0) al restablecer la red.
       </p>
     </div>
   </div>
@@ -1262,25 +1277,48 @@
         </div>
       </div>
 
+      <!-- AVISO COMPROBANTE PROVISIONAL DE CONTINGENCIA -->
+      <div *ngIf="ventaExitosaInfo?.offline_queued"
+           class="p-3 bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 rounded-2xl text-left space-y-1">
+        <div class="flex items-center gap-1.5 text-amber-900 dark:text-amber-200 font-extrabold text-[11px] uppercase tracking-wider">
+          <span>🛡️</span>
+          <span>Comprobante Provisional de Contingencia (P0)</span>
+        </div>
+        <p class="text-[10px] text-amber-800 dark:text-amber-300 leading-snug">
+          <strong>No válido como factura fiscal.</strong> Venta presencial autorizada con cuota de contingencia offline. El comprobante fiscal definitivo se generará al sincronizar con el servidor.
+        </p>
+      </div>
+
       <p class="text-[11px] text-zinc-400">
         {{ ventaExitosaInfo?.offline_queued
-          ? 'La operación sobrevive al reinicio del navegador y se sincronizará de forma idempotente al reconectar.'
+          ? 'La operación sobrevive al reinicio del navegador y se sincronizará con prioridad P0 al reconectar.'
           : 'El monto y la orden quedan listos para su recepción de pago en efectivo o pasarela según el protocolo W28.' }}
       </p>
 
-      <div class="grid grid-cols-1 gap-2 pt-2" [class.sm:grid-cols-2]="!ventaExitosaInfo?.offline_queued">
-        <button *ngIf="!ventaExitosaInfo?.offline_queued"
-                (click)="irACobrar(ventaExitosaInfo!.id_venta)"
-                class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2">
+      <div class="space-y-2 pt-2">
+        <button *ngIf="ventaExitosaInfo?.offline_queued"
+                (click)="imprimirTicketProvisional()"
+                class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-xl shadow-md shadow-amber-500/20 transition-all flex items-center justify-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
           </svg>
-          Cobrar Ahora (W28)
+          Imprimir Ticket Provisional de Contingencia
         </button>
-        <button (click)="cerrarModalVentaExitosa()"
-                class="w-full py-3 bg-stone-100 hover:bg-stone-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-zinc-700 dark:text-slate-300 font-bold text-xs rounded-xl transition-all">
-          {{ ventaExitosaInfo?.offline_queued ? 'Aceptar y Continuar Vendiendo' : 'Nueva Venta' }}
-        </button>
+
+        <div class="grid grid-cols-1 gap-2" [class.sm:grid-cols-2]="!ventaExitosaInfo?.offline_queued">
+          <button *ngIf="!ventaExitosaInfo?.offline_queued"
+                  (click)="irACobrar(ventaExitosaInfo!.id_venta)"
+                  class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+            </svg>
+            Cobrar Ahora (W28)
+          </button>
+          <button (click)="cerrarModalVentaExitosa()"
+                  class="w-full py-3 bg-stone-100 hover:bg-stone-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-zinc-700 dark:text-slate-300 font-bold text-xs rounded-xl transition-all">
+            {{ ventaExitosaInfo?.offline_queued ? 'Aceptar y Continuar Vendiendo' : 'Nueva Venta' }}
+          </button>
+        </div>
       </div>
 
     </div>

@@ -191,6 +191,14 @@ def resolver_tenant_operacion(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"El Tenant seleccionado con ID #{empresa_id} no existe en el sistema."
                 )
+            if row[1] == 'PENDIENTE':
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail={
+                        'code': 'EMPRESA_PENDIENTE_PAGO',
+                        'message': f"Tu tienda se encuentra en espera de confirmación de pago para su activación comercial. Completa el pago en Suscripciones para comenzar a operar."
+                    }
+                )
             if row[1] != 'ACTIVO':
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,

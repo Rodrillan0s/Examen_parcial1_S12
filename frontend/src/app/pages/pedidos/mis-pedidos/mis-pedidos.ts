@@ -30,8 +30,12 @@ export class MisPedidosComponent implements OnInit {
   public router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
 
-  // Pestañas (CU11 Mis Pedidos / CU25W Mis Devoluciones)
-  tabActiva: 'PEDIDOS' | 'DEVOLUCIONES' = 'PEDIDOS';
+  // Pestañas (CU11 Mis Pedidos / CU25W Mis Devoluciones / Mis Saldos)
+  tabActiva: 'PEDIDOS' | 'DEVOLUCIONES' | 'CREDITOS' = 'PEDIDOS';
+
+  // --- Mis Créditos (Saldo a Favor) ---
+  misCreditos: any[] = [];
+  cargandoCreditos: boolean = false;
 
   // --- Listado y Paginación de Pedidos ---
   pedidos: PedidoResumen[] = [];
@@ -71,6 +75,7 @@ export class MisPedidosComponent implements OnInit {
   idEmpresaDevolucion: number | null = null;
   itemsSeleccionados: { [id_detalle_venta: number]: { seleccionado: boolean; cantidad: number } } = {};
   motivoDevolucion: string = 'DEFECTO_FABRICA';
+  tipoResolucionDevolucion: 'CAMBIO_PRENDA' | 'SALDO_A_FAVOR' | 'REEMBOLSO_DINERO' = 'REEMBOLSO_DINERO';
   descripcionDevolucion: string = '';
   evidenciaUrlDevolucion: string = '';
   enviandoSolicitud: boolean = false;
@@ -92,12 +97,31 @@ export class MisPedidosComponent implements OnInit {
     this.cargarPedidos(1);
   }
 
-  cambiarTab(tab: 'PEDIDOS' | 'DEVOLUCIONES'): void {
+  cambiarTab(tab: 'PEDIDOS' | 'DEVOLUCIONES' | 'CREDITOS'): void {
     this.tabActiva = tab;
     if (tab === 'DEVOLUCIONES' && this.misDevoluciones.length === 0) {
       this.cargarDevoluciones(1);
+    } else if (tab === 'CREDITOS') {
+      this.cargarMisCreditos();
     }
     this.cdr.markForCheck();
+  }
+
+  cargarMisCreditos(): void {
+    this.cargandoCreditos = true;
+    this.cdr.markForCheck();
+    this.devolucionesService.obtenerMisCreditos().subscribe({
+      next: (res: any) => {
+        this.misCreditos = res.data || [];
+        this.cargandoCreditos = false;
+        this.cdr.markForCheck();
+      },
+      error: (err: any) => {
+        this.cargandoCreditos = false;
+        this.mostrarToast('error', err?.error?.detail || 'No se pudieron consultar los saldos a favor.');
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   // =========================================================================
@@ -332,6 +356,7 @@ export class MisPedidosComponent implements OnInit {
       id_venta: this.idVentaDevolucion,
       id_empresa: this.idEmpresaDevolucion || undefined,
       motivo: this.motivoDevolucion,
+      tipo_resolucion: this.tipoResolucionDevolucion,
       descripcion: this.descripcionDevolucion.trim() || undefined,
       evidencia_url: this.evidenciaUrlDevolucion.trim() || undefined,
       items: itemsPayload
@@ -505,6 +530,28 @@ export class MisPedidosComponent implements OnInit {
       case 'COMPLETADA': return 'Devolución Completada';
       case 'CANCELADA': return 'Cancelada';
       default: return estado || 'En Proceso';
+    }
+  }
+
+  getTipoResolucionLabel(tipo: string | undefined): string {
+    switch (tipo?.toUpperCase()) {
+      case 'CAMBIO_PRENDA': return 'Cambio de Prenda';
+      case 'SALDO_A_FAVOR': return 'Saldo a Favor en Tienda';
+      case 'REEMBOLSO_DINERO': return 'Reembolso de Dinero';
+      default: return tipo || 'Reembolso';
+    }
+  }
+
+  getTipoResolucionClase(tipo: string | undefined): string {
+    switch (tipo?.toUpperCase()) {
+      case 'CAMBIO_PRENDA':
+        return 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30';
+      case 'SALDO_A_FAVOR':
+        return 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30';
+      case 'REEMBOLSO_DINERO':
+        return 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30';
+      default:
+        return 'bg-zinc-500/15 text-zinc-700 dark:text-zinc-300 border-zinc-500/30';
     }
   }
 }

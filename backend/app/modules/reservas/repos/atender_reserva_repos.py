@@ -21,6 +21,13 @@ def listar_reservas_para_atender(
     busqueda: Optional[str] = None,
     estado: Optional[str] = None
 ) -> Dict[str, Any]:
+    # Expiración oportuna de citas vencidas en el mostrador POS
+    try:
+        from app.modules.reservas.repos.reserva_repos import expirar_reservas_vencidas
+        expirar_reservas_vencidas(id_empresa=id_empresa, tolerancia_horas=12)
+    except Exception as exp_err:
+        logger.warning(f"[OPORTUNISTIC EXPIRATION ATENDER] {exp_err}")
+
     db = PostgreSQL()
     db.create_connection()
     schema = _get_schema()

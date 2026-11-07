@@ -615,7 +615,65 @@ export class CajaService {
   }
 
   abrirCaja(payload: AbrirCajaPayload): Observable<any> {
-    return this.http.post<any>(`${this.cajaApiUrl}/abrir`, payload);
+    return this.http.post<any>(`${this.cajaApiUrl}/abrir`, payload).pipe(
+      tap((res) => {
+        const sesionId = res?.data?.id_sesion_caja;
+        const cuotas = res?.data?.cuotas_contingencia;
+        if (sesionId && Array.isArray(cuotas) && cuotas.length > 0) {
+          void this.guardarCuotasContingenciaOffline(sesionId, cuotas);
+        }
+      })
+    );
+  }
+
+  /**
+   * CU38W / Migración 008: Consulta las cuotas de contingencia activas asignadas a la sesión de caja.
+   */
+  obtenerCuotasContingencia(idSesionCaja: number): Observable<{ success: boolean; total: number; cuotas: any[] }> {
+    return this.http.get<{ success: boolean; total: number; cuotas: any[] }>(
+      `${this.posApiUrl}/contingencia/cuotas?id_sesion_caja=${idSesionCaja}`
+    ).pipe(
+      tap((res) => {
+        if (res?.success && Array.isArray(res?.cuotas)) {
+          void this.guardarCuotasContingenciaOffline(idSesionCaja, res.cuotas);
+        }
+      })
+    );
+  }
+
+  /**
+   * Guarda o actualiza las cuotas de contingencia descargadas en IndexedDB para disponibilidad offline.
+   */
+  async guardarCuotasContingenciaOffline(idSesionCaja: number, cuotas: any[]): Promise<void> {
+    const nowMs = Date.now();
+    for (const c of cuotas || []) {
+      const key = `caja:${idSesionCaja}|var:${c.id_variante}`;
+      await this.idb.put('pos_contingency_quotas', {
+        key,
+        id_sesion_caja: idSesionCaja,
+        id_variante: c.id_variante,
+        sku: c.sku,
+        producto_nombre: c.producto_nombre,
+        cuota_asignada: c.cuota_asignada,
+        cuota_consumida: c.cuota_consumida,
+        cuota_disponible: c.cuota_disponible,
+        fetched_at_ms: nowMs,
+        updated_at: new Date(nowMs).toISOString(),
+      });
+    }
+  }
+
+  /**
+   * Obtiene la cuota disponible local para una variante en la sesión activa.
+   */
+  async obtenerCuotaContingenciaLocal(idSesionCaja: number, idVariante: number): Promise<number | null> {
+    try {
+      const key = `caja:${idSesionCaja}|var:${idVariante}`;
+      const record = await this.idb.get<any>('pos_contingency_quotas', key);
+      return record ? Number(record.cuota_disponible ?? record.cuota_asignada ?? 0) : null;
+    } catch {
+      return null;
+    }
   }
 
   obtenerResumenCaja(idSesionCaja: number): Observable<ResumenCajaResponse> {
@@ -910,6 +968,9 @@ export class CajaService {
         descuento: Number(payload.descuento || 0),
         monto_recibido: montoRecibido,
         expected_total: total,
+        contingencia: true,
+        es_contingencia_offline: true,
+        comprobante_tipo_provisional: 'PROVISIONAL_CONTINGENCIA',
         codigo_venta_provisional: codigoTemp,
         observaciones: payload.observaciones || null,
         datos_facturacion: {

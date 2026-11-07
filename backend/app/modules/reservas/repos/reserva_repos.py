@@ -1,5 +1,6 @@
 import uuid
 import json
+import logging
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
 from app.core.postgres import PostgreSQL, atomic
@@ -7,6 +8,8 @@ from app.core.inventory_integrity import lock_items
 from app.core.config import Config
 from app.modules.ecommerce.repos.carrito_repos import obtener_o_crear_cliente
 from app.modules.admin.repos.bitacora_repos import registrar_evento_db
+
+logger = logging.getLogger(__name__)
 
 def _get_schema() -> str:
     return Config.SCHEMA or 'comercio'
@@ -54,9 +57,19 @@ def crear_reserva(id_usuario: int, id_empresa: int, datos: Dict[str, Any]) -> Di
     except Exception:
         raise ValueError("El formato de fecha_hora_visita es inválido. Use formato YYYY-MM-DD HH:MM.")
 
-    # Validar que no sea una fecha pasada (con margen de 24h para absorber diferencias de zona horaria)
-    if fecha_hora_dt < datetime.now() - timedelta(hours=24):
-        raise ValueError("La fecha y hora de visita no puede ser anterior a la fecha actual.")
+    # Validar que no sea una fecha pasada (con tolerancia de 15 minutos para retrasos de red)
+    if fecha_hora_dt < datetime.now() - timedelta(minutes=15):
+        raise ValueError("La fecha y hora de visita programada no puede ser anterior al momento actual.")
+
+    # Política de Reservas: Anticipación máxima de 7 días
+    fecha_maxima_permitida = datetime.now() + timedelta(days=7, hours=2)
+    if fecha_hora_dt > fecha_maxima_permitida:
+        raise ValueError("Las citas en boutique solo pueden agendarse con un máximo de 7 días de anticipación.")
+
+    # Política de Reservas: Límite de prendas por cita (máximo 5 prendas)
+    total_prendas_reserva = sum(int(item.get('cantidad', 1)) for item in items)
+    if total_prendas_reserva > 5:
+        raise ValueError(f"Por políticas de probador en boutique, el límite máximo por cita es de 5 prendas (has seleccionado {total_prendas_reserva}).")
 
     # Obtener el cliente asociado al usuario autenticado
     id_cliente = obtener_o_crear_cliente(id_usuario)
@@ -68,9 +81,23 @@ def crear_reserva(id_usuario: int, id_empresa: int, datos: Dict[str, Any]) -> Di
     try:
         cur = db.conn.cursor()
 
-        # 1. Validar que la sucursal pertenezca a la empresa del Tenant y esté activa
+        # Política de Reservas: Límite de reservas activas simultáneas por cliente (máximo 3)
         cur.execute(f"""
-            SELECT nombre, activo 
+            SELECT COUNT(*) 
+            FROM {schema}.t_reserva r
+            JOIN {schema}.t_sucursal s ON s.id_sucursal = r.id_sucursal
+            WHERE r.id_cliente = %s AND s.id_empresa = %s AND r.estado = 'PENDIENTE';
+        """, (id_cliente, id_empresa))
+        reservas_activas_row = cur.fetchone()
+        if reservas_activas_row and reservas_activas_row[0] >= 3:
+            raise ValueError(
+                f"Has alcanzado el límite permitido de 3 reservas activas simultáneas en esta tienda. "
+                f"Por favor asiste a tu cita agendada o cancela alguna previa antes de apartar nuevas prendas."
+            )
+
+        # 1. Validar que la sucursal pertenezca a la empresa del Tenant, esté activa y dentro de horario comercial
+        cur.execute(f"""
+            SELECT nombre, activo, horario_apertura, horario_cierre 
             FROM {schema}.t_sucursal 
             WHERE id_sucursal = %s AND id_empresa = %s;
         """, (id_sucursal, id_empresa))
@@ -81,6 +108,16 @@ def crear_reserva(id_usuario: int, id_empresa: int, datos: Dict[str, Any]) -> Di
             raise ValueError(f"La sucursal '{suc_row[0]}' se encuentra inactiva temporalmente.")
 
         sucursal_nombre = suc_row[0]
+        # Horarios comerciales de atención (con fallback a estándar 09:00 - 21:00)
+        hora_apertura = suc_row[2] or datetime.strptime("09:00", "%H:%M").time()
+        hora_cierre = suc_row[3] or datetime.strptime("21:00", "%H:%M").time()
+
+        hora_cita = fecha_hora_dt.time()
+        if hora_cita < hora_apertura or hora_cita > hora_cierre:
+            raise ValueError(
+                f"El horario seleccionado ({hora_cita.strftime('%H:%M')}) se encuentra fuera del horario comercial "
+                f"de atención de '{sucursal_nombre}' ({hora_apertura.strftime('%H:%M')} a {hora_cierre.strftime('%H:%M')})."
+            )
 
         # 2. Validar que cada variante pertenezca a un producto activo del Tenant
         for item in items:
@@ -134,9 +171,11 @@ def crear_reserva(id_usuario: int, id_empresa: int, datos: Dict[str, Any]) -> Di
 
         lock_items(db, schema, id_sucursal, items, id_empresa)
 
-        con_pago = bool(datos.get('con_pago', False))
-        monto_pagado = float(datos.get('monto_pagado', 0.0) or 0.0)
-        estado_pago = 'PAGADO' if (con_pago and monto_pagado > 0) else 'SIN_PAGO'
+        # Seguridad financiera: Se desactiva con_pago online anticipado hasta integrar pasarela dedicada para reservas.
+        # Todas las reservas se registran como citas presenciales gratuitas para probador con pago en mostrador POS.
+        con_pago = False
+        monto_pagado = 0.0
+        estado_pago = 'SIN_PAGO'
 
         # 4. Crear cabecera de la reserva en t_reserva
         codigo_reserva = _generar_codigo_reserva()
@@ -242,6 +281,12 @@ def obtener_mis_reservas(id_usuario: int, id_empresa: Optional[int] = None) -> L
     Si se indica id_empresa, filtra por ese Tenant específico; de lo contrario retorna todas las reservas del cliente.
     Incluye datos de sucursal y el desglose de prendas/variantes reservadas.
     """
+    # Mantenimiento preventivo: Expirar reservas vencidas de forma oportunista
+    try:
+        expirar_reservas_vencidas(id_empresa=id_empresa, tolerancia_horas=12)
+    except Exception as exp_err:
+        logger.warning(f"[OPORTUNISTIC EXPIRATION] {exp_err}")
+
     schema = _get_schema()
     db = PostgreSQL()
     db.create_connection()
@@ -664,5 +709,179 @@ def cancelar_reserva(id_reserva: int, id_usuario: int, id_empresa: int, motivo: 
         if db.conn:
             db.rollback()
         raise e
+    finally:
+        db.close_connection()
+
+
+def expirar_reservas_vencidas(id_empresa: Optional[int] = None, tolerancia_horas: int = 12) -> Dict[str, Any]:
+    """
+    Expira automáticamente reservas en estado PENDIENTE cuya fecha_hora_visita haya superado
+    la tolerancia de inasistencia configurada (por defecto 12 horas).
+    Restaura el inventario atómicamente a stock_disponible y registra 'LIBERACION_RESERVA'.
+    """
+    schema = _get_schema()
+    db = PostgreSQL()
+    db.create_connection()
+
+    reservas_expiradas = 0
+    prendas_liberadas = 0
+    detalles_expirados = []
+
+    try:
+        cur = db.conn.cursor()
+
+        # Buscar reservas PENDIENTES con fecha_hora_visita vencida más allá de tolerancia_horas
+        filtro_empresa = "AND s.id_empresa = %s" if id_empresa else ""
+        query = f"""
+            SELECT r.id_reserva, r.codigo_reserva, r.id_sucursal, s.id_empresa, r.id_cliente, r.fecha_hora_visita
+            FROM {schema}.t_reserva r
+            JOIN {schema}.t_sucursal s ON s.id_sucursal = r.id_sucursal
+            WHERE r.estado = 'PENDIENTE'
+              AND r.fecha_hora_visita < (NOW() - (%s || ' hours')::INTERVAL)
+              {filtro_empresa}
+            ORDER BY r.id_reserva ASC;
+        """
+        params = (tolerancia_horas, id_empresa) if id_empresa else (tolerancia_horas,)
+        cur.execute(query, params)
+        candidatas = cur.fetchall()
+
+        if not candidatas:
+            return {
+                "total_candidatas": 0,
+                "reservas_expiradas": 0,
+                "prendas_liberadas": 0,
+                "detalles": []
+            }
+
+        for cand in candidatas:
+            res_id, cod_res, suc_id, emp_id, cli_id, f_visita = cand
+            try:
+                # Bloquear reserva candidata
+                cur.execute(f"""
+                    SELECT id_reserva, estado
+                    FROM {schema}.t_reserva
+                    WHERE id_reserva = %s AND estado = 'PENDIENTE'
+                    FOR UPDATE;
+                """, (res_id,))
+                locked = cur.fetchone()
+                if not locked:
+                    continue
+
+                # Obtener prendas apartadas
+                cur.execute(f"""
+                    SELECT id_variante, cantidad
+                    FROM {schema}.t_detalle_reserva
+                    WHERE id_reserva = %s;
+                """, (res_id,))
+                items_reserva = cur.fetchall()
+
+                cant_prendas_reserva = 0
+                for item in items_reserva:
+                    var_id, cant = item[0], item[1]
+                    cant_prendas_reserva += cant
+
+                    # Bloquear y actualizar t_inventario
+                    cur.execute(f"""
+                        SELECT id_inventario, stock_reservado, stock_disponible
+                        FROM {schema}.t_inventario
+                        WHERE id_sucursal = %s AND id_variante = %s
+                        FOR UPDATE;
+                    """, (suc_id, var_id))
+                    inv_row = cur.fetchone()
+                    if inv_row:
+                        inv_id, s_res, s_disp = inv_row[0], inv_row[1], inv_row[2]
+                        n_res = max(0, s_res - cant)
+                        n_disp = s_disp + cant
+
+                        cur.execute(f"""
+                            UPDATE {schema}.t_inventario
+                            SET stock_reservado = %s,
+                                stock_disponible = %s,
+                                fecha_actualizacion = CURRENT_TIMESTAMP
+                            WHERE id_inventario = %s;
+                        """, (n_res, n_disp, inv_id))
+
+                        # Registrar movimiento de inventario
+                        cur.execute(f"""
+                            INSERT INTO {schema}.t_movimiento_inventario (
+                                id_inventario,
+                                id_usuario,
+                                tipo_movimiento,
+                                cantidad,
+                                stock_anterior,
+                                stock_nuevo,
+                                motivo,
+                                fecha_movimiento
+                            ) VALUES (%s, NULL, 'LIBERACION_RESERVA', %s, %s, %s, %s, CURRENT_TIMESTAMP);
+                        """, (
+                            inv_id,
+                            cant,
+                            s_disp,
+                            n_disp,
+                            f"Expiración automática de reserva {cod_res} por inasistencia (+{tolerancia_horas}h vencida)"
+                        ))
+
+                # Marcar reserva como VENCIDA
+                f_visita_str = f_visita.strftime('%d/%m/%Y %H:%M') if hasattr(f_visita, 'strftime') else str(f_visita)
+                motivo_exp = f"Expiración automática por inasistencia transcurridas {tolerancia_horas}h tras la cita programada ({f_visita_str})."
+                cur.execute(f"""
+                    UPDATE {schema}.t_reserva
+                    SET estado = 'VENCIDA',
+                        fecha_cancelacion = CURRENT_TIMESTAMP,
+                        motivo_cancelacion = %s
+                    WHERE id_reserva = %s;
+                """, (motivo_exp, res_id))
+
+                cur.execute(f"""
+                    UPDATE {schema}.t_detalle_reserva
+                    SET estado_prenda = 'VENCIDA'
+                    WHERE id_reserva = %s;
+                """, (res_id,))
+
+                # Registrar auditoría en bitácora
+                try:
+                    registrar_evento_db(
+                        id_usuario=None,
+                        usuario_nombre="SISTEMA_AUTO_EXPIRACION",
+                        usuario_email=None,
+                        id_empresa=emp_id,
+                        id_sucursal=suc_id,
+                        modulo="RESERVAS",
+                        accion="EXPIRACION_AUTOMATICA",
+                        entidad="t_reserva",
+                        id_entidad=str(res_id),
+                        descripcion=f"Reserva {cod_res} expirada automáticamente a estado VENCIDA. {cant_prendas_reserva} prenda(s) liberadas a stock disponible.",
+                        resultado="EXITO",
+                        nivel="INFO",
+                        ip=None,
+                        user_agent="CRON_SYSTEM_DAEMON",
+                        datos_anteriores={"estado": "PENDIENTE"},
+                        datos_nuevos={"estado": "VENCIDA", "motivo_cancelacion": motivo_exp},
+                        metadatos={"id_cliente": cli_id, "prendas_liberadas": cant_prendas_reserva},
+                        request_id=None
+                    )
+                except Exception as b_ex:
+                    logger.warning(f"[EXPIRAR RESERVAS] Advertencia en bitácora: {b_ex}")
+
+                db.commit()
+                reservas_expiradas += 1
+                prendas_liberadas += cant_prendas_reserva
+                detalles_expirados.append({
+                    "id_reserva": res_id,
+                    "codigo_reserva": cod_res,
+                    "prendas_liberadas": cant_prendas_reserva
+                })
+
+            except Exception as single_err:
+                db.rollback()
+                logger.error(f"[EXPIRAR RESERVAS] Error expirando reserva {res_id}: {single_err}")
+
+        return {
+            "total_candidatas": len(candidatas),
+            "reservas_expiradas": reservas_expiradas,
+            "prendas_liberadas": prendas_liberadas,
+            "detalles": detalles_expirados
+        }
+
     finally:
         db.close_connection()

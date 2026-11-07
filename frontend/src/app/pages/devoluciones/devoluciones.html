@@ -29,6 +29,14 @@
           <span>Actualizar</span>
         </button>
 
+        <!-- Configuración de Políticas de Devolución -->
+        <button *ngIf="authService.hasPermission('devoluciones.politicas') || authService.isGlobalAdmin() || authService.isStoreAdmin()"
+                (click)="abrirModalPoliticas()"
+                class="px-3.5 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-semibold transition-colors flex items-center space-x-1.5 cursor-pointer">
+          <span>⚙️</span>
+          <span>Políticas de Tienda</span>
+        </button>
+
         <!-- Registro Presencial para Cajeros / Encargados -->
         <button *ngIf="authService.hasPermission('devoluciones.crear_presencial')"
                 (click)="abrirModalPresencial()"
@@ -171,14 +179,22 @@
                 <span>{{ dev.codigo_devolucion }}</span>
                 <button (click)="copiarCodigo(dev.codigo_devolucion)" class="text-zinc-400 hover:text-amber-500 text-[10px]">📋</button>
               </div>
-              <span class="inline-block mt-0.5 text-[9px] px-2 py-0.2 rounded font-mono uppercase"
-                    [class.bg-purple-500/15]="dev.tipo_devolucion === 'PRESENCIAL'"
-                    [class.text-purple-700]="dev.tipo_devolucion === 'PRESENCIAL'"
-                    [class.dark:text-purple-300]="dev.tipo_devolucion === 'PRESENCIAL'"
-                    [class.bg-blue-500/15]="dev.tipo_devolucion !== 'PRESENCIAL'"
-                    [class.text-blue-700]="dev.tipo_devolucion !== 'PRESENCIAL'">
-                {{ dev.tipo_devolucion }}
-              </span>
+              <div class="flex items-center gap-1 mt-0.5">
+                <span class="inline-block text-[9px] px-1.5 py-0.2 rounded font-mono uppercase"
+                      [class.bg-purple-500/15]="dev.tipo_devolucion === 'PRESENCIAL'"
+                      [class.text-purple-700]="dev.tipo_devolucion === 'PRESENCIAL'"
+                      [class.dark:text-purple-300]="dev.tipo_devolucion === 'PRESENCIAL'"
+                      [class.bg-blue-500/15]="dev.tipo_devolucion !== 'PRESENCIAL'"
+                      [class.text-blue-700]="dev.tipo_devolucion !== 'PRESENCIAL'">
+                  {{ dev.tipo_devolucion }}
+                </span>
+                <span *ngIf="dev.tipo_resolucion" [class]="getTipoResolucionClase(dev.tipo_resolucion)" class="text-[9px] px-1.5 py-0.2 rounded font-bold font-mono">
+                  {{ getTipoResolucionLabel(dev.tipo_resolucion) }}
+                </span>
+                <span *ngIf="dev.excepcion_ley_453" class="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-mono font-bold" title="Garantía Legal Ley 453">
+                  Ley 453
+                </span>
+              </div>
             </td>
 
             <!-- Venta Original & Fecha -->
@@ -341,6 +357,36 @@
             </div>
           </div>
 
+          <!-- Políticas, Tipo de Resolución & Pago Origen -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+            <div class="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+              <span class="text-[10px] text-zinc-400 uppercase font-mono block">Resolución Solicitada</span>
+              <span class="font-bold text-zinc-800 dark:text-zinc-200 block mt-0.5">
+                {{ getTipoResolucionLabel(devolucionDetalle.tipo_resolucion) }}
+              </span>
+            </div>
+
+            <div class="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+              <span class="text-[10px] text-zinc-400 uppercase font-mono block">Evaluación de Plazo & Ley 453</span>
+              <span class="font-bold block mt-0.5" [class.text-emerald-600]="devolucionDetalle.cumple_politica || devolucionDetalle.excepcion_ley_453">
+                {{ devolucionDetalle.excepcion_ley_453 ? '🛡️ Garantía Legal Ley N° 453' : (devolucionDetalle.cumple_politica ? '✓ Plazo Comercial Válido' : 'Evaluación Especial') }}
+              </span>
+              <span class="text-[10px] text-zinc-500 font-mono block" *ngIf="devolucionDetalle.dias_desde_compra !== undefined">
+                {{ devolucionDetalle.dias_desde_compra }} día(s) desde compra
+              </span>
+            </div>
+
+            <div class="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+              <span class="text-[10px] text-zinc-400 uppercase font-mono block">Pago de Origen</span>
+              <span class="font-bold font-mono text-zinc-800 dark:text-zinc-200 block mt-0.5">
+                {{ devolucionDetalle.pago_origen?.metodo_pago || 'Desconocido' }}
+              </span>
+              <span class="text-[10px] text-zinc-500 font-mono block truncate" *ngIf="devolucionDetalle.pago_origen?.codigo_transaccion">
+                Ref: {{ devolucionDetalle.pago_origen?.codigo_transaccion }}
+              </span>
+            </div>
+          </div>
+
           <!-- Motivo y Explicación del Cliente -->
           <div class="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 space-y-1.5 text-xs">
             <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-wider font-mono block">Motivo Declarado: {{ devolucionDetalle.motivo }}</span>
@@ -446,115 +492,427 @@
   </div>
 
   <!-- ========================================================================= -->
-  <!-- MODAL: NUEVA DEVOLUCIÓN PRESENCIAL (CU24W)                                -->
+  <!-- ========================================================================= -->
+  <!-- MODAL: NUEVA DEVOLUCIÓN PRESENCIAL EN MOSTRADOR (CU24W)                  -->
   <!-- ========================================================================= -->
   <div *ngIf="mostrarModalPresencial" 
        class="fixed inset-0 z-50 overflow-y-auto bg-black/80 dark:bg-zinc-950/90 backdrop-blur-md animate-fade-in">
     <div class="flex min-h-full items-center justify-center p-2 sm:p-4 md:p-6 text-center">
       <div (click)="cerrarModalPresencial()" class="fixed inset-0 -z-10 cursor-pointer"></div>
 
-      <div class="relative w-full max-w-2xl max-h-[calc(100vh-2.5rem)] rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl text-zinc-900 dark:text-zinc-100 flex flex-col overflow-hidden text-left animate-slide-up">
+      <div class="relative w-full max-w-3xl max-h-[calc(100vh-2.5rem)] rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl text-zinc-900 dark:text-zinc-100 flex flex-col overflow-hidden text-left animate-slide-up">
         
         <!-- Header -->
         <div class="px-5 sm:px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-950/60 flex items-center justify-between shrink-0">
-          <div class="space-y-0.5">
-            <h3 class="text-base sm:text-lg font-serif font-bold text-zinc-900 dark:text-white flex items-center space-x-2">
-              <span>🏪</span>
-              <span>Nueva Devolución Presencial en Mostrador</span>
-            </h3>
-            <p class="text-[11px] text-zinc-500 font-mono">
-              Atención directa sin requerir solicitud previa del cliente
+          <div class="space-y-1">
+            <div class="flex items-center space-x-2.5">
+              <span class="p-1.5 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 text-sm">🏪</span>
+              <h3 class="text-base sm:text-lg font-serif font-bold text-zinc-900 dark:text-white">
+                Nueva devolución presencial
+              </h3>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
+                Mostrador
+              </span>
+            </div>
+            <p class="text-[11px] text-zinc-500 dark:text-zinc-400">
+              Busca la compra del cliente para iniciar el proceso de devolución, sin necesidad de una solicitud previa.
             </p>
           </div>
-          <button (click)="cerrarModalPresencial()" class="p-2 rounded-xl text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors">
+          <button (click)="cerrarModalPresencial()" class="p-2 rounded-xl text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors cursor-pointer">
             ✕
           </button>
         </div>
 
+        <!-- Stepper Visual -->
+        <div class="px-6 py-2.5 bg-zinc-100/70 dark:bg-zinc-950/40 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between text-xs">
+          <div class="flex items-center space-x-3">
+            <div class="flex items-center space-x-1.5" [class.text-amber-600]="pasoPresencial === 1" [class.font-bold]="pasoPresencial === 1">
+              <span class="w-5 h-5 rounded-full flex items-center justify-center text-[10px]"
+                    [ngClass]="pasoPresencial === 1 ? 'bg-amber-500 text-zinc-950 font-bold' : 'bg-zinc-300 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300'">1</span>
+              <span>Búsqueda y Ficha de Venta</span>
+            </div>
+            <span class="text-zinc-400 dark:text-zinc-600">→</span>
+            <div class="flex items-center space-x-1.5" [class.text-amber-600]="pasoPresencial === 2" [class.font-bold]="pasoPresencial === 2">
+              <span class="w-5 h-5 rounded-full flex items-center justify-center text-[10px]"
+                    [ngClass]="pasoPresencial === 2 ? 'bg-amber-500 text-zinc-950 font-bold' : 'bg-zinc-300 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300'">2</span>
+              <span>Selección de Prendas y Resolución</span>
+            </div>
+          </div>
+          <span *ngIf="ventaElegiblePresencial" class="font-mono text-[11px] text-zinc-500">
+            Venta: <strong class="text-zinc-800 dark:text-zinc-200">{{ ventaElegiblePresencial.venta.numero_venta }}</strong>
+          </span>
+        </div>
+
         <!-- Body -->
-        <div class="p-5 sm:p-6 overflow-y-auto space-y-5">
-          
-          <!-- Búsqueda de venta -->
-          <div class="space-y-1.5">
-            <label class="text-xs font-bold text-zinc-700 dark:text-zinc-300">ID de Venta / Pedido Original:</label>
-            <div class="flex space-x-2">
-              <input type="number" 
-                     [(ngModel)]="idVentaBusqueda" 
-                     (keyup.enter)="buscarVentaParaPresencial()"
-                     placeholder="Ej. 102" 
-                     class="flex-1 bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500" />
-              <button (click)="buscarVentaParaPresencial()" 
-                      [disabled]="cargandoVentaPresencial"
-                      class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs uppercase tracking-wider transition-all disabled:opacity-40 cursor-pointer">
-                <span>{{ cargandoVentaPresencial ? 'Buscando...' : 'Consultar Venta' }}</span>
-              </button>
-            </div>
-          </div>
+        <div class="p-5 sm:p-6 overflow-y-auto space-y-6">
 
-          <!-- Si la venta no es elegible -->
-          <div *ngIf="ventaElegiblePresencial && !ventaElegiblePresencial.es_elegible" class="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs">
-            <p class="font-bold">⚠️ Venta No Elegible</p>
-            <p class="text-[11px] mt-1">{{ ventaElegiblePresencial.motivo_bloqueo || 'No cuenta con prendas disponibles para devolver.' }}</p>
-          </div>
+          <!-- =============================================================== -->
+          <!-- PASO 1: BÚSQUEDA Y FICHA DE LA VENTA ENCONTRADA                 -->
+          <!-- =============================================================== -->
+          <div *ngIf="pasoPresencial === 1" class="space-y-6">
 
-          <!-- Si es elegible: Selección de Prendas -->
-          <div *ngIf="ventaElegiblePresencial?.es_elegible" class="space-y-4">
-            
-            <div class="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-xs flex justify-between items-center">
-              <div>
-                <span class="font-bold text-zinc-800 dark:text-zinc-200">Venta: {{ ventaElegiblePresencial?.venta?.numero_venta }}</span>
-                <span class="text-[10px] text-zinc-500 font-mono block">Total original: Bs. {{ ventaElegiblePresencial?.venta?.total | number:'1.2-2' }}</span>
+            <!-- Buscador flexible con múltiples criterios -->
+            <div class="p-4 sm:p-5 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3">
+              <div class="flex items-center justify-between">
+                <label class="text-xs font-bold text-zinc-900 dark:text-white uppercase tracking-wider flex items-center space-x-1.5">
+                  <span>🔍</span>
+                  <span>Buscar venta o pedido</span>
+                </label>
+                <span class="text-[11px] text-zinc-400 dark:text-zinc-500">
+                  N.º de venta · Cliente · Documento · Pedido
+                </span>
               </div>
-              <span class="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-bold">
-                ✓ Elegible
-              </span>
+
+              <div class="flex flex-col sm:flex-row gap-2">
+                <div class="relative flex-1">
+                  <input type="text" 
+                         [(ngModel)]="criterioBusquedaPresencial" 
+                         (keyup.enter)="ejecutarBusquedaVentasPresencial()"
+                         placeholder="Ej: VTA-2026..., PED-..., María López, 10203040..." 
+                         class="w-full bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3.5 py-2.5 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:border-amber-500 font-mono shadow-sm" />
+                  <button *ngIf="criterioBusquedaPresencial" 
+                          (click)="criterioBusquedaPresencial = ''"
+                          class="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-xs p-1">
+                    ✕
+                  </button>
+                </div>
+
+                <button (click)="ejecutarBusquedaVentasPresencial()" 
+                        [disabled]="buscandoVentasPresencial"
+                        class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs uppercase tracking-wider transition-all disabled:opacity-40 cursor-pointer shadow flex items-center justify-center space-x-2 shrink-0">
+                  <span *ngIf="buscandoVentasPresencial" class="w-3.5 h-3.5 border-2 border-zinc-950 border-t-transparent rounded-full animate-spin"></span>
+                  <span>{{ buscandoVentasPresencial ? 'Buscando...' : 'Buscar' }}</span>
+                </button>
+              </div>
+
+              <!-- Opción de Escaneo de Comprobante -->
+              <div class="pt-2 border-t border-zinc-200 dark:border-zinc-800/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
+                <span class="text-zinc-500 dark:text-zinc-400 text-[11px]">
+                  También puedes escanear el código QR o código de barras del comprobante.
+                </span>
+                <button type="button" 
+                        (click)="abrirEscanerComprobante()" 
+                        class="px-3 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-semibold flex items-center space-x-1.5 transition-colors cursor-pointer shrink-0">
+                  <span>📷</span>
+                  <span>Escanear comprobante</span>
+                </button>
+              </div>
             </div>
 
-            <!-- Prendas -->
-            <div class="space-y-2">
-              <label class="text-xs font-bold text-zinc-700 dark:text-zinc-300 block">Prendas a Devolver e Inspección:</label>
+            <!-- Lista de Ventas Candidatas (si hubo múltiples coincidencias) -->
+            <div *ngIf="ventasCandidatas.length > 1 && !cargandoVentaPresencial" class="space-y-2">
+              <h4 class="text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
+                Ventas encontradas ({{ ventasCandidatas.length }}):
+              </h4>
+              <div class="max-h-56 overflow-y-auto space-y-2 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-2 bg-zinc-50/50 dark:bg-zinc-950/40">
+                <div *ngFor="let cand of ventasCandidatas" 
+                     (click)="seleccionarVentaPresencial(cand.id_venta)"
+                     class="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-amber-500 hover:bg-amber-500/5 transition-all cursor-pointer flex items-center justify-between text-xs">
+                  <div class="space-y-0.5">
+                    <div class="flex items-center space-x-2">
+                      <span class="font-bold font-mono text-zinc-900 dark:text-white">{{ cand.numero_venta }}</span>
+                      <span *ngIf="cand.codigo_pedido" class="px-1.5 py-0.2 rounded bg-zinc-100 dark:bg-zinc-800 text-[10px] text-zinc-500 font-mono">
+                        {{ cand.codigo_pedido }}
+                      </span>
+                      <span class="px-1.5 py-0.2 rounded text-[10px] font-bold"
+                            [ngClass]="cand.es_elegible ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'">
+                        {{ cand.es_elegible ? 'Elegible' : 'No elegible' }}
+                      </span>
+                    </div>
+                    <p class="text-[11px] text-zinc-600 dark:text-zinc-400">
+                      Cliente: <strong>{{ cand.cliente_nombre }}</strong> (Doc: {{ cand.cliente_documento }}) • {{ cand.nombre_sucursal }}
+                    </p>
+                    <p class="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono">
+                      {{ cand.fecha_venta | date:'dd/MM/yyyy · HH:mm' }} • Método: {{ cand.metodo_pago }}
+                    </p>
+                  </div>
+                  <div class="text-right shrink-0 ml-3">
+                    <div class="font-mono font-bold text-amber-600 dark:text-amber-400 text-sm">
+                      Bs. {{ cand.total | number:'1.2-2' }}
+                    </div>
+                    <span class="text-[10px] text-zinc-500 block">
+                      {{ cand.total_articulos_disponibles }} disponibles
+                    </span>
+                    <button class="mt-1 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-amber-500 hover:text-zinc-950 text-[10px] font-bold transition-colors">
+                      Ver Ficha →
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Cargando Venta -->
+            <div *ngIf="cargandoVentaPresencial" class="py-10 text-center space-y-3">
+              <div class="w-8 h-8 border-3 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+              <p class="text-xs text-zinc-500 font-medium">Consultando ficha de la venta y políticas...</p>
+            </div>
+
+            <!-- FICHA DE LA VENTA ENCONTRADA -->
+            <div *ngIf="ventaElegiblePresencial && !cargandoVentaPresencial" class="space-y-4">
               
-              <div class="space-y-2">
-                <div *ngFor="let it of (ventaElegiblePresencial?.items || [])" 
-                     [class.border-amber-500]="itemsPresenciales[it.id_detalle_venta]?.seleccionado"
-                     class="p-3 rounded-2xl border border-zinc-200 dark:border-zinc-800 space-y-2">
-                  
-                  <div class="flex items-center justify-between">
-                    <div class="flex items-center space-x-2.5">
-                      <input type="checkbox" 
-                             [checked]="itemsPresenciales[it.id_detalle_venta]?.seleccionado"
-                             (change)="toggleItemPresencial(it.id_detalle_venta)"
-                             class="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 cursor-pointer" />
-                      <div>
-                        <h5 class="font-bold text-xs text-zinc-900 dark:text-white">{{ it.producto_nombre }}</h5>
-                        <p class="text-[10px] text-zinc-500 font-mono">Talla: {{ it.talla }} • Color: {{ it.color }} • Disp: {{ it.cantidad_elegible }}</p>
+              <!-- Tarjeta Superior: Estado y Cabecera de la Venta -->
+              <div class="p-4 sm:p-5 rounded-3xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-4 shadow-sm">
+                
+                <!-- Badges de Estado -->
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div class="flex items-center space-x-2">
+                    <span class="px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20 text-xs font-bold flex items-center space-x-1">
+                      <span>✓</span>
+                      <span>Venta encontrada</span>
+                    </span>
+
+                    <span *ngIf="ventaElegiblePresencial.es_elegible" 
+                          class="px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-bold flex items-center space-x-1">
+                      <span>✓</span>
+                      <span>Venta válida</span>
+                    </span>
+
+                    <span *ngIf="!ventaElegiblePresencial.es_elegible" 
+                          class="px-2.5 py-1 rounded-full bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30 text-xs font-bold flex items-center space-x-1">
+                      <span>⚠️</span>
+                      <span>No disponible</span>
+                    </span>
+                  </div>
+
+                  <span *ngIf="ventaElegiblePresencial.venta.es_otra_sucursal" 
+                        class="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-bold">
+                    🏢 Origen: Otra Sucursal
+                  </span>
+                </div>
+
+                <!-- Código y Fecha -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
+                  <div>
+                    <h4 class="text-xl sm:text-2xl font-mono font-bold text-zinc-900 dark:text-white tracking-tight">
+                      {{ ventaElegiblePresencial.venta.numero_venta }}
+                    </h4>
+                    <p *ngIf="ventaElegiblePresencial.venta.codigo_pedido" class="text-xs text-zinc-500 font-mono mt-0.5">
+                      Pedido online asociado: <strong>{{ ventaElegiblePresencial.venta.codigo_pedido }}</strong>
+                    </p>
+                  </div>
+                  <div class="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+                    {{ ventaElegiblePresencial.venta.fecha_venta | date:'dd/MM/yyyy · HH:mm' }}
+                  </div>
+                </div>
+
+                <!-- Grid de Datos Principales (Cliente, Sucursal, Total, Método) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                  <div class="p-3 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1">
+                    <span class="text-[10px] uppercase font-bold tracking-wider text-zinc-400 block">Cliente:</span>
+                    <p class="font-bold text-zinc-900 dark:text-white truncate">
+                      {{ ventaElegiblePresencial.venta.cliente_nombre }}
+                    </p>
+                    <p class="text-[10px] text-zinc-500 font-mono">
+                      NIT/CI: {{ ventaElegiblePresencial.venta.cliente_documento }}
+                    </p>
+                  </div>
+
+                  <div class="p-3 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1">
+                    <span class="text-[10px] uppercase font-bold tracking-wider text-zinc-400 block">Sucursal:</span>
+                    <p class="font-bold text-zinc-900 dark:text-white truncate">
+                      {{ ventaElegiblePresencial.venta.nombre_sucursal }}
+                    </p>
+                    <p class="text-[10px] text-zinc-500">
+                      {{ ventaElegiblePresencial.venta.tipo_venta }}
+                    </p>
+                  </div>
+
+                  <div class="p-3 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1">
+                    <span class="text-[10px] uppercase font-bold tracking-wider text-zinc-400 block">Total de venta:</span>
+                    <p class="font-mono text-base font-bold text-amber-600 dark:text-amber-400">
+                      Bs. {{ ventaElegiblePresencial.venta.total | number:'1.2-2' }}
+                    </p>
+                    <p class="text-[10px] text-zinc-500">
+                      Subtotal: Bs. {{ ventaElegiblePresencial.venta.subtotal | number:'1.2-2' }}
+                    </p>
+                  </div>
+
+                  <div class="p-3 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1">
+                    <span class="text-[10px] uppercase font-bold tracking-wider text-zinc-400 block">Método de pago:</span>
+                    <p class="font-bold text-zinc-900 dark:text-white">
+                      {{ ventaElegiblePresencial.venta.metodo_pago }}
+                    </p>
+                    <span *ngIf="ventaElegiblePresencial.pago_origen?.es_paypal" class="text-[10px] text-blue-500 font-semibold">
+                      PayPal verificado
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Aviso de Políticas / Ley 453 -->
+                <div *ngIf="ventaElegiblePresencial.aviso_politica" 
+                     class="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs flex items-start space-x-2">
+                  <span class="text-base shrink-0">⚖️</span>
+                  <div>
+                    <span class="font-bold block">Aviso de Plazos y Políticas:</span>
+                    <p class="text-[11px] leading-relaxed mt-0.5">{{ ventaElegiblePresencial.aviso_politica }}</p>
+                  </div>
+                </div>
+
+                <!-- Bloqueo si la venta no es elegible -->
+                <div *ngIf="!ventaElegiblePresencial.es_elegible" 
+                     class="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs flex items-start space-x-2">
+                  <span class="text-base shrink-0">🚫</span>
+                  <div>
+                    <span class="font-bold block">No es posible procesar devolución:</span>
+                    <p class="text-[11px] mt-0.5">{{ ventaElegiblePresencial.motivo_bloqueo || 'No cuenta con prendas disponibles para devolver.' }}</p>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Lista: Productos Adquiridos -->
+              <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <h4 class="text-xs font-bold text-zinc-900 dark:text-white uppercase tracking-wider flex items-center space-x-1.5">
+                    <span>👗</span>
+                    <span>Productos adquiridos</span>
+                  </h4>
+                  <span class="text-[11px] text-zinc-500">
+                    {{ ventaElegiblePresencial.items.length }} ítem(s) en ticket original
+                  </span>
+                </div>
+
+                <div class="space-y-2">
+                  <div *ngFor="let it of ventaElegiblePresencial.items" 
+                       class="p-3 sm:p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-sm">
+                    
+                    <div class="flex items-center space-x-3">
+                      <!-- Imagen -->
+                      <div class="w-12 h-14 rounded-xl bg-zinc-100 dark:bg-zinc-800 overflow-hidden border border-zinc-200 dark:border-zinc-700 flex items-center justify-center shrink-0">
+                        <img *ngIf="it.imagen_url" [src]="it.imagen_url" [alt]="it.producto_nombre" class="w-full h-full object-cover" />
+                        <span *ngIf="!it.imagen_url" class="text-lg">👗</span>
+                      </div>
+
+                      <!-- Datos de Prenda -->
+                      <div class="space-y-0.5">
+                        <h5 class="font-bold text-zinc-900 dark:text-white text-sm">
+                          {{ it.producto_nombre }}
+                        </h5>
+                        <p class="text-zinc-500 text-[11px]">
+                          Talla: <strong class="text-zinc-700 dark:text-zinc-300">{{ it.talla }}</strong> • 
+                          Color: <strong class="text-zinc-700 dark:text-zinc-300">{{ it.color }}</strong> • 
+                          <span class="font-mono text-[10px] text-zinc-400">{{ it.sku }}</span>
+                        </p>
+                        <div class="flex items-center space-x-2 pt-0.5">
+                          <span class="text-[10px] text-zinc-500">Comprados: <strong>{{ it.cantidad_original }}</strong></span>
+                          <span *ngIf="it.cantidad_devuelta > 0" class="text-[10px] text-rose-500 font-bold">
+                            Devueltos previamente: {{ it.cantidad_devuelta }}
+                          </span>
+                        </div>
                       </div>
                     </div>
 
-                    <div class="font-mono text-xs font-bold text-amber-600 dark:text-amber-400">
+                    <!-- Precio y Disponibles -->
+                    <div class="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 pt-2 sm:pt-0 border-zinc-100 dark:border-zinc-800 shrink-0">
+                      <div class="font-mono font-bold text-amber-600 dark:text-amber-400 text-sm">
+                        Bs. {{ it.precio_neto_unitario | number:'1.2-2' }}
+                      </div>
+                      <span class="px-2 py-0.5 rounded-full text-[10px] font-bold mt-1"
+                            [ngClass]="it.cantidad_elegible > 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500'">
+                        {{ it.cantidad_elegible }} disponible(s) para devolver
+                      </span>
+                    </div>
+
+                  </div>
+                </div>
+              </div>
+
+              <!-- Banner Destacado: Productos Disponibles para Devolver -->
+              <div class="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-amber-500/5 border border-amber-500/30 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="flex items-center space-x-3.5 text-center sm:text-left">
+                  <div class="w-12 h-12 rounded-2xl bg-amber-500 text-zinc-950 font-bold font-mono text-xl flex items-center justify-center shrink-0 shadow-md">
+                    {{ ventaElegiblePresencial.venta.total_articulos_disponibles }}
+                  </div>
+                  <div>
+                    <h5 class="text-sm font-bold text-zinc-900 dark:text-white">
+                      Productos disponibles para devolución
+                    </h5>
+                    <p class="text-xs text-zinc-600 dark:text-zinc-400">
+                      Confirmación previa de elegibilidad y plazos conforme a políticas y Ley 453.
+                    </p>
+                  </div>
+                </div>
+
+                <button (click)="avanzarASeleccionProductos()" 
+                        [disabled]="!ventaElegiblePresencial.es_elegible || ventaElegiblePresencial.venta.total_articulos_disponibles === 0"
+                        class="w-full sm:w-auto px-6 py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs uppercase tracking-wider transition-all disabled:opacity-40 cursor-pointer shadow-lg flex items-center justify-center space-x-2 shrink-0">
+                  <span>Seleccionar productos para devolver</span>
+                  <span>→</span>
+                </button>
+              </div>
+
+            </div>
+
+          </div>
+
+          <!-- =============================================================== -->
+          <!-- PASO 2: SELECCIÓN DE PRENDAS Y RESOLUCIÓN EN MOSTRADOR          -->
+          <!-- =============================================================== -->
+          <div *ngIf="pasoPresencial === 2 && ventaElegiblePresencial" class="space-y-5">
+            
+            <!-- Botón Volver a Ficha -->
+            <button (click)="volverABusquedaVenta()" 
+                    class="text-xs text-amber-600 dark:text-amber-400 hover:underline flex items-center space-x-1.5 font-bold cursor-pointer">
+              <span>←</span>
+              <span>Cambiar venta seleccionada / Ver ficha anterior</span>
+            </button>
+
+            <!-- Selección de Prendas -->
+            <div class="space-y-3">
+              <label class="text-xs font-bold text-zinc-900 dark:text-white uppercase tracking-wider block">
+                Prendas a devolver e inspección física:
+              </label>
+
+              <div class="space-y-2.5">
+                <div *ngFor="let it of (ventaElegiblePresencial.items || [])" 
+                     [class.border-amber-500]="itemsPresenciales[it.id_detalle_venta]?.seleccionado"
+                     [class.bg-amber-500/5]="itemsPresenciales[it.id_detalle_venta]?.seleccionado"
+                     class="p-3 sm:p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 space-y-3 bg-white dark:bg-zinc-900 transition-all">
+                  
+                  <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center space-x-3">
+                      <input type="checkbox" 
+                             [disabled]="it.cantidad_elegible === 0"
+                             [checked]="itemsPresenciales[it.id_detalle_venta]?.seleccionado"
+                             (change)="toggleItemPresencial(it.id_detalle_venta)"
+                             class="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 cursor-pointer disabled:opacity-30" />
+                      <div>
+                        <h5 class="font-bold text-xs text-zinc-900 dark:text-white">{{ it.producto_nombre }}</h5>
+                        <p class="text-[11px] text-zinc-500 font-mono">
+                          Talla: {{ it.talla }} • Color: {{ it.color }} • Disp: {{ it.cantidad_elegible }}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div class="font-mono text-xs font-bold text-amber-600 dark:text-amber-400 text-right">
                       Bs. {{ it.precio_neto_unitario | number:'1.2-2' }}/u
                     </div>
                   </div>
 
-                  <!-- Controles si está seleccionado -->
+                  <!-- Controles si la prenda está seleccionada -->
                   <div *ngIf="itemsPresenciales[it.id_detalle_venta]?.seleccionado" 
-                       class="pt-2 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between gap-3 text-xs bg-zinc-50/50 dark:bg-zinc-950/40 p-2 rounded-xl">
+                       class="pt-2 border-t border-zinc-100 dark:border-zinc-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs bg-zinc-50/80 dark:bg-zinc-950/60 p-2.5 rounded-xl">
                     <div class="flex items-center space-x-2">
-                      <span class="text-[10px] text-zinc-500">Cantidad:</span>
+                      <span class="text-[11px] text-zinc-500 font-medium">Cantidad a devolver:</span>
                       <input type="number" 
                              min="1" 
                              [max]="it.cantidad_elegible" 
                              [(ngModel)]="itemsPresenciales[it.id_detalle_venta].cantidad"
                              (ngModelChange)="ajustarCantidadPresencial(it.id_detalle_venta, itemsPresenciales[it.id_detalle_venta].cantidad, it.cantidad_elegible)"
-                             class="w-16 px-2 py-0.5 text-xs font-mono font-bold text-center rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white" />
+                             class="w-16 px-2 py-1 text-xs font-mono font-bold text-center rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white" />
+                      <span class="text-[10px] text-zinc-400 font-mono">(máx. {{ it.cantidad_elegible }})</span>
                     </div>
 
                     <div class="flex items-center space-x-2">
-                      <span class="text-[10px] text-zinc-500">Condición:</span>
+                      <span class="text-[11px] text-zinc-500 font-medium">Condición:</span>
                       <select [(ngModel)]="itemsPresenciales[it.id_detalle_venta].condicion" 
-                              class="px-2 py-0.5 text-xs font-semibold rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white cursor-pointer">
-                        <option value="REVENDIBLE">✓ Revendible (Reincorporar a Stock)</option>
-                        <option value="DEFECTUOSO">✕ Defectuoso (Retener en Merma/No vender)</option>
+                              class="px-2.5 py-1 text-xs font-semibold rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white cursor-pointer">
+                        <option value="REVENDIBLE">✓ Revendible (Stock Vendible)</option>
+                        <option value="NUEVO">✨ Nuevo con Etiquetas</option>
+                        <option value="CON_DEFECTO">⚠️ Con Defecto / Ley 453 (Cuarentena)</option>
+                        <option value="DAÑADO">💥 Dañado / Desgaste (Merma)</option>
+                        <option value="EN_INSPECCION">🔬 En Inspección</option>
+                        <option value="NO_REVENDIBLE">🚫 No Revendible (Baja)</option>
                       </select>
                     </div>
                   </div>
@@ -563,57 +921,122 @@
               </div>
             </div>
 
-            <!-- Sucursal de Recepción -->
-            <div class="space-y-1">
-              <label class="text-xs font-bold text-zinc-700 dark:text-zinc-300">Sucursal donde se recibe:</label>
-              <select [(ngModel)]="idSucursalPresencial" class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs text-zinc-900 dark:text-white font-semibold cursor-pointer">
-                <option *ngFor="let s of sucursales" [ngValue]="s.id_sucursal">{{ s.nombre }}</option>
-              </select>
+            <!-- Alternativas para Resolver la Devolución (3 Resultados Posibles) -->
+            <div class="space-y-2">
+              <label class="text-xs font-bold text-zinc-900 dark:text-white uppercase tracking-wider block">
+                Resultado de la devolución:
+              </label>
+              
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <button type="button" 
+                        (click)="tipoResolucionPresencial = 'CAMBIO_PRENDA'"
+                        [class.border-amber-500]="tipoResolucionPresencial === 'CAMBIO_PRENDA'"
+                        [class.bg-amber-500/10]="tipoResolucionPresencial === 'CAMBIO_PRENDA'"
+                        class="p-3 rounded-2xl border border-zinc-300 dark:border-zinc-700 text-left transition-all cursor-pointer">
+                  <div class="flex items-center space-x-1.5 font-bold text-xs text-zinc-900 dark:text-white">
+                    <span>🔄</span>
+                    <span>Cambio de prenda</span>
+                  </div>
+                  <p class="text-[10px] text-zinc-500 mt-1 leading-snug">
+                    El cliente entrega una prenda y recibe otra.
+                  </p>
+                </button>
+
+                <button type="button" 
+                        (click)="tipoResolucionPresencial = 'SALDO_A_FAVOR'"
+                        [class.border-amber-500]="tipoResolucionPresencial === 'SALDO_A_FAVOR'"
+                        [class.bg-amber-500/10]="tipoResolucionPresencial === 'SALDO_A_FAVOR'"
+                        class="p-3 rounded-2xl border border-zinc-300 dark:border-zinc-700 text-left transition-all cursor-pointer">
+                  <div class="flex items-center space-x-1.5 font-bold text-xs text-zinc-900 dark:text-white">
+                    <span>🎫</span>
+                    <span>Saldo a favor</span>
+                  </div>
+                  <p class="text-[10px] text-zinc-500 mt-1 leading-snug">
+                    Devuelve la prenda y recibe crédito para futuras compras.
+                  </p>
+                </button>
+
+                <button type="button" 
+                        (click)="tipoResolucionPresencial = 'REEMBOLSO_DINERO'"
+                        [class.border-amber-500]="tipoResolucionPresencial === 'REEMBOLSO_DINERO'"
+                        [class.bg-amber-500/10]="tipoResolucionPresencial === 'REEMBOLSO_DINERO'"
+                        class="p-3 rounded-2xl border border-zinc-300 dark:border-zinc-700 text-left transition-all cursor-pointer">
+                  <div class="flex items-center space-x-1.5 font-bold text-xs text-zinc-900 dark:text-white">
+                    <span>💵</span>
+                    <span>Reembolso dinero</span>
+                  </div>
+                  <p class="text-[10px] text-zinc-500 mt-1 leading-snug">
+                    La tienda devuelve el importe correspondiente al cliente.
+                  </p>
+                </button>
+              </div>
             </div>
 
-            <!-- Motivo -->
+            <!-- Motivo de Devolución -->
             <div class="space-y-1">
               <label class="text-xs font-bold text-zinc-700 dark:text-zinc-300">Motivo de Devolución:</label>
               <select [(ngModel)]="motivoPresencial" class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs text-zinc-900 dark:text-white font-semibold cursor-pointer">
-                <option value="DEFECTO_FABRICA">Defecto de Fábrica / Costura</option>
-                <option value="TALLA_INCORRECTA">Talla Incorrecta / Cambio de Medida</option>
-                <option value="PRODUCTO_EQUIVOCADO">Producto Entregado No Correspondía</option>
-                <option value="OTRO">Otro Motivo</option>
+                <optgroup label="⚖️ Reclamación por Falla (Ley N° 453 Bolivia)">
+                  <option value="DEFECTO_FABRICA">Defecto de Fabricación / Costura o Tela</option>
+                  <option value="PRODUCTO_DEFECTUOSO">Producto Defectuoso al Uso Inicial</option>
+                  <option value="PRODUCTO_EQUIVOCADO">Producto Equivocado / No Correspondía</option>
+                  <option value="DANADO_TRANSPORTE">Producto Dañado Durante Entrega</option>
+                  <option value="ERROR_DESCRIPCION">Error en la Descripción del Producto</option>
+                </optgroup>
+                <optgroup label="🛍️ Preferencia Comercial / Cambio de Talla">
+                  <option value="TALLA_INCORRECTA">Talla Incorrecta / Ajuste</option>
+                  <option value="COLOR_DISTINTO">Color Diferente al Esperado</option>
+                  <option value="NO_GUSTO">No le gustó la prenda</option>
+                  <option value="COMPRA_DUPLICADA">Compra Duplicada</option>
+                  <option value="OTRO">Otro Motivo Comercial</option>
+                </optgroup>
+              </select>
+            </div>
+
+            <!-- Sucursal de Recepción -->
+            <div class="space-y-1">
+              <label class="text-xs font-bold text-zinc-700 dark:text-zinc-300">Sucursal donde se recibe físicamente la prenda:</label>
+              <select [(ngModel)]="idSucursalPresencial" class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs text-zinc-900 dark:text-white font-semibold cursor-pointer">
+                <option *ngFor="let s of sucursales" [ngValue]="s.id_sucursal">{{ s.nombre }}</option>
               </select>
             </div>
 
             <!-- Observaciones -->
             <div class="space-y-1">
               <label class="text-xs font-bold text-zinc-700 dark:text-zinc-300">Observaciones Técnicas / Estado de la Prenda:</label>
-              <textarea [(ngModel)]="observacionesPresenciales" rows="2" placeholder="Detalles de la inspección física..." class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl p-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500"></textarea>
+              <textarea [(ngModel)]="observacionesPresenciales" rows="2" placeholder="Detalles de la inspección física, etiquetas o motivos..." class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl p-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500"></textarea>
             </div>
 
             <!-- Reembolso Inmediato en Mostrador -->
-            <div class="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2">
-              <label class="flex items-center space-x-2 text-xs font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer">
+            <div class="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2.5">
+              <label class="flex items-center space-x-2.5 text-xs font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer">
                 <input type="checkbox" [(ngModel)]="reembolsoInmediatoPresencial" class="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 cursor-pointer" />
-                <span>Registrar reembolso inmediato en mostrador (Cajero)</span>
+                <span>Registrar liquidación inmediata en mostrador (Cajero)</span>
               </label>
 
-              <div *ngIf="reembolsoInmediatoPresencial" class="grid grid-cols-2 gap-2 pt-2">
+              <div *ngIf="reembolsoInmediatoPresencial" class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
                 <div>
                   <span class="text-[10px] text-zinc-500 font-mono block">Método de Reembolso:</span>
-                  <select [(ngModel)]="metodoReembolsoPresencial" class="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-lg p-1.5 text-xs">
-                    <option value="EFECTIVO">Efectivo en Caja</option>
-                    <option value="VALE_TIENDA">Vale de Tienda / Crédito</option>
+                  <select [(ngModel)]="metodoReembolsoPresencial" class="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl p-2 text-xs font-semibold">
+                    <option value="EFECTIVO">💵 Efectivo en Caja</option>
+                    <option value="VALE_TIENDA">🎫 Saldo a Favor / Vale de Tienda</option>
+                    <option value="TRANSFERENCIA">🏦 Transferencia Bancaria</option>
                   </select>
                 </div>
                 <div>
-                  <span class="text-[10px] text-zinc-500 font-mono block">Comprobante / Recibo:</span>
-                  <input type="text" [(ngModel)]="referenciaReembolsoPresencial" placeholder="Nro de Recibo" class="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-lg p-1.5 text-xs font-mono" />
+                  <span class="text-[10px] text-zinc-500 font-mono block">Nro. de Recibo / Referencia:</span>
+                  <input type="text" [(ngModel)]="referenciaReembolsoPresencial" placeholder="Ej: REC-PRES-10492" class="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl p-2 text-xs font-mono" />
                 </div>
               </div>
             </div>
 
             <!-- Resumen Total -->
-            <div class="p-3 rounded-2xl bg-zinc-100 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex justify-between items-center text-xs">
-              <span class="font-bold text-zinc-800 dark:text-zinc-200">Reembolso Total a Efectuar:</span>
-              <span class="font-mono text-base font-bold text-amber-600 dark:text-amber-400">
+            <div class="p-4 rounded-2xl bg-zinc-100 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex justify-between items-center text-xs">
+              <div>
+                <span class="font-bold text-zinc-800 dark:text-zinc-200 block">Total a liquidar en devolución:</span>
+                <span class="text-[10px] text-zinc-500">Calculado neto proporcional al ticket original</span>
+              </div>
+              <span class="font-mono text-lg font-bold text-amber-600 dark:text-amber-400">
                 Bs. {{ calcularReembolsoPresencial() | number:'1.2-2' }}
               </span>
             </div>
@@ -623,15 +1046,94 @@
         </div>
 
         <!-- Footer -->
-        <div class="px-5 sm:px-6 py-3.5 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50/90 dark:bg-zinc-950/80 flex items-center justify-between shrink-0">
-          <button (click)="cerrarModalPresencial()" class="px-4 py-2 rounded-xl bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-200 font-semibold text-xs transition-colors cursor-pointer">
+        <div class="px-5 sm:px-6 py-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50/90 dark:bg-zinc-950/80 flex items-center justify-between shrink-0">
+          <button (click)="cerrarModalPresencial()" class="px-4 py-2.5 rounded-xl bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-200 font-semibold text-xs transition-colors cursor-pointer">
             Cancelar
           </button>
 
-          <button (click)="confirmarDevolucionPresencial()" 
-                  [disabled]="!hayItemsPresenciales() || guardandoPresencial"
-                  class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs uppercase tracking-wider transition-all disabled:opacity-40 cursor-pointer flex items-center space-x-2">
-            <span>{{ guardandoPresencial ? 'Registrando...' : 'Confirmar Devolución Presencial' }}</span>
+          <div class="flex items-center space-x-2">
+            <button *ngIf="pasoPresencial === 2" 
+                    (click)="volverABusquedaVenta()" 
+                    class="px-4 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-semibold transition-colors cursor-pointer">
+              ← Volver
+            </button>
+
+            <button *ngIf="pasoPresencial === 1 && ventaElegiblePresencial" 
+                    (click)="avanzarASeleccionProductos()"
+                    [disabled]="!ventaElegiblePresencial.es_elegible || ventaElegiblePresencial.venta.total_articulos_disponibles === 0"
+                    class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs uppercase tracking-wider transition-all disabled:opacity-40 cursor-pointer shadow flex items-center space-x-1.5">
+              <span>Continuar</span>
+              <span>→</span>
+            </button>
+
+            <button *ngIf="pasoPresencial === 2" 
+                    (click)="confirmarDevolucionPresencial()" 
+                    [disabled]="!hayItemsPresenciales() || guardandoPresencial"
+                    class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs uppercase tracking-wider transition-all disabled:opacity-40 cursor-pointer flex items-center space-x-2 shadow-lg">
+              <span *ngIf="guardandoPresencial" class="w-3.5 h-3.5 border-2 border-zinc-950 border-t-transparent rounded-full animate-spin"></span>
+              <span>{{ guardandoPresencial ? 'Registrando...' : 'Confirmar Devolución' }}</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: ESCANEAR COMPROBANTE (QR / BARRAS)                                 -->
+  <!-- ========================================================================= -->
+  <div *ngIf="mostrarModalEscaner" 
+       class="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md animate-fade-in">
+    <div class="flex min-h-full items-center justify-center p-4 text-center">
+      <div (click)="cerrarEscanerComprobante()" class="fixed inset-0 -z-10 cursor-pointer"></div>
+
+      <div class="relative w-full max-w-md rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl p-6 text-left space-y-4 animate-scale-in">
+        
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <span class="p-1.5 rounded-xl bg-amber-500/10 text-amber-500 text-sm">📷</span>
+            <h4 class="font-serif font-bold text-base text-zinc-900 dark:text-white">
+              Escanear Comprobante
+            </h4>
+          </div>
+          <button (click)="cerrarEscanerComprobante()" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
+            ✕
+          </button>
+        </div>
+
+        <p class="text-xs text-zinc-500">
+          Apunta con tu lector láser/óptico o pega el código QR/barras del ticket de compra:
+        </p>
+
+        <!-- Viewfinder Simulado -->
+        <div class="w-full h-44 rounded-2xl border-2 border-dashed border-amber-500/50 bg-zinc-950 flex flex-col items-center justify-center text-center p-4 relative overflow-hidden">
+          <div class="w-36 h-36 border-2 border-amber-500 rounded-xl relative flex items-center justify-center">
+            <div class="w-full h-0.5 bg-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.8)] animate-pulse"></div>
+          </div>
+          <span class="text-[10px] text-zinc-400 mt-2 font-mono">
+            Esperando lectura de código...
+          </span>
+        </div>
+
+        <div class="space-y-1.5">
+          <label class="text-[11px] font-bold text-zinc-700 dark:text-zinc-300">
+            Código escaneado o manual:
+          </label>
+          <input type="text" 
+                 [(ngModel)]="codigoEscaneoInput" 
+                 (keyup.enter)="procesarCodigoEscaneado()"
+                 placeholder="Ej: VTA-20260929-45913" 
+                 autofocus
+                 class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500" />
+        </div>
+
+        <div class="flex items-center justify-end space-x-2 pt-2">
+          <button (click)="cerrarEscanerComprobante()" class="px-4 py-2 rounded-xl bg-zinc-200 dark:bg-zinc-800 text-xs font-semibold">
+            Cancelar
+          </button>
+          <button (click)="procesarCodigoEscaneado()" class="px-4 py-2 rounded-xl bg-amber-500 text-zinc-950 font-bold text-xs uppercase tracking-wider">
+            Buscar Comprobante
           </button>
         </div>
 
@@ -681,6 +1183,34 @@
                       [class.dark:border-zinc-700]="accionDictamen !== 'RECHAZAR'"
                       class="p-3 rounded-2xl border text-center font-bold uppercase tracking-wider transition-all cursor-pointer">
                 ✕ RECHAZAR
+              </button>
+            </div>
+          </div>
+
+          <!-- Selección de tipo de resolución autorizada -->
+          <div *ngIf="accionDictamen === 'APROBAR'" class="space-y-1.5 p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+            <label class="font-bold text-zinc-700 dark:text-zinc-300 block">Tipo de Resolución Autorizada:</label>
+            <div class="grid grid-cols-3 gap-2">
+              <button type="button" (click)="tipoResolucionDictamen = 'CAMBIO_PRENDA'"
+                      [class.bg-amber-500]="tipoResolucionDictamen === 'CAMBIO_PRENDA'"
+                      [class.text-zinc-950]="tipoResolucionDictamen === 'CAMBIO_PRENDA'"
+                      [class.font-bold]="tipoResolucionDictamen === 'CAMBIO_PRENDA'"
+                      class="p-2 rounded-xl border border-zinc-300 dark:border-zinc-700 text-[11px] cursor-pointer">
+                🔄 Cambio Prenda
+              </button>
+              <button type="button" (click)="tipoResolucionDictamen = 'SALDO_A_FAVOR'"
+                      [class.bg-amber-500]="tipoResolucionDictamen === 'SALDO_A_FAVOR'"
+                      [class.text-zinc-950]="tipoResolucionDictamen === 'SALDO_A_FAVOR'"
+                      [class.font-bold]="tipoResolucionDictamen === 'SALDO_A_FAVOR'"
+                      class="p-2 rounded-xl border border-zinc-300 dark:border-zinc-700 text-[11px] cursor-pointer">
+                🎫 Saldo a Favor
+              </button>
+              <button type="button" (click)="tipoResolucionDictamen = 'REEMBOLSO_DINERO'"
+                      [class.bg-amber-500]="tipoResolucionDictamen === 'REEMBOLSO_DINERO'"
+                      [class.text-zinc-950]="tipoResolucionDictamen === 'REEMBOLSO_DINERO'"
+                      [class.font-bold]="tipoResolucionDictamen === 'REEMBOLSO_DINERO'"
+                      class="p-2 rounded-xl border border-zinc-300 dark:border-zinc-700 text-[11px] cursor-pointer">
+                💵 Reembolso Dinero
               </button>
             </div>
           </div>
@@ -755,8 +1285,12 @@
 
                 <div *ngIf="itemsRecepcion[it.id_detalle_devolucion]">
                   <select [(ngModel)]="itemsRecepcion[it.id_detalle_devolucion].condicion" class="px-2 py-1 text-xs font-semibold rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 cursor-pointer">
-                    <option value="REVENDIBLE">✓ Revendible (Aumenta Stock)</option>
-                    <option value="DEFECTUOSO">✕ Defectuoso (No Vendible)</option>
+                    <option value="REVENDIBLE">✓ Revendible (Reingresa a Stock Vendible)</option>
+                    <option value="NUEVO">✨ Nuevo con Etiquetas (Stock Vendible)</option>
+                    <option value="CON_DEFECTO">⚠️ Con Defecto / Garantía Ley 453 (Cuarentena)</option>
+                    <option value="DAÑADO">💥 Dañado / Desgaste (Merma)</option>
+                    <option value="EN_INSPECCION">🔬 En Inspección Técnica</option>
+                    <option value="NO_REVENDIBLE">🚫 No Revendible (Baja)</option>
                   </select>
                 </div>
               </div>
@@ -811,14 +1345,25 @@
             <span class="font-mono text-base font-bold">Bs. {{ montoReembolsoLiquidacion | number:'1.2-2' }}</span>
           </div>
 
+          <!-- Alerta de PayPal si la venta fue pagada con PayPal -->
+          <div *ngIf="esPagoPayPalOriginal" class="p-3.5 rounded-2xl bg-blue-500/10 border border-blue-500/30 text-blue-900 dark:text-blue-200 space-y-1.5">
+            <div class="flex items-center space-x-2 font-bold text-xs">
+              <span>⚡</span>
+              <span>Pago Original con PayPal REST API Detectado</span>
+            </div>
+            <p class="text-[11px] leading-relaxed">
+              El cliente realizó su compra mediante PayPal (Captura ID: <code class="font-mono font-bold">{{ idCapturaPayPalOriginal }}</code>). Puedes emitir el reembolso directo a su cuenta seleccionando el método PayPal.
+            </p>
+          </div>
+
           <!-- Método de Reembolso -->
           <div class="space-y-1">
             <label class="font-bold text-zinc-700 dark:text-zinc-300">Método de Liquidación:</label>
             <select [(ngModel)]="metodoReembolso" class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-semibold cursor-pointer">
-              <option value="EFECTIVO">Efectivo en Mostrador</option>
-              <option value="TRANSFERENCIA">Transferencia Bancaria QR / ACH</option>
-              <option value="VALE_TIENDA">Vale de Tienda / Crédito Aurora</option>
-              <option value="TARJETA_PASARELA">Devolución a Tarjeta (Pasarela)</option>
+              <option value="EFECTIVO">💵 Efectivo en Caja (Cajero/Mostrador)</option>
+              <option value="PAYPAL">⚡ Pasarela PayPal (Reembolso Automático Server-to-Server)</option>
+              <option value="SALDO_A_FAVOR">🎫 Saldo a Favor / Vale Digital (Crédito para el Cliente)</option>
+              <option value="TRANSFERENCIA">🏦 Transferencia Bancaria QR / ACH</option>
             </select>
           </div>
 
@@ -846,6 +1391,111 @@
                   [disabled]="!referenciaReembolso.trim() || guardandoReembolso"
                   class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider disabled:opacity-40 transition-colors">
             {{ guardandoReembolso ? 'Liquidando...' : 'Confirmar Liquidación' }}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: CONFIGURACIÓN DE POLÍTICAS DE DEVOLUCIÓN DE LA TIENDA              -->
+  <!-- ========================================================================= -->
+  <div *ngIf="mostrarModalPoliticas" 
+       class="fixed inset-0 z-50 overflow-y-auto bg-black/80 dark:bg-zinc-950/90 backdrop-blur-md animate-fade-in">
+    <div class="flex min-h-full items-center justify-center p-2 sm:p-4 text-center">
+      <div (click)="cerrarModalPoliticas()" class="fixed inset-0 -z-10 cursor-pointer"></div>
+
+      <div class="relative w-full max-w-xl rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl text-zinc-900 dark:text-zinc-100 flex flex-col overflow-hidden text-left animate-slide-up">
+        
+        <div class="px-5 sm:px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-950/60 flex items-center justify-between">
+          <div>
+            <h3 class="text-sm sm:text-base font-bold text-zinc-900 dark:text-white flex items-center space-x-2">
+              <span>⚙️</span>
+              <span>Políticas de Devolución & Ley N° 453</span>
+            </h3>
+            <p class="text-[11px] text-zinc-500 font-mono">Reglas comerciales del tenant y garantía legal boliviana</p>
+          </div>
+          <button (click)="cerrarModalPoliticas()" class="text-zinc-400 hover:text-zinc-600">✕</button>
+        </div>
+
+        <div class="p-5 sm:p-6 space-y-4 text-xs" *ngIf="!cargandoPoliticas">
+          
+          <div class="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 text-[11px] leading-relaxed">
+            <b>Marco Normativo:</b> Conforme al Art. 26 y 62 de la Ley N° 453, los defectos de fabricación cuentan con una garantía legal mínima independiente de las políticas comerciales discrecionales y no pueden ser rechazados por falta de empaque o etiquetas originales.
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div class="space-y-1">
+              <label class="font-bold text-zinc-700 dark:text-zinc-300 block">Días Devolución Comercial:</label>
+              <input type="number" min="1" max="180" [(ngModel)]="politicaConfig.dias_devolucion_comercial" class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-mono font-bold" />
+              <span class="text-[10px] text-zinc-400">Plazo para cambios por talla o gusto (ej. 15d)</span>
+            </div>
+
+            <div class="space-y-1">
+              <label class="font-bold text-zinc-700 dark:text-zinc-300 block">Días Garantía Defecto (Ley 453):</label>
+              <input type="number" min="30" max="365" [(ngModel)]="politicaConfig.dias_garantia_defecto" class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-mono font-bold" />
+              <span class="text-[10px] text-zinc-400">Falla de costura o fábrica (mínimo 90d)</span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div class="space-y-1">
+              <label class="font-bold text-zinc-700 dark:text-zinc-300 block">Vigencia Saldo a Favor (Días):</label>
+              <input type="number" min="30" max="730" [(ngModel)]="politicaConfig.dias_vigencia_credito" class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-mono font-bold" />
+              <span class="text-[10px] text-zinc-400">Duración del cupón digital de tienda (ej. 180d)</span>
+            </div>
+
+            <div class="space-y-2 pt-2">
+              <label class="flex items-center space-x-2 text-xs text-zinc-700 dark:text-zinc-300 cursor-pointer">
+                <input type="checkbox" [(ngModel)]="politicaConfig.requiere_etiqueta_original" class="rounded text-amber-600 cursor-pointer" />
+                <span>Exigir etiquetas en cambios comerciales</span>
+              </label>
+              <label class="flex items-center space-x-2 text-xs text-zinc-700 dark:text-zinc-300 cursor-pointer">
+                <input type="checkbox" [(ngModel)]="politicaConfig.requiere_empaque_original" class="rounded text-amber-600 cursor-pointer" />
+                <span>Exigir empaque original intacto</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="space-y-1.5 pt-1">
+            <span class="font-bold text-zinc-700 dark:text-zinc-300 block">Alternativas Permitidas en la Tienda:</span>
+            <div class="grid grid-cols-3 gap-2">
+              <label class="p-2.5 rounded-xl border flex items-center space-x-2 text-xs cursor-pointer" [class.bg-emerald-500/10]="politicaConfig.permite_cambio_prenda">
+                <input type="checkbox" [(ngModel)]="politicaConfig.permite_cambio_prenda" class="text-emerald-600 cursor-pointer" />
+                <span class="font-semibold">Cambio Prenda</span>
+              </label>
+              <label class="p-2.5 rounded-xl border flex items-center space-x-2 text-xs cursor-pointer" [class.bg-emerald-500/10]="politicaConfig.permite_saldo_favor">
+                <input type="checkbox" [(ngModel)]="politicaConfig.permite_saldo_favor" class="text-emerald-600 cursor-pointer" />
+                <span class="font-semibold">Saldo a Favor</span>
+              </label>
+              <label class="p-2.5 rounded-xl border flex items-center space-x-2 text-xs cursor-pointer" [class.bg-emerald-500/10]="politicaConfig.permite_reembolso_dinero">
+                <input type="checkbox" [(ngModel)]="politicaConfig.permite_reembolso_dinero" class="text-emerald-600 cursor-pointer" />
+                <span class="font-semibold">Reembolso Dinero</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="space-y-1">
+            <label class="font-bold text-zinc-700 dark:text-zinc-300">Texto Público de la Política Comercial:</label>
+            <textarea [(ngModel)]="politicaConfig.politica_texto_publico" rows="2" placeholder="Información pública visible a los clientes al solicitar devolución..." class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl p-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500"></textarea>
+          </div>
+
+        </div>
+
+        <div *ngIf="cargandoPoliticas" class="py-12 text-center">
+          <div class="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p class="text-xs text-zinc-500 mt-2">Cargando políticas de la empresa...</p>
+        </div>
+
+        <div class="px-5 sm:px-6 py-3.5 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50/90 dark:bg-zinc-950/80 flex justify-end space-x-2">
+          <button (click)="cerrarModalPoliticas()" class="px-4 py-2 rounded-xl bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-xs font-semibold">
+            Cancelar
+          </button>
+          <button (click)="guardarPoliticas()" 
+                  [disabled]="guardandoPoliticas || cargandoPoliticas"
+                  class="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs uppercase tracking-wider disabled:opacity-40 transition-colors">
+            {{ guardandoPoliticas ? 'Guardando...' : 'Guardar Políticas' }}
           </button>
         </div>
 

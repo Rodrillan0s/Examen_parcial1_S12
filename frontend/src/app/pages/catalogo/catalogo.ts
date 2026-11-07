@@ -66,6 +66,8 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   searchQuery: string = '';
   selectedCategory: number | null = null;
   categoriaNombreFiltro: string = '';
+  selectedPublico: string = 'Todos';
+  selectedSucursal: number | null = null;
   selectedTalla: number | null = null;
   selectedColor: number | null = null;
   selectedTemporada: string = 'Todas';
@@ -112,6 +114,18 @@ export class CatalogoComponent implements OnInit, OnDestroy {
       }
       if (params['categoria_nombre']) {
         this.categoriaNombreFiltro = params['categoria_nombre'];
+      }
+      if (params['publico']) {
+        this.selectedPublico = params['publico'];
+      }
+      if (params['coleccion']) {
+        this.selectedColeccion = params['coleccion'];
+      }
+      if (params['sucursal']) {
+        const sucId = parseInt(params['sucursal'], 10);
+        if (!isNaN(sucId)) {
+          this.selectedSucursal = sucId;
+        }
       }
       if (params['producto'] || params['id_producto']) {
         const prodId = parseInt(params['producto'] || params['id_producto'], 10);
@@ -248,6 +262,8 @@ export class CatalogoComponent implements OnInit, OnDestroy {
       id_empresa: this.selectedTenantId,
       busqueda: this.searchQuery,
       id_categoria: this.selectedCategory || undefined,
+      publico: this.selectedPublico !== 'Todos' ? this.selectedPublico : undefined,
+      id_sucursal: this.selectedSucursal || undefined,
       id_talla: this.selectedTalla || undefined,
       id_color: this.selectedColor || undefined,
       temporada: this.selectedTemporada,
@@ -337,6 +353,18 @@ export class CatalogoComponent implements OnInit, OnDestroy {
     this.aplicarFiltros();
   }
 
+  onPublicoChange(pub: string): void {
+    this.selectedPublico = pub || 'Todos';
+    this.paginaActual = 1;
+    this.aplicarFiltros();
+  }
+
+  onSucursalChange(idSuc: number | null): void {
+    this.selectedSucursal = idSuc;
+    this.paginaActual = 1;
+    this.aplicarFiltros();
+  }
+
   onTallaChange(idTalla: number | null): void {
     this.selectedTalla = idTalla;
     this.paginaActual = 1;
@@ -388,6 +416,8 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   limpiarFiltros(recargar: boolean = true): void {
     this.searchQuery = '';
     this.selectedCategory = null;
+    this.selectedPublico = 'Todos';
+    this.selectedSucursal = null;
     this.selectedTalla = null;
     this.selectedColor = null;
     this.selectedTemporada = 'Todas';

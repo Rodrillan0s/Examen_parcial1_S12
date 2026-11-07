@@ -12,7 +12,8 @@ import {
   DevolucionesFiltros,
   ElegibilidadVentaResponse,
   DevolucionPresencialPayload,
-  ItemPresencialDevolucion
+  ItemPresencialDevolucion,
+  VentaCandidataPresencial
 } from '../../services/devoluciones';
 
 @Component({
@@ -51,29 +52,39 @@ export class DevolucionesComponent implements OnInit {
 
   // --- MODAL REGISTRO PRESENCIAL (CU24W) ---
   mostrarModalPresencial: boolean = false;
-  idVentaBusqueda: string = '';
+  pasoPresencial: 1 | 2 = 1;
+  criterioBusquedaPresencial: string = '';
+  buscandoVentasPresencial: boolean = false;
+  busquedaRealizadaPresencial: boolean = false;
+  ventasCandidatas: VentaCandidataPresencial[] = [];
   cargandoVentaPresencial: boolean = false;
   ventaElegiblePresencial: ElegibilidadVentaResponse | null = null;
   itemsPresenciales: {
     [id_detalle_venta: number]: {
       seleccionado: boolean;
       cantidad: number;
-      condicion: 'REVENDIBLE' | 'DEFECTUOSO';
+      condicion: string;
     }
   } = {};
   motivoPresencial: string = 'DEFECTO_FABRICA';
+  tipoResolucionPresencial: 'CAMBIO_PRENDA' | 'SALDO_A_FAVOR' | 'REEMBOLSO_DINERO' = 'REEMBOLSO_DINERO';
   observacionesPresenciales: string = '';
   idSucursalPresencial: number | null = null;
-  reembolsoInmediatoPresencial: boolean = false;
+  reembolsoInmediatoPresencial: boolean = true;
   metodoReembolsoPresencial: string = 'EFECTIVO';
   referenciaReembolsoPresencial: string = '';
   guardandoPresencial: boolean = false;
+
+  // Escaneo interactivo de comprobante (QR / Barras)
+  mostrarModalEscaner: boolean = false;
+  codigoEscaneoInput: string = '';
 
   // --- MODAL DICTAMEN (APROBAR / RECHAZAR) ---
   mostrarModalDictamen: boolean = false;
   idDevolucionDictamen: number | null = null;
   codigoDevolucionDictamen: string = '';
   accionDictamen: 'APROBAR' | 'RECHAZAR' | 'EN_REVISION' = 'APROBAR';
+  tipoResolucionDictamen: 'CAMBIO_PRENDA' | 'SALDO_A_FAVOR' | 'REEMBOLSO_DINERO' = 'REEMBOLSO_DINERO';
   observacionesDictamen: string = '';
   guardandoDictamen: boolean = false;
 
@@ -85,7 +96,7 @@ export class DevolucionesComponent implements OnInit {
   itemsRecepcion: {
     [id_detalle_devolucion: number]: {
       cantidad: number;
-      condicion: 'REVENDIBLE' | 'DEFECTUOSO';
+      condicion: string;
     }
   } = {};
   observacionesRecepcion: string = '';
@@ -100,6 +111,24 @@ export class DevolucionesComponent implements OnInit {
   referenciaReembolso: string = '';
   observacionesReembolso: string = '';
   guardandoReembolso: boolean = false;
+  esPagoPayPalOriginal: boolean = false;
+  idCapturaPayPalOriginal: string = '';
+
+  // --- MODAL CONFIGURACIÓN DE POLÍTICAS ---
+  mostrarModalPoliticas: boolean = false;
+  cargandoPoliticas: boolean = false;
+  guardandoPoliticas: boolean = false;
+  politicaConfig: any = {
+    dias_devolucion_comercial: 15,
+    dias_garantia_defecto: 90,
+    requiere_etiqueta_original: true,
+    requiere_empaque_original: false,
+    permite_cambio_prenda: true,
+    permite_saldo_favor: true,
+    permite_reembolso_dinero: true,
+    dias_vigencia_credito: 180,
+    politica_texto_publico: ''
+  };
 
   // --- TOAST NOTIFICATIONS ---
   mensajeToast: { tipo: 'exito' | 'error' | 'info'; texto: string } | null = null;
@@ -212,46 +241,79 @@ export class DevolucionesComponent implements OnInit {
 
   abrirModalPresencial(): void {
     this.mostrarModalPresencial = true;
-    this.idVentaBusqueda = '';
+    this.pasoPresencial = 1;
+    this.criterioBusquedaPresencial = '';
+    this.ventasCandidatas = [];
+    this.busquedaRealizadaPresencial = false;
     this.ventaElegiblePresencial = null;
     this.itemsPresenciales = {};
     this.motivoPresencial = 'DEFECTO_FABRICA';
+    this.tipoResolucionPresencial = 'REEMBOLSO_DINERO';
     this.observacionesPresenciales = '';
-    this.reembolsoInmediatoPresencial = false;
+    this.reembolsoInmediatoPresencial = true;
     this.metodoReembolsoPresencial = 'EFECTIVO';
     this.referenciaReembolsoPresencial = 'REC-PRES-' + Date.now().toString().slice(-6);
+    this.idSucursalPresencial = this.sucursales[0]?.id_sucursal || null;
     this.cdr.markForCheck();
   }
 
   cerrarModalPresencial(): void {
     this.mostrarModalPresencial = false;
+    this.pasoPresencial = 1;
+    this.criterioBusquedaPresencial = '';
+    this.ventasCandidatas = [];
+    this.busquedaRealizadaPresencial = false;
     this.ventaElegiblePresencial = null;
     this.itemsPresenciales = {};
     this.cdr.markForCheck();
   }
 
-  buscarVentaParaPresencial(): void {
-    const query = this.idVentaBusqueda.trim();
+  ejecutarBusquedaVentasPresencial(): void {
+    const query = (this.criterioBusquedaPresencial || '').trim();
     if (!query) {
-      this.mostrarToast('info', 'Ingresa el ID o número de venta a consultar.');
+      this.mostrarToast('info', 'Ingresa el número de venta, código de pedido, cliente o documento.');
       return;
     }
 
-    const idVenta = parseInt(query, 10);
-    if (isNaN(idVenta) || idVenta <= 0) {
-      this.mostrarToast('error', 'Por favor ingresa un ID numérico de venta válido.');
-      return;
-    }
+    this.buscandoVentasPresencial = true;
+    this.busquedaRealizadaPresencial = true;
+    this.ventasCandidatas = [];
+    this.ventaElegiblePresencial = null;
+    this.cdr.markForCheck();
 
+    this.devolucionesService.buscarVentasPresencial(query, this.authService.getEffectiveCompanyId() || undefined).subscribe({
+      next: (candidatas: VentaCandidataPresencial[]) => {
+        this.buscandoVentasPresencial = false;
+        this.ventasCandidatas = candidatas || [];
+        if (this.ventasCandidatas.length === 1) {
+          // Si coincide con 1 venta exacta, cargar su ficha de verificación
+          this.seleccionarVentaPresencial(this.ventasCandidatas[0].id_venta);
+        } else if (this.ventasCandidatas.length === 0) {
+          this.mostrarToast('info', 'No se encontraron ventas con los criterios ingresados.');
+        }
+        this.cdr.markForCheck();
+      },
+      error: (err: any) => {
+        this.buscandoVentasPresencial = false;
+        this.mostrarToast('error', err?.error?.detail || 'Error al buscar ventas.');
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  seleccionarVentaPresencial(idVenta: number): void {
     this.cargandoVentaPresencial = true;
     this.ventaElegiblePresencial = null;
     this.itemsPresenciales = {};
     this.cdr.markForCheck();
 
     this.devolucionesService.consultarElegibilidadVenta(idVenta, this.authService.getEffectiveCompanyId() || undefined).subscribe({
-      next: (res: any) => {
+      next: (res: ElegibilidadVentaResponse) => {
         this.cargandoVentaPresencial = false;
         this.ventaElegiblePresencial = res;
+        if (res.venta?.id_sucursal && !this.idSucursalPresencial) {
+          this.idSucursalPresencial = res.venta.id_sucursal;
+        }
         if (res.es_elegible && res.items?.length) {
           res.items.forEach((it: any) => {
             if (it.cantidad_elegible > 0) {
@@ -271,6 +333,51 @@ export class DevolucionesComponent implements OnInit {
         this.cdr.markForCheck();
       }
     });
+  }
+
+  avanzarASeleccionProductos(): void {
+    if (!this.ventaElegiblePresencial?.es_elegible) {
+      this.mostrarToast('info', this.ventaElegiblePresencial?.motivo_bloqueo || 'Esta venta no cuenta con artículos elegibles.');
+      return;
+    }
+    // Si ninguna prenda está marcada, pre-seleccionamos la primera disponible
+    const haySeleccionados = Object.values(this.itemsPresenciales).some(it => it.seleccionado);
+    if (!haySeleccionados && this.ventaElegiblePresencial.items?.length) {
+      const primerElegible = this.ventaElegiblePresencial.items.find(it => it.cantidad_elegible > 0);
+      if (primerElegible && this.itemsPresenciales[primerElegible.id_detalle_venta]) {
+        this.itemsPresenciales[primerElegible.id_detalle_venta].seleccionado = true;
+      }
+    }
+    this.pasoPresencial = 2;
+    this.cdr.markForCheck();
+  }
+
+  volverABusquedaVenta(): void {
+    this.pasoPresencial = 1;
+    this.cdr.markForCheck();
+  }
+
+  abrirEscanerComprobante(): void {
+    this.codigoEscaneoInput = '';
+    this.mostrarModalEscaner = true;
+    this.cdr.markForCheck();
+  }
+
+  cerrarEscanerComprobante(): void {
+    this.mostrarModalEscaner = false;
+    this.codigoEscaneoInput = '';
+    this.cdr.markForCheck();
+  }
+
+  procesarCodigoEscaneado(): void {
+    const code = (this.codigoEscaneoInput || '').trim();
+    if (!code) {
+      this.mostrarToast('info', 'Por favor ingresa o escanea un código.');
+      return;
+    }
+    this.criterioBusquedaPresencial = code;
+    this.cerrarEscanerComprobante();
+    this.ejecutarBusquedaVentasPresencial();
   }
 
   toggleItemPresencial(idDet: number): void {
@@ -323,6 +430,7 @@ export class DevolucionesComponent implements OnInit {
       id_sucursal: this.idSucursalPresencial || this.ventaElegiblePresencial.venta.id_sucursal || undefined,
       id_empresa: this.authService.getEffectiveCompanyId() || undefined,
       motivo: this.motivoPresencial,
+      tipo_resolucion: this.tipoResolucionPresencial,
       observaciones: this.observacionesPresenciales.trim() || undefined,
       items: itemsPayload,
       registrar_reembolso_inmediato: this.reembolsoInmediatoPresencial,
@@ -357,6 +465,7 @@ export class DevolucionesComponent implements OnInit {
     this.idDevolucionDictamen = dev.id_devolucion;
     this.codigoDevolucionDictamen = dev.codigo_devolucion;
     this.accionDictamen = 'APROBAR';
+    this.tipoResolucionDictamen = (dev.tipo_resolucion as any) || 'REEMBOLSO_DINERO';
     this.observacionesDictamen = '';
     this.mostrarModalDictamen = true;
     this.cdr.markForCheck();
@@ -383,7 +492,8 @@ export class DevolucionesComponent implements OnInit {
       this.idDevolucionDictamen,
       this.accionDictamen,
       this.observacionesDictamen.trim(),
-      this.authService.getEffectiveCompanyId() || undefined
+      this.authService.getEffectiveCompanyId() || undefined,
+      this.tipoResolucionDictamen
     ).subscribe({
       next: (res: any) => {
         this.guardandoDictamen = false;
@@ -484,9 +594,26 @@ export class DevolucionesComponent implements OnInit {
     this.idDevolucionReembolso = dev.id_devolucion;
     this.codigoDevolucionReembolso = dev.codigo_devolucion;
     this.montoReembolsoLiquidacion = dev.monto_reembolso;
-    this.metodoReembolso = 'EFECTIVO';
-    this.referenciaReembolso = 'REEMB-' + Date.now().toString().slice(-6);
     this.observacionesReembolso = '';
+
+    const pagoOrig = (dev as any).pago_origen;
+    if (pagoOrig?.es_paypal || pagoOrig?.metodo_pago === 'PAYPAL' || (pagoOrig?.codigo_transaccion && pagoOrig.codigo_transaccion.length > 10)) {
+      this.esPagoPayPalOriginal = true;
+      this.idCapturaPayPalOriginal = pagoOrig?.codigo_transaccion || '';
+      this.metodoReembolso = 'PAYPAL';
+      this.referenciaReembolso = this.idCapturaPayPalOriginal ? `PAYPAL-${this.idCapturaPayPalOriginal}` : 'PAYPAL_REFUND';
+    } else if (dev.tipo_resolucion === 'SALDO_A_FAVOR') {
+      this.esPagoPayPalOriginal = false;
+      this.idCapturaPayPalOriginal = '';
+      this.metodoReembolso = 'SALDO_A_FAVOR';
+      this.referenciaReembolso = 'VALE_DIGITAL';
+    } else {
+      this.esPagoPayPalOriginal = false;
+      this.idCapturaPayPalOriginal = '';
+      this.metodoReembolso = 'EFECTIVO';
+      this.referenciaReembolso = 'REEMB-' + Date.now().toString().slice(-6);
+    }
+
     this.mostrarModalReembolso = true;
     this.cdr.markForCheck();
   }
@@ -587,6 +714,74 @@ export class DevolucionesComponent implements OnInit {
       case 'COMPLETADA': return 'Completada / Reembolsada ✓';
       case 'CANCELADA': return 'Cancelada';
       default: return estado || 'En Proceso';
+    }
+  }
+
+  // =========================================================================
+  // GESTIÓN DE POLÍTICAS DE DEVOLUCIÓN DE LA TIENDA
+  // =========================================================================
+
+  abrirModalPoliticas(): void {
+    this.mostrarModalPoliticas = true;
+    this.cargandoPoliticas = true;
+    this.cdr.markForCheck();
+    this.devolucionesService.consultarPoliticas(this.authService.getEffectiveCompanyId() || undefined).subscribe({
+      next: (res: any) => {
+        this.cargandoPoliticas = false;
+        if (res.data) {
+          this.politicaConfig = { ...this.politicaConfig, ...res.data };
+        }
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.cargandoPoliticas = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  cerrarModalPoliticas(): void {
+    this.mostrarModalPoliticas = false;
+    this.cdr.markForCheck();
+  }
+
+  guardarPoliticas(): void {
+    this.guardandoPoliticas = true;
+    this.cdr.markForCheck();
+    this.devolucionesService.actualizarPoliticas(this.politicaConfig, this.authService.getEffectiveCompanyId() || undefined).subscribe({
+      next: () => {
+        this.guardandoPoliticas = false;
+        this.cerrarModalPoliticas();
+        this.mostrarToast('exito', 'Políticas de devolución actualizadas correctamente.');
+        this.cdr.markForCheck();
+      },
+      error: (err: any) => {
+        this.guardandoPoliticas = false;
+        this.mostrarToast('error', err?.error?.detail || 'Error al guardar las políticas de devolución.');
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  getTipoResolucionLabel(tipo: string | undefined): string {
+    switch (tipo?.toUpperCase()) {
+      case 'CAMBIO_PRENDA': return 'Cambio Prenda';
+      case 'SALDO_A_FAVOR': return 'Saldo a Favor';
+      case 'REEMBOLSO_DINERO': return 'Reembolso Dinero';
+      default: return tipo || 'Reembolso';
+    }
+  }
+
+  getTipoResolucionClase(tipo: string | undefined): string {
+    switch (tipo?.toUpperCase()) {
+      case 'CAMBIO_PRENDA':
+        return 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30';
+      case 'SALDO_A_FAVOR':
+        return 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30';
+      case 'REEMBOLSO_DINERO':
+        return 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30';
+      default:
+        return 'bg-zinc-500/15 text-zinc-700 dark:text-zinc-300 border-zinc-500/30';
     }
   }
 }

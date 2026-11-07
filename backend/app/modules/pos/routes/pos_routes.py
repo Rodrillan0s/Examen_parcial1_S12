@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from app.core.security import verificar_token, tiene_permiso
 from app.modules.pos.repos import pos_repos
 from app.modules.pos.repos import caja_repos
+from app.modules.pos.repos import contingencia_repos
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/pos", tags=["W24 - Punto de Venta (POS)"])
@@ -287,3 +288,105 @@ def detalle_venta_pos(
     except Exception as e:
         logger.error(f"[DETALLE VENTA ERROR] {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+# ============================================================================
+# ENDPOINTS DE CONTINGENCIA OFFLINE POS (MIGRACIÓN 008)
+# ============================================================================
+
+class PoliticaContingenciaDTO(BaseModel):
+    habilitado: Optional[bool] = True
+    modo: Optional[str] = "PORCENTAJE"
+    porcentaje_defecto: Optional[float] = 15.0
+    cantidad_fija_defecto: Optional[int] = 2
+    minimo_unidades: Optional[int] = 1
+    maximo_unidades: Optional[int] = 10
+    permitir_sobreventa_con_incidencia: Optional[bool] = True
+    solo_efectivo_offline: Optional[bool] = True
+
+class ResolverIncidenciaDTO(BaseModel):
+    resolucion_tipo: str
+    observaciones: Optional[str] = None
+
+
+@router.get('/contingencia/cuotas', summary="W24: Descargar cuotas de contingencia activas para la sesión de caja")
+def obtener_cuotas_contingencia(
+    id_sesion_caja: Optional[int] = Query(None, description="ID de sesión de caja"),
+    token_data: dict = Depends(verificar_token)
+):
+    _verificar_acceso_pos(token_data)
+    try:
+        id_usuario = token_data.get("nro_usuario") or token_data.get("id_usuario")
+        if not id_sesion_caja:
+            sesion = caja_repos.obtener_sesion_activa_usuario(id_usuario)
+            if not sesion:
+                return {"success": True, "cuotas": [], "total": 0}
+            id_sesion_caja = sesion["id_sesion_caja"]
+
+        cuotas = contingencia_repos.obtener_cuotas_activas_sesion(id_sesion_caja)
+        return {
+            "success": True,
+            "id_sesion_caja": id_sesion_caja,
+            "cuotas": cuotas,
+            "total": len(cuotas)
+        }
+    except Exception as e:
+        logger.error(f"[CUOTAS CONTINGENCIA ERROR] {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.get('/contingencia/politica', summary="W24: Obtener política de contingencia offline del tenant")
+def obtener_politica_contingencia_route(
+    token_data: dict = Depends(verificar_token)
+):
+    _verificar_acceso_pos(token_data)
+    try:
+        id_empresa = token_data.get("id_empresa") or 1
+        politica = contingencia_repos.obtener_politica_contingencia(id_empresa)
+        return {"success": True, "politica": politica}
+    except Exception as e:
+        logger.error(f"[POLITICA CONTINGENCIA GET ERROR] {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.put('/contingencia/politica', summary="W24: Configurar política de contingencia offline")
+def actualizar_politica_contingencia_route(
+    dto: PoliticaContingenciaDTO,
+    token_data: dict = Depends(verificar_token)
+):
+    roles = {str(r).upper() for r in (token_data.get("roles") or [])}
+    rol = str(token_data.get("nombre_rol") or token_data.get("rol") or "").upper()
+    if rol:
+        roles.add(rol)
+    if not (tiene_permiso(token_data, "pos.contingencia") or bool(roles.intersection({"ADMIN_EMPRESA", "ADMINISTRADOR", "SUPERADMIN"}))):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Permiso 'pos.contingencia' requerido.")
+
+    try:
+        id_empresa = token_data.get("id_empresa") or 1
+        nueva = contingencia_repos.actualizar_politica_contingencia(id_empresa, dto.dict())
+        return {"success": True, "politica": nueva}
+    except Exception as e:
+        logger.error(f"[POLITICA CONTINGENCIA PUT ERROR] {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.get('/contingencia/incidencias', summary="W24: Listar incidencias de sobreventa para resolución")
+def listar_incidencias_sobreventa_route(
+    estado: Optional[str] = Query(None, description="PENDIENTE_CONCILIACION | RESUELTA"),
+    token_data: dict = Depends(verificar_token)
+):
+    roles = {str(r).upper() for r in (token_data.get("roles") or [])}
+    rol = str(token_data.get("nombre_rol") or token_data.get("rol") or "").upper()
+    if rol:
+        roles.add(rol)
+    if not (tiene_permiso(token_data, "pos.contingencia") or bool(roles.intersection({"ADMIN_EMPRESA", "ADMINISTRADOR", "SUPERADMIN", "ENCARGADO"}))):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acceso denegado a incidencias de sobreventa.")
+
+    try:
+        id_empresa = token_data.get("id_empresa") or 1
+        incidencias = contingencia_repos.listar_incidencias_sobreventa(id_empresa, estado)
+        return {"success": True, "incidencias": incidencias, "total": len(incidencias)}
+    except Exception as e:
+        logger.error(f"[INCIDENCIAS SOBREVENTA GET ERROR] {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+

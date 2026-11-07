@@ -423,6 +423,7 @@ export class CajaComponent implements OnInit {
           this.cargarCatalogoPOS();
           this.consultarResumenCaja(res.sesion_activa.id_sesion_caja);
           this.cargarVentasTurno();
+          this.cargarCuotasContingencia();
         } else {
           // Pre-cargar catálogo de la sucursal seleccionada para consulta
           this.cargarCatalogoPOS();
@@ -862,13 +863,6 @@ export class CajaComponent implements OnInit {
   // REGISTRAR VENTA POS (TRANSACCIÓN)
   // -------------------------------------------------------------
   abrirModalConfirmarVenta(): void {
-    if (!this.networkStatus.isOnline()) {
-      this.mostrarError(
-        'CU24W: El registro de ventas presenciales POS y descuento definitivo de stock requiere conexión en línea activa.'
-      );
-      return;
-    }
-
     if (!this.estadoCaja?.tiene_sesion_activa || !this.estadoCaja.sesion_activa) {
       this.mostrarError('No puede registrar ventas sin una caja abierta.');
       return;
@@ -885,6 +879,25 @@ export class CajaComponent implements OnInit {
     this.razonSocialFacturacionOffline = this.clienteSeleccionado?.nombre_completo || 'SIN NOMBRE';
     this.modalidadCobroConfirmacion = this.networkStatus.isOnline() ? 'PASO_W28_ONLINE' : 'EFECTIVO_INMEDIATO';
     this.modalConfirmarVentaAbierto = true;
+  }
+
+  cargarCuotasContingencia(): void {
+    const sesionId = this.estadoCaja?.sesion_activa?.id_sesion_caja;
+    if (!sesionId || !this.networkStatus.isOnline()) return;
+    this.cajaService.obtenerCuotasContingencia(sesionId).subscribe({
+      next: (res) => {
+        if (res?.cuotas) {
+          console.info(`[POS Contingencia] ${res.cuotas.length} cuotas de contingencia sincronizadas.`);
+        }
+      },
+      error: (err) => console.warn('[POS Contingencia] Aviso al descargar cuotas:', err)
+    });
+  }
+
+  imprimirTicketProvisional(): void {
+    if (typeof window !== 'undefined') {
+      window.print();
+    }
   }
 
   fijarMontoRecibidoRapido(monto: number): void {

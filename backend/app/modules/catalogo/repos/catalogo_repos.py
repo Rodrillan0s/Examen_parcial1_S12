@@ -9,6 +9,54 @@ def _get_schema() -> str:
 # TENANTS PÚBLICOS
 # ==============================================================================
 
+def _normalizar_publico(valor: Optional[str]) -> str:
+    if not valor:
+        return "Unisex"
+    v = valor.strip().lower()
+    if v in ("mujer", "damas", "dama", "femenino", "women"):
+        return "Mujer"
+    if v in ("hombre", "caballeros", "caballero", "masculino", "men"):
+        return "Hombre"
+    if v in ("unisex", "ambos", "mixto"):
+        return "Unisex"
+    if v in ("niños", "ninos", "niño", "nino", "infantil", "boys"):
+        return "Niños"
+    if v in ("niñas", "ninas", "niña", "nina", "girls"):
+        return "Niñas"
+    if v in ("bebés", "bebes", "bebé", "bebe", "baby"):
+        return "Bebés"
+    return valor.strip().title()
+
+
+def _normalizar_config_storefront(raw_cfg: Any, nombre_empresa: str = "") -> Dict[str, Any]:
+    cfg = dict(raw_cfg) if isinstance(raw_cfg, dict) else {}
+    default_secciones = [
+        {"codigo": "banner", "visible": True, "orden": 1},
+        {"codigo": "publicos", "visible": True, "orden": 2},
+        {"codigo": "categorias", "visible": True, "orden": 3},
+        {"codigo": "colecciones", "visible": True, "orden": 4},
+        {"codigo": "destacados", "visible": True, "orden": 5},
+        {"codigo": "novedades", "visible": True, "orden": 6},
+        {"codigo": "recomendaciones", "visible": True, "orden": 7},
+    ]
+    return {
+        "nombre_comercial": cfg.get("nombre_comercial") or nombre_empresa or "Tienda Oficial",
+        "eslogan": cfg.get("eslogan") or "Moda y estilo para cada ocasión",
+        "color_primario": cfg.get("color_primario") or "#18181b",
+        "color_secundario": cfg.get("color_secundario") or "#c2410c",
+        "tipografia": cfg.get("tipografia") if cfg.get("tipografia") in ("editorial", "moderna", "clasica", "minimal") else "editorial",
+        "estilo_tarjetas": cfg.get("estilo_tarjetas") if cfg.get("estilo_tarjetas") in ("editorial", "minimal", "borde_suave") else "editorial",
+        "banner_titulo": cfg.get("banner_titulo") or f"Colección Oficial {nombre_empresa or ''}".strip(),
+        "banner_subtitulo": cfg.get("banner_subtitulo") or "Explora nuestro catálogo actualizado con disponibilidad real por sucursal.",
+        "banner_imagen_url": cfg.get("banner_imagen_url") or "",
+        "banner_cta_texto": cfg.get("banner_cta_texto") or "Explorar catálogo",
+        "publicos_habilitados": cfg.get("publicos_habilitados") if isinstance(cfg.get("publicos_habilitados"), list) else [],
+        "colecciones_destacadas": cfg.get("colecciones_destacadas") if isinstance(cfg.get("colecciones_destacadas"), list) else [],
+        "secciones": cfg.get("secciones") if isinstance(cfg.get("secciones"), list) and len(cfg.get("secciones")) > 0 else default_secciones,
+        "onboarding_completado": bool(cfg.get("onboarding_completado", False)),
+    }
+
+
 def obtener_tenants_publicos() -> List[Dict[str, Any]]:
     """
     Retorna la lista de tiendas / empresas activas disponibles para consulta pública.
@@ -26,7 +74,9 @@ def obtener_tenants_publicos() -> List[Dict[str, Any]]:
                 ciudad, 
                 correo, 
                 telefono, 
-                direccion_fiscal
+                direccion_fiscal,
+                COALESCE(slug, LOWER(REGEXP_REPLACE(TRIM(nombre_empresa), '[^a-zA-Z0-9]+', '-', 'g'))) AS slug,
+                COALESCE(configuracion_storefront, '{{}}'::jsonb) AS configuracion_storefront
             FROM {schema}.empresa
             WHERE estado = 'ACTIVO'
             ORDER BY id_empresa ASC;
@@ -42,7 +92,9 @@ def obtener_tenants_publicos() -> List[Dict[str, Any]]:
                 "ciudad": r[4],
                 "correo": r[5],
                 "telefono": r[6],
-                "direccion_fiscal": r[7]
+                "direccion_fiscal": r[7],
+                "slug": r[8],
+                "configuracion_storefront": _normalizar_config_storefront(r[9], r[1])
             })
         return resultado
     finally:
@@ -65,7 +117,9 @@ def obtener_info_tenant(id_empresa: int) -> Optional[Dict[str, Any]]:
                 ciudad, 
                 correo, 
                 telefono, 
-                direccion_fiscal
+                direccion_fiscal,
+                COALESCE(slug, LOWER(REGEXP_REPLACE(TRIM(nombre_empresa), '[^a-zA-Z0-9]+', '-', 'g'))) AS slug,
+                COALESCE(configuracion_storefront, '{{}}'::jsonb) AS configuracion_storefront
             FROM {schema}.empresa
             WHERE id_empresa = %s AND estado = 'ACTIVO'
             LIMIT 1;
@@ -81,7 +135,56 @@ def obtener_info_tenant(id_empresa: int) -> Optional[Dict[str, Any]]:
             "ciudad": r[4],
             "correo": r[5],
             "telefono": r[6],
-            "direccion_fiscal": r[7]
+            "direccion_fiscal": r[7],
+            "slug": r[8],
+            "configuracion_storefront": _normalizar_config_storefront(r[9], r[1])
+        }
+    finally:
+        db.close_connection()
+
+
+def obtener_info_tenant_por_slug(slug: str) -> Optional[Dict[str, Any]]:
+    """
+    Obtiene los datos públicos de un Tenant activo por su slug único.
+    """
+    if not slug or not slug.strip():
+        return None
+    db = PostgreSQL()
+    db.create_connection()
+    try:
+        schema = _get_schema()
+        slug_norm = slug.strip().lower()
+        query = f"""
+            SELECT 
+                id_empresa, 
+                nombre_empresa, 
+                razon_social, 
+                logo, 
+                ciudad, 
+                correo, 
+                telefono, 
+                direccion_fiscal,
+                COALESCE(slug, LOWER(REGEXP_REPLACE(TRIM(nombre_empresa), '[^a-zA-Z0-9]+', '-', 'g'))) AS slug,
+                COALESCE(configuracion_storefront, '{{}}'::jsonb) AS configuracion_storefront
+            FROM {schema}.empresa
+            WHERE LOWER(COALESCE(slug, LOWER(REGEXP_REPLACE(TRIM(nombre_empresa), '[^a-zA-Z0-9]+', '-', 'g')))) = %s
+              AND estado = 'ACTIVO'
+            LIMIT 1;
+        """
+        r = db.execute_query(query, (slug_norm,), fetchone=True)
+        if not r:
+            return None
+        return {
+            "id_empresa": r[0],
+            "nombre_empresa": r[1],
+            "razon_social": r[2],
+            "logo": r[3],
+            "ciudad": r[4],
+            "correo": r[5],
+            "telefono": r[6],
+            "direccion_fiscal": r[7],
+            "slug": r[8],
+            "configuracion_storefront": _normalizar_config_storefront(r[9], r[1])
         }
     finally:
         db.close_connection()
@@ -326,8 +429,61 @@ def obtener_filtros_disponibles(id_empresa: int) -> Dict[str, Any]:
             else 0.0
         )
 
+        # 7. Públicos objetivo (genero) con productos visibles en la tienda
+        q_publicos = f"""
+            SELECT 
+                COALESCE(NULLIF(TRIM(p.genero), ''), 'Unisex') AS genero_raw,
+                COUNT(p.id_producto) AS total_prendas
+            FROM {schema}.t_producto p
+            WHERE p.id_empresa = %s
+              AND p.activo = TRUE
+              AND {condicion_visibilidad}
+            GROUP BY 1
+            ORDER BY total_prendas DESC;
+        """
+        pub_res = db.execute_query(q_publicos, (id_empresa,), fetchall=True) or []
+        publicos_map: Dict[str, int] = {}
+        for r in pub_res:
+            norm = _normalizar_publico(r[0])
+            publicos_map[norm] = publicos_map.get(norm, 0) + int(r[1] or 0)
+        publicos = [
+            {"nombre": k, "total_prendas": v}
+            for k, v in publicos_map.items()
+            if v > 0
+        ]
+
+        # 8. Sucursales activas de la empresa
+        q_sucs = f"""
+            SELECT 
+                s.id_sucursal,
+                s.nombre,
+                COALESCE(s.direccion, '') AS direccion,
+                COALESCE(c.nombre, '') AS ciudad,
+                COALESCE(s.telefono, '') AS telefono,
+                COALESCE(TO_CHAR(s.horario_apertura, 'HH24:MI'), '') AS apertura,
+                COALESCE(TO_CHAR(s.horario_cierre, 'HH24:MI'), '') AS cierre
+            FROM {schema}.t_sucursal s
+            LEFT JOIN {schema}.t_ciudad c ON c.id_ciudad = s.id_ciudad
+            WHERE s.id_empresa = %s AND COALESCE(s.activo, s.estado, FALSE) = TRUE
+            ORDER BY s.id_sucursal ASC;
+        """
+        sucs_res = db.execute_query(q_sucs, (id_empresa,), fetchall=True) or []
+        sucursales = [
+            {
+                "id_sucursal": r[0],
+                "nombre": r[1],
+                "direccion": r[2],
+                "ciudad": r[3],
+                "telefono": r[4],
+                "horario": f"{r[5]} - {r[6]}".strip(" -") if (r[5] or r[6]) else ""
+            }
+            for r in sucs_res
+        ]
+
         return {
             "categorias": categorias,
+            "publicos": publicos,
+            "sucursales": sucursales,
             "tallas": tallas,
             "colores": colores,
             "temporadas": temporadas,
@@ -345,6 +501,8 @@ def listar_catalogo_publico(
     id_empresa: int,
     busqueda: Optional[str] = None,
     id_categoria: Optional[int] = None,
+    publico: Optional[str] = None,
+    id_sucursal: Optional[int] = None,
     id_talla: Optional[int] = None,
     id_color: Optional[int] = None,
     temporada: Optional[str] = None,
@@ -485,6 +643,45 @@ def listar_catalogo_publico(
         if coleccion and coleccion.strip() and coleccion.lower() != 'todas':
             condiciones.append("p.coleccion ILIKE %s")
             params.append(f"%{coleccion.strip()}%")
+
+        # Filtro por público objetivo (genero)
+        if publico and publico.strip() and publico.lower() != 'todos':
+            pub_norm = _normalizar_publico(publico)
+            if pub_norm == "Mujer":
+                condiciones.append("UPPER(TRIM(COALESCE(p.genero, ''))) IN ('MUJER', 'DAMAS', 'DAMA', 'FEMENINO', 'WOMEN')")
+            elif pub_norm == "Hombre":
+                condiciones.append("UPPER(TRIM(COALESCE(p.genero, ''))) IN ('HOMBRE', 'CABALLEROS', 'CABALLERO', 'MASCULINO', 'MEN')")
+            elif pub_norm == "Unisex":
+                condiciones.append("UPPER(TRIM(COALESCE(p.genero, 'UNISEX'))) IN ('UNISEX', 'AMBOS', 'MIXTO', '')")
+            elif pub_norm == "Niños":
+                condiciones.append("UPPER(TRIM(COALESCE(p.genero, ''))) IN ('NIÑOS', 'NINOS', 'NIÑO', 'NINO', 'INFANTIL', 'BOYS')")
+            elif pub_norm == "Niñas":
+                condiciones.append("UPPER(TRIM(COALESCE(p.genero, ''))) IN ('NIÑAS', 'NINAS', 'NIÑA', 'NINA', 'GIRLS')")
+            elif pub_norm == "Bebés":
+                condiciones.append("UPPER(TRIM(COALESCE(p.genero, ''))) IN ('BEBÉS', 'BEBES', 'BEBÉ', 'BEBE', 'BABY')")
+            else:
+                condiciones.append("p.genero ILIKE %s")
+                params.append(f"%{publico.strip()}%")
+
+        # Filtro por disponibilidad en sucursal específica
+        if id_sucursal and id_sucursal > 0:
+            condiciones.append(f"""
+                EXISTS (
+                    SELECT 1
+                    FROM {schema}.t_inventario inv_suc
+                    INNER JOIN {schema}.t_producto_talla_color var_suc
+                        ON var_suc.id_variante = inv_suc.id_variante
+                    INNER JOIN {schema}.t_sucursal suc_f
+                        ON suc_f.id_sucursal = inv_suc.id_sucursal
+                    WHERE var_suc.id_producto = p.id_producto
+                      AND var_suc.activo = TRUE
+                      AND suc_f.id_sucursal = %s
+                      AND suc_f.id_empresa = p.id_empresa
+                      AND COALESCE(suc_f.activo, suc_f.estado, FALSE) = TRUE
+                      AND COALESCE(inv_suc.stock_disponible, 0) > 0
+                )
+            """)
+            params.append(id_sucursal)
 
         # Filtro por rango de precio
         if precio_min is not None and precio_min >= 0:

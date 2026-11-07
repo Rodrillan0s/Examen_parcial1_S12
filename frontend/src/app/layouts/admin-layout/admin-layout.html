@@ -354,11 +354,13 @@
            class="hidden md:inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border shadow-sm group"
            [ngClass]="planVigencia.vigente
              ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:hover:bg-emerald-900/50 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
-             : 'bg-rose-50 hover:bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:hover:bg-rose-900/50 dark:text-rose-300 border-rose-200 dark:border-rose-800'"
+             : (planVigencia.estado === 'PENDIENTE_ACTIVACION'
+               ? 'bg-amber-50 hover:bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:hover:bg-amber-900/50 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+               : 'bg-rose-50 hover:bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:hover:bg-rose-900/50 dark:text-rose-300 border-rose-200 dark:border-rose-800')"
            [title]="'Plan ' + (planVigencia.codigo_plan || 'Sin Plan') + ': ' + (planVigencia.vigente ? 'Vigente' : planVigencia.estado) + '. Sucursales: ' + (planVigencia.uso?.sucursales_activas || 0) + '/' + (planVigencia.limites.sucursales_activas || '—')">
-          <span class="w-2 h-2 rounded-full" [ngClass]="planVigencia.vigente ? 'bg-emerald-500' : 'bg-rose-500'"></span>
-          <span>{{ planVigencia.codigo_plan || 'Sin Plan' }}</span>
-          <span class="text-[10px] font-semibold opacity-75">({{ planVigencia.uso?.sucursales_activas ?? 0 }}/{{ planVigencia.limites.sucursales_activas ?? '—' }})</span>
+          <span class="w-2 h-2 rounded-full" [ngClass]="planVigencia.vigente ? 'bg-emerald-500' : (planVigencia.estado === 'PENDIENTE_ACTIVACION' ? 'bg-amber-500 animate-pulse' : 'bg-rose-500')"></span>
+          <span>{{ planVigencia.codigo_plan || (planVigencia.estado === 'PENDIENTE_ACTIVACION' ? 'Pago Pendiente' : 'Sin Plan') }}</span>
+          <span *ngIf="planVigencia.vigente" class="text-[10px] font-semibold opacity-75">({{ planVigencia.uso?.sucursales_activas ?? 0 }}/{{ planVigencia.limites.sucursales_activas ?? '—' }})</span>
         </a>
 
         <!-- Store Access Button -->
@@ -430,6 +432,38 @@
 
     <!-- Route Content Canvas -->
     <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 w-full relative scrollbar-thin">
+      <!-- Banner de Activación / Pago Pendiente SaaS -->
+      <div *ngIf="planVigencia?.estado === 'PENDIENTE_ACTIVACION' || planVigencia?.solicitud_contratacion?.estado_contratacion === 'PENDIENTE_PAGO'"
+           role="alert"
+           class="mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-950 dark:text-amber-200 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm animate-fadeIn">
+        <div class="flex items-start sm:items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+            <svg class="w-5 h-5 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div>
+            <p class="font-bold text-amber-900 dark:text-amber-100 text-sm">
+              Tienda en espera de activación por pago (Plan {{ planVigencia?.solicitud_contratacion?.nombre_plan || planVigencia?.codigo_plan || 'SaaS' }})
+            </p>
+            <p class="text-[11px] text-amber-700/90 dark:text-amber-300/80 mt-0.5">
+              Tu contratación está pendiente de confirmación de pago (Código: <span class="font-mono font-bold">{{ planVigencia?.solicitud_contratacion?.codigo_seguimiento }}</span>). Completa el pago para activar tus operaciones comerciales y POS.
+            </p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <a *ngIf="planVigencia?.solicitud_contratacion?.codigo_seguimiento"
+             [routerLink]="['/saas/contratacion', planVigencia!.solicitud_contratacion!.codigo_seguimiento]"
+             class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm">
+            Completar Pago Ahora →
+          </a>
+          <a routerLink="/admin/suscripciones"
+             class="px-3 py-2 bg-white/80 dark:bg-slate-900/80 hover:bg-white text-zinc-700 dark:text-slate-200 rounded-xl text-xs font-semibold border border-amber-200 dark:border-amber-800 transition-all">
+            Ver Suscripción
+          </a>
+        </div>
+      </div>
+
       <!-- Banner informativo no invasivo cuando se pierde conexión (Fase F2) -->
       <div *ngIf="!networkStatus.isOnline()"
            role="status"

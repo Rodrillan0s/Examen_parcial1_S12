@@ -36,7 +36,8 @@ def obtener_todas_las_empresas():
                 COALESCE(logo, '') AS logo,
                 COALESCE(estado, 'ACTIVO') AS estado,
                 TO_CHAR(created_at, 'YYYY-MM-DD"T"HH24:MI:SS') AS created_at,
-                TO_CHAR(updated_at, 'YYYY-MM-DD"T"HH24:MI:SS') AS updated_at
+                TO_CHAR(updated_at, 'YYYY-MM-DD"T"HH24:MI:SS') AS updated_at,
+                COALESCE(slug, LOWER(REGEXP_REPLACE(TRIM(nombre_empresa), '[^a-zA-Z0-9]+', '-', 'g'))) AS slug
             FROM {schema}.empresa 
             ORDER BY id_empresa ASC;
         """
@@ -57,7 +58,8 @@ def obtener_todas_las_empresas():
                     "logo": r[8],
                     "estado": r[9],
                     "created_at": r[10],
-                    "updated_at": r[11]
+                    "updated_at": r[11],
+                    "slug": r[12]
                 })
         return empresas
     finally:

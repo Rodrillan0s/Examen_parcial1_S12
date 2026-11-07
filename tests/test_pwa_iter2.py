@@ -28,6 +28,10 @@ ALTER TABLE empresa
     ADD COLUMN IF NOT EXISTS telefono TEXT,
     ADD COLUMN IF NOT EXISTS direccion_fiscal TEXT;
 
+ALTER TABLE t_sucursal
+    ADD COLUMN IF NOT EXISTS horario_apertura TIME DEFAULT '09:00:00',
+    ADD COLUMN IF NOT EXISTS horario_cierre TIME DEFAULT '21:00:00';
+
 CREATE TABLE t_categoria (
     id_categoria SERIAL PRIMARY KEY,
     nombre TEXT NOT NULL,
@@ -480,6 +484,7 @@ class PwaOfflineIter2Suite(unittest.TestCase):
                 cur.execute(render(ROOT / "backend/migrations/002_iter1_perf_indexes.up.sql", cls.schema))
                 cur.execute(render(ROOT / "backend/migrations/003_iter2_sync_idempotency.up.sql", cls.schema))
                 cur.execute(render(ROOT / "backend/migrations/004_iter2_sync_transactional.up.sql", cls.schema))
+                cur.execute(render(ROOT / "backend/migrations/006_iter4_saas_storefront.up.sql", cls.schema))
 
                 # Suscripción activa para Empresa 1 y Empresa 2
                 cur.execute(

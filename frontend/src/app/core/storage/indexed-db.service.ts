@@ -12,7 +12,8 @@ export type StoreName =
   | 'pending_operations'
   | 'sync_attempts'
   | 'sync_receipts'
-  | 'metadata';
+  | 'metadata'
+  | 'pos_contingency_quotas';
 
 export interface CachedRecord<T = any> {
   key: string;
@@ -65,7 +66,8 @@ export class IndexedDbService {
       'pending_operations',
       'sync_attempts',
       'sync_receipts',
-      'metadata'
+      'metadata',
+      'pos_contingency_quotas'
     ];
     for (const s of stores) {
       this.memoryFallback.set(s, new Map<string, any>());
@@ -111,7 +113,7 @@ export class IndexedDbService {
           req.onsuccess = () => {
             const db = req.result;
             const required: StoreName[] = ['products', 'product_details', 'catalog_filters', 'branches',
-              'stock_snapshots', 'cart_drafts', 'pending_operations', 'sync_attempts', 'sync_receipts', 'metadata'];
+              'stock_snapshots', 'cart_drafts', 'pending_operations', 'sync_attempts', 'sync_receipts', 'metadata', 'pos_contingency_quotas'];
             if (required.some(store => !db.objectStoreNames.contains(store))) {
               const next = db.version + 1;
               db.close();
@@ -153,7 +155,8 @@ export class IndexedDbService {
       { name: 'pending_operations', keyPath: 'operation_id' },
       { name: 'sync_attempts', keyPath: 'attempt_id' },
       { name: 'sync_receipts', keyPath: 'operation_id' },
-      { name: 'metadata', keyPath: 'key' }
+      { name: 'metadata', keyPath: 'key' },
+      { name: 'pos_contingency_quotas', keyPath: 'key' }
     ];
 
     for (const def of storeDefs) {

@@ -140,9 +140,9 @@ def _procesar_operacion_individual(op: SyncOperationItemDTO, token_data: dict) -
                         "ORDER BY inv.id_variante, inv.id_inventario FOR UPDATE OF inv",
                         (empresa, branch, variants), fetchall=True,
                     )
-                    result = _aplicar_operacion(op, token_data, empresa)
+                    result = _aplicar_operacion(op, token_data, empresa, db=db)
             else:
-                result = _aplicar_operacion(op, token_data, empresa)
+                result = _aplicar_operacion(op, token_data, empresa, db=db)
             if result.get("status") != "synced":
                 db.cur.execute("ROLLBACK TO SAVEPOINT sync_effects")
                 db._rollback_only = False
@@ -310,7 +310,7 @@ def _resolver_metodo_pago_efectivo(schema: str, requested_id_metodo: Optional[in
         db.close_connection()
 
 
-def _aplicar_operacion(op: SyncOperationItemDTO, token_data: dict, empresa_id: int) -> Dict[str, Any]:
+def _aplicar_operacion(op: SyncOperationItemDTO, token_data: dict, empresa_id: int, db: Optional[Any] = None) -> Dict[str, Any]:
     schema = Config.SCHEMA or "comercio"
     id_usuario = int(token_data.get("nro_usuario") or token_data.get("id_usuario") or 0)
     if not id_usuario:
@@ -1127,12 +1127,48 @@ def _aplicar_operacion(op: SyncOperationItemDTO, token_data: dict, empresa_id: i
                 }
                 return res_inc
 
+            # Registrar contingencia offline y consumir cuotas transaccionalmente si aplica
+            es_contingencia = bool(payload.get("contingencia") or payload.get("es_contingencia_offline") or payload.get("cuota_utilizada"))
+            id_cuota_usada = None
+            if db and es_contingencia:
+                try:
+                    # Comprobar si la tabla t_caja_cuota_contingencia existe en el esquema (Migración 008)
+                    has_cuotas_table = db.execute_query(
+                        "SELECT 1 FROM information_schema.tables WHERE table_schema=%s AND table_name='t_caja_cuota_contingencia'",
+                        (schema,),
+                        fetchone=True
+                    )
+                    if has_cuotas_table and has_cuotas_table[0]:
+                        from app.modules.pos.repos import contingencia_repos
+                        for it in items_pos:
+                            c_id = contingencia_repos.consumir_cuota_contingencia_transaccional(
+                                db=db,
+                                id_sesion_caja=id_sesion_activa,
+                                id_variante=int(it["id_variante"]),
+                                cantidad=int(it["cantidad"]),
+                                id_sucursal=id_sucursal
+                            )
+                            if c_id and not id_cuota_usada:
+                                id_cuota_usada = c_id
+
+                        db.execute_query(
+                            f"UPDATE {schema}.t_venta SET es_contingencia_offline = TRUE, "
+                            "comprobante_tipo_provisional = 'PROVISIONAL_CONTINGENCIA', "
+                            "id_cuota_contingencia = %s WHERE id_venta = %s",
+                            (id_cuota_usada, int(venta_res["id_venta"]))
+                        )
+                except Exception as e_cont:
+                    logger.warning(f"Aviso no bloqueante en contingencia sync: {e_cont}")
+
             combined_data = {
                 **venta_res,
                 **pago_res,
                 "estado_venta": "PAGADO",
                 "estado": "PAGADO",
                 "referencia_offline": f"OFFLINE-{empresa_id}-{id_usuario}-{op.operation_id}",
+                "es_contingencia_offline": bool(es_contingencia or id_cuota_usada),
+                "comprobante_tipo_provisional": "PROVISIONAL_CONTINGENCIA" if (es_contingencia or id_cuota_usada) else None,
+                "id_cuota_contingencia": id_cuota_usada,
             }
             res_ok = {
                 "operation_id": op.operation_id,
@@ -1189,13 +1225,18 @@ def sync_ping():
 
 
 def _ejecutar_lote_sync(body: SyncBatchRequestDTO, token_data: dict) -> Dict[str, Any]:
+    # Prioridad P0: Procesar ventas presenciales POS antes de carritos o reservas online
+    operaciones_ordenadas = sorted(
+        body.operations,
+        key=lambda op: 0 if (op.kind or "").strip().upper() == "VENTA_CONTADO" else 1
+    )
     results: List[Dict[str, Any]] = []
     synced_count = 0
     conflict_count = 0
     reconciliation_count = 0
     failed_count = 0
 
-    for op in body.operations:
+    for op in operaciones_ordenadas:
         res = _procesar_operacion_individual(op, token_data)
         st = res.get("status")
         if st == "synced":

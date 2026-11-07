@@ -68,6 +68,22 @@
         {{ totalDevoluciones }}
       </span>
     </button>
+
+    <button type="button"
+            (click)="cambiarTab('CREDITOS')"
+            [class.border-amber-500]="tabActiva === 'CREDITOS'"
+            [class.text-amber-600]="tabActiva === 'CREDITOS'"
+            [class.dark:text-amber-400]="tabActiva === 'CREDITOS'"
+            [class.bg-amber-500/10]="tabActiva === 'CREDITOS'"
+            [class.border-transparent]="tabActiva !== 'CREDITOS'"
+            [class.text-zinc-500]="tabActiva !== 'CREDITOS'"
+            class="px-5 py-2.5 rounded-2xl border font-bold text-xs sm:text-sm tracking-wide transition-all cursor-pointer flex items-center space-x-2">
+      <span>🎫</span>
+      <span>Mis Saldos a Favor</span>
+      <span *ngIf="misCreditos.length > 0" class="ml-1.5 px-2 py-0.5 text-[10px] rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-mono font-bold">
+        {{ misCreditos.length }}
+      </span>
+    </button>
   </div>
 
 
@@ -448,13 +464,21 @@
           </div>
 
           <div class="flex items-center space-x-2">
+            <span *ngIf="dev.tipo_resolucion" [class]="getTipoResolucionClase(dev.tipo_resolucion)" class="px-2.5 py-1 rounded-full border text-xs font-bold tracking-wide">
+              {{ getTipoResolucionLabel(dev.tipo_resolucion) }}
+            </span>
             <span [class]="getEstadoDevolucionClase(dev.estado)" class="px-3 py-1 rounded-full border text-xs font-bold tracking-wide">
               {{ getEstadoDevolucionLabel(dev.estado) }}
             </span>
           </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+          <div class="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200/60 dark:border-zinc-800/60">
+            <span class="text-[10px] text-zinc-500 font-mono uppercase block">Resolución:</span>
+            <span class="font-semibold text-zinc-800 dark:text-zinc-200">{{ getTipoResolucionLabel(dev.tipo_resolucion) }}</span>
+          </div>
+
           <div class="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200/60 dark:border-zinc-800/60">
             <span class="text-[10px] text-zinc-500 font-mono uppercase block">Motivo:</span>
             <span class="font-semibold text-zinc-800 dark:text-zinc-200">{{ dev.motivo }}</span>
@@ -502,6 +526,121 @@
             Sig →
           </button>
         </div>
+      </div>
+    </div>
+
+  </ng-container>
+
+  <!-- ========================================================================= -->
+  <!-- TAB SALDOS A FAVOR: VALES Y CRÉDITOS EN TIENDA                            -->
+  <!-- ========================================================================= -->
+  <ng-container *ngIf="tabActiva === 'CREDITOS'">
+
+    <!-- Banner Informativo Créditos -->
+    <div class="p-4 sm:p-5 rounded-3xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-zinc-800 dark:text-zinc-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+      <div class="flex items-center space-x-3">
+        <span class="text-2xl">🎫</span>
+        <div>
+          <h3 class="font-bold text-emerald-800 dark:text-emerald-300 text-sm">Saldos a Favor & Crédito en Tienda</h3>
+          <p class="text-[11px] text-zinc-600 dark:text-zinc-400 mt-0.5">
+            Los saldos a favor emitidos por devoluciones o resoluciones comerciales quedan vinculados a tu cuenta y cuentan con un código de cupón único para tus compras.
+          </p>
+        </div>
+      </div>
+      <button (click)="cargarMisCreditos()" class="px-3.5 py-1.5 rounded-xl border border-emerald-500/30 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold text-xs uppercase tracking-wider shrink-0 transition-colors">
+        🔄 Actualizar
+      </button>
+    </div>
+
+    <!-- Loading Skeletons Créditos -->
+    <div *ngIf="cargandoCreditos" class="space-y-4">
+      <div *ngFor="let i of [1, 2]" class="p-6 rounded-3xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 animate-pulse space-y-3">
+        <div class="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-1/4"></div>
+        <div class="h-3 bg-zinc-200 dark:bg-zinc-800 rounded w-1/2"></div>
+      </div>
+    </div>
+
+    <!-- Empty State Créditos -->
+    <div *ngIf="!cargandoCreditos && misCreditos.length === 0" 
+         class="p-10 rounded-3xl bg-white dark:bg-zinc-900/50 border border-dashed border-zinc-300 dark:border-zinc-800 text-center space-y-4">
+      <div class="text-4xl">🎫</div>
+      <h3 class="text-base font-bold text-zinc-800 dark:text-zinc-200">No tienes saldos a favor pendientes</h3>
+      <p class="text-xs text-zinc-500 dark:text-zinc-400 max-w-md mx-auto">
+        Cuando solicites una devolución con resolución de saldo a favor o recibas una nota de crédito, tus cupones y saldos disponibles aparecerán aquí.
+      </p>
+      <button (click)="cambiarTab('PEDIDOS')" class="px-5 py-2 rounded-2xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs uppercase tracking-wider transition-all">
+        Ver Mis Compras
+      </button>
+    </div>
+
+    <!-- Listado de Créditos / Vales -->
+    <div *ngIf="!cargandoCreditos && misCreditos.length > 0" class="space-y-4">
+      <div *ngFor="let c of misCreditos" 
+           class="p-5 sm:p-6 rounded-3xl bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 shadow-sm hover:border-emerald-500/40 transition-all space-y-4">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-100 dark:border-zinc-800/80">
+          <div class="space-y-1">
+            <div class="flex items-center space-x-2">
+              <span class="font-mono font-bold text-base text-emerald-600 dark:text-emerald-400">{{ c.codigo_credito }}</span>
+              <button (click)="copiarCodigo(c.codigo_credito)" class="text-xs text-zinc-400 hover:text-emerald-500" title="Copiar código de cupón">📋</button>
+            </div>
+            <p class="text-[11px] text-zinc-500 dark:text-zinc-400 font-mono">
+              Emisión: {{ c.fecha_emision | date:'dd/MM/yyyy HH:mm' }} 
+              <span *ngIf="c.fecha_vencimiento"> • Vence: <b class="text-zinc-700 dark:text-zinc-300">{{ c.fecha_vencimiento | date:'dd/MM/yyyy' }}</b></span>
+            </p>
+          </div>
+
+          <div class="flex items-center space-x-2">
+            <span class="px-3 py-1 rounded-full border text-xs font-bold font-mono uppercase"
+                  [class.bg-emerald-500/15]="c.estado === 'ACTIVO'"
+                  [class.text-emerald-700]="c.estado === 'ACTIVO'"
+                  [class.border-emerald-500/30]="c.estado === 'ACTIVO'"
+                  [class.bg-zinc-500/15]="c.estado !== 'ACTIVO'"
+                  [class.text-zinc-600]="c.estado !== 'ACTIVO'">
+              {{ c.estado }}
+            </span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+          <div class="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200/60 dark:border-zinc-800/60">
+            <span class="text-[10px] text-zinc-500 font-mono uppercase block">Saldo Disponible:</span>
+            <span class="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-lg">
+              Bs. {{ c.saldo_disponible | number:'1.2-2' }}
+            </span>
+          </div>
+
+          <div class="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200/60 dark:border-zinc-800/60">
+            <span class="text-[10px] text-zinc-500 font-mono uppercase block">Monto Total Emitido:</span>
+            <span class="font-mono font-semibold text-zinc-700 dark:text-zinc-300">
+              Bs. {{ c.monto_total | number:'1.2-2' }}
+            </span>
+          </div>
+
+          <div class="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200/60 dark:border-zinc-800/60">
+            <span class="text-[10px] text-zinc-500 font-mono uppercase block">Uso / Canje:</span>
+            <span class="font-semibold text-zinc-800 dark:text-zinc-200">
+              Válido para compras online y mostrador
+            </span>
+          </div>
+        </div>
+
+        <!-- Historial de Movimientos de este crédito -->
+        <div *ngIf="c.movimientos && c.movimientos.length > 0" class="space-y-1.5 pt-1">
+          <span class="text-[10px] font-bold text-zinc-500 font-mono uppercase block">Historial de Transacciones:</span>
+          <div class="divide-y divide-zinc-200 dark:divide-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden text-xs">
+            <div *ngFor="let m of c.movimientos" class="p-2.5 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-950/30">
+              <div class="space-y-0.5">
+                <span class="font-semibold text-zinc-800 dark:text-zinc-200">{{ m.tipo_movimiento }}</span>
+                <p class="text-[10px] text-zinc-400 font-mono">{{ m.fecha_movimiento | date:'dd/MM/yyyy HH:mm' }} • {{ m.descripcion || 'Sin detalle' }}</p>
+              </div>
+              <span class="font-mono font-bold" [class.text-emerald-600]="m.monto > 0" [class.text-rose-600]="m.monto < 0">
+                {{ m.monto > 0 ? '+' : '' }}Bs. {{ m.monto | number:'1.2-2' }}
+              </span>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -770,6 +909,103 @@
           <!-- Formulario si es elegible -->
           <div *ngIf="!cargandoElegibilidad && datosElegibilidad?.es_elegible" class="space-y-5">
             
+            <!-- Banner de Política y Ley 453 -->
+            <div *ngIf="datosElegibilidad?.politica" class="p-4 rounded-2xl border text-xs space-y-2"
+                 [class.bg-blue-500/10]="datosElegibilidad?.politica?.cumple_plazo_comercial"
+                 [class.border-blue-500/20]="datosElegibilidad?.politica?.cumple_plazo_comercial"
+                 [class.bg-amber-500/10]="!datosElegibilidad?.politica?.cumple_plazo_comercial && datosElegibilidad?.politica?.cumple_plazo_ley_453"
+                 [class.border-amber-500/30]="!datosElegibilidad?.politica?.cumple_plazo_comercial && datosElegibilidad?.politica?.cumple_plazo_ley_453">
+              
+              <div class="flex items-center justify-between">
+                <span class="font-bold flex items-center gap-1.5"
+                      [class.text-blue-800]="datosElegibilidad?.politica?.cumple_plazo_comercial"
+                      [class.dark:text-blue-300]="datosElegibilidad?.politica?.cumple_plazo_comercial"
+                      [class.text-amber-800]="!datosElegibilidad?.politica?.cumple_plazo_comercial"
+                      [class.dark:text-amber-300]="!datosElegibilidad?.politica?.cumple_plazo_comercial">
+                  <span>⚖️</span>
+                  <span>{{ datosElegibilidad?.politica?.cumple_plazo_comercial ? 'Plazo Comercial Válido' : 'Garantía Legal Ley N° 453' }}</span>
+                </span>
+                <span class="font-mono text-[11px] text-zinc-500">
+                  {{ datosElegibilidad?.politica?.dias_transcurridos }} día(s) desde compra
+                </span>
+              </div>
+
+              <p class="text-[11px] text-zinc-700 dark:text-zinc-300 leading-relaxed">
+                {{ datosElegibilidad?.politica?.aviso_politica }}
+              </p>
+
+              <div class="pt-1 flex flex-wrap gap-2 text-[10px] text-zinc-600 dark:text-zinc-400">
+                <span class="px-2 py-0.5 rounded-md bg-zinc-200/60 dark:bg-zinc-800 font-mono">
+                  Plazo comercial: {{ datosElegibilidad?.politica?.limite_comercial_dias }} días
+                </span>
+                <span class="px-2 py-0.5 rounded-md bg-zinc-200/60 dark:bg-zinc-800 font-mono">
+                  Garantía Ley 453: {{ datosElegibilidad?.politica?.garantia_ley_453_dias }} días
+                </span>
+                <span class="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-mono">
+                  🛡️ Ley 453: Defectos de fábrica no exigen etiquetas intactas
+                </span>
+              </div>
+            </div>
+
+            <!-- Selector de Tipo de Resolución -->
+            <div class="space-y-2">
+              <label class="text-xs font-bold text-zinc-800 dark:text-zinc-200 block">
+                Alternativa de Resolución Solicitada:
+              </label>
+
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                
+                <!-- Opción 1: Cambio de Prenda -->
+                <div (click)="tipoResolucionDevolucion = 'CAMBIO_PRENDA'"
+                     class="p-3.5 rounded-2xl border cursor-pointer transition-all space-y-1"
+                     [class.border-amber-500]="tipoResolucionDevolucion === 'CAMBIO_PRENDA'"
+                     [class.bg-amber-500/10]="tipoResolucionDevolucion === 'CAMBIO_PRENDA'"
+                     [class.border-zinc-200]="tipoResolucionDevolucion !== 'CAMBIO_PRENDA'"
+                     [class.dark:border-zinc-800]="tipoResolucionDevolucion !== 'CAMBIO_PRENDA'">
+                  <div class="flex items-center space-x-2">
+                    <input type="radio" name="tipoRes" [checked]="tipoResolucionDevolucion === 'CAMBIO_PRENDA'" class="text-amber-600 cursor-pointer" />
+                    <span class="font-bold text-xs text-zinc-900 dark:text-white">Cambio de Prenda</span>
+                  </div>
+                  <p class="text-[10px] text-zinc-500 leading-snug">
+                    Entrega la prenda en tienda física y cámbiala por otra talla o prenda.
+                  </p>
+                </div>
+
+                <!-- Opción 2: Saldo a Favor -->
+                <div (click)="tipoResolucionDevolucion = 'SALDO_A_FAVOR'"
+                     class="p-3.5 rounded-2xl border cursor-pointer transition-all space-y-1"
+                     [class.border-amber-500]="tipoResolucionDevolucion === 'SALDO_A_FAVOR'"
+                     [class.bg-amber-500/10]="tipoResolucionDevolucion === 'SALDO_A_FAVOR'"
+                     [class.border-zinc-200]="tipoResolucionDevolucion !== 'SALDO_A_FAVOR'"
+                     [class.dark:border-zinc-800]="tipoResolucionDevolucion !== 'SALDO_A_FAVOR'">
+                  <div class="flex items-center space-x-2">
+                    <input type="radio" name="tipoRes" [checked]="tipoResolucionDevolucion === 'SALDO_A_FAVOR'" class="text-amber-600 cursor-pointer" />
+                    <span class="font-bold text-xs text-zinc-900 dark:text-white">Saldo a Favor</span>
+                  </div>
+                  <p class="text-[10px] text-zinc-500 leading-snug">
+                    Recibe un cupón de crédito en tienda con vigencia de {{ datosElegibilidad?.politica?.dias_vigencia_credito || 180 }} días.
+                  </p>
+                </div>
+
+                <!-- Opción 3: Reembolso de Dinero -->
+                <div (click)="tipoResolucionDevolucion = 'REEMBOLSO_DINERO'"
+                     class="p-3.5 rounded-2xl border cursor-pointer transition-all space-y-1"
+                     [class.border-amber-500]="tipoResolucionDevolucion === 'REEMBOLSO_DINERO'"
+                     [class.bg-amber-500/10]="tipoResolucionDevolucion === 'REEMBOLSO_DINERO'"
+                     [class.border-zinc-200]="tipoResolucionDevolucion !== 'REEMBOLSO_DINERO'"
+                     [class.dark:border-zinc-800]="tipoResolucionDevolucion !== 'REEMBOLSO_DINERO'">
+                  <div class="flex items-center space-x-2">
+                    <input type="radio" name="tipoRes" [checked]="tipoResolucionDevolucion === 'REEMBOLSO_DINERO'" class="text-amber-600 cursor-pointer" />
+                    <span class="font-bold text-xs text-zinc-900 dark:text-white">Reembolso Dinero</span>
+                  </div>
+                  <p class="text-[10px] text-zinc-500 leading-snug">
+                    Restitución monetaria al medio de pago original (PayPal, efectivo o transferencia).
+                  </p>
+                </div>
+
+              </div>
+            </div>
+            
             <div class="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
               Selecciona las prendas y la cantidad que deseas devolver. El valor a reembolsar se calculará proporcionalmente restando los descuentos aplicados en tu compra original.
             </div>
@@ -829,11 +1065,19 @@
               <label class="text-xs font-bold text-zinc-700 dark:text-zinc-300">Motivo de Devolución:</label>
               <select [(ngModel)]="motivoDevolucion" 
                       class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs text-zinc-900 dark:text-white font-semibold focus:outline-none focus:border-amber-500 cursor-pointer">
-                <option value="DEFECTO_FABRICA">Defecto de Fabricación / Costura o Tela</option>
-                <option value="TALLA_INCORRECTA">Talla Incorrecta / Problema de Ajuste</option>
-                <option value="PRODUCTO_EQUIVOCADO">Producto Recibido No Corresponde al Pedido</option>
-                <option value="DANO_TRANSPORTE">Daño Ocurrido Durante el Transporte/Envío</option>
-                <option value="OTRO">Otro Motivo</option>
+                <optgroup label="⚖️ Garantía Legal por Falla (Ley N° 453)">
+                  <option value="DEFECTO_FABRICA">Defecto de Fabricación / Costura o Tela</option>
+                  <option value="PRODUCTO_EQUIVOCADO">Producto Equivocado / No corresponde al pedido</option>
+                  <option value="DANO_TRANSPORTE">Daño Ocurrido Durante el Transporte/Envío</option>
+                  <option value="ERROR_DESCRIPCION">Error en la Descripción o Especificación</option>
+                </optgroup>
+                <optgroup label="🛍️ Preferencia Comercial / Cambio de Talla">
+                  <option value="TALLA_INCORRECTA">Talla Incorrecta / Problema de Ajuste</option>
+                  <option value="COLOR_DISTINTO">Color Diferente al Esperado</option>
+                  <option value="NO_GUSTO">Disconformidad / No le gustó la prenda</option>
+                  <option value="COMPRA_DUPLICADA">Compra Duplicada</option>
+                  <option value="OTRO">Otro Motivo</option>
+                </optgroup>
               </select>
             </div>
 
@@ -904,6 +1148,9 @@
               <h3 class="text-base sm:text-lg font-serif font-bold text-zinc-900 dark:text-white">
                 Devolución {{ devolucionDetalle?.codigo_devolucion }}
               </h3>
+              <span *ngIf="devolucionDetalle?.tipo_resolucion" [class]="getTipoResolucionClase(devolucionDetalle?.tipo_resolucion)" class="px-2 py-0.5 rounded-full border text-[10px] font-bold">
+                {{ getTipoResolucionLabel(devolucionDetalle?.tipo_resolucion) }}
+              </span>
               <span *ngIf="devolucionDetalle" [class]="getEstadoDevolucionClase(devolucionDetalle.estado)" class="px-2.5 py-0.5 rounded-full border text-[11px] font-bold">
                 {{ getEstadoDevolucionLabel(devolucionDetalle.estado) }}
               </span>
@@ -933,11 +1180,30 @@
               Las prendas han sido recibidas y verificadas en sucursal. El personal está procesando la liquidación de tu reembolso.
             </p>
             <p *ngIf="devolucionDetalle.estado === 'COMPLETADA'" class="mt-1 opacity-90">
-              ✓ Proceso completado exitosamente. Tu reembolso ha sido emitido y liquidado.
+              ✓ Proceso completado exitosamente. Tu resolución ha sido ejecutada y liquidada.
             </p>
             <p *ngIf="devolucionDetalle.estado === 'RECHAZADA'" class="mt-1 opacity-90">
               ✕ Tu solicitud no fue aprobada tras la revisión. Consulta las observaciones adjuntas más abajo.
             </p>
+          </div>
+
+          <!-- Resumen de Política y Resolución -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div class="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+              <span class="text-[10px] text-zinc-500 font-mono uppercase block">Tipo de Resolución:</span>
+              <span class="font-bold text-zinc-900 dark:text-white flex items-center gap-1.5 mt-0.5">
+                {{ getTipoResolucionLabel(devolucionDetalle.tipo_resolucion) }}
+              </span>
+            </div>
+            <div class="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+              <span class="text-[10px] text-zinc-500 font-mono uppercase block">Evaluación Legal & Política:</span>
+              <span class="font-bold mt-0.5 block" [class.text-emerald-600]="devolucionDetalle.cumple_politica || devolucionDetalle.excepcion_ley_453" [class.text-amber-600]="!devolucionDetalle.cumple_politica && !devolucionDetalle.excepcion_ley_453">
+                {{ devolucionDetalle.excepcion_ley_453 ? '🛡️ Garantía Legal Ley N° 453' : (devolucionDetalle.cumple_politica ? '✓ Plazo Comercial Válido' : 'Evaluación Especial') }}
+                <span class="font-mono text-[10px] font-normal text-zinc-500 block" *ngIf="devolucionDetalle.dias_desde_compra !== undefined">
+                  Solicitado a los {{ devolucionDetalle.dias_desde_compra }} días de compra
+                </span>
+              </span>
+            </div>
           </div>
 
           <!-- Items Devueltos -->

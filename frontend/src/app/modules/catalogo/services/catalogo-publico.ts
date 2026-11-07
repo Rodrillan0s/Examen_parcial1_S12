@@ -6,6 +6,29 @@ import { environment } from '../../../../environments/environment';
 import { CachedRecord, IndexedDbService } from '../../../core/storage/indexed-db.service';
 import { NetworkStatusService } from '../../../core/network/network-status.service';
 
+export interface SeccionStorefront {
+  codigo: 'banner' | 'publicos' | 'categorias' | 'colecciones' | 'destacados' | 'novedades' | 'recomendaciones';
+  visible: boolean;
+  orden: number;
+}
+
+export interface ConfiguracionStorefront {
+  nombre_comercial: string;
+  eslogan: string;
+  color_primario: string;
+  color_secundario: string;
+  tipografia: 'editorial' | 'moderna' | 'clasica' | 'minimal';
+  estilo_tarjetas: 'editorial' | 'minimal' | 'borde_suave';
+  banner_titulo: string;
+  banner_subtitulo: string;
+  banner_imagen_url: string;
+  banner_cta_texto: string;
+  publicos_habilitados: string[];
+  colecciones_destacadas: string[];
+  secciones: SeccionStorefront[];
+  onboarding_completado: boolean;
+}
+
 export interface TenantPublico {
   id_empresa: number;
   nombre_empresa: string;
@@ -15,6 +38,22 @@ export interface TenantPublico {
   correo?: string;
   telefono?: string;
   direccion_fiscal?: string;
+  slug?: string;
+  configuracion_storefront?: ConfiguracionStorefront;
+}
+
+export interface PublicoFiltro {
+  nombre: string;
+  total_prendas: number;
+}
+
+export interface SucursalFiltro {
+  id_sucursal: number;
+  nombre: string;
+  direccion: string;
+  ciudad: string;
+  telefono?: string;
+  horario?: string;
 }
 
 export interface CategoriaFiltro {
@@ -45,6 +84,8 @@ export interface PromocionProducto {
 }
 export interface FiltrosCatalogoResponse {
   categorias: CategoriaFiltro[];
+  publicos?: PublicoFiltro[];
+  sucursales?: SucursalFiltro[];
   tallas: TallaFiltro[];
   colores: ColorFiltro[];
   temporadas: string[];
@@ -339,13 +380,20 @@ export class CatalogoPublicoService {
     );
   }
 
-  obtenerFiltros(id_empresa?: number): Observable<{ success: boolean; empresa: TenantPublico | null; data: FiltrosCatalogoResponse }> {
+  resolverTenantPorSlug(slug: string): Observable<{ success: boolean; empresa: TenantPublico; filtros: FiltrosCatalogoResponse }> {
+    return this.http.get<{ success: boolean; empresa: TenantPublico; filtros: FiltrosCatalogoResponse }>(
+      `${this.apiUrl}/tenant-by-slug/${encodeURIComponent(slug.trim().toLowerCase())}`
+    );
+  }
+
+  obtenerFiltros(id_empresa?: number, slug?: string): Observable<{ success: boolean; empresa: TenantPublico | null; data: FiltrosCatalogoResponse }> {
     const tenantId = id_empresa || 1;
     const scopeKey = this.indexedDb.buildPublicScopeKey(tenantId);
-    const cacheKey = `filters_e:${tenantId}`;
+    const cacheKey = slug ? `filters_slug:${slug}` : `filters_e:${tenantId}`;
 
     let params = new HttpParams();
     if (id_empresa) params = params.set('id_empresa', id_empresa.toString());
+    if (slug && slug.trim()) params = params.set('slug', slug.trim().toLowerCase());
 
     return this.http
       .get<{ success: boolean; empresa: TenantPublico | null; data: FiltrosCatalogoResponse }>(
@@ -477,8 +525,11 @@ export class CatalogoPublicoService {
 
   consultarProductos(filtros?: {
     id_empresa?: number;
+    slug?: string;
     busqueda?: string;
     id_categoria?: number;
+    publico?: string;
+    id_sucursal?: number;
     id_talla?: number;
     id_color?: number;
     temporada?: string;
@@ -494,8 +545,11 @@ export class CatalogoPublicoService {
 
     let params = new HttpParams();
     if (filtros?.id_empresa) params = params.set('id_empresa', filtros.id_empresa.toString());
+    if (filtros?.slug && filtros.slug.trim()) params = params.set('slug', filtros.slug.trim().toLowerCase());
     if (filtros?.busqueda) params = params.set('busqueda', filtros.busqueda.trim());
     if (filtros?.id_categoria) params = params.set('id_categoria', filtros.id_categoria.toString());
+    if (filtros?.publico && filtros.publico !== 'Todos') params = params.set('publico', filtros.publico);
+    if (filtros?.id_sucursal) params = params.set('id_sucursal', filtros.id_sucursal.toString());
     if (filtros?.id_talla) params = params.set('id_talla', filtros.id_talla.toString());
     if (filtros?.id_color) params = params.set('id_color', filtros.id_color.toString());
     if (filtros?.temporada && filtros.temporada !== 'Todas') params = params.set('temporada', filtros.temporada);

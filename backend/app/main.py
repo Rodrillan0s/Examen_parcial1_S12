@@ -101,7 +101,7 @@ def create_app() -> FastAPI:
             "https://aurora-store-d20q.onrender.com",
             ""
         ],
-        allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
+        allow_origin_regex=r"https?://([a-zA-Z0-9-]+\.)?(localhost|127\.0\.0\.1)(:\d+)?",
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

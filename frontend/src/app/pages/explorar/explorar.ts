@@ -1,13 +1,16 @@
-import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth';
 import { FavoritosService } from '../../services/favoritos';
-import { CatalogoPublicoService, DetallePrendaCatalogo } from '../../services/catalogo-publico';
+import { CatalogoPublicoService, DetallePrendaCatalogo, PrendaCatalogo } from '../../services/catalogo-publico';
 import { ProductDetailModalComponent, ProductoFashion } from '../../components/product-detail-modal/product-detail-modal';
 import { RecomendacionesService, RecomendacionML } from '../../services/recomendaciones.service';
+import { TenantContextService } from '../../services/tenant-context';
 
 export interface ProductoDestacadoItem extends ProductoFashion {
+  genero?: string;
+  coleccion?: string;
   rating?: number;
   reviews?: number;
 }
@@ -20,7 +23,9 @@ export interface ProductoDestacadoItem extends ProductoFashion {
 })
 export class ExplorarComponent implements OnInit {
   public authService = inject(AuthService);
+  public tenantContext = inject(TenantContextService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private catalogoService = inject(CatalogoPublicoService);
   private cdr = inject(ChangeDetectorRef);
   public favoritosService = inject(FavoritosService);
@@ -28,154 +33,49 @@ export class ExplorarComponent implements OnInit {
 
   selectedProductForModal: DetallePrendaCatalogo | ProductoFashion | null = null;
   public recomendacionesML: RecomendacionML[] = [];
+  public productosDestacados: ProductoDestacadoItem[] = [];
+  public productosNovedades: ProductoDestacadoItem[] = [];
+  public cargandoProductos: boolean = false;
+  private ultimoTenantCargado: number = 0;
 
-  // Historias circulares de categorías (8 avatares inspirados en la maqueta editorial)
-  categoriasHistorias = [
-    { nombre: 'Vestidos', imagen: 'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=300&q=80' },
-    { nombre: 'Blusas', imagen: 'https://images.unsplash.com/photo-1598554747436-c9293d6a588f?auto=format&fit=crop&w=300&q=80' },
-    { nombre: 'Pantalones', imagen: 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?auto=format&fit=crop&w=300&q=80' },
-    { nombre: 'Chaquetas', imagen: 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?auto=format&fit=crop&w=300&q=80' },
-    { nombre: 'Faldas', imagen: 'https://images.unsplash.com/photo-1583496661160-fb5886a0aaaa?auto=format&fit=crop&w=300&q=80' },
-    { nombre: 'Accesorios', imagen: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=300&q=80' },
-    { nombre: 'Calzado', imagen: 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?auto=format&fit=crop&w=300&q=80' },
-    { nombre: 'Nueva Colección', imagen: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=300&q=80' }
-  ];
+  readonly defaultBannerImg = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1600&q=85';
 
-  // 6 Productos destacados exactamente iguales a la maqueta de diseño
-  productosDestacados: ProductoDestacadoItem[] = [
-    {
-      id: 201,
-      nombre: 'Blusa Éter',
-      subtitulo: 'Blusas • Nueva Colección',
-      precio: 299,
-      categoria: 'Blusas',
-      imagenPrincipal: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=800&q=80',
-      imagenes: ['https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=800&q=80'],
-      tallas: ['S', 'M', 'L'],
-      colores: [
-        { nombre: 'Crema Marfil', hex: '#FAF0E6' },
-        { nombre: 'Café Moka', hex: '#6B4423' }
-      ],
-      descripcion: 'Confección en satén de seda suave con caída fluida y escote refinado.',
-      rating: 4.8,
-      reviews: 42
-    },
-    {
-      id: 202,
-      nombre: 'Camisa Milano',
-      subtitulo: 'Camisas • Otoño 2026',
-      precio: 349,
-      categoria: 'Blusas',
-      imagenPrincipal: 'https://images.unsplash.com/photo-1598554747436-c9293d6a588f?auto=format&fit=crop&w=800&q=80',
-      imagenes: ['https://images.unsplash.com/photo-1598554747436-c9293d6a588f?auto=format&fit=crop&w=800&q=80'],
-      tallas: ['XS', 'S', 'M', 'L', 'XL'],
-      colores: [
-        { nombre: 'Azul Rayas', hex: '#6A82FB' },
-        { nombre: 'Beige Arena', hex: '#E0C39E' },
-        { nombre: 'Marrón Cuero', hex: '#6B4423' }
-      ],
-      descripcion: 'Algodón popelín italiano con estampado a rayas clásicas de sastrería.',
-      rating: 4.9,
-      reviews: 28
-    },
-    {
-      id: 203,
-      nombre: 'Blazer Aurora',
-      subtitulo: 'Chaquetas • Sastrería Fina',
-      precio: 699,
-      categoria: 'Chaquetas',
-      imagenPrincipal: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&w=800&q=80',
-      imagenes: ['https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&w=800&q=80'],
-      tallas: ['S', 'M', 'L'],
-      colores: [
-        { nombre: 'Gris Grafito', hex: '#9E9E9E' },
-        { nombre: 'Vino Tinto', hex: '#6A1B29' }
-      ],
-      descripcion: 'Corte recto estructurado con lana noble y solapa de pico contemporánea.',
-      rating: 4.9,
-      reviews: 31
-    },
-    {
-      id: 204,
-      nombre: 'Vestido Noa',
-      subtitulo: 'Vestidos • Noche & Cóctel',
-      precio: 549,
-      categoria: 'Vestidos',
-      imagenPrincipal: 'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80',
-      imagenes: ['https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80'],
-      tallas: ['XS', 'S', 'M'],
-      colores: [
-        { nombre: 'Negro Azabache', hex: '#18181B' },
-        { nombre: 'Marrón Atacama', hex: '#6B4423' }
-      ],
-      descripcion: 'Vestido midi con mangas abullonadas y silueta entallada de alta definición.',
-      rating: 4.7,
-      reviews: 19
-    },
-    {
-      id: 205,
-      nombre: 'Suéter Lira',
-      subtitulo: 'Tejidos • Esenciales',
-      precio: 329,
-      categoria: 'Tejidos',
-      imagenPrincipal: 'https://images.unsplash.com/photo-1434389677669-e08b4cac3105?auto=format&fit=crop&w=800&q=80',
-      imagenes: ['https://images.unsplash.com/photo-1434389677669-e08b4cac3105?auto=format&fit=crop&w=800&q=80'],
-      tallas: ['S', 'M', 'L'],
-      colores: [
-        { nombre: 'Marfil Perla', hex: '#F5F5DC' },
-        { nombre: 'Blanco Nieve', hex: '#FFFFFF' }
-      ],
-      descripcion: 'Punto acanalado en hilo suave con cuello cerrado y tacto ultra confortable.',
-      rating: 4.6,
-      reviews: 15
-    },
-    {
-      id: 206,
-      nombre: 'Cartera Siena',
-      subtitulo: 'Accesorios • Cuero Artesanal',
-      precio: 459,
-      categoria: 'Accesorios',
-      imagenPrincipal: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=800&q=80',
-      imagenes: ['https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=800&q=80'],
-      tallas: ['Única'],
-      colores: [
-        { nombre: 'Cuero Siena', hex: '#B87333' }
-      ],
-      descripcion: 'Bolso estructurado de mano con herrajes dorados y correa desmontable.',
-      rating: 4.8,
-      reviews: 27
-    }
-  ];
+  constructor() {
+    effect(() => {
+      const tenant = this.tenantContext.tenantActual();
+      if (tenant && tenant.id_empresa !== this.ultimoTenantCargado) {
+        this.ultimoTenantCargado = tenant.id_empresa;
+        this.cargarProductosDelTenant(tenant.id_empresa);
+      }
+    });
+  }
 
   ngOnInit(): void {
-    // 1. Cargar productos destacados del catálogo
-    this.catalogoService.consultarProductos({ limit: 6 }).subscribe({
-      next: (res) => {
-        if (res.data && res.data.length >= 4) {
-          const mapped = res.data.map((p, idx) => ({
-            id: p.id_producto,
-            nombre: p.nombre,
-            subtitulo: `${p.marca} • ${p.coleccion}`,
-            precio: p.precio,
-            categoria: p.categoria_nombre,
-            imagenPrincipal: p.imagen_principal || this.productosDestacados[idx % this.productosDestacados.length].imagenPrincipal,
-            imagenes: p.imagen_principal ? [p.imagen_principal] : [],
-            tallas: p.tallas_disponibles?.map(t => t.nombre) || ['S', 'M', 'L'],
-            colores: p.colores_disponibles?.map(c => ({ nombre: c.nombre, hex: c.codigo_hex })) || [{ nombre: 'Clásico', hex: '#18181B' }],
-            descripcion: p.descripcion,
-            popularidad: 95,
-            etiqueta: p.temporada,
-            rating: 4.7 + (idx % 3) * 0.1,
-            reviews: 20 + idx * 7
-          }));
-          this.productosDestacados = mapped;
-          this.cdr.markForCheck();
-        }
-      },
-      error: () => {}
+    this.route.paramMap.subscribe(params => {
+      const slug = params.get('slug');
+      if (slug) {
+        this.tenantContext.cargarTenantPorSlug(slug);
+      }
     });
 
-    // 2. Cargar recomendaciones personalizadas por Mini Machine Learning
+    this.route.queryParamMap.subscribe(qParams => {
+      const empId = Number(qParams.get('empresa'));
+      const slug = qParams.get('tienda');
+      if (slug) {
+        this.tenantContext.cargarTenantPorSlug(slug);
+      } else if (empId && empId > 0) {
+        this.tenantContext.cargarTenantPorId(empId);
+      } else if (!this.tenantContext.tenantActual()) {
+        this.tenantContext.inicializarContexto();
+      }
+    });
+
+    const actual = this.tenantContext.tenantActual();
+    if (actual) {
+      this.ultimoTenantCargado = actual.id_empresa;
+      this.cargarProductosDelTenant(actual.id_empresa);
+    }
+
     this.recomendacionesService.obtenerMisRecomendaciones(4).subscribe({
       next: (res) => {
         if (res && res.recomendaciones && res.recomendaciones.length > 0) {
@@ -187,9 +87,81 @@ export class ExplorarComponent implements OnInit {
     });
   }
 
+  private mapearPrenda(p: PrendaCatalogo, idx: number): ProductoDestacadoItem {
+    return {
+      id: p.id_producto,
+      nombre: p.nombre,
+      subtitulo: `${p.marca || this.tenantContext.configStorefront().nombre_comercial} • ${p.coleccion || p.temporada || 'Catálogo'}`,
+      precio: p.precio,
+      categoria: p.categoria_nombre,
+      genero: p.genero || 'Unisex',
+      coleccion: p.coleccion || '',
+      imagenPrincipal: p.imagen_principal || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=800&q=80',
+      imagenes: p.imagen_principal ? [p.imagen_principal] : [],
+      tallas: p.tallas_disponibles?.map(t => t.nombre) || [],
+      colores: p.colores_disponibles?.map(c => ({ nombre: c.nombre, hex: c.codigo_hex })) || [],
+      descripcion: p.descripcion,
+      popularidad: 95,
+      etiqueta: p.temporada,
+      rating: 4.8,
+      reviews: 12 + idx * 5
+    };
+  }
+
+  cargarProductosDelTenant(idEmpresa: number): void {
+    this.cargandoProductos = true;
+    this.catalogoService.consultarProductos({ id_empresa: idEmpresa, orden: 'destacados', limit: 12 }).subscribe({
+      next: (res) => {
+        const lista = (res.data || []).map((p, idx) => this.mapearPrenda(p, idx));
+        this.productosDestacados = lista.slice(0, 6);
+        this.productosNovedades = lista.slice(6, 12).length > 0 ? lista.slice(6, 12) : lista.slice(0, 4);
+        this.cargandoProductos = false;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.productosDestacados = [];
+        this.productosNovedades = [];
+        this.cargandoProductos = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  get coleccionesParaMostrar(): string[] {
+    const dest = this.tenantContext.configStorefront().colecciones_destacadas || [];
+    const disp = this.tenantContext.filtrosActuales().colecciones || [];
+    if (dest.length > 0) {
+      return dest;
+    }
+    return disp.slice(0, 6);
+  }
+
+  iconoPublico(publico: string): string {
+    const p = publico.toLowerCase();
+    if (p.includes('mujer')) return 'ph-dress';
+    if (p.includes('hombre')) return 'ph-coat-hanger';
+    if (p.includes('niñ')) return 'ph-smiley';
+    if (p.includes('beb')) return 'ph-baby';
+    return 'ph-users-three';
+  }
+
+  iconoCategoria(nombre: string): string {
+    const n = (nombre || '').toLowerCase();
+    if (n.includes('vestid')) return 'ph-dress';
+    if (n.includes('blus') || n.includes('camis') || n.includes('poler') || n.includes('top')) return 'ph-t-shirt';
+    if (n.includes('pantal') || n.includes('jean') || n.includes('short')) return 'ph-scissors';
+    if (n.includes('chaquet') || n.includes('abrig') || n.includes('blazer') || n.includes('saco')) return 'ph-coat-hanger';
+    if (n.includes('calzad') || n.includes('zapat') || n.includes('bot')) return 'ph-sneaker';
+    if (n.includes('bols') || n.includes('carter') || n.includes('mochil') || n.includes('accesori')) return 'ph-handbag';
+    if (n.includes('joy') || n.includes('reloj') || n.includes('anill') || n.includes('collar')) return 'ph-sparkle';
+    if (n.includes('fald')) return 'ph-sketch-logo';
+    if (n.includes('deport') || n.includes('active') || n.includes('sport')) return 'ph-lightning';
+    return 'ph-tag';
+  }
+
   openQuickView(prod: any): void {
     if (prod?.id) {
-      this.catalogoService.obtenerDetalleProducto(prod.id).subscribe({
+      this.catalogoService.obtenerDetalleProducto(prod.id, this.tenantContext.idEmpresaActual()).subscribe({
         next: (res) => {
           if (res.data) {
             this.selectedProductForModal = res.data;
@@ -199,11 +171,11 @@ export class ExplorarComponent implements OnInit {
           this.cdr.markForCheck();
         },
         error: () => {
-          this.router.navigate(['/catalogo']);
+          this.router.navigate(['/catalogo'], { queryParams: { empresa: this.tenantContext.idEmpresaActual() } });
         }
       });
     } else {
-      this.router.navigate(['/catalogo']);
+      this.router.navigate(['/catalogo'], { queryParams: { empresa: this.tenantContext.idEmpresaActual() } });
     }
   }
 

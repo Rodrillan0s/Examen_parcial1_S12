@@ -554,7 +554,8 @@ export class AdminLayoutComponent implements OnInit {
         icono: 'M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z',
         expandido: true,
         submenus: [
-          { nombre: 'Planes y Capacidades', ruta: '/admin/planes', permiso: 'planes.ver' },
+          { nombre: 'Mi Tienda & Storefront', ruta: '/admin/mi-tienda', maxAuthorityLevel: 3 },
+          { nombre: 'Planes y Contrataciones', ruta: '/admin/planes', permiso: 'planes.ver' },
           { nombre: 'Suscripciones y Límites', ruta: '/admin/suscripciones', permiso: 'suscripciones.ver' }
         ]
       },

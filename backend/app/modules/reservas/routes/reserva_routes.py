@@ -136,6 +136,13 @@ def crear_reserva(
         if not id_usuario:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Sesión no válida o usuario no identificado.")
 
+        # Seguridad de pagos: Deshabilitado temporalmente pago online anticipado
+        if body.con_pago or (body.monto_pagado and body.monto_pagado > 0):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="El pago anticipado online de reservas no se encuentra habilitado por el momento. Las prendas apartadas deben abonarse directamente en el mostrador tras probárselas."
+            )
+
         empresa_id = _resolver_id_empresa_segura(token_data, body.id_empresa, body.id_sucursal)
 
         from app.modules.saas.services.saas_services import exigir_vigencia
@@ -257,4 +264,24 @@ def cancelar_reserva(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error al cancelar la reserva: {str(e)}"
+        )
+
+@router.post('/expirar-vencidas', summary="Expira reservas vencidas y libera inventario al stock disponible")
+def expirar_reservas_vencidas_endpoint(
+    tolerancia_horas: int = Query(12, ge=1, le=168, description="Horas de tolerancia tras la cita programada"),
+    id_empresa: Optional[int] = Query(None, description="Opcional: ID de la empresa a filtrar"),
+    token_data: dict = Depends(verificar_token)
+):
+    try:
+        empresa_id = _resolver_id_empresa_segura(token_data, id_empresa) if id_empresa else None
+        res = reserva_repos.expirar_reservas_vencidas(id_empresa=empresa_id, tolerancia_horas=tolerancia_horas)
+        return {
+            "success": True,
+            "message": f"Se procesaron {res['reservas_expiradas']} reservas vencidas y se liberaron {res['prendas_liberadas']} prendas al inventario disponible.",
+            "data": res
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al ejecutar expiración automática de reservas: {str(e)}"
         )

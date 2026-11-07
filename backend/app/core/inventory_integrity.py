@@ -27,9 +27,23 @@ def lock_position(db, schema, branch, variant, company=None, allow_missing=False
     tenant = owner[0] if company is None else company
     if tenant is None or owner[0] != tenant or owner[1] != tenant or any(x is not None and x != tenant for x in owner[2:]):
         raise HTTPException(403, 'La sucursal, producto, talla y color no pertenecen al mismo tenant autorizado.')
-    rows = db.execute_query(f'''SELECT id_inventario,stock_actual,stock_reservado,stock_disponible
-        FROM {schema}.t_inventario WHERE id_sucursal=%s AND id_variante=%s
-        ORDER BY id_inventario FOR UPDATE''', (branch, variant), fetchall=True) or []
+    # Verificar si t_inventario posee la columna stock_contingencia (Migración 008)
+    cols_info = db.execute_query(
+        "SELECT column_name FROM information_schema.columns WHERE table_schema=%s AND table_name='t_inventario' AND column_name='stock_contingencia'",
+        (schema,),
+        fetchone=True
+    )
+    has_contingencia = bool(cols_info and cols_info[0])
+
+    if has_contingencia:
+        rows = db.execute_query(f'''SELECT id_inventario,stock_actual,stock_reservado,stock_disponible,COALESCE(stock_contingencia, 0)
+            FROM {schema}.t_inventario WHERE id_sucursal=%s AND id_variante=%s
+            ORDER BY id_inventario FOR UPDATE''', (branch, variant), fetchall=True) or []
+    else:
+        rows = db.execute_query(f'''SELECT id_inventario,stock_actual,stock_reservado,stock_disponible,0
+            FROM {schema}.t_inventario WHERE id_sucursal=%s AND id_variante=%s
+            ORDER BY id_inventario FOR UPDATE''', (branch, variant), fetchall=True) or []
+
     if len(rows) > 1:
         raise HTTPException(409, 'INVENTORY_RECONCILIATION_REQUIRED: posición duplicada; no se modificaron saldos.')
     if not rows:
@@ -37,10 +51,15 @@ def lock_position(db, schema, branch, variant, company=None, allow_missing=False
             return None
         raise HTTPException(409, 'No existe inventario para esta variante y sucursal.')
     row = rows[0]
-    actual, reserved, available = row[1:]
-    if any(x is None for x in row[1:]) or min(actual, reserved, available) < 0 or reserved > actual or available != actual - reserved:
+    actual, reserved, available, contingency = row[1:5]
+    contingency = contingency or 0
+    if (any(x is None for x in (actual, reserved, available, contingency))
+        or min(actual, reserved, available, contingency) < 0
+        or reserved > actual
+        or contingency > actual
+        or available != (actual - reserved - contingency)):
         raise HTTPException(409, 'INVENTORY_RECONCILIATION_REQUIRED: saldo histórico inconsistente; requiere conciliación.')
-    return row
+    return row[:4]
 
 
 def lock_items(db, schema, branch, items, company=None, allow_missing=False):

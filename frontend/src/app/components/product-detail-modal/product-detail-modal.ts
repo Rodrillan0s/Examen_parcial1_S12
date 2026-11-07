@@ -480,8 +480,8 @@ export class ProductDetailModalComponent implements OnChanges, OnDestroy {
     // 6. Preparar payload y ejecutar la reserva en backend
     const fechaHora = `${this.fechaReserva} ${this.horaReserva || '15:00'}`;
     const empresaId = this.esDetalleReal(this.producto) ? this.producto.id_empresa : undefined;
-    const esConPago = this.modalidadReserva === 'CON_PAGO';
-    const totalPagar = this.getPrecioActual() * this.quantity;
+    const esConPago = false;
+    const totalPagar = 0.0;
 
     this.cargandoReserva = true;
     this.reservaEnColaOffline = false;

@@ -39,7 +39,7 @@ export class App implements OnInit {
       .pipe(filter(event => event instanceof NavigationEnd))
       .subscribe((event: any) => {
         const url = event.urlAfterRedirects || event.url || '';
-        this.esRutaAdmin = url.startsWith('/admin');
+        this.esRutaAdmin = url.startsWith('/admin') || url.startsWith('/saas');
       });
   }
 
