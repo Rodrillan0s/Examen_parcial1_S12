@@ -104,7 +104,11 @@ export class ReportesComponent implements OnInit, OnDestroy {
     'Inventario de prendas agotadas',
     'Prendas con stock bajo',
     'Reporte de pagos de este mes',
-    'Sesiones de caja'
+    'Sesiones de caja',
+    'Devoluciones de este mes',
+    'Rentabilidad por producto',
+    'Rendimiento de cajeros',
+    'Stock inmovilizado'
   ];
 
   // Paginación en tabla
@@ -491,6 +495,20 @@ export class ReportesComponent implements OnInit, OnDestroy {
     );
   }
 
+  exportarCsvDinamico() {
+    if (!this.resultadoDinamico || !this.resultadoDinamico.items.length) {
+      alert('No hay registros para exportar.');
+      return;
+    }
+    const timestamp = new Date().toISOString().replace(/\D/g, '').substring(0, 14);
+    const nombre = `Reporte_${this.resultadoDinamico.codigo}_${timestamp}`;
+    this.motorService.exportarCsv(
+      this.resultadoDinamico.items,
+      nombre,
+      this.resultadoDinamico.columnas
+    );
+  }
+
   volverAVistaEstandar() {
     this.vistaActiva = 'estandar';
     this.cdr.detectChanges();
@@ -765,6 +783,67 @@ export class ReportesComponent implements OnInit, OnDestroy {
         'Participación Ingresos %': s.participacion_ingresos_pct
       }));
       this.reportesService.exportarAExcel(filas, `Reporte_Sucursales_${timestamp}`, 'Sucursales');
+    }
+  }
+
+  exportarCsv() {
+    const timestamp = new Date().toISOString().replace(/\D/g, '').substring(0, 14);
+
+    if (this.tipoReporteActivo === 'ventas') {
+      const filas = (this.datosVentas?.items || []).map(v => ({
+        'N° Venta': v.numero_venta,
+        'Fecha': v.fecha,
+        'Sucursal': v.sucursal,
+        'Cliente': v.cliente,
+        'NIT/CI': v.nit_ci,
+        'Método Pago': v.metodo_pago,
+        'Subtotal (Bs.)': v.subtotal,
+        'Descuento (Bs.)': v.descuento,
+        'Total (Bs.)': v.total,
+        'Estado': v.estado
+      }));
+      this.reportesService.exportarACSV(filas, `Reporte_Ventas_${timestamp}`);
+    } else if (this.tipoReporteActivo === 'inventario') {
+      const filas = (this.datosInventario?.items || []).map(i => ({
+        'Prenda': i.producto,
+        'SKU': i.sku,
+        'Código': i.codigo_producto,
+        'Categoría': i.categoria,
+        'Talla': i.talla,
+        'Color': i.color,
+        'Sucursal': i.sucursal,
+        'Stock Actual': i.stock_actual,
+        'Stock Reservado': i.stock_reservado,
+        'Stock Disponible': i.stock_disponible,
+        'Stock Mínimo': i.stock_minimo,
+        'Estado': i.estado_alerta
+      }));
+      this.reportesService.exportarACSV(filas, `Reporte_Inventario_${timestamp}`);
+    } else if (this.tipoReporteActivo === 'productos') {
+      const filas = (this.datosProductos?.items || []).map(p => ({
+        'Prenda / Modelo': p.producto,
+        'SKU': p.sku,
+        'Categoría': p.categoria,
+        'Talla': p.talla,
+        'Color': p.color,
+        'Unidades Vendidas': p.unidades_vendidas,
+        'Precio Promedio (Bs.)': p.precio_promedio,
+        'Total Ingresos (Bs.)': p.total_ingresos,
+        'Participación %': p.participacion_pct
+      }));
+      this.reportesService.exportarACSV(filas, `Reporte_Productos_Vendidos_${timestamp}`);
+    } else {
+      const filas = (this.datosSucursales?.items || []).map(s => ({
+        'Sucursal': s.sucursal,
+        'Ciudad': s.ciudad,
+        'Teléfono': s.telefono,
+        'Cantidad Ventas': s.cantidad_ventas,
+        'Prendas Vendidas': s.unidades_vendidas,
+        'Ticket Promedio (Bs.)': s.ticket_promedio,
+        'Total Ingresos (Bs.)': s.total_ingresos,
+        'Participación Ingresos %': s.participacion_ingresos_pct
+      }));
+      this.reportesService.exportarACSV(filas, `Reporte_Sucursales_${timestamp}`);
     }
   }
 

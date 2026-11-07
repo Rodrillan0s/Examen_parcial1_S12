@@ -220,13 +220,23 @@ def obtener_resumen_caja(
     _verificar_permiso_cajero(token_data)
     try:
         id_usuario = token_data.get("nro_usuario") or token_data.get("id_usuario")
+        id_emp = _obtener_empresa_efectiva(token_data)
         if not id_sesion_caja:
             sesion = caja_repos.obtener_sesion_activa_usuario(id_usuario)
             if not sesion:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No tienes una sesión de caja abierta.")
             id_sesion_caja = sesion["id_sesion_caja"]
+        else:
+            sesion = caja_repos.obtener_sesion_caja_por_id(id_sesion_caja)
+            if not sesion:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sesión de caja no encontrada.")
+            from app.core.tenant_guard import validar_acceso_recurso_tenant, obtener_sucursales_autorizadas
+            validar_acceso_recurso_tenant(token_data, sesion.get("id_empresa"), "sesión de caja")
+            sucursales_auth = obtener_sucursales_autorizadas(token_data)
+            if sucursales_auth is not None and sesion.get("id_sucursal") not in sucursales_auth:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tiene permisos sobre la sucursal de esta sesión de caja.")
 
-        resumen = caja_repos.calcular_resumen_caja(id_sesion_caja)
+        resumen = caja_repos.calcular_resumen_caja(id_sesion_caja, id_empresa=id_emp)
         return {
             "success": True,
             "resumen": resumen,
@@ -249,12 +259,22 @@ def cerrar_caja(
     _verificar_permiso_cajero(token_data)
     try:
         id_usuario = token_data.get("nro_usuario") or token_data.get("id_usuario")
+        id_emp = _obtener_empresa_efectiva(token_data)
         id_sesion = body.id_sesion_caja
         if not id_sesion:
             sesion = caja_repos.obtener_sesion_activa_usuario(id_usuario)
             if not sesion:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No tienes una sesión de caja abierta para cerrar.")
             id_sesion = sesion["id_sesion_caja"]
+        else:
+            sesion = caja_repos.obtener_sesion_caja_por_id(id_sesion)
+            if not sesion:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sesión de caja no encontrada.")
+            from app.core.tenant_guard import validar_acceso_recurso_tenant, obtener_sucursales_autorizadas
+            validar_acceso_recurso_tenant(token_data, sesion.get("id_empresa"), "sesión de caja")
+            sucursales_auth = obtener_sucursales_autorizadas(token_data)
+            if sucursales_auth is not None and sesion.get("id_sucursal") not in sucursales_auth:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tiene permisos sobre la sucursal de esta sesión de caja.")
 
         conteo_raw = body.conteo or body.conteo_items or []
         if not conteo_raw:
@@ -266,7 +286,8 @@ def cerrar_caja(
             id_sesion_caja=id_sesion,
             id_usuario=id_usuario,
             conteo_items=conteo_dicts,
-            observacion=obs
+            observacion=obs,
+            id_empresa=id_emp
         )
 
         dif = cierre["diferencia"]

@@ -25,8 +25,8 @@ def lock_position(db, schema, branch, variant, company=None, allow_missing=False
     if not owner:
         raise HTTPException(404, 'Sucursal o variante no encontrada.')
     tenant = owner[0] if company is None else company
-    if tenant is None or owner[0] != tenant or owner[1] != tenant or any(x is not None and x != tenant for x in owner[2:]):
-        raise HTTPException(403, 'La sucursal, producto, talla y color no pertenecen al mismo tenant autorizado.')
+    if tenant is None or owner[0] != tenant or owner[1] != tenant:
+        raise HTTPException(403, 'La sucursal y el producto no pertenecen al mismo tenant autorizado.')
     # Verificar si t_inventario posee la columna stock_contingencia (Migración 008)
     cols_info = db.execute_query(
         "SELECT column_name FROM information_schema.columns WHERE table_schema=%s AND table_name='t_inventario' AND column_name='stock_contingencia'",

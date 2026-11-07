@@ -166,7 +166,8 @@ def obtener_variantes_producto_pos(id_producto: int, id_sucursal: int) -> List[D
 
 def buscar_clientes_pos(id_empresa: int, query: str) -> List[Dict[str, Any]]:
     """
-    Búsqueda rápida de clientes para el POS por CI, nombre, apellido o correo.
+    Búsqueda rápida de clientes para el POS por CI, nombre, apellido o correo,
+    restringida al contexto autorizado del tenant.
     """
     db = PostgreSQL()
     db.create_connection()
@@ -184,6 +185,13 @@ def buscar_clientes_pos(id_empresa: int, query: str) -> List[Dict[str, Any]]:
             FROM {schema}.t_cliente c
             JOIN {schema}.t_usuario u ON u.id_usuario = c.id_usuario
             WHERE (
+                u.id_empresa = %s OR 
+                (u.id_empresa IS NULL AND NOT EXISTS (
+                    SELECT 1 FROM {schema}.t_venta v_other 
+                    WHERE v_other.id_cliente = c.id_cliente AND v_other.id_empresa != %s
+                ))
+            )
+            AND (
                 c.ci ILIKE %s OR 
                 u.nombre ILIKE %s OR 
                 u.apellido ILIKE %s OR 
@@ -192,7 +200,7 @@ def buscar_clientes_pos(id_empresa: int, query: str) -> List[Dict[str, Any]]:
             ORDER BY u.nombre ASC
             LIMIT 15;
         """
-        rows = db.execute_query(sql, (term, term, term, term), fetchall=True) or []
+        rows = db.execute_query(sql, (id_empresa, id_empresa, term, term, term, term), fetchall=True) or []
         resultado = []
         for r in rows:
             resultado.append({
@@ -303,7 +311,7 @@ def ejecutar_registro_venta_pos(
 
     finally:
         db.close_connection()
-def obtener_historial_ventas_sesion(id_sesion_caja: int) -> List[Dict[str, Any]]:
+def obtener_historial_ventas_sesion(id_sesion_caja: int, id_empresa: Optional[int] = None) -> List[Dict[str, Any]]:
     """
     Retorna el listado de ventas generadas durante la sesión de caja activa.
     """
@@ -311,6 +319,10 @@ def obtener_historial_ventas_sesion(id_sesion_caja: int) -> List[Dict[str, Any]]
     db.create_connection()
     try:
         schema = _get_schema()
+        emp_filter = "AND v.id_empresa = %s" if id_empresa else ""
+        params: List[Any] = [id_sesion_caja]
+        if id_empresa:
+            params.append(id_empresa)
         sql = f"""
             SELECT 
                 v.id_venta,
@@ -334,10 +346,10 @@ def obtener_historial_ventas_sesion(id_sesion_caja: int) -> List[Dict[str, Any]]
             FROM {schema}.t_venta v
             LEFT JOIN {schema}.t_cliente c ON c.id_cliente = v.id_cliente
             LEFT JOIN {schema}.t_usuario u ON u.id_usuario = c.id_usuario
-            WHERE v.id_sesion_caja = %s
+            WHERE v.id_sesion_caja = %s {emp_filter}
             ORDER BY v.id_venta DESC;
         """
-        rows = db.execute_query(sql, (id_sesion_caja,), fetchall=True) or []
+        rows = db.execute_query(sql, tuple(params), fetchall=True) or []
         resultado = []
         for r in rows:
             cliente_nombre = "Sin cliente"
@@ -389,7 +401,9 @@ def obtener_detalle_venta_pos(id_venta: int) -> Optional[Dict[str, Any]]:
                 u.nombre,
                 u.apellido,
                 u.correo,
-                suc.nombre AS nombre_sucursal
+                suc.nombre AS nombre_sucursal,
+                v.id_empresa,
+                v.id_sucursal
             FROM {schema}.t_venta v
             LEFT JOIN {schema}.t_cliente c ON c.id_cliente = v.id_cliente
             LEFT JOIN {schema}.t_usuario u ON u.id_usuario = c.id_usuario
@@ -458,6 +472,8 @@ def obtener_detalle_venta_pos(id_venta: int) -> Optional[Dict[str, Any]]:
             "cliente_str": cliente_str,
             "cliente_correo": head[14],
             "nombre_sucursal": head[15],
+            "id_empresa": head[16],
+            "id_sucursal": head[17],
             "items": items
         }
     finally:

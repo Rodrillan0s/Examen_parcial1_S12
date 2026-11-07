@@ -10,6 +10,8 @@ from app.modules.pedidos.services.reports.parser.command_parser import interpret
 from app.modules.pedidos.services.reports.engine.report_engine import (
     ejecutar_reporte_dinamico,
     generar_pdf_reporte_dinamico,
+    generar_csv_reporte_dinamico,
+    generar_xlsx_reporte_dinamico,
     _resolver_contexto_tenant
 )
 
@@ -188,4 +190,90 @@ def exportar_reporte_pdf(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error generando PDF del reporte: {str(e)}"
+        )
+
+
+@router.post("/exportar/csv")
+def exportar_reporte_csv(
+    payload: ReporteEjecucionIn,
+    token_data: dict = Depends(require_permission('reportes.ver'))
+):
+    """
+    Genera y descarga en streaming un CSV delimitado por comas con codificación UTF-8 BOM.
+    """
+    try:
+        empresa_req = payload.id_empresa or (payload.filtros or {}).get("id_empresa")
+        token_data = _contexto_reporte(token_data, empresa_req)
+        req_dict = payload.model_dump()
+        if empresa_req and not req_dict.get("id_empresa"):
+            req_dict["id_empresa"] = empresa_req
+        datos = ejecutar_reporte_dinamico(req_dict, token_data)
+        
+        csv_buffer = generar_csv_reporte_dinamico(datos)
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        tipo = payload.tipo_reporte
+        filename = f"reporte_{tipo}_{timestamp}.csv"
+
+        return StreamingResponse(
+            csv_buffer,
+            media_type="text/csv; charset=utf-8",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+                "Access-Control-Expose-Headers": "Content-Disposition"
+            }
+        )
+    except ValueError as ve:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(ve)
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error generando CSV del reporte: {str(e)}"
+        )
+
+
+@router.post("/exportar/xlsx")
+def exportar_reporte_xlsx(
+    payload: ReporteEjecucionIn,
+    token_data: dict = Depends(require_permission('reportes.ver'))
+):
+    """
+    Genera y descarga en streaming un archivo XLSX con formato institucional y resumen.
+    """
+    try:
+        empresa_req = payload.id_empresa or (payload.filtros or {}).get("id_empresa")
+        token_data = _contexto_reporte(token_data, empresa_req)
+        req_dict = payload.model_dump()
+        if empresa_req and not req_dict.get("id_empresa"):
+            req_dict["id_empresa"] = empresa_req
+        datos = ejecutar_reporte_dinamico(req_dict, token_data)
+        
+        xlsx_buffer = generar_xlsx_reporte_dinamico(datos)
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        tipo = payload.tipo_reporte
+        filename = f"reporte_{tipo}_{timestamp}.xlsx"
+
+        return StreamingResponse(
+            xlsx_buffer,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+                "Access-Control-Expose-Headers": "Content-Disposition"
+            }
+        )
+    except ValueError as ve:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(ve)
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error generando XLSX del reporte: {str(e)}"
         )

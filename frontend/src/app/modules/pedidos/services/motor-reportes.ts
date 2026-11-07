@@ -150,9 +150,75 @@ export class MotorReportesService {
     );
   }
 
+  exportarCsvBackend(request: ReportRequest): Observable<Blob> {
+    const id_empresa = request.id_empresa || this.authService.obtenerUsuario()?.id_empresa;
+    const body = {
+      ...request,
+      ...(id_empresa ? { id_empresa } : {}),
+      filtros: {
+        ...(request.filtros || {}),
+        ...(id_empresa ? { id_empresa } : {})
+      }
+    };
+    return this.http.post(
+      `${this.apiUrl}/api/motor-reportes/exportar/csv`,
+      body,
+      { headers: this.getHeaders(), responseType: 'blob' }
+    );
+  }
+
+  exportarXlsxBackend(request: ReportRequest): Observable<Blob> {
+    const id_empresa = request.id_empresa || this.authService.obtenerUsuario()?.id_empresa;
+    const body = {
+      ...request,
+      ...(id_empresa ? { id_empresa } : {}),
+      filtros: {
+        ...(request.filtros || {}),
+        ...(id_empresa ? { id_empresa } : {})
+      }
+    };
+    return this.http.post(
+      `${this.apiUrl}/api/motor-reportes/exportar/xlsx`,
+      body,
+      { headers: this.getHeaders(), responseType: 'blob' }
+    );
+  }
+
   // ============================================================================
-  // EXPORTACIÓN A EXCEL CLIENT-SIDE CON SHEETJS
+  // EXPORTACIÓN A EXCEL Y CSV CLIENT-SIDE CON SHEETJS (CU21W / CU22W)
   // ============================================================================
+
+  exportarCsv(filas: any[], nombreArchivo: string, columnas?: ColumnaMeta[]) {
+    if (!filas || !filas.length) {
+      alert('No hay datos para exportar a CSV.');
+      return;
+    }
+    const headers = columnas && columnas.length > 0 
+      ? columnas.map(c => c.titulo || c.campo) 
+      : Object.keys(filas[0]);
+    const keys = columnas && columnas.length > 0
+      ? columnas.map(c => c.campo)
+      : Object.keys(filas[0]);
+
+    const csvRows = [
+      headers.join(','),
+      ...filas.map(row => keys.map(k => {
+        let val = row[k] ?? '';
+        val = String(val).replace(/"/g, '""');
+        return `"${val}"`;
+      }).join(','))
+    ];
+
+    const blob = new Blob(['\uFEFF' + csvRows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${nombreArchivo}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
 
   exportarExcel(filas: any[], nombreArchivo: string, columnas?: ColumnaMeta[], nombreHoja: string = 'Reporte') {
     if (!filas || !filas.length) {

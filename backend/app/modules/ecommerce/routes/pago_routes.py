@@ -171,6 +171,14 @@ def capturar_paypal_endpoint(
                     db.close_connection()
             raise ve
 
+        # 0. Pre-vuelo de inventario: verificar integridad antes de capturar dinero en PayPal
+        pago_repos.validar_integridad_inventario_pedido(
+            id_pedido=pedido["id_pedido"],
+            id_sucursal=pedido["id_sucursal"],
+            id_empresa=pedido["id_empresa"],
+            items=pedido.get("items", [])
+        )
+
         # 1. Capturar pago con el proveedor PayPal
         captura = paypal_service.capturar_orden_paypal(body.order_id)
         if not captura.get("success") or captura.get("status") != "COMPLETED":

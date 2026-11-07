@@ -181,3 +181,61 @@ def obtener_pedido(
             detail=f"Error al consultar el pedido: {str(e)}"
         )
 
+class CancelarPedidoDTO(BaseModel):
+    motivo: Optional[str] = Field("Cancelado por el cliente", max_length=250, description="Motivo de la cancelación")
+
+@router.post('/{id_pedido}/cancelar', summary="Cancelar pedido propio en estado PENDIENTE_PAGO y liberar stock")
+def cancelar_pedido(
+    id_pedido: int,
+    body: Optional[CancelarPedidoDTO] = None,
+    id_empresa: Optional[int] = Query(None, description="ID del Tenant"),
+    token_data: dict = Depends(verificar_token)
+):
+    try:
+        id_usuario = token_data.get('nro_usuario') or token_data.get('id_usuario')
+        if not id_usuario:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token sin identificador de usuario."
+            )
+
+        empresa_id = _resolver_id_empresa(id_empresa, token_data)
+        motivo = body.motivo if body and body.motivo else "Cancelado por el cliente"
+        res = pedido_repos.cancelar_pedido_cliente(id_pedido, id_usuario, empresa_id, motivo=motivo)
+        return {
+            "success": True,
+            "message": "Pedido cancelado y existencias liberadas exitosamente.",
+            "data": res
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al cancelar el pedido: {str(e)}"
+        )
+
+@router.post('/expirar', summary="Ejecutar expiración automática de pedidos vencidos sin pago")
+def expirar_pedidos(
+    horas: int = Query(48, ge=1, le=720, description="Tolerancia de horas antes de expirar"),
+    id_empresa: Optional[int] = Query(None, description="ID del Tenant"),
+    token_data: dict = Depends(verificar_token)
+):
+    try:
+        empresa_id = _resolver_id_empresa(id_empresa, token_data)
+        res = pedido_repos.expirar_pedidos_vencidos(id_empresa=empresa_id, horas_tolerancia=horas)
+        return {
+            "success": True,
+            "message": f"Proceso de expiración ejecutado. {res['pedidos_expirados']} pedido(s) expirados y {res['prendas_liberadas']} prenda(s) liberadas.",
+            "data": res
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error ejecutando expiración de pedidos: {str(e)}"
+        )
+

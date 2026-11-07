@@ -161,7 +161,7 @@ export class ExplorarComponent implements OnInit {
 
   openQuickView(prod: any): void {
     if (prod?.id) {
-      this.catalogoService.obtenerDetalleProducto(prod.id, this.tenantContext.idEmpresaActual()).subscribe({
+      this.catalogoService.obtenerDetalleProducto(prod.id).subscribe({
         next: (res) => {
           if (res.data) {
             this.selectedProductForModal = res.data;

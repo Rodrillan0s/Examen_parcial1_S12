@@ -103,6 +103,26 @@ def obtener_stock_total_variante(id_variante: int, id_empresa: int) -> int:
     finally:
         db.close_connection()
 
+def obtener_empresa_de_variante(id_variante: int) -> Optional[int]:
+    """
+    Recupera el id_empresa al que pertenece una variante de producto.
+    """
+    db = PostgreSQL()
+    db.create_connection()
+    try:
+        schema = _get_schema()
+        q = f"""
+            SELECT p.id_empresa
+            FROM {schema}.t_producto_talla_color v
+            JOIN {schema}.t_producto p ON p.id_producto = v.id_producto
+            WHERE v.id_variante = %s
+            LIMIT 1;
+        """
+        res = db.execute_query(q, (id_variante,), fetchone=True)
+        return int(res[0]) if res else None
+    finally:
+        db.close_connection()
+
 def obtener_datos_variante_tenant(id_variante: int, id_empresa: int) -> Optional[Dict[str, Any]]:
     """
     Verifica que la variante exista, pertenezca a un producto activo del Tenant
@@ -140,8 +160,6 @@ def obtener_datos_variante_tenant(id_variante: int, id_empresa: int) -> Optional
             JOIN {schema}.t_talla t ON t.id_talla = v.id_talla AND t.activo = TRUE
             JOIN {schema}.t_color col ON col.id_color = v.id_color AND col.activo = TRUE
             WHERE v.id_variante = %s AND p.id_empresa = %s
-              AND (t.id_empresa IS NULL OR t.id_empresa=p.id_empresa)
-              AND (col.id_empresa IS NULL OR col.id_empresa=p.id_empresa)
             LIMIT 1;
         """
         r = db.execute_query(q, (id_variante, id_empresa), fetchone=True)

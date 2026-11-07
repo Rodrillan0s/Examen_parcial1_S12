@@ -102,6 +102,8 @@ def obtener_alcance_usuario(payload: dict) -> str:
     # Current role names from DB; legacy numeric IDs are not authority.
     if not payload.get('id_empresa'):
         return 'PLATAFORMA' if roles.intersection({'ADMINISTRADOR', 'SUPERADMIN'}) else 'CLIENTE'
+    if 'CLIENTE' in roles and not roles.intersection({'ADMINISTRADOR', 'ADMINISTRADOR_TIENDA', 'SUPERADMIN', 'CAJERO', 'ENCARGADO_SUCURSAL', 'EMPLEADO'}):
+        return 'CLIENTE'
     if roles.intersection({'ADMINISTRADOR', 'ADMINISTRADOR_TIENDA', 'SUPERADMIN'}):
         return 'EMPRESA'
     return 'SUCURSAL'

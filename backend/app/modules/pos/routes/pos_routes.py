@@ -251,19 +251,31 @@ def historial_ventas_pos(
 ):
     _verificar_acceso_pos(token_data)
     try:
+        from app.core.tenant_guard import resolver_tenant_operacion, validar_acceso_recurso_tenant, obtener_sucursales_autorizadas
+        id_emp = resolver_tenant_operacion(token_data, permitir_global=True)
         id_usuario = token_data.get("nro_usuario") or token_data.get("id_usuario")
         if not id_sesion_caja:
             sesion = caja_repos.obtener_sesion_activa_usuario(id_usuario)
             if not sesion:
                 return {"success": True, "ventas": [], "data": []}
             id_sesion_caja = sesion["id_sesion_caja"]
+        else:
+            sesion = caja_repos.obtener_sesion_caja_por_id(id_sesion_caja)
+            if not sesion:
+                return {"success": True, "ventas": [], "data": []}
+            validar_acceso_recurso_tenant(token_data, sesion.get("id_empresa"), "sesión de caja")
+            sucursales_auth = obtener_sucursales_autorizadas(token_data)
+            if sucursales_auth is not None and sesion.get("id_sucursal") not in sucursales_auth:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tiene permisos sobre la sucursal de esta sesión de caja.")
 
-        ventas = pos_repos.obtener_historial_ventas_sesion(id_sesion_caja)
+        ventas = pos_repos.obtener_historial_ventas_sesion(id_sesion_caja, id_empresa=id_emp)
         return {
             "success": True,
             "ventas": ventas,
             "data": ventas
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"[HISTORIAL VENTAS ERROR] {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
@@ -279,6 +291,11 @@ def detalle_venta_pos(
         detalle = pos_repos.obtener_detalle_venta_pos(id_venta)
         if not detalle:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Venta no encontrada.")
+        from app.core.tenant_guard import validar_acceso_recurso_tenant, obtener_sucursales_autorizadas
+        validar_acceso_recurso_tenant(token_data, detalle.get("id_empresa"), "venta")
+        sucursales_auth = obtener_sucursales_autorizadas(token_data)
+        if sucursales_auth is not None and detalle.get("id_sucursal") not in sucursales_auth:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tiene permisos sobre la sucursal de esta venta.")
         return {
             "success": True,
             "data": detalle
@@ -316,20 +333,32 @@ def obtener_cuotas_contingencia(
 ):
     _verificar_acceso_pos(token_data)
     try:
+        from app.core.tenant_guard import resolver_tenant_operacion, validar_acceso_recurso_tenant, obtener_sucursales_autorizadas
+        id_emp = resolver_tenant_operacion(token_data, permitir_global=True)
         id_usuario = token_data.get("nro_usuario") or token_data.get("id_usuario")
         if not id_sesion_caja:
             sesion = caja_repos.obtener_sesion_activa_usuario(id_usuario)
             if not sesion:
                 return {"success": True, "cuotas": [], "total": 0}
             id_sesion_caja = sesion["id_sesion_caja"]
+        else:
+            sesion = caja_repos.obtener_sesion_caja_por_id(id_sesion_caja)
+            if not sesion:
+                return {"success": True, "cuotas": [], "total": 0}
+            validar_acceso_recurso_tenant(token_data, sesion.get("id_empresa"), "sesión de caja")
+            sucursales_auth = obtener_sucursales_autorizadas(token_data)
+            if sucursales_auth is not None and sesion.get("id_sucursal") not in sucursales_auth:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tiene permisos sobre la sucursal de esta sesión de caja.")
 
-        cuotas = contingencia_repos.obtener_cuotas_activas_sesion(id_sesion_caja)
+        cuotas = contingencia_repos.obtener_cuotas_activas_sesion(id_sesion_caja, id_empresa=id_emp)
         return {
             "success": True,
             "id_sesion_caja": id_sesion_caja,
             "cuotas": cuotas,
             "total": len(cuotas)
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"[CUOTAS CONTINGENCIA ERROR] {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
@@ -341,9 +370,12 @@ def obtener_politica_contingencia_route(
 ):
     _verificar_acceso_pos(token_data)
     try:
-        id_empresa = token_data.get("id_empresa") or 1
+        from app.core.tenant_guard import resolver_tenant_operacion
+        id_empresa = resolver_tenant_operacion(token_data, permitir_global=True) or 1
         politica = contingencia_repos.obtener_politica_contingencia(id_empresa)
         return {"success": True, "politica": politica}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"[POLITICA CONTINGENCIA GET ERROR] {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
@@ -362,9 +394,12 @@ def actualizar_politica_contingencia_route(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Permiso 'pos.contingencia' requerido.")
 
     try:
-        id_empresa = token_data.get("id_empresa") or 1
+        from app.core.tenant_guard import resolver_tenant_operacion
+        id_empresa = resolver_tenant_operacion(token_data)
         nueva = contingencia_repos.actualizar_politica_contingencia(id_empresa, dto.dict())
         return {"success": True, "politica": nueva}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"[POLITICA CONTINGENCIA PUT ERROR] {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
@@ -383,9 +418,12 @@ def listar_incidencias_sobreventa_route(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acceso denegado a incidencias de sobreventa.")
 
     try:
-        id_empresa = token_data.get("id_empresa") or 1
+        from app.core.tenant_guard import resolver_tenant_operacion
+        id_empresa = resolver_tenant_operacion(token_data, permitir_global=True) or 1
         incidencias = contingencia_repos.listar_incidencias_sobreventa(id_empresa, estado)
         return {"success": True, "incidencias": incidencias, "total": len(incidencias)}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"[INCIDENCIAS SOBREVENTA GET ERROR] {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

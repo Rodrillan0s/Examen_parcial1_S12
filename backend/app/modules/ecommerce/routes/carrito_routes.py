@@ -69,7 +69,11 @@ def agregar_item(
 ):
     try:
         id_usuario = token_data.get('nro_usuario') or token_data.get('id_usuario')
-        empresa_id = _resolver_id_empresa(payload.id_empresa, token_data)
+        tenant_target = payload.id_empresa
+        empresa_variante = carrito_repos.obtener_empresa_de_variante(payload.id_variante)
+        if empresa_variante and (not tenant_target or tenant_target != empresa_variante):
+            tenant_target = empresa_variante
+        empresa_id = _resolver_id_empresa(tenant_target, token_data)
         carrito = carrito_repos.agregar_item_al_carrito(
             id_usuario=id_usuario,
             id_empresa=empresa_id,

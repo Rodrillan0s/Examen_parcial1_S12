@@ -208,21 +208,21 @@ export class DevolucionesComponent implements OnInit {
   // DETALLE COMPLETO DE DEVOLUCIÓN
   // =========================================================================
 
-  abrirDetalle(idDevolucion: number): void {
+  abrirDetalle(idDevolucion: number, idEmpresa?: number): void {
     this.cargandoDetalle = true;
     this.mostrarModalDetalle = true;
     this.devolucionDetalle = null;
     this.cdr.markForCheck();
 
-    this.devolucionesService.obtenerDetallePersonal(idDevolucion, this.authService.getEffectiveCompanyId() || undefined).subscribe({
+    const empId = idEmpresa || this.authService.getEffectiveCompanyId() || undefined;
+    this.devolucionesService.obtenerDetallePersonal(idDevolucion, empId).subscribe({
       next: (res: any) => {
-        this.devolucionDetalle = res.data;
+        this.devolucionDetalle = res?.data || res;
         this.cargandoDetalle = false;
         this.cdr.markForCheck();
       },
       error: (err: any) => {
         this.cargandoDetalle = false;
-        this.mostrarModalDetalle = false;
         this.mostrarToast('error', err?.error?.detail || 'No se pudo obtener el detalle de la devolución.');
         this.cdr.markForCheck();
       }
@@ -517,15 +517,42 @@ export class DevolucionesComponent implements OnInit {
   // CU24W: RECEPCIÓN FÍSICA E INSPECCIÓN DE PRENDAS
   // =========================================================================
 
-  abrirModalRecepcion(dev: DevolucionDetalleCompleto): void {
-    this.idDevolucionRecepcion = dev.id_devolucion;
-    this.codigoDevolucionRecepcion = dev.codigo_devolucion;
-    this.idSucursalRecepcion = dev.id_sucursal || (this.sucursales[0]?.id_sucursal ?? null);
+  abrirModalRecepcion(dev: DevolucionDetalleCompleto | any): void {
+    const rawDev = dev?.data || dev;
+    if (!rawDev.items || rawDev.items.length === 0) {
+      this.cargando = true;
+      this.cdr.markForCheck();
+      this.devolucionesService.obtenerDetallePersonal(
+        rawDev.id_devolucion, 
+        rawDev.id_empresa || this.authService.getEffectiveCompanyId() || undefined
+      ).subscribe({
+        next: (res: any) => {
+          this.cargando = false;
+          const detalle = res?.data || res;
+          if (detalle) {
+            this.devolucionDetalle = detalle;
+            this.abrirModalRecepcion(detalle);
+          }
+          this.cdr.markForCheck();
+        },
+        error: (err: any) => {
+          this.cargando = false;
+          this.mostrarToast('error', err?.error?.detail || 'No se pudo cargar el detalle para recepcionar.');
+          this.cdr.markForCheck();
+        }
+      });
+      return;
+    }
+
+    this.devolucionDetalle = rawDev;
+    this.idDevolucionRecepcion = rawDev.id_devolucion;
+    this.codigoDevolucionRecepcion = rawDev.codigo_devolucion;
+    this.idSucursalRecepcion = rawDev.id_sucursal || (this.sucursales[0]?.id_sucursal ?? null);
     this.observacionesRecepcion = '';
     this.itemsRecepcion = {};
 
-    if (dev.items) {
-      dev.items.forEach(it => {
+    if (rawDev.items) {
+      rawDev.items.forEach((it: any) => {
         this.itemsRecepcion[it.id_detalle_devolucion] = {
           cantidad: it.cantidad,
           condicion: 'REVENDIBLE'
@@ -590,19 +617,45 @@ export class DevolucionesComponent implements OnInit {
   // CU24W: LIQUIDACIÓN DE REEMBOLSO FINANCIERO
   // =========================================================================
 
-  abrirModalReembolso(dev: DevolucionResumen | DevolucionDetalleCompleto): void {
-    this.idDevolucionReembolso = dev.id_devolucion;
-    this.codigoDevolucionReembolso = dev.codigo_devolucion;
-    this.montoReembolsoLiquidacion = dev.monto_reembolso;
+  abrirModalReembolso(dev: DevolucionResumen | DevolucionDetalleCompleto | any): void {
+    const rawDev = dev?.data || dev;
+    if (!rawDev.pago_origen && !rawDev.items) {
+      this.cargando = true;
+      this.cdr.markForCheck();
+      this.devolucionesService.obtenerDetallePersonal(
+        rawDev.id_devolucion,
+        rawDev.id_empresa || this.authService.getEffectiveCompanyId() || undefined
+      ).subscribe({
+        next: (res: any) => {
+          this.cargando = false;
+          const detalle = res?.data || res;
+          if (detalle) {
+            this.devolucionDetalle = detalle;
+            this.abrirModalReembolso(detalle);
+          }
+          this.cdr.markForCheck();
+        },
+        error: (err: any) => {
+          this.cargando = false;
+          this.mostrarToast('error', err?.error?.detail || 'No se pudo cargar el detalle para liquidar reembolso.');
+          this.cdr.markForCheck();
+        }
+      });
+      return;
+    }
+
+    this.idDevolucionReembolso = rawDev.id_devolucion;
+    this.codigoDevolucionReembolso = rawDev.codigo_devolucion;
+    this.montoReembolsoLiquidacion = rawDev.monto_reembolso;
     this.observacionesReembolso = '';
 
-    const pagoOrig = (dev as any).pago_origen;
+    const pagoOrig = rawDev.pago_origen;
     if (pagoOrig?.es_paypal || pagoOrig?.metodo_pago === 'PAYPAL' || (pagoOrig?.codigo_transaccion && pagoOrig.codigo_transaccion.length > 10)) {
       this.esPagoPayPalOriginal = true;
       this.idCapturaPayPalOriginal = pagoOrig?.codigo_transaccion || '';
       this.metodoReembolso = 'PAYPAL';
       this.referenciaReembolso = this.idCapturaPayPalOriginal ? `PAYPAL-${this.idCapturaPayPalOriginal}` : 'PAYPAL_REFUND';
-    } else if (dev.tipo_resolucion === 'SALDO_A_FAVOR') {
+    } else if (rawDev.tipo_resolucion === 'SALDO_A_FAVOR') {
       this.esPagoPayPalOriginal = false;
       this.idCapturaPayPalOriginal = '';
       this.metodoReembolso = 'SALDO_A_FAVOR';

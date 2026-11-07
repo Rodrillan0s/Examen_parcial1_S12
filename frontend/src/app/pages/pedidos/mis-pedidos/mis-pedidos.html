@@ -334,6 +334,15 @@
               <span>Pagar</span>
             </button>
 
+            <!-- Botón Cancelar si está pendiente de pago -->
+            <button *ngIf="p.estado_pago === 'PENDIENTE' && (p.estado === 'PENDIENTE_PAGO' || p.estado === 'REGISTRADO')"
+                    (click)="abrirModalCancelar(p)"
+                    class="px-3 py-2 rounded-xl border border-rose-500/30 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 text-xs font-semibold flex items-center space-x-1 cursor-pointer transition-colors shrink-0"
+                    title="Cancelar pedido y liberar prendas">
+              <span>✕</span>
+              <span>Cancelar</span>
+            </button>
+
             <!-- Botón Comprobante si está pagado -->
             <button *ngIf="p.estado_pago === 'PAGADO'"
                     (click)="descargarComprobante(p.id_pedido)"
@@ -351,6 +360,20 @@
           </div>
         </div>
 
+      </div>
+
+      <!-- Recordatorio de Pago / Reserva Temporal de Stock -->
+      <div *ngIf="p.estado_pago === 'PENDIENTE' && (p.estado === 'PENDIENTE_PAGO' || p.estado === 'REGISTRADO')"
+           class="mt-3 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-300 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+        <div class="flex items-center space-x-2">
+          <span>⏰</span>
+          <span class="text-[11px] font-medium leading-tight">
+            Tus prendas están reservadas temporalmente en inventario (48h de tolerancia). Completa tu pago para despachar tu pedido.
+          </span>
+        </div>
+        <span *ngIf="p.modalidad_compra === 'RETIRO_SUCURSAL'" class="text-[10px] font-bold font-mono px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-800 dark:text-amber-200 shrink-0">
+          🏬 Retiro en tienda disponible
+        </span>
       </div>
 
     </div>
@@ -1266,5 +1289,54 @@
     </div>
   </div>
 
+  <!-- ========================================================================= -->
+  <!-- MODAL DE CANCELACIÓN DE PEDIDO (CU11 / CU12)                              -->
+  <!-- ========================================================================= -->
+  <div *ngIf="mostrarModalCancelar && pedidoACancelar"
+       class="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+    <div (click)="cerrarModalCancelar()" class="fixed inset-0 -z-10 cursor-pointer"></div>
+    <div class="relative w-full max-w-md rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 shadow-2xl space-y-4 text-left animate-slide-up">
+      
+      <div class="flex items-center space-x-3 text-rose-600 dark:text-rose-400">
+        <span class="text-2xl">⚠️</span>
+        <div>
+          <h3 class="text-base font-serif font-bold text-zinc-900 dark:text-white">
+            ¿Cancelar Pedido?
+          </h3>
+          <span class="text-[10px] font-mono font-bold tracking-wider uppercase text-zinc-400">
+            {{ pedidoACancelar.codigo_pedido }}
+          </span>
+        </div>
+      </div>
+
+      <p class="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+        Estás a punto de cancelar tu pedido de <strong class="text-zinc-800 dark:text-zinc-200">{{ pedidoACancelar.total_items }} prenda(s)</strong> por un total de <strong class="text-amber-600 dark:text-amber-400 font-mono">Bs. {{ pedidoACancelar.total | number:'1.2-2' }}</strong>.
+        Las prendas apartadas serán liberadas de inmediato para que otros clientes puedan adquirirlas.
+      </p>
+
+      <div class="space-y-1.5">
+        <label class="text-[11px] font-bold text-zinc-700 dark:text-zinc-300">Motivo de cancelación (opcional):</label>
+        <input type="text" 
+               [(ngModel)]="motivoCancelacion" 
+               placeholder="Ej: Cambio de talla, compra postergada..."
+               class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3.5 py-2 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500 shadow-2xs" />
+      </div>
+
+      <div class="flex items-center justify-end space-x-2 pt-2">
+        <button (click)="cerrarModalCancelar()" 
+                [disabled]="cancelandoPedido"
+                class="px-4 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 text-xs font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer transition-colors">
+          Mantener Pedido
+        </button>
+        <button (click)="confirmarCancelarPedido()" 
+                [disabled]="cancelandoPedido"
+                class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all shadow-md flex items-center space-x-1.5 cursor-pointer disabled:opacity-50">
+          <span *ngIf="cancelandoPedido" class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+          <span>{{ cancelandoPedido ? 'Cancelando...' : 'Sí, Cancelar Pedido' }}</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
 
 </div>

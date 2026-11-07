@@ -99,6 +99,55 @@ def obtener_sesion_activa_usuario(id_usuario: int, id_sucursal: Optional[int] = 
     finally:
         db.close_connection()
 
+def obtener_sesion_caja_por_id(id_sesion_caja: int) -> Optional[Dict[str, Any]]:
+    """
+    Obtiene los datos base de una sesión de caja por su identificador.
+    """
+    db = PostgreSQL()
+    db.create_connection()
+    try:
+        schema = _get_schema()
+        q = f"""
+            SELECT 
+                s.id_sesion_caja,
+                s.id_caja,
+                s.id_usuario,
+                s.id_sucursal,
+                s.id_empresa,
+                s.fecha_apertura,
+                s.fecha_cierre,
+                s.monto_inicial,
+                s.estado,
+                s.observacion_apertura,
+                c.codigo_caja,
+                c.nombre AS nombre_caja,
+                suc.nombre AS nombre_sucursal
+            FROM {schema}.t_caja_sesion s
+            JOIN {schema}.t_caja c ON c.id_caja = s.id_caja
+            JOIN {schema}.t_sucursal suc ON suc.id_sucursal = s.id_sucursal
+            WHERE s.id_sesion_caja = %s;
+        """
+        row = db.execute_query(q, (id_sesion_caja,), fetchone=True)
+        if not row:
+            return None
+        return {
+            "id_sesion_caja": row[0],
+            "id_caja": row[1],
+            "id_usuario": row[2],
+            "id_sucursal": row[3],
+            "id_empresa": row[4],
+            "fecha_apertura": row[5].isoformat() if row[5] else None,
+            "fecha_cierre": row[6].isoformat() if row[6] else None,
+            "monto_inicial": float(row[7]) if row[7] is not None else 0.0,
+            "estado": row[8],
+            "observacion_apertura": row[9],
+            "codigo_caja": row[10],
+            "nombre_caja": row[11],
+            "nombre_sucursal": row[12]
+        }
+    finally:
+        db.close_connection()
+
 def obtener_caja_disponible_sucursal(id_sucursal: int, id_empresa: int) -> Dict[str, Any]:
     """
     Retorna la caja principal de la sucursal o crea una si no existe.
@@ -314,7 +363,7 @@ def abrir_caja_sesion(
     finally:
         db.close_connection()
 
-def calcular_resumen_caja(id_sesion_caja: int) -> Dict[str, Any]:
+def calcular_resumen_caja(id_sesion_caja: int, id_empresa: Optional[int] = None) -> Dict[str, Any]:
     """
     Calcula el resumen financiero de la sesión de caja:
     - Fondo inicial
@@ -338,6 +387,9 @@ def calcular_resumen_caja(id_sesion_caja: int) -> Dict[str, Any]:
         s_row = db.execute_query(q_sesion, (id_sesion_caja,), fetchone=True)
         if not s_row:
             raise ValueError(f"Sesión de caja {id_sesion_caja} no encontrada.")
+
+        if id_empresa is not None and s_row[4] is not None and int(s_row[4]) != int(id_empresa):
+            raise ValueError("Acceso denegado: la sesión de caja no pertenece al tenant autorizado.")
 
         monto_inicial = float(s_row[5])
         estado_sesion = s_row[8]
@@ -505,7 +557,8 @@ def cerrar_caja_sesion(
     id_sesion_caja: int,
     id_usuario: int,
     conteo_items: List[Dict[str, Any]],
-    observacion: Optional[str] = None
+    observacion: Optional[str] = None,
+    id_empresa: Optional[int] = None
 ) -> Dict[str, Any]:
     """
     Cierra la sesión de caja mediante conteo por denominaciones.
@@ -535,7 +588,7 @@ def cerrar_caja_sesion(
     efectivo_contado = round(efectivo_contado, 2)
 
     # Calcular resumen actual
-    resumen = calcular_resumen_caja(id_sesion_caja)
+    resumen = calcular_resumen_caja(id_sesion_caja, id_empresa=id_empresa)
     if resumen["estado"] != "ABIERTA":
         raise ValueError("La sesión de caja ya se encuentra cerrada.")
 

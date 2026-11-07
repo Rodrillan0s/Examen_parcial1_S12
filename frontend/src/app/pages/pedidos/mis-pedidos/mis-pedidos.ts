@@ -59,6 +59,12 @@ export class MisPedidosComponent implements OnInit {
   cargandoDetalle: boolean = false;
   descargandoPdfId: number | null = null;
 
+  // Modal Cancelar Pedido (CU11 / CU12)
+  mostrarModalCancelar: boolean = false;
+  pedidoACancelar: PedidoResumen | null = null;
+  motivoCancelacion: string = '';
+  cancelandoPedido: boolean = false;
+
   // --- CU25W: Mis Devoluciones Solicitadas ---
   misDevoluciones: DevolucionResumen[] = [];
   totalDevoluciones: number = 0;
@@ -202,6 +208,43 @@ export class MisPedidosComponent implements OnInit {
     this.mostrarModalDetalle = false;
     this.pedidoDetalle = null;
     this.cdr.markForCheck();
+  }
+
+  abrirModalCancelar(pedido: PedidoResumen): void {
+    this.pedidoACancelar = pedido;
+    this.motivoCancelacion = '';
+    this.mostrarModalCancelar = true;
+    this.cdr.markForCheck();
+  }
+
+  cerrarModalCancelar(): void {
+    this.mostrarModalCancelar = false;
+    this.pedidoACancelar = null;
+    this.motivoCancelacion = '';
+    this.cdr.markForCheck();
+  }
+
+  confirmarCancelarPedido(): void {
+    if (!this.pedidoACancelar) return;
+    this.cancelandoPedido = true;
+    this.cdr.markForCheck();
+
+    const motivo = this.motivoCancelacion.trim() || 'Cancelado por el cliente desde su perfil';
+    this.pedidoService.cancelarPedido(this.pedidoACancelar.id_pedido, motivo, this.pedidoACancelar.id_empresa).subscribe({
+      next: () => {
+        this.cancelandoPedido = false;
+        this.mostrarModalCancelar = false;
+        const cod = this.pedidoACancelar?.codigo_pedido;
+        this.pedidoACancelar = null;
+        this.mostrarToast('exito', `El pedido ${cod} ha sido cancelado y sus prendas han sido liberadas a stock disponible.`);
+        this.cargarPedidos(this.paginaActual);
+      },
+      error: (err) => {
+        this.cancelandoPedido = false;
+        this.mostrarToast('error', err?.error?.detail || 'No se pudo cancelar el pedido.');
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   irAPagar(idPedido: number): void {

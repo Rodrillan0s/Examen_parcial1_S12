@@ -20,10 +20,33 @@ def construir_consulta_reporte(
     filtros = request.get("filtros") or {}
     group_by = request.get("groupBy")
     order_by = request.get("orderBy")
+
+    # Normalización de sinónimos entre command_parser y catálogo de vistas
+    synonyms_group = {
+        "cajero": "empleado_nombre" if definicion.get("codigo") == "rendimiento_personal" else "cajero",
+        "motivo": "motivo_general",
+        "tienda": "sucursal",
+        "sede": "sucursal",
+        "forma_pago": "metodo_pago",
+        "caja": "caja_nombre" if definicion.get("codigo") == "caja" else "caja",
+    }
+    synonyms_order = {
+        "margen_porcentual": "margen_porcentaje",
+        "utilidad_neta_bs": "margen_bruto_bs",
+        "total_devoluciones": "monto_total_devolucion",
+        "capital_estancado": "capital_estancado_bs",
+    }
+    if group_by in synonyms_group:
+        group_by = synonyms_group[group_by]
+    if order_by in synonyms_order:
+        order_by = synonyms_order[order_by]
+
     order_dir = "DESC" if str(request.get("orderDirection", "DESC")).upper() == "DESC" else "ASC"
 
     where_clauses = ["id_empresa = %s"]
     params = [id_empresa]
+
+    filtros_permitidos = set(definicion.get("filtros_permitidos", []))
 
     # Restricción de sucursal por usuario de Nivel 4/5 (Encargado/Cajero)
     if sucursales_permitidas == []:
@@ -33,43 +56,89 @@ def construir_consulta_reporte(
         where_clauses.append(f"id_sucursal IN ({placeholders})")
         params.extend(sucursales_permitidas)
 
-    # 1. Filtros de Fecha (Inclusivos)
-    if filtros.get("fechaDesde"):
-        where_clauses.append("fecha >= %s")
-        params.append(filtros["fechaDesde"])
-        
-    if filtros.get("fechaHasta"):
-        where_clauses.append("fecha <= %s")
-        params.append(filtros["fechaHasta"])
+    # 1. Filtros de Fecha (Inclusivos) — solo si el reporte lo permite
+    if "fechaDesde" in filtros_permitidos:
+        if filtros.get("fechaDesde"):
+            where_clauses.append("fecha >= %s")
+            params.append(filtros["fechaDesde"])
+        if filtros.get("fechaHasta"):
+            where_clauses.append("fecha <= %s")
+            params.append(filtros["fechaHasta"])
 
     # 2. Filtros de Entidades
-    if filtros.get("sucursalId"):
+    if filtros.get("sucursalId") and "sucursalId" in filtros_permitidos:
         where_clauses.append("id_sucursal = %s")
         params.append(filtros["sucursalId"])
 
-    if filtros.get("categoriaId") and "categoriaId" in definicion["filtros_permitidos"]:
+    if filtros.get("categoriaId") and "categoriaId" in filtros_permitidos:
         where_clauses.append("id_categoria = %s")
         params.append(filtros["categoriaId"])
 
-    if filtros.get("productoId") and "productoId" in definicion["filtros_permitidos"]:
+    if filtros.get("productoId") and "productoId" in filtros_permitidos:
         where_clauses.append("id_producto = %s")
         params.append(filtros["productoId"])
 
-    if filtros.get("metodoPagoId") and "metodoPagoId" in definicion["filtros_permitidos"]:
+    if filtros.get("metodoPagoId") and "metodoPagoId" in filtros_permitidos:
         where_clauses.append("id_metodo_pago = %s")
         params.append(filtros["metodoPagoId"])
 
-    if filtros.get("clienteId") and "clienteId" in definicion["filtros_permitidos"]:
+    if filtros.get("clienteId") and "clienteId" in filtros_permitidos:
         where_clauses.append("id_cliente = %s")
         params.append(filtros["clienteId"])
 
-    if filtros.get("estado") and str(filtros.get("estado")).upper() != "TODOS":
-        where_clauses.append("UPPER(estado) = %s")
-        params.append(str(filtros["estado"]).upper())
+    if filtros.get("usuarioId") and "usuarioId" in filtros_permitidos:
+        where_clauses.append("id_usuario = %s")
+        params.append(filtros["usuarioId"])
 
-    if filtros.get("estadoStock") and filtros.get("estadoStock") != "todos":
+    if filtros.get("cajaId") and "cajaId" in filtros_permitidos:
+        where_clauses.append("id_caja = %s")
+        params.append(filtros["cajaId"])
+
+    # Filtro de Estado adaptativo
+    estado_val = filtros.get("estado") or filtros.get("estadoVenta")
+    if estado_val and str(estado_val).upper() != "TODOS":
+        # En ventas_pendientes, la vista ya contiene exclusivamente pendientes
+        if definicion.get("codigo") == "ventas_pendientes" and str(estado_val).upper() in ("PENDIENTE", "PENDIENTES", "PENDIENTE_PAGO"):
+            pass
+        elif "estado" in filtros_permitidos or "estadoVenta" in filtros_permitidos:
+            campos_vista = [c["campo"] for c in definicion.get("columnas", [])]
+            col_estado = "estado"
+            if "estado" in campos_vista:
+                col_estado = "estado"
+            elif "estado_pago" in campos_vista:
+                col_estado = "estado_pago"
+            elif "estado_venta" in campos_vista:
+                col_estado = "estado_venta"
+            where_clauses.append(f"UPPER({col_estado}) = %s")
+            params.append(str(estado_val).upper())
+
+    if filtros.get("estadoStock") and filtros.get("estadoStock") != "todos" and "estadoStock" in filtros_permitidos:
         where_clauses.append("LOWER(estado_stock) = %s")
         params.append(str(filtros["estadoStock"]).lower())
+
+    if filtros.get("canal") and "canal" in filtros_permitidos:
+        where_clauses.append("UPPER(canal) = %s")
+        params.append(str(filtros["canal"]).upper())
+
+    if filtros.get("vigencia") and "vigencia" in filtros_permitidos:
+        where_clauses.append("UPPER(vigencia) = %s")
+        params.append(str(filtros["vigencia"]).upper())
+
+    if filtros.get("motivoGeneral") and "motivoGeneral" in filtros_permitidos:
+        where_clauses.append("UPPER(motivo_general) = %s")
+        params.append(str(filtros["motivoGeneral"]).upper())
+
+    if filtros.get("reembolsoEstado") and "reembolsoEstado" in filtros_permitidos:
+        where_clauses.append("UPPER(reembolso_estado) = %s")
+        params.append(str(filtros["reembolsoEstado"]).upper())
+
+    if filtros.get("alerta") and "alerta" in filtros_permitidos:
+        where_clauses.append("alerta_auditoria = %s")
+        params.append(filtros["alerta"])
+
+    if filtros.get("ciudad") and "ciudad" in filtros_permitidos:
+        where_clauses.append("LOWER(ciudad) LIKE LOWER(%s)")
+        params.append(f"%{filtros['ciudad']}%")
 
     where_sql = " AND ".join(where_clauses)
 

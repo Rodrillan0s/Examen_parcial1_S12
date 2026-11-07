@@ -98,7 +98,8 @@ export const routes: Routes = [
       { path: 'catalogo', loadComponent: () => import('./pages/catalogo/catalogo').then(m => m.CatalogoComponent), canActivate: [permissionGuard('productos.ver')] },
       { path: 'proveedores', loadComponent: () => import('./pages/proveedores/proveedores').then(m => m.ProveedoresComponent), canActivate: [permissionGuard('compras.ver')] },
       { path: 'atender-reserva', loadComponent: () => import('./pages/atender-reserva/atender-reserva').then(m => m.AtenderReservaComponent), canActivate: [permissionGuard('ventas.ver')] },
-      { path: 'devoluciones', loadComponent: () => import('./pages/devoluciones/devoluciones').then(m => m.DevolucionesComponent), canActivate: [permissionGuard('devoluciones.ver')] }   
+      { path: 'devoluciones', loadComponent: () => import('./pages/devoluciones/devoluciones').then(m => m.DevolucionesComponent), canActivate: [permissionGuard('devoluciones.ver')] },
+      { path: 'predicciones', loadComponent: () => import('./pages/predicciones/predicciones').then(m => m.PrediccionesComponent), canActivate: [permissionGuard(['reportes.ver', 'admin.acceder', 'ia.recomendar'])] }   
     ]
   },
 

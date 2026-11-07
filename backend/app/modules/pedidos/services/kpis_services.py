@@ -179,10 +179,10 @@ def obtener_inventario_kpis(token_data: dict, id_sucursal: int = None, id_empres
 
 
 def obtener_ventas_sucursal(token_data: dict, fecha_inicio: str = None, fecha_fin: str = None, id_empresa: int = None):
-    id_empresa_final, _ = _resolver_contexto_tenant(token_data, None, id_empresa)
+    id_empresa_final, id_sucursal_final = _resolver_contexto_tenant(token_data, None, id_empresa)
     f_ini, f_fin, _, _ = _normalizar_fechas(fecha_inicio, fecha_fin)
     
-    datos = kpis_repos.obtener_ventas_por_sucursal_db(id_empresa_final, f_ini, f_fin)
+    datos = kpis_repos.obtener_ventas_por_sucursal_db(id_empresa_final, f_ini, f_fin, id_sucursal=id_sucursal_final)
     return {
         "success": True,
         "message": "Comparativa de ventas por sucursal calculada.",

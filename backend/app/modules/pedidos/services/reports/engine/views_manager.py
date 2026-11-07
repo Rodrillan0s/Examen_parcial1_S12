@@ -1,6 +1,13 @@
 from app.core.postgres import PostgreSQL
 from app.core.config import Config
 
+def _crear_vista(db, schema: str, name: str, sql: str):
+    try:
+        db.execute_query(f"DROP VIEW IF EXISTS {schema}.{name} CASCADE;", commit=True)
+    except Exception:
+        pass
+    db.execute_query(sql, commit=True)
+
 def asegurar_vistas_sql():
     """
     Crea o actualiza las vistas SQL en PostgreSQL que sirven como
@@ -22,7 +29,7 @@ def asegurar_vistas_sql():
             s.nombre AS sucursal,
             COALESCE(c.nombre, 'No asignada') AS ciudad,
             v.id_cliente,
-            COALESCE(v.razon_social, u.nombre || ' ' || COALESCE(u.apellido, ''), 'Cliente Mostrador') AS cliente,
+            COALESCE(v.razon_social, u_cliente.nombre || ' ' || COALESCE(u_cliente.apellido, ''), u_cajero.nombre || ' (Mostrador)', 'Cliente Mostrador') AS cliente,
             COALESCE(v.nit_ci, '0') AS nit_ci,
             v.fecha_venta,
             DATE(v.fecha_venta) AS fecha,
@@ -38,11 +45,12 @@ def asegurar_vistas_sql():
         JOIN {schema}.t_sucursal s ON s.id_sucursal = v.id_sucursal
         LEFT JOIN {schema}.t_ciudad c ON c.id_ciudad = s.id_ciudad
         LEFT JOIN {schema}.t_cliente cl ON cl.id_cliente = v.id_cliente
-        LEFT JOIN {schema}.t_usuario u ON u.id_usuario = v.id_usuario OR u.id_usuario = cl.id_usuario
+        LEFT JOIN {schema}.t_usuario u_cajero ON u_cajero.id_usuario = v.id_usuario
+        LEFT JOIN {schema}.t_usuario u_cliente ON u_cliente.id_usuario = cl.id_usuario
         LEFT JOIN {schema}.t_pago p ON p.id_venta = v.id_venta
         LEFT JOIN {schema}.t_metodo_pago mp ON mp.id_metodo_pago = p.id_metodo_pago;
         """
-        db.execute_query(v_ventas, commit=True)
+        _crear_vista(db, schema, 'vw_ventas_reporte', v_ventas)
 
         # 2. Vista de Inventario
         v_inv = f"""
@@ -78,7 +86,7 @@ def asegurar_vistas_sql():
         LEFT JOIN {schema}.t_talla t ON t.id_talla = ptc.id_talla
         LEFT JOIN {schema}.t_color col ON col.id_color = ptc.id_color;
         """
-        db.execute_query(v_inv, commit=True)
+        _crear_vista(db, schema, 'vw_inventario_reporte', v_inv)
 
         # 3. Vista de Productos Vendidos
         v_prod = f"""
@@ -114,7 +122,7 @@ def asegurar_vistas_sql():
         LEFT JOIN {schema}.t_talla t ON t.id_talla = ptc.id_talla
         LEFT JOIN {schema}.t_color col ON col.id_color = ptc.id_color;
         """
-        db.execute_query(v_prod, commit=True)
+        _crear_vista(db, schema, 'vw_productos_reporte', v_prod)
 
         # 4. Vista de Pagos
         v_pagos = f"""
@@ -139,7 +147,7 @@ def asegurar_vistas_sql():
         JOIN {schema}.t_sucursal s ON s.id_sucursal = v.id_sucursal
         LEFT JOIN {schema}.t_metodo_pago mp ON mp.id_metodo_pago = p.id_metodo_pago;
         """
-        db.execute_query(v_pagos, commit=True)
+        _crear_vista(db, schema, 'vw_pagos_reporte', v_pagos)
 
         # 5. Vista de Caja
         v_caja = f"""
@@ -167,7 +175,7 @@ def asegurar_vistas_sql():
         JOIN {schema}.t_sucursal s ON s.id_sucursal = cs.id_sucursal
         LEFT JOIN {schema}.t_usuario u ON u.id_usuario = cs.id_usuario;
         """
-        db.execute_query(v_caja, commit=True)
+        _crear_vista(db, schema, 'vw_caja_reporte', v_caja)
 
         # 6. Vista de Ventas y Pedidos Pendientes de Pago (Prendas por Pagar)
         v_pendientes = f"""
@@ -181,19 +189,21 @@ def asegurar_vistas_sql():
             s.nombre AS sucursal,
             COALESCE(c.nombre, 'No asignada') AS ciudad,
             v.id_cliente,
-            COALESCE(v.razon_social, u.nombre || ' ' || COALESCE(u.apellido, ''), 'Cliente Mostrador') AS cliente,
-            COALESCE(u.telefono, 'S/N') AS telefono,
+            COALESCE(v.razon_social, u_cliente.nombre || ' ' || COALESCE(u_cliente.apellido, ''), u_cajero.nombre || ' (Mostrador)', 'Cliente Mostrador') AS cliente,
+            COALESCE(u_cliente.telefono, u_cajero.telefono, 'S/N') AS telefono,
             v.fecha_venta AS fecha_registro,
             DATE(v.fecha_venta) AS fecha,
             COALESCE(v.total, 0) AS total,
             'PRESENCIAL / POS' AS canal,
+            COALESCE(v.estado, 'PENDIENTE_PAGO') AS estado,
             COALESCE(v.estado, 'PENDIENTE_PAGO') AS estado_pago,
             (CURRENT_DATE - DATE(v.fecha_venta)) AS dias_pendiente
         FROM {schema}.t_venta v
         JOIN {schema}.t_sucursal s ON s.id_sucursal = v.id_sucursal
         LEFT JOIN {schema}.t_ciudad c ON c.id_ciudad = s.id_ciudad
         LEFT JOIN {schema}.t_cliente cl ON cl.id_cliente = v.id_cliente
-        LEFT JOIN {schema}.t_usuario u ON u.id_usuario = v.id_usuario OR u.id_usuario = cl.id_usuario
+        LEFT JOIN {schema}.t_usuario u_cajero ON u_cajero.id_usuario = v.id_usuario
+        LEFT JOIN {schema}.t_usuario u_cliente ON u_cliente.id_usuario = cl.id_usuario
         WHERE v.estado IN ('PENDIENTE_PAGO', 'PENDIENTE')
 
         UNION ALL
@@ -213,6 +223,7 @@ def asegurar_vistas_sql():
             DATE(p.fecha_pedido) AS fecha,
             COALESCE(p.total, 0) AS total,
             'TIENDA ONLINE' AS canal,
+            COALESCE(p.estado, 'PENDIENTE') AS estado,
             COALESCE(p.estado_pago, p.estado, 'PENDIENTE') AS estado_pago,
             (CURRENT_DATE - DATE(p.fecha_pedido)) AS dias_pendiente
         FROM {schema}.t_pedido p
@@ -222,7 +233,7 @@ def asegurar_vistas_sql():
         WHERE (p.estado IN ('PENDIENTE', 'PENDIENTE_PAGO') OR p.estado_pago = 'PENDIENTE')
           AND p.id_venta IS NULL;
         """
-        db.execute_query(v_pendientes, commit=True)
+        _crear_vista(db, schema, 'vw_ventas_pendientes_reporte', v_pendientes)
 
         # 7. Vista de Reservas de Prendas (Apartados por Recoger/Pagar)
         v_reservas = f"""
@@ -266,7 +277,7 @@ def asegurar_vistas_sql():
         LEFT JOIN {schema}.t_talla t ON t.id_talla = ptc.id_talla
         LEFT JOIN {schema}.t_color col ON col.id_color = ptc.id_color;
         """
-        db.execute_query(v_reservas, commit=True)
+        _crear_vista(db, schema, 'vw_reservas_reporte', v_reservas)
 
         # 8. Vista de Auditoría y Transacciones POS (Punto de Venta)
         v_pos = f"""
@@ -291,6 +302,7 @@ def asegurar_vistas_sql():
             COALESCE(v.subtotal, 0) AS subtotal,
             COALESCE(v.descuento, 0) AS descuento,
             COALESCE(v.total, 0) AS total,
+            COALESCE(v.estado, 'PAGADO') AS estado,
             COALESCE(v.estado, 'PAGADO') AS estado_venta,
             COALESCE(cs.estado, 'CERRADA') AS estado_sesion,
             p.id_pago,
@@ -312,7 +324,7 @@ def asegurar_vistas_sql():
         LEFT JOIN {schema}.t_metodo_pago mp ON mp.id_metodo_pago = p.id_metodo_pago
         WHERE v.tipo_venta = 'PRESENCIAL' OR v.id_sesion_caja IS NOT NULL;
         """
-        db.execute_query(v_pos, commit=True)
+        _crear_vista(db, schema, 'vw_pos_reporte', v_pos)
 
         # 9. Vista de Rendimiento y Comparativa de Sucursales
         v_sucursales = f"""
@@ -334,7 +346,8 @@ def asegurar_vistas_sql():
         LEFT JOIN {schema}.t_venta v ON v.id_sucursal = s.id_sucursal
         GROUP BY s.id_sucursal, s.id_empresa, s.nombre, ci.nombre, s.telefono, s.direccion, s.activo;
         """
-        db.execute_query(v_sucursales, commit=True)
+        _crear_vista(db, schema, 'vw_sucursales_reporte', v_sucursales)
+
         # 10. Vista de Devoluciones y Reclamos
         v_devoluciones = f"""
         CREATE OR REPLACE VIEW {schema}.vw_devoluciones_reporte AS
@@ -347,25 +360,24 @@ def asegurar_vistas_sql():
             COALESCE(ci.nombre, 'Santa Cruz') AS ciudad,
             d.id_venta,
             v.numero_venta,
-            d.id_cliente,
+            d.id_usuario,
             COALESCE(u.nombre || ' ' || COALESCE(u.apellido, ''), 'Cliente Aurora') AS cliente,
             COALESCE(u.telefono, 'S/N') AS telefono,
-            d.fecha_solicitud,
-            DATE(d.fecha_solicitud) AS fecha,
-            COALESCE(d.monto_total_devolucion, 0) AS monto_total_devolucion,
+            d.fecha_devolucion AS fecha_solicitud,
+            DATE(d.fecha_devolucion) AS fecha,
+            COALESCE(d.monto_reembolso, 0) AS monto_total_devolucion,
             d.estado,
-            COALESCE(d.motivo_general, 'OTRO') AS motivo_general,
-            COALESCE(d.total_articulos, 1) AS total_articulos,
-            COALESCE(d.reembolso_estado, 'NO_REQUERIDO') AS reembolso_estado,
-            COALESCE(d.reembolso_metodo, 'EFECTIVO') AS reembolso_metodo
+            COALESCE(d.motivo, 'OTRO') AS motivo_general,
+            COALESCE((SELECT SUM(dd.cantidad) FROM {schema}.t_detalle_devolucion dd WHERE dd.id_devolucion = d.id_devolucion), 1) AS total_articulos,
+            COALESCE(d.estado, 'NO_REQUERIDO') AS reembolso_estado,
+            COALESCE(d.metodo_reembolso, 'EFECTIVO') AS reembolso_metodo
         FROM {schema}.t_devolucion d
         JOIN {schema}.t_sucursal s ON s.id_sucursal = d.id_sucursal
         LEFT JOIN {schema}.t_ciudad ci ON ci.id_ciudad = s.id_ciudad
         LEFT JOIN {schema}.t_venta v ON v.id_venta = d.id_venta
-        LEFT JOIN {schema}.t_cliente cl ON cl.id_cliente = d.id_cliente
-        LEFT JOIN {schema}.t_usuario u ON u.id_usuario = cl.id_usuario;
+        LEFT JOIN {schema}.t_usuario u ON u.id_usuario = d.id_usuario;
         """
-        db.execute_query(v_devoluciones, commit=True)
+        _crear_vista(db, schema, 'vw_devoluciones_reporte', v_devoluciones)
 
         # 11. Vista de Rentabilidad y Margen
         v_rentabilidad = f"""
@@ -381,18 +393,30 @@ def asegurar_vistas_sql():
             COUNT(dv.id_detalle_venta) AS transacciones,
             SUM(dv.cantidad) AS unidades_vendidas,
             SUM(dv.subtotal) AS ingresos_totales,
-            ROUND(SUM(dv.subtotal * 0.55), 2) AS costo_estimado,
-            ROUND(SUM(dv.subtotal * 0.45), 2) AS margen_bruto_bs,
-            45.0 AS margen_porcentaje
+            ROUND(SUM(dv.cantidad * COALESCE(pp.costo_base, 0)), 2) AS costo_estimado,
+            ROUND(SUM(dv.subtotal - (dv.cantidad * COALESCE(pp.costo_base, 0))), 2) AS margen_bruto_bs,
+            ROUND(
+                CASE 
+                    WHEN SUM(dv.subtotal) > 0 THEN 
+                        ((SUM(dv.subtotal - (dv.cantidad * COALESCE(pp.costo_base, 0)))) / SUM(dv.subtotal)) * 100 
+                    ELSE 0 
+                END, 
+                2
+            ) AS margen_porcentaje
         FROM {schema}.t_detalle_venta dv
         JOIN {schema}.t_venta v ON v.id_venta = dv.id_venta
         JOIN {schema}.t_sucursal s ON s.id_sucursal = v.id_sucursal
         JOIN {schema}.t_producto_talla_color ptc ON ptc.id_variante = dv.id_variante
         JOIN {schema}.t_producto p ON p.id_producto = ptc.id_producto
         LEFT JOIN {schema}.t_categoria cat ON cat.id_categoria = p.id_categoria
+        LEFT JOIN (
+            SELECT id_producto, AVG(costo_compra) AS costo_base 
+            FROM {schema}.t_producto_proveedor 
+            GROUP BY id_producto
+        ) pp ON pp.id_producto = p.id_producto
         GROUP BY p.id_producto, p.id_empresa, p.nombre, cat.nombre, s.id_sucursal, s.nombre, DATE(v.fecha_venta);
         """
-        db.execute_query(v_rentabilidad, commit=True)
+        _crear_vista(db, schema, 'vw_rentabilidad_reporte', v_rentabilidad)
 
         # 12. Vista de Rendimiento de Cajeros y Personal
         v_personal = f"""
@@ -414,7 +438,7 @@ def asegurar_vistas_sql():
         LEFT JOIN {schema}.t_rol r ON r.id_rol = u.id_rol
         GROUP BY u.id_usuario, v.id_empresa, v.id_sucursal, s.nombre, u.nombre, u.apellido, r.nombre, DATE(v.fecha_venta);
         """
-        db.execute_query(v_personal, commit=True)
+        _crear_vista(db, schema, 'vw_rendimiento_personal_reporte', v_personal)
 
         # 13. Vista de Stock Inmovilizado / Baja Rotación
         v_inmovilizado = f"""
@@ -433,6 +457,7 @@ def asegurar_vistas_sql():
             i.stock_disponible,
             p.precio,
             ROUND(i.stock_disponible * p.precio, 2) AS capital_estancado_bs,
+            COALESCE(MAX(DATE(v.fecha_venta)), CURRENT_DATE - 45) AS fecha,
             COALESCE(MAX(DATE(v.fecha_venta)), CURRENT_DATE - 45) AS ultima_venta
         FROM {schema}.t_inventario i
         JOIN {schema}.t_sucursal s ON s.id_sucursal = i.id_sucursal
@@ -446,7 +471,7 @@ def asegurar_vistas_sql():
         WHERE i.stock_disponible > 0
         GROUP BY i.id_inventario, s.id_empresa, i.id_sucursal, s.nombre, p.id_producto, p.nombre, p.codigo_producto, cat.nombre, t.nombre, col.nombre, i.stock_disponible, p.precio;
         """
-        db.execute_query(v_inmovilizado, commit=True)
+        _crear_vista(db, schema, 'vw_stock_inmovilizado_reporte', v_inmovilizado)
 
         return True
     finally:

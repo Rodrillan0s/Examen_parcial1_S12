@@ -170,15 +170,15 @@ def migrar_pago_comprobante():
                     );
                 END IF;
 
-                -- Comprobar si el inventario cubre la venta (disponible normal o reservado)
-                IF v_stk_disp >= v_item.cantidad THEN
-                    v_nuevo_disp := v_stk_disp - v_item.cantidad;
-                    v_nuevo_res := v_stk_res;
+                -- Comprobar si el inventario cubre la venta (priorizando las reservas del pedido)
+                IF v_stk_res >= v_item.cantidad THEN
+                    v_nuevo_res := v_stk_res - v_item.cantidad;
+                    v_nuevo_disp := v_stk_disp;
                     v_nuevo_actual := v_stk_actual - v_item.cantidad;
                 ELSIF (v_stk_disp + v_stk_res) >= v_item.cantidad AND v_stk_actual >= v_item.cantidad THEN
-                    -- Se consumen las reservas existentes del cliente
-                    v_nuevo_res := GREATEST(0, v_stk_res - (v_item.cantidad - v_stk_disp));
-                    v_nuevo_disp := 0;
+                    -- Se consumen las reservas existentes del cliente y el resto de disponible
+                    v_nuevo_disp := v_stk_disp - (v_item.cantidad - v_stk_res);
+                    v_nuevo_res := 0;
                     v_nuevo_actual := v_stk_actual - v_item.cantidad;
                 ELSE
                     RETURN json_build_object(

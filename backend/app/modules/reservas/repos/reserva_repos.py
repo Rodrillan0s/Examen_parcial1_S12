@@ -713,10 +713,14 @@ def cancelar_reserva(id_reserva: int, id_usuario: int, id_empresa: int, motivo: 
         db.close_connection()
 
 
-def expirar_reservas_vencidas(id_empresa: Optional[int] = None, tolerancia_horas: int = 12) -> Dict[str, Any]:
+def expirar_reservas_vencidas(
+    id_empresa: Optional[int] = None,
+    tolerancia_horas: int = 12,
+    tolerancia_llegada_minutos: int = 60
+) -> Dict[str, Any]:
     """
     Expira automáticamente reservas en estado PENDIENTE cuya fecha_hora_visita haya superado
-    la tolerancia de inasistencia configurada (por defecto 12 horas).
+    la ventana de retención física configurada en boutique (por defecto 12 horas) y la tolerancia de llegada.
     Restaura el inventario atómicamente a stock_disponible y registra 'LIBERACION_RESERVA'.
     """
     schema = _get_schema()

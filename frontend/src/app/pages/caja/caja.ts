@@ -977,6 +977,39 @@ export class CajaComponent implements OnInit {
     this.cdr.detectChanges();
 
     try {
+      // CU38W / Validación de cuota de contingencia offline local (IndexedDB)
+      const sesionId = this.estadoCaja.sesion_activa.id_sesion_caja;
+      let posibleSobreventa = false;
+      const advertenciasCuota: string[] = [];
+
+      for (const item of this.carrito) {
+        const cuota = await this.cajaService.obtenerCuotaContingenciaLocal(sesionId, item.variante.id_variante);
+        if (cuota !== null && item.cantidad > cuota) {
+          posibleSobreventa = true;
+          advertenciasCuota.push(
+            `• ${item.productoNombre} (${item.variante.talla_nombre || 'Talla única'}/${item.variante.color_nombre || 'Color único'}): Solicitado ${item.cantidad}, Cuota autorizada ${cuota}.`
+          );
+        }
+      }
+
+      if (posibleSobreventa) {
+        const confirmar = confirm(
+          `⚠️ ALERTA DE CUOTA DE CONTINGENCIA POS:\n\n` +
+          `Las siguientes prendas superan la cuota offline autorizada para esta caja:\n\n` +
+          advertenciasCuota.join('\n') +
+          `\n\n¿Desea registrar la venta provisional de todos modos bajo observación de posible sobreventa?`
+        );
+        if (!confirmar) {
+          this.procesando = false;
+          this.cdr.detectChanges();
+          return;
+        }
+      }
+
+      const obsFinal = posibleSobreventa
+        ? `[SOBREVENTA_CONTINGENCIA] ${this.observacionesVenta.trim()}`.trim()
+        : (this.observacionesVenta.trim() || undefined);
+
       const payloadItems = this.carrito.map(item => ({
         id_variante: item.variante.id_variante,
         cantidad: item.cantidad,
@@ -995,7 +1028,7 @@ export class CajaComponent implements OnInit {
         id_sucursal: this.sucursalActiva?.id,
         items: payloadItems,
         descuento: this.descuento || 0,
-        observaciones: this.observacionesVenta.trim() || undefined,
+        observaciones: obsFinal,
         metodo_tipo: 'EFECTIVO',
         monto_recibido: Number(this.montoRecibidoEfectivo) || this.totalCarrito,
         expected_total: this.totalCarrito,

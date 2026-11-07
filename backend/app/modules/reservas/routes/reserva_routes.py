@@ -268,13 +268,18 @@ def cancelar_reserva(
 
 @router.post('/expirar-vencidas', summary="Expira reservas vencidas y libera inventario al stock disponible")
 def expirar_reservas_vencidas_endpoint(
-    tolerancia_horas: int = Query(12, ge=1, le=168, description="Horas de tolerancia tras la cita programada"),
+    tolerancia_horas: int = Query(12, ge=1, le=168, description="Ventana de retención en boutique (horas)"),
+    tolerancia_llegada_minutos: int = Query(60, ge=15, le=240, description="Minutos de cortesía para llegada a la cita"),
     id_empresa: Optional[int] = Query(None, description="Opcional: ID de la empresa a filtrar"),
     token_data: dict = Depends(verificar_token)
 ):
     try:
         empresa_id = _resolver_id_empresa_segura(token_data, id_empresa) if id_empresa else None
-        res = reserva_repos.expirar_reservas_vencidas(id_empresa=empresa_id, tolerancia_horas=tolerancia_horas)
+        res = reserva_repos.expirar_reservas_vencidas(
+            id_empresa=empresa_id,
+            tolerancia_horas=tolerancia_horas,
+            tolerancia_llegada_minutos=tolerancia_llegada_minutos
+        )
         return {
             "success": True,
             "message": f"Se procesaron {res['reservas_expiradas']} reservas vencidas y se liberaron {res['prendas_liberadas']} prendas al inventario disponible.",

@@ -341,3 +341,34 @@ def obtener_vestidor_producto(id_producto: int):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error al consultar configuración del vestidor: {str(e)}"
         )
+
+
+@router.get('/delta', summary="Sincronización incremental del catálogo para clientes offline (PWA / POS)")
+@router.get('/productos/delta', summary="Sincronización incremental del catálogo")
+def obtener_delta_productos_catalogo(
+    updated_since: Optional[str] = Query(None, description="Cursor ISO 8601 de la última sincronización"),
+    id_empresa: Optional[int] = Query(None, description="Filtrar por tenant específico"),
+    id_sucursal: Optional[int] = Query(None, description="Filtrar stock por sucursal específica"),
+    limit: int = Query(200, ge=1, le=1000, description="Límite máximo de productos por lote")
+):
+    """
+    Retorna únicamente los productos y variantes modificados o eliminados desde 'updated_since'.
+    Permite a la PWA o aplicación POS mantener su copia IndexedDB al día con consumo mínimo de datos.
+    """
+    try:
+        resultado = catalogo_repos.obtener_delta_catalogo(
+            id_empresa=id_empresa,
+            updated_since=updated_since,
+            id_sucursal=id_sucursal,
+            limit=limit
+        )
+        return {
+            "success": True,
+            **resultado
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al sincronizar delta de catálogo: {str(e)}"
+        )
+

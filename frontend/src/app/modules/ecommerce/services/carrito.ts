@@ -226,6 +226,9 @@ export class CarritoService {
     this.inFlightLoad$ = this.http.get<{ success: boolean; data: CarritoData }>(`${this.apiUrl}`, { params }).pipe(
       tap((res) => {
         if (res && res.success) {
+          if (empId && empId > 0) {
+            this.currentEmpresaId = empId;
+          }
           this.isOfflineDraft.set(false);
           this.actualizarEstado(res.data);
           this.guardarBorradorLocal(res.data, empId);
@@ -275,6 +278,9 @@ export class CarritoService {
     return this.http.post<{ success: boolean; message: string; data: CarritoData }>(`${this.apiUrl}/items`, body).pipe(
       tap((res) => {
         if (res && res.success) {
+          if (empId && empId > 0) {
+            this.currentEmpresaId = empId;
+          }
           this.isOfflineDraft.set(false);
           this.actualizarEstado(res.data);
           this.guardarBorradorLocal(res.data, empId);
@@ -372,6 +378,9 @@ export class CarritoService {
     return this.http.put<{ success: boolean; message: string; data: CarritoData }>(`${this.apiUrl}/items/${idDetalle}`, body).pipe(
       tap((res) => {
         if (res && res.success) {
+          if (empId && empId > 0) {
+            this.currentEmpresaId = empId;
+          }
           this.isOfflineDraft.set(false);
           this.actualizarEstado(res.data);
           this.guardarBorradorLocal(res.data, empId);
@@ -443,6 +452,9 @@ export class CarritoService {
     return this.http.delete<{ success: boolean; message: string; data: CarritoData }>(`${this.apiUrl}/items/${idDetalle}`, { params }).pipe(
       tap((res) => {
         if (res && res.success) {
+          if (empId && empId > 0) {
+            this.currentEmpresaId = empId;
+          }
           this.isOfflineDraft.set(false);
           this.actualizarEstado(res.data);
           this.guardarBorradorLocal(res.data, empId);
@@ -507,6 +519,9 @@ export class CarritoService {
     return this.http.delete<{ success: boolean; message: string; data: CarritoData }>(`${this.apiUrl}/vaciar`, { params }).pipe(
       tap((res) => {
         if (res && res.success) {
+          if (empId && empId > 0) {
+            this.currentEmpresaId = empId;
+          }
           this.isOfflineDraft.set(false);
           this.actualizarEstado(res.data);
           this.guardarBorradorLocal(res.data, empId);

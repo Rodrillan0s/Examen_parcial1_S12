@@ -593,6 +593,7 @@ export class AdminLayoutComponent implements OnInit {
             permiso: 'reportes.ver' 
           },
           { nombre: 'Generador de Reportes', ruta: '/admin/reportes', permiso: 'reportes.ver' },
+          { nombre: 'Predicciones IA & Demanda', ruta: '/admin/predicciones', permiso: 'reportes.ver' },
           { nombre: 'Inteligencia de Ventas (BI)', ruta: '/admin/bi_dashboard', permiso: 'reportes.ver' }
         ]
       }

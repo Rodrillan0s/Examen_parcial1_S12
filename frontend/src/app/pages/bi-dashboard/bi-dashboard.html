@@ -44,15 +44,15 @@
     </div>
 
     <div class="bg-white dark:bg-slate-900 p-5 rounded-md shadow-sm border border-gray-200 dark:border-slate-800 border-l-4 border-l-indigo-500">
-      <p class="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-1">Emergencias Totales</p>
+      <p class="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-1">Transacciones Totales</p>
       <h3 class="text-2xl font-black text-gray-900 dark:text-white">{{ metricas.total_casos_registrados }}</h3>
-      <p class="text-[10px] text-indigo-600 mt-2 font-semibold">Incidentes transaccionales</p>
+      <p class="text-[10px] text-indigo-600 mt-2 font-semibold">Operaciones registradas</p>
     </div>
 
     <div class="bg-white dark:bg-slate-900 p-5 rounded-md shadow-sm border border-gray-200 dark:border-slate-800 border-l-4 border-l-red-500">
-      <p class="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-1">Tasa de Cancelación</p>
+      <p class="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-1">Pedidos Cancelados</p>
       <h3 class="text-2xl font-black text-gray-900 dark:text-white">{{ metricas.casos_cancelados_actuales }}</h3>
-      <p class="text-[10px] text-red-600 mt-2 font-semibold">Auxilios abortados en ruta</p>
+      <p class="text-[10px] text-red-600 mt-2 font-semibold">Anulaciones y devoluciones</p>
     </div>
 
   </div>
@@ -60,11 +60,11 @@
   <div *ngIf="!cargando && metricas" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     
     <div class="bg-white dark:bg-slate-900 rounded-md shadow-sm border border-gray-200 dark:border-slate-800 p-5">
-      <h3 class="text-sm font-bold text-gray-800 dark:text-white uppercase mb-4 border-b border-gray-100 dark:border-slate-800 pb-2">Top Fallas (Histórico)</h3>
+      <h3 class="text-sm font-bold text-gray-800 dark:text-white uppercase mb-4 border-b border-gray-100 dark:border-slate-800 pb-2">Distribución de Eventos</h3>
       <ul class="space-y-3">
         <li *ngFor="let item of metricas.incidentes_por_tipo_historico" class="flex items-center justify-between">
           <span class="text-sm text-gray-600 dark:text-slate-300 font-medium">{{ item.tipo }}</span>
-          <span class="bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200 text-xs font-bold px-2 py-1 rounded">{{ item.cantidad }} casos</span>
+          <span class="bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200 text-xs font-bold px-2 py-1 rounded">{{ item.cantidad }} registros</span>
         </li>
         <li *ngIf="metricas.incidentes_por_tipo_historico.length === 0" class="text-xs text-gray-500 italic text-center py-4">No hay datos procesados por el ETL aún.</li>
       </ul>
@@ -72,11 +72,11 @@
 
     <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-md shadow-sm border border-slate-700 p-6 text-white flex flex-col justify-center">
       <svg class="w-10 h-10 text-blue-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-      <h3 class="text-lg font-bold mb-2">Arquitectura OLAP (ETL)</h3>
+      <h3 class="text-lg font-bold mb-2">Arquitectura OLAP y Vistas Analíticas</h3>
       <p class="text-sm text-slate-300 mb-4 leading-relaxed">
-        Este dashboard no consulta la tabla transaccional directamente. Utiliza una tabla de hechos (<code class="bg-slate-800 px-1 rounded text-blue-300">fact_emergencia_analitica</code>) poblada mediante un proceso de Extracción, Transformación y Carga (ETL) para garantizar una latencia casi nula y no colapsar la base de datos principal.
+        Este dashboard consulta vistas analíticas y tablas consolidadas mediante sincronización continua, garantizando una latencia óptima y protegiendo el rendimiento de las operaciones transaccionales POS y E-commerce.
       </p>
-      <p class="text-xs text-slate-400 font-mono">Última sincronización del cubo OLAP verificada.</p>
+      <p class="text-xs text-slate-400 font-mono">Vistas analíticas de AuroraStore verificadas.</p>
     </div>
 
   </div>

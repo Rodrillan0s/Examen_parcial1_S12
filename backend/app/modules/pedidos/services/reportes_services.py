@@ -637,3 +637,77 @@ def generar_pdf_reporte_sucursales(token_data: dict, fecha_inicio: Optional[str]
     doc.build(story, canvasmaker=NumberedCanvas)
     buffer.seek(0)
     return buffer
+
+
+# ==============================================================================
+# EXPORTADORES CSV Y XLSX (CU21W)
+# ==============================================================================
+
+from app.modules.pedidos.services.reports.export_utils import exportar_a_csv, exportar_a_xlsx
+
+def generar_csv_reporte_ventas(token_data: dict, id_sucursal: Optional[int] = None, fecha_inicio: Optional[str] = None, fecha_fin: Optional[str] = None, estado: Optional[str] = None, id_metodo_pago: Optional[int] = None, id_empresa: Optional[int] = None) -> io.BytesIO:
+    id_empresa_final, id_sucursal_final = _resolver_contexto_tenant(token_data, id_sucursal, id_empresa)
+    f_ini, f_fin, _, _ = _normalizar_fechas(fecha_inicio, fecha_fin)
+    datos = reportes_repos.obtener_reporte_ventas_db(id_empresa_final, id_sucursal_final, f_ini, f_fin, estado, id_metodo_pago)
+    headers = ["N° Venta", "Fecha", "Sucursal", "Cliente", "NIT/CI", "Método Pago", "Subtotal (Bs.)", "Descuento (Bs.)", "Total (Bs.)", "Estado"]
+    keys = ["numero_venta", "fecha_formateada", "sucursal_nombre", "cliente_nombre", "nit_ci", "metodo_pago", "subtotal", "descuento", "total", "estado"]
+    return exportar_a_csv(headers, keys, datos.get("items", []))
+
+def generar_xlsx_reporte_ventas(token_data: dict, id_sucursal: Optional[int] = None, fecha_inicio: Optional[str] = None, fecha_fin: Optional[str] = None, estado: Optional[str] = None, id_metodo_pago: Optional[int] = None, id_empresa: Optional[int] = None) -> io.BytesIO:
+    id_empresa_final, id_sucursal_final = _resolver_contexto_tenant(token_data, id_sucursal, id_empresa)
+    f_ini, f_fin, _, _ = _normalizar_fechas(fecha_inicio, fecha_fin)
+    datos = reportes_repos.obtener_reporte_ventas_db(id_empresa_final, id_sucursal_final, f_ini, f_fin, estado, id_metodo_pago)
+    headers = ["N° Venta", "Fecha", "Sucursal", "Cliente", "NIT/CI", "Método Pago", "Subtotal (Bs.)", "Descuento (Bs.)", "Total (Bs.)", "Estado"]
+    keys = ["numero_venta", "fecha_formateada", "sucursal_nombre", "cliente_nombre", "nit_ci", "metodo_pago", "subtotal", "descuento", "total", "estado"]
+    tipos = ["string", "date", "string", "string", "string", "string", "currency", "currency", "currency", "badge"]
+    return exportar_a_xlsx("Reporte de Ventas", headers, keys, tipos, datos.get("items", []), datos.get("resumen"))
+
+def generar_csv_reporte_inventario(token_data: dict, id_sucursal: Optional[int] = None, id_categoria: Optional[int] = None, estado_stock: Optional[str] = None, id_empresa: Optional[int] = None) -> io.BytesIO:
+    id_empresa_final, id_sucursal_final = _resolver_contexto_tenant(token_data, id_sucursal, id_empresa)
+    datos = reportes_repos.obtener_reporte_inventario_db(id_empresa_final, id_sucursal_final, id_categoria, estado_stock)
+    headers = ["Prenda / Modelo", "SKU", "Categoría", "Talla", "Color", "Sucursal", "Stock Físico", "Reservado", "Disponible", "Mínimo", "Estado"]
+    keys = ["producto", "sku", "categoria", "talla", "color", "sucursal", "stock_actual", "stock_reservado", "stock_disponible", "stock_minimo", "estado_alerta"]
+    return exportar_a_csv(headers, keys, datos.get("items", []))
+
+def generar_xlsx_reporte_inventario(token_data: dict, id_sucursal: Optional[int] = None, id_categoria: Optional[int] = None, estado_stock: Optional[str] = None, id_empresa: Optional[int] = None) -> io.BytesIO:
+    id_empresa_final, id_sucursal_final = _resolver_contexto_tenant(token_data, id_sucursal, id_empresa)
+    datos = reportes_repos.obtener_reporte_inventario_db(id_empresa_final, id_sucursal_final, id_categoria, estado_stock)
+    headers = ["Prenda / Modelo", "SKU", "Categoría", "Talla", "Color", "Sucursal", "Stock Físico", "Reservado", "Disponible", "Mínimo", "Estado"]
+    keys = ["producto", "sku", "categoria", "talla", "color", "sucursal", "stock_actual", "stock_reservado", "stock_disponible", "stock_minimo", "estado_alerta"]
+    tipos = ["string", "string", "string", "string", "string", "string", "number", "number", "number", "number", "badge"]
+    return exportar_a_xlsx("Reporte de Inventario y Stock", headers, keys, tipos, datos.get("items", []), datos.get("resumen"))
+
+def generar_csv_reporte_productos_vendidos(token_data: dict, id_sucursal: Optional[int] = None, id_categoria: Optional[int] = None, fecha_inicio: Optional[str] = None, fecha_fin: Optional[str] = None, id_empresa: Optional[int] = None) -> io.BytesIO:
+    id_empresa_final, id_sucursal_final = _resolver_contexto_tenant(token_data, id_sucursal, id_empresa)
+    f_ini, f_fin, _, _ = _normalizar_fechas(fecha_inicio, fecha_fin)
+    datos = reportes_repos.obtener_reporte_productos_vendidos_db(id_empresa_final, id_sucursal_final, id_categoria, f_ini, f_fin)
+    headers = ["Prenda / Modelo", "SKU", "Categoría", "Talla", "Color", "Sucursal", "Unidades", "Precio (Bs.)", "Recaudación (Bs.)", "Part. %"]
+    keys = ["producto", "sku", "categoria", "talla", "color", "sucursal", "unidades_vendidas", "precio_unitario", "subtotal_ingresos", "participacion_ingresos_pct"]
+    return exportar_a_csv(headers, keys, datos.get("items", []))
+
+def generar_xlsx_reporte_productos_vendidos(token_data: dict, id_sucursal: Optional[int] = None, id_categoria: Optional[int] = None, fecha_inicio: Optional[str] = None, fecha_fin: Optional[str] = None, id_empresa: Optional[int] = None) -> io.BytesIO:
+    id_empresa_final, id_sucursal_final = _resolver_contexto_tenant(token_data, id_sucursal, id_empresa)
+    f_ini, f_fin, _, _ = _normalizar_fechas(fecha_inicio, fecha_fin)
+    datos = reportes_repos.obtener_reporte_productos_vendidos_db(id_empresa_final, id_sucursal_final, id_categoria, f_ini, f_fin)
+    headers = ["Prenda / Modelo", "SKU", "Categoría", "Talla", "Color", "Sucursal", "Unidades", "Precio (Bs.)", "Recaudación (Bs.)", "Part. %"]
+    keys = ["producto", "sku", "categoria", "talla", "color", "sucursal", "unidades_vendidas", "precio_unitario", "subtotal_ingresos", "participacion_ingresos_pct"]
+    tipos = ["string", "string", "string", "string", "string", "string", "number", "currency", "currency", "string"]
+    return exportar_a_xlsx("Reporte de Productos Vendidos", headers, keys, tipos, datos.get("items", []), datos.get("resumen"))
+
+def generar_csv_reporte_sucursales(token_data: dict, fecha_inicio: Optional[str] = None, fecha_fin: Optional[str] = None, id_empresa: Optional[int] = None) -> io.BytesIO:
+    id_empresa_final, _ = _resolver_contexto_tenant(token_data, None, id_empresa)
+    f_ini, f_fin, _, _ = _normalizar_fechas(fecha_inicio, fecha_fin)
+    datos = reportes_repos.obtener_reporte_sucursales_db(id_empresa_final, f_ini, f_fin)
+    headers = ["Sucursal", "Ciudad", "Transacciones", "Prendas", "Ticket Promedio (Bs.)", "Total Ingresos (Bs.)", "Part. %"]
+    keys = ["sucursal", "ciudad", "cantidad_ventas", "unidades_vendidas", "ticket_promedio", "total_ingresos", "participacion_ingresos_pct"]
+    return exportar_a_csv(headers, keys, datos.get("items", []))
+
+def generar_xlsx_reporte_sucursales(token_data: dict, fecha_inicio: Optional[str] = None, fecha_fin: Optional[str] = None, id_empresa: Optional[int] = None) -> io.BytesIO:
+    id_empresa_final, _ = _resolver_contexto_tenant(token_data, None, id_empresa)
+    f_ini, f_fin, _, _ = _normalizar_fechas(fecha_inicio, fecha_fin)
+    datos = reportes_repos.obtener_reporte_sucursales_db(id_empresa_final, f_ini, f_fin)
+    headers = ["Sucursal", "Ciudad", "Transacciones", "Prendas", "Ticket Promedio (Bs.)", "Total Ingresos (Bs.)", "Part. %"]
+    keys = ["sucursal", "ciudad", "cantidad_ventas", "unidades_vendidas", "ticket_promedio", "total_ingresos", "participacion_ingresos_pct"]
+    tipos = ["string", "string", "number", "number", "currency", "currency", "string"]
+    return exportar_a_xlsx("Reporte Comparativo de Sucursales", headers, keys, tipos, datos.get("items", []), datos.get("resumen"))
+

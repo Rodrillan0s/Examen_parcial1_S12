@@ -44,14 +44,23 @@ class MiniMLPreferenceEngine:
     WEIGHT_PRICE = 0.15
 
     @classmethod
-    def extraer_vector_cliente(cls, cur, id_cliente: int) -> Optional[Dict[str, Any]]:
+    def extraer_vector_cliente(cls, cur, id_cliente: int, id_empresa: Optional[int] = None) -> Optional[Dict[str, Any]]:
         """
         Extrae y pondera el vector de preferencias del cliente a partir de su
-        historial transaccional en ventas presenciales (POS) y pedidos online.
+        historial transaccional en ventas presenciales (POS) y pedidos online en el tenant.
         Aplica decaimiento temporal y frecuencias acumuladas.
         """
+        if id_empresa:
+            filtro_v = "v.id_cliente = %s AND v.estado NOT IN ('CANCELADA', 'ANULADA') AND v.id_empresa = %s"
+            filtro_ped = "ped.id_cliente = %s AND ped.estado_pago = 'PAGADO' AND ped.id_empresa = %s"
+            params_compras = (id_cliente, id_empresa, id_cliente, id_empresa)
+        else:
+            filtro_v = "v.id_cliente = %s AND v.estado NOT IN ('CANCELADA', 'ANULADA')"
+            filtro_ped = "ped.id_cliente = %s AND ped.estado_pago = 'PAGADO'"
+            params_compras = (id_cliente, id_cliente)
+
         # 1. Ventas presenciales y pedidos confirmados
-        cur.execute("""
+        cur.execute(f"""
             SELECT 
                 p.id_producto,
                 p.id_categoria,
@@ -70,7 +79,7 @@ class MiniMLPreferenceEngine:
             LEFT JOIN comercio.t_categoria c ON p.id_categoria = c.id_categoria
             LEFT JOIN comercio.t_talla t ON ptc.id_talla = t.id_talla
             LEFT JOIN comercio.t_color col ON ptc.id_color = col.id_color
-            WHERE v.id_cliente = %s AND v.estado != 'CANCELADA'
+            WHERE {filtro_v}
 
             UNION ALL
 
@@ -92,8 +101,8 @@ class MiniMLPreferenceEngine:
             LEFT JOIN comercio.t_categoria c ON p.id_categoria = c.id_categoria
             LEFT JOIN comercio.t_talla t ON ptc.id_talla = t.id_talla
             LEFT JOIN comercio.t_color col ON ptc.id_color = col.id_color
-            WHERE ped.id_cliente = %s AND ped.estado_pago = 'PAGADO';
-        """, (id_cliente, id_cliente))
+            WHERE {filtro_ped};
+        """, params_compras)
 
         compras = cur.fetchall()
         if not compras:
@@ -338,18 +347,18 @@ class MiniMLPreferenceEngine:
 def aprender_preferencias_cliente(id_cliente: int, id_empresa: int = 1) -> Dict[str, Any]:
     """
     Ejecuta el aprendizaje automático de preferencias para un cliente específico.
-    Lee su historial de compras, actualiza t_preferencia_cliente y recalcula t_recomendacion.
+    Lee su historial de compras en el tenant, actualiza t_preferencia_cliente y recalcula t_recomendacion.
     """
     conn = _get_db_connection()
     try:
         cur = conn.cursor()
-        perfil = MiniMLPreferenceEngine.extraer_vector_cliente(cur, id_cliente)
+        perfil = MiniMLPreferenceEngine.extraer_vector_cliente(cur, id_cliente, id_empresa=id_empresa)
         if not perfil:
             conn.close()
             return {
                 "success": False,
                 "id_cliente": id_cliente,
-                "mensaje": "El cliente no cuenta con compras registradas aún para inferir preferencias."
+                "mensaje": "El cliente no cuenta con compras registradas en esta tienda para inferir preferencias."
             }
 
         # 1. Actualizar preferencias aprendidas
@@ -381,7 +390,7 @@ def aprender_preferencias_cliente(id_cliente: int, id_empresa: int = 1) -> Dict[
 
 def entrenar_modelo_todos_los_clientes(id_empresa: int = 1) -> Dict[str, Any]:
     """
-    Entrena el modelo de Machine Learning en lote para todos los clientes
+    Entrena el modelo de Machine Learning en lote para los clientes del tenant
     que han realizado compras en tiendas físicas u online.
     """
     conn = _get_db_connection()
@@ -390,12 +399,12 @@ def entrenar_modelo_todos_los_clientes(id_empresa: int = 1) -> Dict[str, Any]:
         cur.execute("""
             SELECT DISTINCT id_cliente 
             FROM comercio.t_venta 
-            WHERE id_cliente IS NOT NULL
+            WHERE id_cliente IS NOT NULL AND id_empresa = %s
             UNION
             SELECT DISTINCT id_cliente
             FROM comercio.t_pedido
-            WHERE id_cliente IS NOT NULL;
-        """)
+            WHERE id_cliente IS NOT NULL AND id_empresa = %s;
+        """, (id_empresa, id_empresa))
         clientes = [r[0] for r in cur.fetchall()]
 
         procesados = 0
@@ -403,7 +412,7 @@ def entrenar_modelo_todos_los_clientes(id_empresa: int = 1) -> Dict[str, Any]:
 
         for id_cli in clientes:
             try:
-                perfil = MiniMLPreferenceEngine.extraer_vector_cliente(cur, id_cli)
+                perfil = MiniMLPreferenceEngine.extraer_vector_cliente(cur, id_cli, id_empresa=id_empresa)
                 if perfil:
                     MiniMLPreferenceEngine.actualizar_tabla_preferencias(cur, perfil)
                     recs = MiniMLPreferenceEngine.generar_recomendaciones(cur, perfil, id_empresa=id_empresa)
@@ -468,7 +477,7 @@ def obtener_recomendaciones_cliente(id_usuario: Optional[int], id_empresa: int =
                 return _formatear_recomendaciones(cur, rows)
 
             # Si no había en t_recomendacion, intentar aprender sobre la marcha
-            perfil = MiniMLPreferenceEngine.extraer_vector_cliente(cur, id_cliente)
+            perfil = MiniMLPreferenceEngine.extraer_vector_cliente(cur, id_cliente, id_empresa=id_empresa)
             if perfil:
                 MiniMLPreferenceEngine.actualizar_tabla_preferencias(cur, perfil)
                 recs = MiniMLPreferenceEngine.generar_recomendaciones(cur, perfil, id_empresa=id_empresa, top_k=limite)

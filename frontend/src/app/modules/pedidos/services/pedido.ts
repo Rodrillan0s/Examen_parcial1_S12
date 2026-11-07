@@ -167,5 +167,15 @@ export class PedidoService {
     }
     return this.http.get<RespuestaPaginadaPedidos>(`${this.apiUrl}`, { params });
   }
+
+  cancelarPedido(idPedido: number, motivo?: string, idEmpresa?: number): Observable<{ success: boolean; message: string; data: any }> {
+    let params = new HttpParams();
+    if (idEmpresa) params = params.set('id_empresa', idEmpresa.toString());
+    return this.http.post<{ success: boolean; message: string; data: any }>(
+      `${this.apiUrl}/${idPedido}/cancelar`,
+      { motivo: motivo || 'Cancelado por el cliente' },
+      { params }
+    );
+  }
 }
 

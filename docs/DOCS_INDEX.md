@@ -28,6 +28,7 @@ A partir de noviembre de 2026, la documentación sigue una política de **segmen
 | :--- | :--- | :--- |
 | **`PWA_ARQUITECTURA.md`** | `docs/architecture/` | Arquitectura completa de la Progressive Web App: Service Worker v2.0.0, IndexedDB v4, matriz offline vs online, bloqueos transaccionales y cola de sincronización. |
 | **`POS_CONTINGENCIA_OFFLINE.md`** | `docs/architecture/` | Estrategia de contingencia offline POS (Migración 008): cuotas de inventario aisladas por sesión de caja, sincronización prioritaria P0, prevención de sobreventa y comprobantes provisionales. |
+| **`VENTAS_STOREFRONT_ARQUITECTURA.md`** | `docs/architecture/` | Arquitectura de ventas y pedidos online: reserva atómica de inventario, máquina de estados ortogonales, cancelación de órdenes, expiración 48h y desacoplamiento de reservas. |
 | **`RESERVAS_ARQUITECTURA.md`** | `docs/architecture/` | Especificación de citas de probador en boutique, caja registradora única compartida con POS, y algoritmo atómico de expiración automática. |
 | **`ITER1_CONTEXT.md`** | `docs/` | Modelos de datos base de la Iteración 1, entidades de usuario, sucursales y principios de aislamiento multi-tenant. |
 | **`ITER1_API.md`** | `docs/` | Catálogo de contratos REST de la Iteración 1, parámetros de consulta y códigos de respuesta. |
@@ -41,6 +42,8 @@ A partir de noviembre de 2026, la documentación sigue una política de **segmen
 | **`CHANGELOG_PWA.md`** | `docs/changes/` | Service Worker, IndexedDB v4, suite `test_pwa_iter2.py` (8/8 superadas), detección de red y sincronización en reconexión. |
 | **`CHANGELOG_POS.md`** | `docs/changes/` | Contingencia offline POS (Migración 008), cuotas de sesión, sincronización P0, suite `test_pos_contingencia.py` (5/5 superadas) y comprobantes provisionales. |
 | **`CHANGELOG_RESERVAS.md`** | `docs/changes/` | Saneamiento de reservas, 46 prendas liberadas a stock disponible, expiración automática JIT y validación de horarios comerciales. |
+| **`CHANGELOG_VENTAS_RESERVAS.md`** | `docs/changes/` | Alineación funcional pedidos vs reservas, reserva atómica de stock en órdenes online, cancelación voluntaria, consumo de stock pre-reservado y suite de pruebas `test_ventas_reservas_flujo.py`. |
+| **`CHANGELOG_PAGOS_INVENTARIO.md`** | `docs/changes/` | Conciliación de inventario (Migración 009 reversible, 5.690 registros sincronizados), pre-vuelo de pasarelas de pago y resolución de error 409 en captura PayPal. |
 | **`CHANGELOG_DEVOLUCIONES.md`** | `docs/changes/` | Flujos de mostrador: cambio de prenda, saldo a favor y reembolso de dinero; buscador multicriterio y cumplimiento Ley 453. |
 | **`CHANGELOG_SAAS.md`** | `docs/changes/` | Contratación autónoma, resolución storefront multitenant, pasarela PayPal Sandbox, modal de suscripciones y políticas de cancelación. |
 | **`AGENT_CHANGES.md`** | `docs/` | *(Histórico / Solo Lectura)* Bitácora original acumulada con las 92 entradas iniciales del proyecto. |

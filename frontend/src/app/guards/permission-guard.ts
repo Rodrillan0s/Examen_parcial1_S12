@@ -37,14 +37,14 @@ export function permissionGuard(requiredPermissions: string | string[]): CanActi
         return true;
       }
       const destino = authService.getDefaultRouteForUser(usuario);
-      return router.parseUrl(destino === state.url ? '/' : destino);
+      return destino === state.url ? false : router.parseUrl(destino);
     }
 
     return authService.refrescarPermisos().pipe(
       map(() => {
         if (authService.hasAnyPermission(permissionsToCheck)) return true;
         const destino = authService.getDefaultRouteForUser(authService.obtenerUsuario() || usuario);
-        return router.parseUrl(destino === state.url ? '/' : destino);
+        return destino === state.url ? false : router.parseUrl(destino);
       }),
       catchError((err) => {
         console.warn('[PermissionGuard] No se pudieron refrescar permisos en tiempo real, validando con sesión local:', err);
@@ -52,7 +52,7 @@ export function permissionGuard(requiredPermissions: string | string[]): CanActi
           return of(true);
         }
         const destino = authService.getDefaultRouteForUser(usuario);
-        return of(router.parseUrl(destino === state.url ? '/' : destino));
+        return of(destino === state.url ? false : router.parseUrl(destino));
       })
     );
   };

@@ -439,3 +439,27 @@ def generar_pdf_reporte_dinamico(
     doc.build(story, canvasmaker=NumberedCanvas)
     buffer.seek(0)
     return buffer
+
+
+def generar_csv_reporte_dinamico(datos_reporte: Dict[str, Any]) -> io.BytesIO:
+    """Exporta el reporte dinámico a CSV con codificación UTF-8 BOM."""
+    from app.modules.pedidos.services.reports.export_utils import exportar_a_csv
+    columnas = datos_reporte.get("columnas", [])
+    headers = [c.get("titulo", c.get("campo", "")) for c in columnas]
+    keys = [c.get("campo", "") for c in columnas]
+    filas = datos_reporte.get("filas", [])
+    return exportar_a_csv(headers, keys, filas)
+
+
+def generar_xlsx_reporte_dinamico(datos_reporte: Dict[str, Any]) -> io.BytesIO:
+    """Exporta el reporte dinámico a XLSX con formato institucional y resumen."""
+    from app.modules.pedidos.services.reports.export_utils import exportar_a_xlsx
+    columnas = datos_reporte.get("columnas", [])
+    headers = [c.get("titulo", c.get("campo", "")) for c in columnas]
+    keys = [c.get("campo", "") for c in columnas]
+    tipos = [c.get("tipo", "string") for c in columnas]
+    filas = datos_reporte.get("filas", [])
+    resumen = datos_reporte.get("resumen", {})
+    reporte_nombre = datos_reporte.get("reporte", {}).get("nombre", "Reporte Dinámico")
+    return exportar_a_xlsx(reporte_nombre, headers, keys, tipos, filas, resumen)
+

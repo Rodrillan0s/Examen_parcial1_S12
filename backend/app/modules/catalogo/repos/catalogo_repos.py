@@ -1753,3 +1753,123 @@ def obtener_disponibilidad_variante_sucursales(
 
     finally:
         db.close_connection()
+
+
+def obtener_delta_catalogo(
+    id_empresa: Optional[int] = None,
+    updated_since: Optional[str] = None,
+    id_sucursal: Optional[int] = None,
+    limit: int = 200
+) -> Dict[str, Any]:
+    """
+    Recupera el conjunto incremental de productos y variantes modificados desde 'updated_since'.
+    Garantiza una sincronización ligera y eficiente para clientes offline (PWA / POS).
+    """
+    from datetime import datetime, timezone
+    db = PostgreSQL()
+    db.create_connection()
+    try:
+        schema = _get_schema()
+        cursor_nuevo = datetime.now(timezone.utc).isoformat()
+        
+        condiciones = ["1=1"]
+        params = []
+        if id_empresa:
+            condiciones.append("p.id_empresa = %s")
+            params.append(id_empresa)
+            
+        if updated_since:
+            condiciones.append("(p.updated_at >= %s OR p.fecha_registro >= %s)")
+            params.extend([updated_since, updated_since])
+            
+        cond_sql = " AND ".join(condiciones)
+        
+        q_modificados = f"""
+            SELECT 
+                p.id_producto,
+                p.id_empresa,
+                p.nombre,
+                p.codigo_producto,
+                p.precio,
+                p.imagen_url,
+                p.activo,
+                p.updated_at,
+                c.nombre AS categoria_nombre
+            FROM {schema}.t_producto p
+            LEFT JOIN {schema}.t_categoria c ON c.id_categoria = p.id_categoria
+            WHERE {cond_sql}
+            ORDER BY p.updated_at DESC
+            LIMIT %s;
+        """
+        params.append(limit)
+        rows = db.execute_query(q_modificados, tuple(params), fetchall=True) or []
+        
+        items = []
+        for r in rows:
+            prod_id = r[0]
+            suc_clause = "AND i.id_sucursal = %s" if id_sucursal else ""
+            q_vars = f"""
+                SELECT 
+                    ptc.id_variante,
+                    ptc.sku,
+                    COALESCE(ptc.precio, %s) AS precio,
+                    t.nombre AS talla,
+                    col.nombre AS color,
+                    COALESCE(SUM(i.stock_disponible), 0) AS stock_disponible
+                FROM {schema}.t_producto_talla_color ptc
+                LEFT JOIN {schema}.t_talla t ON t.id_talla = ptc.id_talla
+                LEFT JOIN {schema}.t_color col ON col.id_color = ptc.id_color
+                LEFT JOIN {schema}.t_inventario i ON i.id_variante = ptc.id_variante {suc_clause}
+                WHERE ptc.id_producto = %s AND ptc.activo = TRUE
+                GROUP BY ptc.id_variante, ptc.sku, ptc.precio, t.nombre, col.nombre;
+            """
+            v_params = [r[4]]
+            if id_sucursal:
+                v_params.append(id_sucursal)
+            v_params.append(prod_id)
+            var_rows = db.execute_query(q_vars, tuple(v_params), fetchall=True) or []
+            
+            variantes = [{
+                "id_variante": vr[0],
+                "sku": vr[1],
+                "precio": float(vr[2] or 0),
+                "talla": vr[3] or "",
+                "color": vr[4] or "",
+                "stock_disponible": int(vr[5] or 0)
+            } for vr in var_rows]
+            
+            items.append({
+                "id_producto": r[0],
+                "id_empresa": r[1],
+                "nombre": r[2],
+                "codigo_producto": r[3],
+                "precio": float(r[4] or 0),
+                "imagen_url": r[5] or "",
+                "activo": bool(r[6]),
+                "updated_at": r[7].isoformat() if r[7] else None,
+                "categoria": r[8] or "",
+                "variantes": variantes
+            })
+            
+        eliminados = []
+        if updated_since:
+            emp_clause = "AND id_empresa = %s" if id_empresa else ""
+            q_del = f"""
+                SELECT id_producto 
+                FROM {schema}.t_producto 
+                WHERE activo = FALSE AND updated_at >= %s {emp_clause};
+            """
+            d_params = [updated_since]
+            if id_empresa:
+                d_params.append(id_empresa)
+            del_rows = db.execute_query(q_del, tuple(d_params), fetchall=True) or []
+            eliminados = [dr[0] for dr in del_rows]
+            
+        return {
+            "cursor": cursor_nuevo,
+            "total_modificados": len(items),
+            "modificados": items,
+            "eliminados_ids": eliminados
+        }
+    finally:
+        db.close_connection()

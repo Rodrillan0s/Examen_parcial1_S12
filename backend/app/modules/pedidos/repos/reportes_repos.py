@@ -72,6 +72,8 @@ def obtener_reporte_ventas_db(
         if estado and estado.upper() != 'TODOS':
             where.append("UPPER(v.estado) = %s")
             params.append(estado.upper())
+        else:
+            where.append("UPPER(COALESCE(v.estado, '')) NOT IN ('ANULADA', 'CANCELADA')")
         if id_metodo_pago:
             where.append("p.id_metodo_pago = %s")
             params.append(id_metodo_pago)
@@ -275,7 +277,7 @@ def obtener_reporte_productos_vendidos_db(
     db.create_connection()
     try:
         schema = _get_schema()
-        where = ["1=1"]
+        where = ["1=1", "UPPER(COALESCE(v.estado, '')) NOT IN ('ANULADA', 'CANCELADA')"]
         params = []
 
         if id_empresa:
@@ -370,7 +372,7 @@ def obtener_reporte_sucursales_db(
     db.create_connection()
     try:
         schema = _get_schema()
-        v_where = ["1=1"]
+        v_where = ["1=1", "UPPER(COALESCE(v.estado, '')) NOT IN ('ANULADA', 'CANCELADA')"]
         params = []
 
         if id_empresa:

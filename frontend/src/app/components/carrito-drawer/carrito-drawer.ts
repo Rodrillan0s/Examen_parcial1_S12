@@ -42,6 +42,11 @@ export class CarritoDrawerComponent implements OnInit {
     this.authService.openAuthModal('login');
   }
 
+  agendarCitaParaPrenda(item: ItemCarrito): void {
+    this.cerrar();
+    this.router.navigate(['/catalogo'], { queryParams: { producto: item.id_producto, modo: 'cita' } });
+  }
+
   incrementarCantidad(item: ItemCarrito): void {
     if (item.cantidad >= item.stock_disponible) {
       this.mostrarError(`Solo quedan ${item.stock_disponible} unidades disponibles.`);

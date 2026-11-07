@@ -8,6 +8,21 @@
 
 ---
 
+## [2026-11-07] — Corrección de Consulta de Reembolso PayPal (IndexError: tuple index out of range)
+- **Causa del Error 500:** En `devoluciones_repos.py` (`procesar_reembolso_devolucion`), la consulta SQL para recuperar la transacción original de PayPal contenía comodines `%` no escapados en literales SQL (`LIKE 'CAPTURE-%' OR p.codigo_transaccion LIKE 'ORD-%'`). El conector `psycopg2` interpreta `%` como especificador de formato, esperando parámetros adicionales y lanzando `IndexError: tuple index out of range` al recibir únicamente la tupla `(d_venta,)`.
+- **Solución Transaccional:** Se parametrizaron todos los argumentos dinámicos y comodines como `%s` pasando `(d_venta, 'PAYPAL', 'CAPTURE-%', 'ORD-%')`. Además, se reforzó el manejo de respuesta de `reembolsar_captura_paypal` para capturar el `refund_id` correctamente y asignar referencias de auditoría estructuradas (`PAYPAL-REFUND-...` o `PAYPAL-SIM-...`) en caso de entornos sandbox/simulados, permitiendo la culminación exitosa a estado `COMPLETADA`.
+
+---
+
+## [2026-11-07] — Corrección de Deserialización de Detalle y Activación de Botón de Recepción Física
+- **Causa del Modal Vacío:** El endpoint backend `GET /api/devoluciones/{id}` retorna el diccionario del detalle directamente (sin envoltura `{ success: true, data: { ... } }`). En `devoluciones.ts`, `abrirDetalle()` asignaba `this.devolucionDetalle = res.data`, resultando en `undefined` y dejando el modal sin contenido (solo cabecera y pie).
+- **Solución Deserialización:** Se actualizó `abrirDetalle()`, `abrirModalRecepcion()` y `abrirModalReembolso()` para asignar de forma robusta `res?.data || res`.
+- **Causa de Botón Oculto:** En la plantilla `devoluciones.html`, las acciones `📦 Recepcionar` verificaban estrictamente `dev.estado === 'APROBADA'`, mientras que el backend asigna el estado legal canónico `PENDIENTE_RECEPCION` tras el dictamen favorable del encargado.
+- **Solución Transición:** Se actualizó la directiva `*ngIf` en la tabla principal y en el modal de detalle para mostrar el botón de recepción tanto en `APROBADA` como en `PENDIENTE_RECEPCION`.
+- **Auto-carga en Recepción desde Tabla:** Si se presiona `📦 Recepcionar` desde la lista resumen, `abrirModalRecepcion()` consulta automáticamente el detalle con sus prendas (`items`) antes de abrir el modal de inspección.
+
+---
+
 ## [2026-11-06] — Diseño de Mostrador, Búsqueda Multicriterio y Cumplimiento Ley 453
 
 ### 1. Diagnóstico del Flujo Anterior

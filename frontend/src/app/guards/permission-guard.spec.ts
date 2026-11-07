@@ -9,7 +9,9 @@ import { permissionGuard } from './permission-guard';
 describe('permissionGuard: permisos vigentes', () => {
   it('cancela la navegación si el servidor falla sin entrar en un bucle de redirecciones', async () => {
     const auth = { obtenerUsuario: () => ({}), tokenExpirado: () => false,
-      refrescarPermisos: () => throwError(() => new Error('Sin conexión')) };
+      refrescarPermisos: () => throwError(() => new Error('Sin conexión')),
+      hasAnyPermission: () => false,
+      getDefaultRouteForUser: () => '/admin/suscripciones' };
     TestBed.configureTestingModule({ providers: [provideRouter([]), { provide: PLATFORM_ID, useValue: 'browser' }, { provide: AuthService, useValue: auth }] });
     const result = TestBed.runInInjectionContext(() => permissionGuard('suscripciones.ver')({} as any, { url: '/admin/suscripciones' } as any));
     expect(await firstValueFrom(result as any)).toBe(false);

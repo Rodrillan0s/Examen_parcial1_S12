@@ -40,6 +40,7 @@ export interface ProductoFashion {
 })
 export class ProductDetailModalComponent implements OnChanges, OnDestroy {
   @Input() producto: DetallePrendaCatalogo | ProductoFashion | null = null;
+  @Input() modoInicial: 'PRODUCTO' | 'AGENDAR_CITA' = 'PRODUCTO';
   @Output() close = new EventEmitter<void>();
 
   public authService = inject(AuthService);
@@ -93,7 +94,7 @@ export class ProductDetailModalComponent implements OnChanges, OnDestroy {
       this.quantity = 1;
       this.mostrarVistaRA = false;
       this.reservaExitosa = false;
-      this.vistaModal = 'PRODUCTO';
+      this.vistaModal = this.modoInicial || 'PRODUCTO';
       this.errorReserva = '';
       this.codigoReservaGenerado = '';
 
@@ -479,7 +480,9 @@ export class ProductDetailModalComponent implements OnChanges, OnDestroy {
 
     // 6. Preparar payload y ejecutar la reserva en backend
     const fechaHora = `${this.fechaReserva} ${this.horaReserva || '15:00'}`;
-    const empresaId = this.esDetalleReal(this.producto) ? this.producto.id_empresa : undefined;
+    const empresaId = this.esDetalleReal(this.producto) 
+      ? (this.producto.id_empresa || (this.producto as any).empresa_id) 
+      : ((this.producto as any)?.id_empresa || (this.producto as any)?.empresa_id || undefined);
     const esConPago = false;
     const totalPagar = 0.0;
 
@@ -599,7 +602,9 @@ export class ProductDetailModalComponent implements OnChanges, OnDestroy {
       return;
     }
 
-    const empresaId = this.esDetalleReal(this.producto) ? this.producto.id_empresa : undefined;
+    const empresaId = this.esDetalleReal(this.producto) 
+      ? (this.producto.id_empresa || (this.producto as any).empresa_id) 
+      : ((this.producto as any)?.id_empresa || (this.producto as any)?.empresa_id || undefined);
     const imgs = this.getImagenes();
     this.cargandoBolsa = true;
     this.cdr.markForCheck();

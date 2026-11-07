@@ -213,7 +213,7 @@ def calcular_y_asignar_cuotas_sesion(
         if own_conn:
             db.close_connection()
 
-def obtener_cuotas_activas_sesion(id_sesion_caja: int) -> List[Dict[str, Any]]:
+def obtener_cuotas_activas_sesion(id_sesion_caja: int, id_empresa: Optional[int] = None) -> List[Dict[str, Any]]:
     """
     Retorna el listado de cuotas de contingencia activas y disponibles para la sesión de caja,
     destinado a la descarga y cacheo local en IndexedDB.
@@ -222,6 +222,10 @@ def obtener_cuotas_activas_sesion(id_sesion_caja: int) -> List[Dict[str, Any]]:
     db.create_connection()
     try:
         schema = _get_schema()
+        emp_filter = "AND c.id_empresa = %s" if id_empresa else ""
+        params: List[Any] = [id_sesion_caja]
+        if id_empresa:
+            params.append(id_empresa)
         q = f"""
             SELECT 
                 c.id_cuota,
@@ -241,10 +245,10 @@ def obtener_cuotas_activas_sesion(id_sesion_caja: int) -> List[Dict[str, Any]]:
             FROM {schema}.t_caja_cuota_contingencia c
             JOIN {schema}.t_producto_talla_color v ON v.id_variante = c.id_variante
             JOIN {schema}.t_producto p ON p.id_producto = v.id_producto
-            WHERE c.id_sesion_caja = %s AND c.estado = 'ACTIVA'
+            WHERE c.id_sesion_caja = %s AND c.estado = 'ACTIVA' {emp_filter}
             ORDER BY p.nombre ASC, v.id_variante ASC;
         """
-        rows = db.execute_query(q, (id_sesion_caja,), fetchall=True) or []
+        rows = db.execute_query(q, tuple(params), fetchall=True) or []
         resultado = []
         for r in rows:
             resultado.append({

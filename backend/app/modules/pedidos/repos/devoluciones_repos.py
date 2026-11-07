@@ -1313,7 +1313,8 @@ def listar_devoluciones_cliente(
                     SELECT COUNT(*) 
                     FROM {schema}.t_detalle_devolucion dd 
                     WHERE dd.id_devolucion = d.id_devolucion
-                ) AS total_prendas
+                ) AS total_prendas,
+                d.id_empresa
             FROM {schema}.t_devolucion d
             LEFT JOIN {schema}.t_venta v ON v.id_venta = d.id_venta
             LEFT JOIN {schema}.t_sucursal s ON s.id_sucursal = d.id_sucursal
@@ -1435,7 +1436,8 @@ def listar_devoluciones_personal(
                     SELECT COUNT(*) 
                     FROM {schema}.t_detalle_devolucion dd 
                     WHERE dd.id_devolucion = d.id_devolucion
-                ) AS total_prendas
+                ) AS total_prendas,
+                d.id_empresa
             FROM {schema}.t_devolucion d
             LEFT JOIN {schema}.t_venta v ON v.id_venta = d.id_venta
             LEFT JOIN {schema}.t_sucursal s ON s.id_sucursal = d.id_sucursal
@@ -1469,7 +1471,8 @@ def listar_devoluciones_personal(
                 "cliente_nombre": cliente_nom,
                 "cliente_correo": r[14],
                 "revisor_nombre": revisor_nom,
-                "total_prendas": int(r[17] or 0)
+                "total_prendas": int(r[17] or 0),
+                "id_empresa": r[18]
             })
 
         return {
@@ -1676,6 +1679,7 @@ def obtener_detalle_devolucion(
             "cumple_politica": bool(row[33]),
             "excepcion_ley_453": bool(row[34]),
             "pago_origen": pago_info,
+            "total_prendas": len(items),
             "items": items
         }
     finally:
@@ -2047,18 +2051,21 @@ def registrar_reembolso_financiero(
                     SELECT p.codigo_transaccion, p.monto
                     FROM {schema}.t_pago p
                     JOIN {schema}.t_metodo_pago mp ON mp.id_metodo_pago = p.id_metodo_pago
-                    WHERE p.id_venta = %s AND (mp.tipo = 'PAYPAL' OR p.codigo_transaccion LIKE 'CAPTURE-%' OR p.codigo_transaccion LIKE 'ORD-%')
+                    WHERE p.id_venta = %s AND (mp.tipo = %s OR p.codigo_transaccion LIKE %s OR p.codigo_transaccion LIKE %s)
                     ORDER BY p.id_pago DESC LIMIT 1;
                 """
-                p_row = db.execute_query(sql_pago_pp, (d_venta,), fetchone=True)
+                p_row = db.execute_query(sql_pago_pp, (d_venta, 'PAYPAL', 'CAPTURE-%', 'ORD-%'), fetchone=True)
                 if p_row and p_row[0]:
                     capture_id = p_row[0]
                     try:
                         from app.modules.ecommerce.services.paypal_service import reembolsar_captura_paypal, TASA_CAMBIO_BOB_USD
                         monto_usd = round(monto_float / TASA_CAMBIO_BOB_USD, 2)
                         res_pp = reembolsar_captura_paypal(capture_id=capture_id, monto_usd=monto_usd, nota=f"Reembolso devolución {d_cod}")
-                        ref_pp = res_pp.get("id") or capture_id
-                        referencia_reembolso = f"PAYPAL-REFUND-{ref_pp}"
+                        if res_pp and res_pp.get("success"):
+                            ref_pp = res_pp.get("refund_id") or res_pp.get("id") or capture_id
+                            referencia_reembolso = f"PAYPAL-REFUND-{ref_pp}"
+                        else:
+                            referencia_reembolso = referencia_reembolso or f"PAYPAL-SIM-{capture_id}"
                     except Exception as pe:
                         # Si es entorno sandbox local o captura simulada, persistir referencia estructurada
                         referencia_reembolso = referencia_reembolso or f"PAYPAL-SIM-{capture_id}"

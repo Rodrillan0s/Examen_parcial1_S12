@@ -176,7 +176,7 @@ def ejecutar_confirmacion_pago(
         if not items:
             raise HTTPException(409, 'El pedido no tiene prendas verificables.')
         totals, positions = lock_items(db,schema,order[0],items,order[1])
-        if any(totals[v] > positions[v][3] for v in totals):
+        if any(totals[v] > (positions[v][2] + positions[v][3]) for v in totals):
             raise HTTPException(409, 'Stock insuficiente para confirmar el pedido.')
         q = f"""
             SELECT {schema}.fn_confirmar_pago_pedido(
@@ -241,5 +241,22 @@ def obtener_venta_por_pedido(id_pedido: int) -> Optional[Dict[str, Any]]:
         if not row or not row[0]:
             return None
         return {"id_venta": row[0]}
+    finally:
+        db.close_connection()
+
+def validar_integridad_inventario_pedido(id_pedido: int, id_sucursal: int, id_empresa: int, items: List[Dict[str, Any]]) -> None:
+    """
+    Pre-vuelo de seguridad atómico: comprueba la integridad matemática y pertenencia
+    del inventario antes de disparar llamadas irreversibles de cobro en pasarelas externas.
+    """
+    if not items:
+        raise HTTPException(409, 'El pedido no tiene prendas verificables.')
+    db = PostgreSQL()
+    db.create_connection()
+    try:
+        schema = _get_schema()
+        totals, positions = lock_items(db, schema, id_sucursal, items, id_empresa)
+        if any(totals[v] > (positions[v][2] + positions[v][3]) for v in totals):
+            raise HTTPException(409, 'Stock insuficiente para confirmar el pedido.')
     finally:
         db.close_connection()

@@ -4,7 +4,7 @@ Lógica de negocio, orquestación de permisos, auditoría en t_bitacora y multit
 """
 from typing import Optional, Dict, Any, List
 from fastapi import HTTPException, status
-from app.core.tenant_guard import resolver_tenant_operacion, obtener_sucursales_autorizadas, obtener_alcance_usuario
+from app.core.tenant_guard import resolver_tenant_operacion, obtener_sucursales_autorizadas, obtener_alcance_usuario, es_administrador_global
 from app.core.security import tiene_permiso
 from app.modules.admin.repos.bitacora_repos import registrar_evento_db
 from app.modules.pedidos.repos import devoluciones_repos
@@ -24,6 +24,8 @@ def _require_permission(token_data, permission):
 def _authorize_return(id_devolucion, datos, token_data, permission):
     _require_permission(token_data, permission)
     tenant, branch, sale_branch = devoluciones_repos.contexto_devolucion(id_devolucion)
+    if es_administrador_global(token_data):
+        return tenant
     effective = resolver_tenant_operacion(token_data, datos.get('id_empresa') or tenant)
     if effective != tenant:
         raise HTTPException(403, 'Devolución ajena al tenant autorizado.')
@@ -302,8 +304,13 @@ def consultar_detalle_devolucion(
     id_usuario = token_data.get('nro_usuario') or token_data.get('id_usuario')
 
     if es_personal:
-        id_empresa = resolver_tenant_operacion(token_data, id_empresa_solicitado)
-        sucursales = obtener_sucursales_autorizadas(token_data)
+        if es_administrador_global(token_data):
+            tenant, _, _ = devoluciones_repos.contexto_devolucion(id_devolucion)
+            id_empresa = tenant
+            sucursales = None
+        else:
+            id_empresa = resolver_tenant_operacion(token_data, id_empresa_solicitado)
+            sucursales = obtener_sucursales_autorizadas(token_data)
     else:
         id_empresa = id_empresa_solicitado
         sucursales = None

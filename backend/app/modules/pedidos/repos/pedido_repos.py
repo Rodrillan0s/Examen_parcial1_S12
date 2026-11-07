@@ -1,9 +1,12 @@
 import uuid
+import logging
 from datetime import datetime
 from typing import Optional, Dict, Any, List
 from app.core.postgres import PostgreSQL, atomic
 from app.core.config import Config
 from app.modules.ecommerce.repos.carrito_repos import obtener_o_crear_cliente
+
+logger = logging.getLogger(__name__)
 
 def _get_schema() -> str:
     return Config.SCHEMA or 'comercio'
@@ -111,7 +114,8 @@ def validar_y_crear_pedido(id_usuario: int, id_empresa: int, datos: Dict[str, An
     Crea un nuevo pedido formal a partir del carrito activo del cliente.
     Realiza la re-validación completa en tiempo real de productos, variantes,
     pertenencia al Tenant y stock disponible antes de persistir la orden.
-    El inventario NO se descuenta en este punto (permanece inalterado hasta W27/W28).
+    El inventario se reserva atómicamente en t_inventario (stock_reservado += cant, stock_disponible -= cant)
+    para proteger la orden contra sobreventas mientras se encuentra en estado PENDIENTE_PAGO.
     """
     schema = _get_schema()
 
@@ -203,15 +207,11 @@ def validar_y_crear_pedido(id_usuario: int, id_empresa: int, datos: Dict[str, An
         crossed = db.execute_query(f'''SELECT 1 FROM {schema}.t_detalle_carrito d
             JOIN {schema}.t_producto_talla_color v ON v.id_variante=d.id_variante
             JOIN {schema}.t_producto p ON p.id_producto=v.id_producto
-            JOIN {schema}.t_talla t ON t.id_talla=v.id_talla
-            JOIN {schema}.t_color c ON c.id_color=v.id_color
-            WHERE d.id_carrito=%s AND (p.id_empresa<>%s OR
-                (t.id_empresa IS NOT NULL AND t.id_empresa<>p.id_empresa) OR
-                (c.id_empresa IS NOT NULL AND c.id_empresa<>p.id_empresa)) LIMIT 1''',
-            (id_carrito,id_empresa), fetchone=True)
+            WHERE d.id_carrito=%s AND p.id_empresa<>%s LIMIT 1''',
+            (id_carrito, id_empresa), fetchone=True)
         if crossed:
             from fastapi import HTTPException
-            raise HTTPException(403, 'Carrito con prendas o catálogos de otra empresa; no se creó el pedido.')
+            raise HTTPException(403, 'Carrito con prendas de otra empresa; no se creó el pedido.')
         if not items_cart:
             raise ValueError("Tu bolsa de compras se encuentra vacía. Agrega prendas antes de proceder al checkout.")
 
@@ -355,8 +355,51 @@ def validar_y_crear_pedido(id_usuario: int, id_empresa: int, datos: Dict[str, An
         id_pedido = ped_res[0]
         fecha_pedido = ped_res[1]
 
-        # 9. Insertar líneas en t_detalle_pedido conservando el precio unitario histórico
+        # 9. Reservar stock atómicamente en t_inventario e insertar líneas en t_detalle_pedido
         for it in items_a_guardar:
+            # Bloquear la posición de inventario en la sucursal elegida
+            q_lock_inv = f"""
+                SELECT id_inventario, stock_actual, stock_reservado, stock_disponible
+                FROM {schema}.t_inventario
+                WHERE id_sucursal = %s AND id_variante = %s AND estado = TRUE
+                FOR UPDATE;
+            """
+            inv_row = db.execute_query(q_lock_inv, (id_sucursal, it["id_variante"]), fetchone=True)
+            if not inv_row:
+                raise ValueError(f"No existe inventario para '{it['producto_nombre']}' en la sucursal designada.")
+
+            id_inv, s_act, s_res, s_disp = inv_row[0], inv_row[1], inv_row[2], inv_row[3]
+            if s_disp < it["cantidad"]:
+                raise ValueError(
+                    f"Stock insuficiente en la sucursal designada para '{it['producto_nombre']}' ({it['talla_nombre']} / {it['color_nombre']}). "
+                    f"Disponible: {s_disp}, solicitado: {it['cantidad']}."
+                )
+
+            nuevo_res = s_res + it["cantidad"]
+            nuevo_disp = s_disp - it["cantidad"]
+
+            q_upd_inv = f"""
+                UPDATE {schema}.t_inventario
+                SET stock_reservado = %s,
+                    stock_disponible = %s,
+                    fecha_actualizacion = CURRENT_TIMESTAMP
+                WHERE id_inventario = %s;
+            """
+            db.execute_query(q_upd_inv, (nuevo_res, nuevo_disp, id_inv), commit=True)
+
+            # Registrar movimiento de tipo RESERVA en t_movimiento_inventario
+            q_ins_mov = f"""
+                INSERT INTO {schema}.t_movimiento_inventario (
+                    id_inventario, id_usuario, tipo_movimiento, cantidad,
+                    stock_anterior, stock_nuevo, motivo, fecha_movimiento
+                ) VALUES (%s, %s, 'RESERVA', %s, %s, %s, %s, CURRENT_TIMESTAMP);
+            """
+            db.execute_query(
+                q_ins_mov,
+                (id_inv, id_usuario, it["cantidad"], s_disp, nuevo_disp, f"Reserva de stock para pedido {codigo_pedido}"),
+                commit=True
+            )
+
             q_ins_det = f"""
                 INSERT INTO {schema}.t_detalle_pedido (
                     id_pedido, id_variante, cantidad, precio_unitario, subtotal
@@ -380,6 +423,32 @@ def validar_y_crear_pedido(id_usuario: int, id_empresa: int, datos: Dict[str, An
             (id_carrito,),
             commit=True
         )
+
+        # Registrar auditoría en bitácora
+        try:
+            from app.modules.admin.repos.bitacora_repos import registrar_evento_db
+            registrar_evento_db(
+                id_usuario=id_usuario,
+                usuario_nombre=nombre_contacto,
+                usuario_email=correo_contacto,
+                id_empresa=id_empresa,
+                id_sucursal=id_sucursal,
+                modulo="PEDIDOS",
+                accion="CREAR_PEDIDO",
+                entidad="t_pedido",
+                id_entidad=str(id_pedido),
+                descripcion=f"Pedido {codigo_pedido} generado exitosamente en estado PENDIENTE_PAGO. Stock reservado ({sum(it['cantidad'] for it in items_a_guardar)} prendas).",
+                resultado="EXITO",
+                nivel="INFO",
+                ip=None,
+                user_agent=None,
+                datos_anteriores=None,
+                datos_nuevos={"codigo_pedido": codigo_pedido, "total": total_final, "modalidad": modalidad},
+                metadatos={"id_cliente": id_cliente, "items": len(items_a_guardar)},
+                request_id=None
+            )
+        except Exception:
+            pass
 
         # Confirmar transacción completa
         db.close_connection(commit=True)
@@ -568,6 +637,11 @@ def listar_pedidos_cliente(
     Soporta filtros por estado, estado de pago, rango de fechas y código de pedido,
     además de paginación y aislamiento multitenant.
     """
+    # Expiración oportunista de pedidos pendientes vencidos (+48 horas)
+    try:
+        expirar_pedidos_vencidos(id_empresa=id_empresa)
+    except Exception as e_exp:
+        logger.warning(f"[EXPIRAR PEDIDOS OPORTUNISTA] {e_exp}")
 
     db = PostgreSQL()
     db.create_connection()
@@ -734,6 +808,231 @@ def listar_pedidos_cliente(
         return {
             "total": total_pedidos,
             "data": data
+        }
+    finally:
+        db.close_connection()
+
+@atomic
+def cancelar_pedido_cliente(id_pedido: int, id_usuario: int, id_empresa: int, motivo: str = "Cancelado por el cliente") -> Dict[str, Any]:
+    """
+    Cancela un pedido en estado PENDIENTE_PAGO o REGISTRADO y libera el stock reservado en t_inventario.
+    Valida pertenencia estricta al cliente autenticado y al Tenant.
+    """
+    schema = _get_schema()
+    db = PostgreSQL()
+    db.create_connection()
+    try:
+        # 1. Bloquear cabecera de pedido y verificar pertenencia
+        q_ped = f"""
+            SELECT p.id_pedido, p.codigo_pedido, p.id_sucursal, p.estado, p.estado_pago, p.id_venta, c.id_usuario, p.id_empresa
+            FROM {schema}.t_pedido p
+            JOIN {schema}.t_cliente c ON c.id_cliente = p.id_cliente
+            WHERE p.id_pedido = %s
+            FOR UPDATE;
+        """
+        ped_row = db.execute_query(q_ped, (id_pedido,), fetchone=True)
+        if not ped_row:
+            raise ValueError("Pedido no encontrado.")
+
+        if ped_row[6] != id_usuario:
+            from fastapi import HTTPException
+            raise HTTPException(403, "No tienes permiso para gestionar este pedido.")
+
+        if ped_row[7] != id_empresa:
+            raise ValueError("El pedido no pertenece a la tienda activa.")
+
+        estado_actual = ped_row[3]
+        estado_pago = ped_row[4]
+        id_venta = ped_row[5]
+        id_sucursal = ped_row[2]
+        codigo_pedido = ped_row[1]
+
+        if estado_actual == 'CANCELADO':
+            return {
+                "id_pedido": id_pedido,
+                "codigo_pedido": codigo_pedido,
+                "estado": "CANCELADO",
+                "mensaje": "El pedido ya se encontraba cancelado previamente."
+            }
+
+        if estado_pago == 'PAGADO' or id_venta is not None:
+            raise ValueError("No se puede cancelar un pedido que ya ha sido pagado o procesado en venta. Inicie un proceso de devolución.")
+
+        if estado_actual not in ('PENDIENTE_PAGO', 'REGISTRADO'):
+            raise ValueError(f"No se puede cancelar el pedido en su estado actual ({estado_actual}).")
+
+        # 2. Obtener prendas para liberar el stock reservado
+        q_det = f"SELECT id_variante, cantidad FROM {schema}.t_detalle_pedido WHERE id_pedido = %s;"
+        items = db.execute_query(q_det, (id_pedido,), fetchall=True) or []
+
+        for it in items:
+            var_id, cant = it[0], it[1]
+            q_lock_inv = f"""
+                SELECT id_inventario, stock_reservado, stock_disponible
+                FROM {schema}.t_inventario
+                WHERE id_sucursal = %s AND id_variante = %s
+                FOR UPDATE;
+            """
+            inv_row = db.execute_query(q_lock_inv, (id_sucursal, var_id), fetchone=True)
+            if inv_row:
+                id_inv, s_res, s_disp = inv_row[0], inv_row[1], inv_row[2]
+                nuevo_res = max(0, s_res - cant)
+                nuevo_disp = s_disp + cant
+
+                q_upd_inv = f"""
+                    UPDATE {schema}.t_inventario
+                    SET stock_reservado = %s,
+                        stock_disponible = %s,
+                        fecha_actualizacion = CURRENT_TIMESTAMP
+                    WHERE id_inventario = %s;
+                """
+                db.execute_query(q_upd_inv, (nuevo_res, nuevo_disp, id_inv), commit=True)
+
+                q_ins_mov = f"""
+                    INSERT INTO {schema}.t_movimiento_inventario (
+                        id_inventario, id_usuario, tipo_movimiento, cantidad,
+                        stock_anterior, stock_nuevo, motivo, fecha_movimiento
+                    ) VALUES (%s, %s, 'LIBERACION_RESERVA', %s, %s, %s, %s, CURRENT_TIMESTAMP);
+                """
+                db.execute_query(
+                    q_ins_mov,
+                    (id_inv, id_usuario, cant, s_disp, nuevo_disp, f"Liberación de stock por cancelación de pedido {codigo_pedido}"),
+                    commit=True
+                )
+
+        # 3. Marcar el pedido como CANCELADO
+        motivo_limpio = (motivo or "Cancelado por el cliente").strip()
+        q_upd_ped = f"""
+            UPDATE {schema}.t_pedido
+            SET estado = 'CANCELADO',
+                notas_entrega = CASE 
+                    WHEN notas_entrega IS NULL OR notas_entrega = '' THEN %s 
+                    ELSE notas_entrega || ' | ' || %s 
+                END,
+                fecha_actualizacion = CURRENT_TIMESTAMP
+            WHERE id_pedido = %s;
+        """
+        nota_canc = f"[Cancelado: {motivo_limpio}]"
+        db.execute_query(q_upd_ped, (nota_canc, nota_canc, id_pedido), commit=True)
+
+        # 4. Registrar auditoría
+        try:
+            from app.modules.admin.repos.bitacora_repos import registrar_evento_db
+            registrar_evento_db(
+                id_usuario=id_usuario,
+                usuario_nombre="CLIENTE",
+                usuario_email=None,
+                id_empresa=id_empresa,
+                id_sucursal=id_sucursal,
+                modulo="PEDIDOS",
+                accion="CANCELAR_PEDIDO",
+                entidad="t_pedido",
+                id_entidad=str(id_pedido),
+                descripcion=f"Pedido {codigo_pedido} cancelado. Stock liberado a stock disponible.",
+                resultado="EXITO",
+                nivel="INFO",
+                ip=None,
+                user_agent=None,
+                datos_anteriores={"estado": estado_actual},
+                datos_nuevos={"estado": "CANCELADO", "motivo": motivo_limpio},
+                metadatos={"id_pedido": id_pedido},
+                request_id=None
+            )
+        except Exception:
+            pass
+
+        db.close_connection(commit=True)
+        return {
+            "id_pedido": id_pedido,
+            "codigo_pedido": codigo_pedido,
+            "estado": "CANCELADO",
+            "mensaje": "Pedido cancelado exitosamente y stock liberado."
+        }
+    except Exception:
+        db.close_connection(commit=False)
+        raise
+
+def expirar_pedidos_vencidos(id_empresa: Optional[int] = None, horas_tolerancia: int = 48) -> Dict[str, Any]:
+    """
+    Expira automáticamente los pedidos en PENDIENTE_PAGO sin cobro realizado tras transcurrir
+    el tiempo de tolerancia configurado (por defecto 48 horas).
+    Restaura atómicamente el stock reservado a stock disponible.
+    """
+    schema = _get_schema()
+    db = PostgreSQL()
+    db.create_connection()
+    pedidos_expirados = 0
+    prendas_liberadas = 0
+    detalles = []
+    try:
+        cur = db.conn.cursor()
+        filtro_empresa = "AND p.id_empresa = %s" if id_empresa else ""
+        q_cand = f"""
+            SELECT p.id_pedido, p.codigo_pedido, p.id_sucursal, p.id_empresa, p.id_cliente, p.fecha_pedido
+            FROM {schema}.t_pedido p
+            WHERE p.estado = 'PENDIENTE_PAGO'
+              AND p.estado_pago = 'PENDIENTE'
+              AND p.id_venta IS NULL
+              AND p.fecha_pedido < (NOW() - (%s || ' hours')::INTERVAL)
+              {filtro_empresa}
+            ORDER BY p.id_pedido ASC;
+        """
+        params = (horas_tolerancia, id_empresa) if id_empresa else (horas_tolerancia,)
+        cur.execute(q_cand, params)
+        candidatas = cur.fetchall()
+
+        for cand in candidatas:
+            ped_id, cod_ped, suc_id, emp_id, cli_id, f_ped = cand
+            try:
+                cur.execute(f"SELECT id_pedido, estado FROM {schema}.t_pedido WHERE id_pedido = %s AND estado = 'PENDIENTE_PAGO' FOR UPDATE;", (ped_id,))
+                if not cur.fetchone():
+                    continue
+
+                cur.execute(f"SELECT id_variante, cantidad FROM {schema}.t_detalle_pedido WHERE id_pedido = %s;", (ped_id,))
+                items = cur.fetchall()
+                prendas_ped = 0
+                for it in items:
+                    var_id, cant = it[0], it[1]
+                    prendas_ped += cant
+                    cur.execute(f"SELECT id_inventario, stock_reservado, stock_disponible FROM {schema}.t_inventario WHERE id_sucursal = %s AND id_variante = %s FOR UPDATE;", (suc_id, var_id))
+                    inv_row = cur.fetchone()
+                    if inv_row:
+                        i_id, s_res, s_disp = inv_row[0], inv_row[1], inv_row[2]
+                        n_res = max(0, s_res - cant)
+                        n_disp = s_disp + cant
+                        cur.execute(f"UPDATE {schema}.t_inventario SET stock_reservado = %s, stock_disponible = %s, fecha_actualizacion = CURRENT_TIMESTAMP WHERE id_inventario = %s;", (n_res, n_disp, i_id))
+                        cur.execute(f"""
+                            INSERT INTO {schema}.t_movimiento_inventario (
+                                id_inventario, id_usuario, tipo_movimiento, cantidad,
+                                stock_anterior, stock_nuevo, motivo, fecha_movimiento
+                            ) VALUES (%s, NULL, 'LIBERACION_RESERVA', %s, %s, %s, %s, CURRENT_TIMESTAMP);
+                        """, (i_id, cant, s_disp, n_disp, f"Expiración automática pedido {cod_ped} (+{horas_tolerancia}h)"))
+
+                motivo_exp = f"[Expirado automáticamente por inactividad (+{horas_tolerancia}h tras registro)]"
+                cur.execute(f"""
+                    UPDATE {schema}.t_pedido
+                    SET estado = 'CANCELADO',
+                        notas_entrega = CASE 
+                            WHEN notas_entrega IS NULL OR notas_entrega = '' THEN %s 
+                            ELSE notas_entrega || ' | ' || %s 
+                        END,
+                        fecha_actualizacion = CURRENT_TIMESTAMP
+                    WHERE id_pedido = %s;
+                """, (motivo_exp, motivo_exp, ped_id))
+
+                db.commit()
+                pedidos_expirados += 1
+                prendas_liberadas += prendas_ped
+                detalles.append({"id_pedido": ped_id, "codigo_pedido": cod_ped, "prendas_liberadas": prendas_ped})
+            except Exception as single_err:
+                db.rollback()
+                logger.error(f"[EXPIRAR PEDIDOS] Error en pedido {ped_id}: {single_err}")
+
+        return {
+            "total_candidatas": len(candidatas),
+            "pedidos_expirados": pedidos_expirados,
+            "prendas_liberadas": prendas_liberadas,
+            "detalles": detalles
         }
     finally:
         db.close_connection()

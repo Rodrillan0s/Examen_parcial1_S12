@@ -176,6 +176,7 @@ export interface DevolucionResumen {
   cumple_politica?: boolean;
   excepcion_ley_453?: boolean;
   total_prendas: number;
+  id_empresa?: number;
 }
 
 export interface DevolucionDetalleCompleto extends DevolucionResumen {

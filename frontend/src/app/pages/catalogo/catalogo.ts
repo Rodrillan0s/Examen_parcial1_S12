@@ -6,6 +6,7 @@ import { AuthService } from '../../services/auth';
 import { ThemeService } from '../../services/theme';
 import { CarritoService } from '../../services/carrito';
 import { NetworkStatusService } from '../../core/network/network-status.service';
+import { TenantContextService } from '../../services/tenant-context';
 import { 
   CatalogoPublicoService, 
   TenantPublico, 
@@ -36,6 +37,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   public themeService    = inject(ThemeService);
   public carritoService  = inject(CarritoService);
   public networkStatus   = inject(NetworkStatusService);
+  public tenantContext   = inject(TenantContextService);
   private route          = inject(ActivatedRoute);
   private cdr            = inject(ChangeDetectorRef);
   private searchTimer: any = null;
@@ -84,6 +86,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
 
   // Detalle de Prenda (Modal)
   selectedProductForModal: DetallePrendaCatalogo | null = null;
+  modoModalInicial: 'PRODUCTO' | 'AGENDAR_CITA' = 'PRODUCTO';
   cargandoDetalle: boolean = false;
   private pendingProductId: number | null = null;
 
@@ -133,6 +136,11 @@ export class CatalogoComponent implements OnInit, OnDestroy {
           this.pendingProductId = prodId;
         }
       }
+      if (params['modo'] === 'cita' || params['accion'] === 'probar') {
+        this.modoModalInicial = 'AGENDAR_CITA';
+      } else {
+        this.modoModalInicial = 'PRODUCTO';
+      }
       this.cargarTenants(initialTenantId);
     });
   }
@@ -144,18 +152,22 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   }
 
   cargarTenants(initialTenantId: number | null = null): void {
+    const tenantCtxId = this.tenantContext.idEmpresaActual();
+    const targetTenantId = initialTenantId || (tenantCtxId > 0 ? tenantCtxId : null);
+
     this.catalogoService.obtenerTenants().subscribe({
       next: (res) => {
         this.tenants = res.data || [];
         if (this.tenants.length > 0) {
-          if (initialTenantId && this.tenants.some(t => t.id_empresa === initialTenantId)) {
-            this.selectedTenantId = initialTenantId;
+          if (targetTenantId && this.tenants.some(t => t.id_empresa === targetTenantId)) {
+            this.selectedTenantId = targetTenantId;
           } else {
             this.selectedTenantId = this.tenants[0].id_empresa;
           }
           this.selectedTenant = this.tenants.find(t => t.id_empresa === this.selectedTenantId) || this.tenants[0];
           if (this.selectedTenantId) {
             this.carritoService.setEmpresaId(this.selectedTenantId);
+            this.tenantContext.cargarTenantPorId(this.selectedTenantId);
           }
           this.cargarFiltrosYProductos();
 
@@ -163,13 +175,13 @@ export class CatalogoComponent implements OnInit, OnDestroy {
             this.abrirDetalle(this.pendingProductId);
           }
         } else {
-          this.usarFallbackTenant(initialTenantId);
+          this.usarFallbackTenant(targetTenantId);
         }
         this.cdr.markForCheck();
       },
       error: (err) => {
         console.warn('Error al cargar tiendas activas, activando modo offline:', err);
-        this.usarFallbackTenant(initialTenantId);
+        this.usarFallbackTenant(targetTenantId);
         this.cdr.markForCheck();
       }
     });
@@ -188,6 +200,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
               : this.tenants[0].id_empresa;
             this.selectedTenant = this.tenants.find(t => t.id_empresa === this.selectedTenantId) || this.tenants[0];
             this.carritoService.setEmpresaId(this.selectedTenant.id_empresa);
+            this.tenantContext.cargarTenantPorId(this.selectedTenant.id_empresa);
             this.cargarFiltrosYProductos();
             return;
           }
@@ -200,6 +213,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
     this.selectedTenant = fallbackTenant;
     this.tenants = [fallbackTenant];
     this.carritoService.setEmpresaId(fallbackTenantId);
+    this.tenantContext.cargarTenantPorId(fallbackTenantId);
     this.cargarFiltrosYProductos();
   }
 
@@ -208,6 +222,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
     this.selectedTenantId = idEmpresa;
     this.selectedTenant = this.tenants.find(t => t.id_empresa === idEmpresa) || null;
     this.carritoService.setEmpresaId(idEmpresa);
+    this.tenantContext.cargarTenantPorId(idEmpresa);
     this.limpiarFiltros(false);
     this.cargarFiltrosYProductos();
     this.cdr.markForCheck();
@@ -413,6 +428,12 @@ export class CatalogoComponent implements OnInit, OnDestroy {
     return cat ? cat.nombre : '';
   }
 
+  getSucursalNombre(): string {
+    if (!this.selectedSucursal) return '';
+    const suc = this.filtrosDisponibles?.sucursales?.find(s => s.id_sucursal === this.selectedSucursal);
+    return suc ? `${suc.nombre}${suc.ciudad ? ' (' + suc.ciudad + ')' : ''}` : '';
+  }
+
   limpiarFiltros(recargar: boolean = true): void {
     this.searchQuery = '';
     this.selectedCategory = null;
@@ -467,9 +488,22 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   abrirDetalle(idProducto: number): void {
     this.cargandoDetalle = true;
     this.cdr.markForCheck();
-    this.catalogoService.obtenerDetalleProducto(idProducto, this.selectedTenantId || undefined).subscribe({
+    // Consultar detalle sin forzar id_empresa para permitir resolver prendas de cualquier tienda
+    this.catalogoService.obtenerDetalleProducto(idProducto).subscribe({
       next: (res) => {
-        this.selectedProductForModal = res.data;
+        const prod = res.data;
+        if (prod && prod.id_empresa && prod.id_empresa !== this.selectedTenantId) {
+          this.selectedTenantId = prod.id_empresa;
+          this.selectedTenant = this.tenants.find(t => t.id_empresa === prod.id_empresa) || {
+            id_empresa: prod.id_empresa,
+            nombre_empresa: prod.empresa_nombre || 'Tienda'
+          };
+          this.carritoService.setEmpresaId(prod.id_empresa);
+          this.tenantContext.cargarTenantPorId(prod.id_empresa);
+          this.limpiarFiltros(false);
+          this.cargarFiltrosYProductos();
+        }
+        this.selectedProductForModal = prod;
         this.cargandoDetalle = false;
         this.cdr.markForCheck();
       },
@@ -483,6 +517,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
 
   cerrarModalDetalle(): void {
     this.selectedProductForModal = null;
+    this.modoModalInicial = 'PRODUCTO';
     this.cdr.markForCheck();
   }
 }

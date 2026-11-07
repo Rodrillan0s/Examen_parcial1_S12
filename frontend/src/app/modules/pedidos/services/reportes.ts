@@ -238,8 +238,33 @@ export class ReportesService {
   }
 
   // ============================================================================
-  // EXPORTACIÓN A EXCEL (.XLSX) UTILIZANDO SHEETJS (XLSX)
+  // EXPORTACIÓN A EXCEL (.XLSX) Y CSV (CU21W)
   // ============================================================================
+  exportarACSV(filas: any[], nombreArchivo: string) {
+    if (!filas || !filas.length) {
+      alert('No hay datos para exportar a CSV.');
+      return;
+    }
+    const headers = Object.keys(filas[0]);
+    const csvRows = [
+      headers.join(','),
+      ...filas.map(row => headers.map(h => {
+        let val = row[h] ?? '';
+        val = String(val).replace(/"/g, '""');
+        return `"${val}"`;
+      }).join(','))
+    ];
+    const blob = new Blob(['\uFEFF' + csvRows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${nombreArchivo}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   exportarAExcel(filas: any[], nombreArchivo: string, nombreHoja: string = 'Reporte') {
     if (!filas || !filas.length) {
       alert('No hay datos para exportar a Excel.');

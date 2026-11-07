@@ -195,7 +195,7 @@ def parsear_comando_voz(comando_crudo: str, id_empresa: int = 1) -> Dict[str, An
         filtros["productoId"] = entidades["producto_id"]
     if entidades["metodo_pago_id"]:
         filtros["metodoPagoId"] = entidades["metodo_pago_id"]
-    if entidades["estado_venta"]:
+    if entidades["estado_venta"] and reporte_detectado != "ventas_pendientes":
         filtros["estado"] = entidades["estado_venta"]
     if entidades["estado_stock"]:
         filtros["estadoStock"] = entidades["estado_stock"]
