@@ -2,6 +2,8 @@ import 'dart:io';
 import 'dart:ui';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../../theme/app_theme.dart';
 import '../data/virtual_try_on_repository.dart';
 import '../domain/garment_transformer.dart';
 import '../domain/pose_processor.dart';
@@ -12,6 +14,7 @@ import 'garment_overlay.dart';
 import 'garment_selector.dart';
 import 'garment_size_selector.dart';
 import 'pose_skeleton_painter.dart';
+import 'visor_3d_widget.dart';
 
 enum VestidorStatus {
   initializing,
@@ -22,15 +25,22 @@ enum VestidorStatus {
   error,
 }
 
-/// Pantalla principal del Vestidor Virtual mediante Realidad Aumentada (M14)
+enum ModoVestidor {
+  enVivoCamara,
+  visor3d,
+}
+
+/// Pantalla principal del Vestidor Virtual Híbrido: En Vivo con Cámara + Visor 3D y ARCore
 class VestidorVirtualScreen extends StatefulWidget {
   final GarmentModel? initialGarment;
   final int? initialProductoId;
+  final bool openDirectTo3D;
 
   const VestidorVirtualScreen({
     super.key,
     this.initialGarment,
     this.initialProductoId,
+    this.openDirectTo3D = false,
   });
 
   @override
@@ -51,6 +61,7 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
   GarmentModel? _selectedGarment;
 
   VestidorStatus _status = VestidorStatus.initializing;
+  ModoVestidor _modo = ModoVestidor.enVivoCamara;
   String? _errorMessage;
 
   BodyPose? _currentBodyPose;
@@ -64,6 +75,9 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _selectedGarment = widget.initialGarment;
+    if (widget.openDirectTo3D) {
+      _modo = ModoVestidor.visor3d;
+    }
     _initialize();
   }
 
@@ -279,27 +293,30 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 1. Vista de cámara a pantalla completa
-          CameraView(controller: _cameraController),
-
-          // 2. Capa de esqueleto anatómico y puntos clave de brazos/torso
-          CustomPaint(
-            painter: PoseSkeletonPainter(
-              pose: _currentBodyPose,
-              screenSize: screenSize,
-              cameraAspectRatio: cameraAspect,
-              quadPoints: _currentTransform.quadPoints,
-              isVisible: _showSkeleton,
+          // MODO 1: En Vivo con Cámara y tracking de silueta/brazos en tiempo real
+          if (_modo == ModoVestidor.enVivoCamara) ...[
+            CameraView(controller: _cameraController),
+            CustomPaint(
+              painter: PoseSkeletonPainter(
+                pose: _currentBodyPose,
+                screenSize: screenSize,
+                cameraAspectRatio: cameraAspect,
+                quadPoints: _currentTransform.quadPoints,
+                isVisible: _showSkeleton,
+              ),
             ),
-          ),
+            GarmentOverlay(
+              garment: _selectedGarment,
+              transform: _currentTransform,
+            ),
+          ] else if (_selectedGarment != null) ...[
+            // MODO 2: Visor 3D Interactivo 360° y Proyección ARCore (Google SceneViewer)
+            Visor3dWidget(
+              garment: _selectedGarment!,
+            ),
+          ],
 
-          // 3. Capa de la prenda transformada con tracking AR
-          GarmentOverlay(
-            garment: _selectedGarment,
-            transform: _currentTransform,
-          ),
-
-          // 4. Barra superior con navegación, estado y controles
+          // Barra superior con Selector Híbrido [ En Vivo | Visor 3D & AR ] y Controles
           SafeArea(
             child: Align(
               alignment: Alignment.topCenter,
@@ -314,36 +331,37 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
                       onTap: () => Navigator.of(context).pop(),
                     ),
 
-                    // Badge de estado dinámico (indica si torso y brazos están listos)
-                    _buildStatusBadge(),
+                    // Selector Híbrido de Modo: En Vivo vs Visor 3D AR
+                    _buildModeSelector(),
 
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Botón toggle de esqueleto y puntos corporales
-                        _buildGlassIconButton(
-                          icon: _showSkeleton
-                              ? Icons.accessibility_new_rounded
-                              : Icons.accessibility_outlined,
-                          color: _showSkeleton
-                              ? const Color(0xFFF59E0B)
-                              : Colors.white,
-                          tooltip: 'Alternar esqueleto y brazos',
-                          onTap: () {
-                            setState(() {
-                              _showSkeleton = !_showSkeleton;
-                            });
-                          },
-                        ),
-                        const SizedBox(width: 8),
-
-                        // Botón alternar cámara frontal / trasera
-                        _buildGlassIconButton(
-                          icon: Icons.flip_camera_ios_rounded,
-                          onTap: _availableCameras.length > 1 ? _switchCamera : null,
-                        ),
-                      ],
-                    ),
+                    // Controles contextuales según el modo
+                    if (_modo == ModoVestidor.enVivoCamara)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildGlassIconButton(
+                            icon: _showSkeleton
+                                ? Icons.accessibility_new_rounded
+                                : Icons.accessibility_outlined,
+                            color: _showSkeleton
+                                ? const Color(0xFFF59E0B)
+                                : Colors.white,
+                            tooltip: 'Alternar esqueleto',
+                            onTap: () {
+                              setState(() {
+                                _showSkeleton = !_showSkeleton;
+                              });
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          _buildGlassIconButton(
+                            icon: Icons.flip_camera_ios_rounded,
+                            onTap: _availableCameras.length > 1 ? _switchCamera : null,
+                          ),
+                        ],
+                      )
+                    else
+                      _buildStatusBadge(),
                   ],
                 ),
               ),
@@ -428,6 +446,93 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
     );
   }
 
+  Widget _buildModeSelector() {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          padding: const EdgeInsets.all(3),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.55),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.18),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildModeTab(
+                label: 'En Vivo',
+                icon: Icons.videocam_rounded,
+                isSelected: _modo == ModoVestidor.enVivoCamara,
+                onTap: () {
+                  if (_modo != ModoVestidor.enVivoCamara) {
+                    setState(() => _modo = ModoVestidor.enVivoCamara);
+                    _startStreaming();
+                  }
+                },
+              ),
+              const SizedBox(width: 4),
+              _buildModeTab(
+                label: '3D & AR',
+                icon: Icons.view_in_ar_rounded,
+                isSelected: _modo == ModoVestidor.visor3d,
+                onTap: () {
+                  if (_modo != ModoVestidor.visor3d) {
+                    setState(() => _modo = ModoVestidor.visor3d);
+                    _stopStreaming();
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModeTab({
+    required String label,
+    required IconData icon,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? AppTheme.primaryGold : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 14,
+              color: isSelected ? const Color(0xFF0F1117) : Colors.white70,
+            ),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                color: isSelected ? const Color(0xFF0F1117) : Colors.white70,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildGlassIconButton({
     required IconData icon,
     required VoidCallback? onTap,
@@ -463,39 +568,44 @@ class _VestidorVirtualScreenState extends State<VestidorVirtualScreen>
     String text;
     Color dotColor;
 
-    switch (_status) {
-      case VestidorStatus.initializing:
-        text = 'Preparando vestidor...';
-        dotColor = const Color(0xFFF59E0B);
-        break;
-      case VestidorStatus.detecting:
-        text = 'Detectando cuerpo...';
-        dotColor = const Color(0xFF3B82F6);
-        break;
-      case VestidorStatus.bodyDetected:
-        if (_currentBodyPose != null && _currentBodyPose!.hasArms) {
-          text = 'Brazos y Torso ✓ (Talla $_selectedSize)';
-          dotColor = const Color(0xFF10B981);
-        } else if (_selectedGarment != null) {
-          text = 'Talla $_selectedSize • ${_selectedGarment!.nombre}';
-          dotColor = const Color(0xFF10B981);
-        } else {
-          text = 'Cuerpo detectado (Talla $_selectedSize)';
-          dotColor = const Color(0xFF10B981);
-        }
-        break;
-      case VestidorStatus.noBody:
-        text = 'Párate frente a la cámara';
-        dotColor = const Color(0xFFF59E0B);
-        break;
-      case VestidorStatus.loadingGarments:
-        text = 'Cargando prendas...';
-        dotColor = const Color(0xFF8B5CF6);
-        break;
-      case VestidorStatus.error:
-        text = 'Error en vestidor';
-        dotColor = const Color(0xFFEF4444);
-        break;
+    if (_modo == ModoVestidor.visor3d) {
+      text = '3D 360° • ${_selectedGarment?.nombre ?? "Prenda"}';
+      dotColor = AppTheme.primaryGold;
+    } else {
+      switch (_status) {
+        case VestidorStatus.initializing:
+          text = 'Preparando vestidor...';
+          dotColor = const Color(0xFFF59E0B);
+          break;
+        case VestidorStatus.detecting:
+          text = 'Detectando cuerpo...';
+          dotColor = const Color(0xFF3B82F6);
+          break;
+        case VestidorStatus.bodyDetected:
+          if (_currentBodyPose != null && _currentBodyPose!.hasArms) {
+            text = 'Brazos y Torso ✓ (Talla $_selectedSize)';
+            dotColor = const Color(0xFF10B981);
+          } else if (_selectedGarment != null) {
+            text = 'Talla $_selectedSize • ${_selectedGarment!.nombre}';
+            dotColor = const Color(0xFF10B981);
+          } else {
+            text = 'Cuerpo detectado (Talla $_selectedSize)';
+            dotColor = const Color(0xFF10B981);
+          }
+          break;
+        case VestidorStatus.noBody:
+          text = 'Párate frente a la cámara';
+          dotColor = const Color(0xFFF59E0B);
+          break;
+        case VestidorStatus.loadingGarments:
+          text = 'Cargando prendas...';
+          dotColor = const Color(0xFF8B5CF6);
+          break;
+        case VestidorStatus.error:
+          text = 'Error en vestidor';
+          dotColor = const Color(0xFFEF4444);
+          break;
+      }
     }
 
     return ClipRRect(

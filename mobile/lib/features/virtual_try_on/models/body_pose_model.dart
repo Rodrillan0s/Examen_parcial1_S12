@@ -3,24 +3,28 @@ import 'dart:math' as math;
 class BodyPoint {
   final double x;
   final double y;
+  final double z; // Coordenada de profundidad 3D relativa (en metros) de ML Kit
   final double confidence;
 
   const BodyPoint({
     required this.x,
     required this.y,
+    this.z = 0.0,
     required this.confidence,
   });
 
   double distanceTo(BodyPoint other) {
     final dx = x - other.x;
     final dy = y - other.y;
-    return math.sqrt(dx * dx + dy * dy);
+    final dz = z - other.z;
+    return math.sqrt(dx * dx + dy * dy + dz * dz);
   }
 
   static BodyPoint midpoint(BodyPoint a, BodyPoint b) {
     return BodyPoint(
       x: (a.x + b.x) / 2,
       y: (a.y + b.y) / 2,
+      z: (a.z + b.z) / 2,
       confidence: math.min(a.confidence, b.confidence),
     );
   }
@@ -60,8 +64,48 @@ class BodyPose {
   bool get hasShoulders =>
       leftShoulder != null &&
       rightShoulder != null &&
-      leftShoulder!.confidence >= 0.45 &&
-      rightShoulder!.confidence >= 0.45;
+      leftShoulder!.confidence > 0.4 &&
+      rightShoulder!.confidence > 0.4;
+
+  bool get hasTorso =>
+      hasShoulders &&
+      leftHip != null &&
+      rightHip != null &&
+      leftHip!.confidence > 0.3 &&
+      rightHip!.confidence > 0.3;
+
+  /// Ángulo de rotación del torso sobre el eje Y (giro lateral / perfil en radianes)
+  double get torsoYawAngle {
+    if (!hasShoulders) return 0.0;
+    final dz = rightShoulder!.z - leftShoulder!.z;
+    final dx = rightShoulder!.x - leftShoulder!.x;
+    if (dx.abs() < 0.0001) return 0.0;
+    return math.atan2(dz, dx);
+  }
+
+  /// Ángulo de inclinación hacia adelante o atrás (Pitch en radianes)
+  double get torsoPitchAngle {
+    if (!hasTorso) return 0.0;
+    final shoulderCenterZ = (leftShoulder!.z + rightShoulder!.z) / 2.0;
+    final hipCenterZ = (leftHip!.z + rightHip!.z) / 2.0;
+    final shoulderCenterY = (leftShoulder!.y + rightShoulder!.y) / 2.0;
+    final hipCenterY = (leftHip!.y + rightHip!.y) / 2.0;
+    final dz = hipCenterZ - shoulderCenterZ;
+    final dy = hipCenterY - shoulderCenterY;
+    if (dy.abs() < 0.0001) return 0.0;
+    return math.atan2(dz, dy);
+  }
+
+  /// Profundidad Z promedio del torso para estimar distancia relativa a la cámara
+  double get torsoDepthZ {
+    if (hasTorso) {
+      return (leftShoulder!.z + rightShoulder!.z + leftHip!.z + rightHip!.z) / 4.0;
+    }
+    if (hasShoulders) {
+      return (leftShoulder!.z + rightShoulder!.z) / 2.0;
+    }
+    return 0.0;
+  }
 
   bool get hasHips =>
       leftHip != null &&

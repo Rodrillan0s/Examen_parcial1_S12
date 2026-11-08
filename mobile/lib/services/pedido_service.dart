@@ -52,6 +52,9 @@ class PedidoItemModel {
   final double subtotal;
   final String? imagenUrl;
 
+  String get talla => tallaNombre;
+  String get color => colorNombre;
+
   PedidoItemModel({
     required this.idDetallePedido,
     required this.idVariante,
@@ -87,6 +90,8 @@ class PedidoItemModel {
 
 class PedidoModel {
   final int idPedido;
+  final int? idEmpresa;
+  final int? idSucursal;
   final String codigoPedido;
   final String fechaPedido;
   final String estado;
@@ -106,8 +111,12 @@ class PedidoModel {
   final int totalItems;
   final List<PedidoItemModel> items;
 
+  int get idVenta => idPedido;
+
   PedidoModel({
     required this.idPedido,
+    this.idEmpresa,
+    this.idSucursal,
     required this.codigoPedido,
     required this.fechaPedido,
     required this.estado,
@@ -132,6 +141,8 @@ class PedidoModel {
     final rawItems = (json['items'] as List<dynamic>?) ?? (json['items_resumen'] as List<dynamic>?) ?? [];
     return PedidoModel(
       idPedido: json['id_pedido'] ?? 0,
+      idEmpresa: json['id_empresa'] as int?,
+      idSucursal: json['id_sucursal'] as int?,
       codigoPedido: json['codigo_pedido'] ?? '',
       fechaPedido: json['fecha_pedido'] ?? '',
       estado: json['estado'] ?? 'PENDIENTE',

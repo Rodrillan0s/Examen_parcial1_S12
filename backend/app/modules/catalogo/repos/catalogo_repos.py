@@ -1413,10 +1413,20 @@ def _ordenar_tallas(tallas: Optional[List[str]]) -> List[str]:
         return (2, 0, t_str)
     return sorted(list(set(str(t).strip() for t in tallas if t)), key=key_fn)
 
+def _resolver_modelo_3d(custom_url: Optional[str], tipo_prenda: Optional[str]) -> str:
+    if custom_url and custom_url.strip():
+        return custom_url.strip()
+    tipo = (tipo_prenda or "TOP").upper()
+    if tipo in ("DRESS", "VESTIDO"):
+        return "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Corset/glTF-Binary/Corset.glb"
+    elif tipo in ("PANT", "PANTS", "PANTALON", "CALZADO", "ZAPATO"):
+        return "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/MaterialsVariantsShoe/glTF-Binary/MaterialsVariantsShoe.glb"
+    return "https://raw.githubusercontent.com/adrianhajdin/project_threejs_ai/main/client/public/shirt_baked.glb"
+
 def obtener_prendas_vestidor_ra(id_empresa: Optional[int] = None, tipo_prenda: Optional[str] = None) -> List[Dict[str, Any]]:
     """
     Retorna la lista de prendas activas compatibles con el Vestidor Virtual (M14),
-    incluyendo las tallas disponibles según inventario / variantes activas.
+    incluyendo modelos 3D volumétricos y tallas disponibles según inventario / variantes activas.
     """
     db = PostgreSQL()
     db.create_connection()
@@ -1450,7 +1460,8 @@ def obtener_prendas_vestidor_ra(id_empresa: Optional[int] = None, tipo_prenda: O
                         WHERE ptc.id_producto = p.id_producto AND ptc.activo = TRUE
                     ),
                     ARRAY['S', 'M', 'L']::varchar[]
-                ) AS tallas_disponibles
+                ) AS tallas_disponibles,
+                ra.modelo_3d_url
             FROM {schema}.t_producto p
             LEFT JOIN LATERAL (
                 SELECT imagen_url 
@@ -1459,20 +1470,23 @@ def obtener_prendas_vestidor_ra(id_empresa: Optional[int] = None, tipo_prenda: O
                 ORDER BY es_principal DESC, orden ASC, id_imagen ASC 
                 LIMIT 1
             ) img ON TRUE
+            LEFT JOIN {schema}.t_prenda_ra ra ON ra.id_producto = p.id_producto AND ra.estado = TRUE
             WHERE {where_clause}
             ORDER BY p.id_producto ASC;
         """
         rows = db.execute_query(q, tuple(params) if params else None, fetchall=True) or []
         resultado = []
         for r in rows:
+            tipo_ra = r[4] or "TOP"
             resultado.append({
                 "id_producto": r[0],
                 "nombre": r[1],
                 "precio": float(r[2]) if r[2] is not None else 0.0,
                 "modelo_2d_url": r[3] or r[5],
-                "tipo_prenda_ra": r[4] or "TOP",
+                "tipo_prenda_ra": tipo_ra,
                 "imagen_preview": r[5] or r[3],
-                "tallas_disponibles": _ordenar_tallas(r[6])
+                "tallas_disponibles": _ordenar_tallas(r[6]),
+                "modelo_3d_url": _resolver_modelo_3d(r[7], tipo_ra)
             })
         return resultado
     finally:
@@ -1481,7 +1495,7 @@ def obtener_prendas_vestidor_ra(id_empresa: Optional[int] = None, tipo_prenda: O
 def obtener_config_vestidor_producto(id_producto: int) -> Optional[Dict[str, Any]]:
     """
     Obtiene la configuración de vestidor virtual para una prenda específica,
-    incluyendo sus tallas disponibles.
+    incluyendo modelo 3D y tallas disponibles.
     """
     db = PostgreSQL()
     db.create_connection()
@@ -1503,22 +1517,26 @@ def obtener_config_vestidor_producto(id_producto: int) -> Optional[Dict[str, Any
                         WHERE ptc.id_producto = p.id_producto AND ptc.activo = TRUE
                     ),
                     ARRAY['S', 'M', 'L']::varchar[]
-                ) AS tallas_disponibles
+                ) AS tallas_disponibles,
+                ra.modelo_3d_url
             FROM {schema}.t_producto p
+            LEFT JOIN {schema}.t_prenda_ra ra ON ra.id_producto = p.id_producto AND ra.estado = TRUE
             WHERE p.id_producto = %s AND p.activo = TRUE
             LIMIT 1;
         """
         r = db.execute_query(q, (id_producto,), fetchone=True)
         if not r:
             return None
+        tipo_ra = r[5] or "TOP"
         return {
             "id_producto": r[0],
             "nombre": r[1],
             "precio": float(r[2]) if r[2] is not None else 0.0,
             "tiene_ra": bool(r[3]),
             "modelo_2d_url": r[4],
-            "tipo_prenda_ra": r[5] or "TOP",
-            "tallas_disponibles": _ordenar_tallas(r[6])
+            "tipo_prenda_ra": tipo_ra,
+            "tallas_disponibles": _ordenar_tallas(r[6]),
+            "modelo_3d_url": _resolver_modelo_3d(r[7], tipo_ra)
         }
     finally:
         db.close_connection()

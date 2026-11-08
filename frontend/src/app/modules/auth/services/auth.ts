@@ -733,10 +733,24 @@ export class AuthService {
     if (sel && sel.id_empresa) return sel.id_empresa;
     if (typeof localStorage !== 'undefined') {
       try {
+        const stored = localStorage.getItem('aurora_selected_company');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed && parsed.id_empresa) return Number(parsed.id_empresa);
+        }
+      } catch {}
+      try {
         const stored = localStorage.getItem('tenant_seleccionado');
         if (stored) {
           const parsed = JSON.parse(stored);
           if (parsed && parsed.id_empresa) return Number(parsed.id_empresa);
+        }
+      } catch {}
+      try {
+        const stored = localStorage.getItem('aurora_active_tenant_id');
+        if (stored) {
+          const id = Number(stored);
+          if (id > 0) return id;
         }
       } catch {}
     }

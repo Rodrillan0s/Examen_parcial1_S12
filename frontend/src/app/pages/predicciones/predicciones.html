@@ -41,10 +41,13 @@
   <div class="flex flex-wrap items-center justify-between gap-4 mb-6 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
     <div class="flex flex-wrap items-center gap-3">
       <!-- Selector de Tienda / Tenant para Administrador Global -->
-      <div *ngIf="tenants && tenants.length > 0" class="flex items-center gap-2">
+      <div *ngIf="authService.isGlobalAdmin()" class="flex items-center gap-2">
         <label class="text-xs font-bold text-slate-500 uppercase">Tienda:</label>
         <select [(ngModel)]="empresaSeleccionada" (change)="onCambiarEmpresa()"
           class="bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <option *ngIf="!tenants || tenants.length === 0" [ngValue]="empresaSeleccionada">
+            🏢 {{ authService.getEffectiveCompanyName() }}
+          </option>
           <option *ngFor="let t of tenants" [ngValue]="t.id_empresa">🏢 {{ t.nombre_empresa }}</option>
         </select>
       </div>

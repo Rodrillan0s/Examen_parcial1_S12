@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'core/connectivity/connectivity_service.dart';
+import 'core/sync/sync_coordinator.dart';
+import 'core/tenant/tenant_context_manager.dart';
 import 'services/asistente_service.dart';
 import 'services/auth_provider.dart';
 import 'services/carrito_service.dart';
 import 'services/catalogo_service.dart';
+import 'services/devoluciones_service.dart';
 import 'services/pago_service.dart';
 import 'services/pedido_service.dart';
 import 'services/reserva_service.dart';
@@ -31,25 +35,52 @@ void main() async {
   final authProvider = AuthProvider();
   await authProvider.verificarSesion();
 
-  runApp(AuroraStoreApp(authProvider: authProvider));
+  // Inicializar subsistemas de red, multitenant y sincronización
+  final tenantManager = TenantContextManager();
+  final connectivity = ConnectivityService();
+  final syncCoordinator = SyncCoordinator();
+
+  await tenantManager.inicializar();
+  connectivity.inicializar();
+  syncCoordinator.inicializar();
+
+  runApp(AuroraStoreApp(
+    authProvider: authProvider,
+    tenantManager: tenantManager,
+    connectivity: connectivity,
+    syncCoordinator: syncCoordinator,
+  ));
 }
 
 class AuroraStoreApp extends StatelessWidget {
   final AuthProvider? authProvider;
+  final TenantContextManager? tenantManager;
+  final ConnectivityService? connectivity;
+  final SyncCoordinator? syncCoordinator;
 
-  const AuroraStoreApp({super.key, this.authProvider});
+  const AuroraStoreApp({
+    super.key,
+    this.authProvider,
+    this.tenantManager,
+    this.connectivity,
+    this.syncCoordinator,
+  });
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: authProvider ?? AuthProvider()),
+        ChangeNotifierProvider.value(value: tenantManager ?? TenantContextManager()),
+        ChangeNotifierProvider.value(value: connectivity ?? ConnectivityService()),
+        ChangeNotifierProvider.value(value: syncCoordinator ?? SyncCoordinator()),
         ChangeNotifierProvider(create: (_) => CatalogoService()),
         ChangeNotifierProvider(create: (_) => CarritoService()),
         ChangeNotifierProvider(create: (_) => PedidoService()),
         ChangeNotifierProvider(create: (_) => ReservaService()),
         ChangeNotifierProvider(create: (_) => PagoService()),
         ChangeNotifierProvider(create: (_) => AsistenteService()),
+        ChangeNotifierProvider(create: (_) => DevolucionesService()),
       ],
       child: MaterialApp(
         title: 'Aurora Store',

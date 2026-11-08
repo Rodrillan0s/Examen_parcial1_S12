@@ -30,7 +30,6 @@ class _CrearReservaModalState extends State<CrearReservaModal> {
   DisponibilidadSucursalModel? _sucursalSeleccionada;
   DateTime _fechaSeleccionada = DateTime.now().add(const Duration(days: 1));
   TimeOfDay _horaSeleccionada = const TimeOfDay(hour: 15, minute: 0);
-  bool _conPago = false;
 
   bool _cargandoSucursales = true;
   bool _enviando = false;
@@ -165,8 +164,8 @@ class _CrearReservaModalState extends State<CrearReservaModal> {
         ],
         observaciones: _observacionesController.text.trim(),
         idEmpresa: widget.prenda.idEmpresa,
-        conPago: _conPago,
-        montoPagado: _conPago ? widget.prenda.precio : 0.0,
+        conPago: false,
+        montoPagado: 0.0,
       );
 
       if (mounted) {
@@ -177,15 +176,15 @@ class _CrearReservaModalState extends State<CrearReservaModal> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             title: Row(
               children: [
-                Icon(
-                  _conPago ? Icons.verified : Icons.event_available,
+                const Icon(
+                  Icons.event_available,
                   color: AppTheme.primaryGold,
                   size: 26,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    _conPago ? '¡Prenda Asegurada!' : '¡Cita Confirmada!',
+                    '¡Cita Confirmada!',
                     style: GoogleFonts.playfairDisplay(fontSize: 19, fontWeight: FontWeight.w700),
                   ),
                 ),
@@ -196,9 +195,7 @@ class _CrearReservaModalState extends State<CrearReservaModal> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _conPago
-                      ? 'Tu reserva ha sido pagada y asegurada con éxito:'
-                      : 'Tu reserva ha sido agendada exitosamente:',
+                  'Tu cita en probador ha sido agendada exitosamente (100% gratuita):',
                   style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textSecondary),
                 ),
                 const SizedBox(height: 8),
@@ -230,26 +227,24 @@ class _CrearReservaModalState extends State<CrearReservaModal> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: _conPago ? AppTheme.successLight : AppTheme.surfaceVariant,
+                    color: AppTheme.surfaceVariant,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     children: [
-                      Icon(
-                        _conPago ? Icons.check_circle_outline : Icons.info_outline,
+                      const Icon(
+                        Icons.info_outline,
                         size: 16,
-                        color: _conPago ? AppTheme.success : AppTheme.primaryGold,
+                        color: AppTheme.primaryGold,
                       ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          _conPago
-                              ? 'Prenda pre-pagada. Lista en probador VIP para retiro prioritario.'
-                              : 'Sin costo previo. Pruébatela en tienda y abona solo si decides comprarla.',
+                          'Sin costo previo. Pruébatela en tienda con tranquilidad y abona únicamente si decides comprarla.',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 11,
                             fontWeight: FontWeight.w500,
-                            color: _conPago ? AppTheme.success : AppTheme.textPrimary,
+                            color: AppTheme.textPrimary,
                           ),
                         ),
                       ),
@@ -668,140 +663,71 @@ class _CrearReservaModalState extends State<CrearReservaModal> {
 
                       const SizedBox(height: 20),
 
-                      // Modalidad de Reserva: Sin Pago previo vs Pago Anticipado Online
-                      Text(
-                        'Modalidad de Reserva',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.textPrimary,
+                      // Modalidad de Reserva: Cita 100% Gratuita en Probador Privado
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: AppTheme.goldLight.withValues(alpha: 0.6),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: AppTheme.primaryGold.withValues(alpha: 0.35),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          // Opción 1: Sin Pago Previo
-                          Expanded(
-                            child: InkWell(
-                              onTap: () => setState(() => _conPago = false),
-                              borderRadius: BorderRadius.circular(14),
-                              child: Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: !_conPago
-                                      ? AppTheme.goldLight
-                                      : AppTheme.surface,
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(
-                                    color: !_conPago
-                                        ? AppTheme.primaryGold
-                                        : AppTheme.border,
-                                    width: !_conPago ? 1.5 : 1,
-                                  ),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        const Icon(
-                                          Icons.storefront_outlined,
-                                          size: 20,
-                                          color: AppTheme.primaryGold,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(
+                              Icons.room_service_outlined,
+                              color: AppTheme.primaryGold,
+                              size: 22,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text(
+                                        'Cita Presencial en Probador VIP',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppTheme.textPrimary,
                                         ),
-                                        if (!_conPago)
-                                          const Icon(
-                                            Icons.check_circle,
-                                            size: 16,
-                                            color: AppTheme.primaryGold,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: AppTheme.success.withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          '100% GRATIS',
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w800,
+                                            color: AppTheme.success,
                                           ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Cita Gratuita',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w700,
+                                        ),
                                       ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    'Apartamos tu prenda en la sucursal seleccionada para que te la pruebes cómodamente sin costo previo ni compromiso de compra.',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 11,
+                                      color: AppTheme.textSecondary,
+                                      height: 1.35,
                                     ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'Pruébatela y abona en tienda',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 10,
-                                        color: AppTheme.textSecondary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 10),
-                          // Opción 2: Pago Anticipado Online
-                          Expanded(
-                            child: InkWell(
-                              onTap: () => setState(() => _conPago = true),
-                              borderRadius: BorderRadius.circular(14),
-                              child: Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: _conPago
-                                      ? AppTheme.goldLight
-                                      : AppTheme.surface,
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(
-                                    color: _conPago
-                                        ? AppTheme.primaryGold
-                                        : AppTheme.border,
-                                    width: _conPago ? 1.5 : 1,
-                                  ),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        const Icon(
-                                          Icons.verified_outlined,
-                                          size: 20,
-                                          color: AppTheme.primaryGold,
-                                        ),
-                                        if (_conPago)
-                                          const Icon(
-                                            Icons.check_circle,
-                                            size: 16,
-                                            color: AppTheme.primaryGold,
-                                          ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Pago Anticipado',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'Asegura la prenda (Bs. ${widget.prenda.precio.toStringAsFixed(2)})',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 10,
-                                        color: AppTheme.textSecondary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 20),
 

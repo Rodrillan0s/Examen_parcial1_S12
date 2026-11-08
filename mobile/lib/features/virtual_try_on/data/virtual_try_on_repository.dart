@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import '../../../core/tenant/tenant_context_manager.dart';
 import '../../../services/api_client.dart';
 import '../models/garment_model.dart';
 
@@ -12,6 +13,10 @@ class VirtualTryOnRepository {
   Future<List<GarmentModel>> getPrendasCompatibles({GarmentType? tipo}) async {
     try {
       final Map<String, dynamic> queryParams = {};
+      final tenantId = TenantContextManager().idEmpresaActiva;
+      if (tenantId != null) {
+        queryParams['id_empresa'] = tenantId;
+      }
       if (tipo != null) {
         queryParams['tipo_prenda'] = tipo.name.toUpperCase();
       }

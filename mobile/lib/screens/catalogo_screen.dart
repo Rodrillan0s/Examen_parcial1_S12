@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../config/app_config.dart';
+import '../core/tenant/tenant_context_manager.dart';
 import '../services/catalogo_service.dart';
 import '../services/carrito_service.dart';
 import '../theme/app_theme.dart';
@@ -54,13 +55,12 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
   Future<void> _cambiarTienda(TenantModel tenant) async {
     final catalogo = context.read<CatalogoService>();
     final carrito = context.read<CarritoService>();
-    final anterior = catalogo.tenantSeleccionado?.idEmpresa;
-    if (anterior != null &&
-        anterior != tenant.idEmpresa &&
-        carrito.carrito != null) {
-      await carrito.vaciarCarrito(idEmpresa: anterior);
-    }
+    final tenantManager = context.read<TenantContextManager>();
+
+    await tenantManager.seleccionarTenant(tenant);
     await catalogo.seleccionarTenant(tenant);
+    // Preservar borradores: cargar bolsa de la nueva tienda sin vaciar la anterior
+    await carrito.cargarCarrito(idEmpresa: tenant.idEmpresa);
   }
 
   void _mostrarSelectorTienda(BuildContext context, CatalogoService catalogo,

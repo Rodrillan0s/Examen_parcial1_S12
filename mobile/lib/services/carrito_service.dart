@@ -1,6 +1,26 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'api_client.dart';
+import 'token_storage.dart';
+import '../core/database/database_helper.dart';
+import '../core/sync/sync_coordinator.dart';
+import '../core/tenant/tenant_context_manager.dart';
+
+class DifferentStoreCartException implements Exception {
+  final String existingTenantName;
+  final int existingTenantId;
+  final int newTenantId;
+
+  DifferentStoreCartException({
+    required this.existingTenantName,
+    required this.existingTenantId,
+    required this.newTenantId,
+  });
+
+  @override
+  String toString() =>
+      'Tu bolsa actual contiene prendas de $existingTenantName. ¿Deseas conservarla o iniciar una nueva bolsa para esta tienda?';
+}
 
 class ItemCarritoModel {
   final int idDetalleCarrito;
@@ -114,6 +134,9 @@ class CarritoModel {
 
 class CarritoService extends ChangeNotifier {
   final Dio _dio = ApiClient.dio;
+  final DatabaseHelper _dbHelper = DatabaseHelper();
+  final SyncCoordinator _syncCoordinator = SyncCoordinator();
+  final TenantContextManager _tenantManager = TenantContextManager();
 
   CarritoModel? _carrito;
   bool _cargando = false;
@@ -130,13 +153,19 @@ class CarritoService extends ChangeNotifier {
     _error = null;
     notifyListeners();
 
+    final activeEmpresa = idEmpresa ?? (await TokenStorage.getEmpresaId()) ?? 1;
+    final userId = (await TokenStorage.getUsuario())?['id_usuario'] as int? ?? 1;
+
     try {
       final params = <String, dynamic>{};
       if (idEmpresa != null) params['id_empresa'] = idEmpresa;
 
       final res = await _dio.get('/api/carrito', queryParameters: params);
       if (res.data['success'] == true && res.data['data'] != null) {
-        _carrito = CarritoModel.fromJson(res.data['data']);
+        final dataMap = Map<String, dynamic>.from(res.data['data'] as Map);
+        _carrito = CarritoModel.fromJson(dataMap);
+        // Persistir borrador local en SQLite
+        await _dbHelper.saveCartDraft(activeEmpresa, userId, _carrito!.items);
       } else {
         _carrito = null;
       }
@@ -145,10 +174,43 @@ class CarritoService extends ChangeNotifier {
         _carrito = null;
         _error = null; // No mostrar error en banner para no autenticado
       } else {
-        _error = e.response?.data?['detail'] ?? 'Error al consultar la bolsa.';
+        // Fallback a SQLite
+        final cached = await _dbHelper.getCartDraft(activeEmpresa, userId);
+        if (cached.isNotEmpty) {
+          _carrito = CarritoModel(
+            idCarrito: 0,
+            idEmpresa: activeEmpresa,
+            nombreEmpresa: _tenantManager.nombreTiendaActiva,
+            totalItems: cached.fold(0, (sum, i) => sum + i.cantidad),
+            subtotal: cached.fold(0.0, (sum, i) => sum + i.subtotal),
+            descuento: 0.0,
+            total: cached.fold(0.0, (sum, i) => sum + i.subtotal),
+            items: cached,
+            puedeContinuarCompra: true,
+          );
+          _error = null;
+        } else {
+          _error = e.response?.data?['detail'] ?? 'Error al consultar la bolsa.';
+        }
       }
     } catch (e) {
-      _error = 'Error de conexión con el carrito.';
+      final cached = await _dbHelper.getCartDraft(activeEmpresa, userId);
+      if (cached.isNotEmpty) {
+        _carrito = CarritoModel(
+          idCarrito: 0,
+          idEmpresa: activeEmpresa,
+          nombreEmpresa: _tenantManager.nombreTiendaActiva,
+          totalItems: cached.fold(0, (sum, i) => sum + i.cantidad),
+          subtotal: cached.fold(0.0, (sum, i) => sum + i.subtotal),
+          descuento: 0.0,
+          total: cached.fold(0.0, (sum, i) => sum + i.subtotal),
+          items: cached,
+          puedeContinuarCompra: true,
+        );
+        _error = null;
+      } else {
+        _error = 'Error de conexión con el carrito.';
+      }
     } finally {
       _cargando = false;
       notifyListeners();
@@ -160,9 +222,27 @@ class CarritoService extends ChangeNotifier {
     int cantidad = 1,
     int? idEmpresa,
   }) async {
+    // 1. Detección estricta de conflicto multitenant (no borrar silenciosamente)
+    if (idEmpresa != null &&
+        _carrito != null &&
+        _carrito!.items.isNotEmpty &&
+        _carrito!.idEmpresa != 0 &&
+        _carrito!.idEmpresa != idEmpresa) {
+      throw DifferentStoreCartException(
+        existingTenantName: _carrito!.nombreEmpresa.isNotEmpty
+            ? _carrito!.nombreEmpresa
+            : 'otra tienda',
+        existingTenantId: _carrito!.idEmpresa,
+        newTenantId: idEmpresa,
+      );
+    }
+
     _cargando = true;
     _error = null;
     notifyListeners();
+
+    final activeEmpresa = idEmpresa ?? _carrito?.idEmpresa ?? (await TokenStorage.getEmpresaId()) ?? 1;
+    final userId = (await TokenStorage.getUsuario())?['id_usuario'] as int? ?? 1;
 
     try {
       final body = <String, dynamic>{
@@ -173,7 +253,9 @@ class CarritoService extends ChangeNotifier {
 
       final res = await _dio.post('/api/carrito/items', data: body);
       if (res.data['success'] == true && res.data['data'] != null) {
-        _carrito = CarritoModel.fromJson(res.data['data']);
+        final dataMap = Map<String, dynamic>.from(res.data['data'] as Map);
+        _carrito = CarritoModel.fromJson(dataMap);
+        await _dbHelper.saveCartDraft(activeEmpresa, userId, _carrito!.items);
         notifyListeners();
         return true;
       }
@@ -181,6 +263,21 @@ class CarritoService extends ChangeNotifier {
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) {
         _error = 'Debes iniciar sesión para agregar prendas a la bolsa.';
+      } else if (e.type == DioExceptionType.connectionError ||
+                 e.type == DioExceptionType.connectionTimeout) {
+        // Encolar para sincronización diferida
+        await _syncCoordinator.enqueueOperation(
+          kind: 'CART_ADD_ITEM',
+          tenantId: activeEmpresa,
+          payload: {
+            'id_variante': idVariante,
+            'cantidad': cantidad,
+            'id_empresa': activeEmpresa,
+          },
+        );
+        _error = 'Operación guardada localmente (sin conexión). Se sincronizará automáticamente.';
+        notifyListeners();
+        return true;
       } else {
         _error = e.response?.data?['detail'] ?? 'Stock insuficiente o error al agregar.';
       }
@@ -201,6 +298,9 @@ class CarritoService extends ChangeNotifier {
     required int nuevaCantidad,
     int? idEmpresa,
   }) async {
+    final activeEmpresa = idEmpresa ?? _carrito?.idEmpresa ?? (await TokenStorage.getEmpresaId()) ?? 1;
+    final userId = (await TokenStorage.getUsuario())?['id_usuario'] as int? ?? 1;
+
     try {
       final body = <String, dynamic>{
         'cantidad': nuevaCantidad,
@@ -213,10 +313,24 @@ class CarritoService extends ChangeNotifier {
       );
 
       if (res.data['success'] == true && res.data['data'] != null) {
-        _carrito = CarritoModel.fromJson(res.data['data']);
+        final dataMap = Map<String, dynamic>.from(res.data['data'] as Map);
+        _carrito = CarritoModel.fromJson(dataMap);
+        await _dbHelper.saveCartDraft(activeEmpresa, userId, _carrito!.items);
         notifyListeners();
       }
     } on DioException catch (e) {
+      if (e.type == DioExceptionType.connectionError ||
+          e.type == DioExceptionType.connectionTimeout) {
+        await _syncCoordinator.enqueueOperation(
+          kind: 'CART_UPDATE_QTY',
+          tenantId: activeEmpresa,
+          payload: {
+            'id_detalle_carrito': idDetalleCarrito,
+            'cantidad': nuevaCantidad,
+            'id_empresa': activeEmpresa,
+          },
+        );
+      }
       _error = e.response?.data?['detail'] ?? 'Error al actualizar cantidad.';
       notifyListeners();
     }
@@ -226,6 +340,9 @@ class CarritoService extends ChangeNotifier {
     required int idDetalleCarrito,
     int? idEmpresa,
   }) async {
+    final activeEmpresa = idEmpresa ?? _carrito?.idEmpresa ?? (await TokenStorage.getEmpresaId()) ?? 1;
+    final userId = (await TokenStorage.getUsuario())?['id_usuario'] as int? ?? 1;
+
     try {
       final params = <String, dynamic>{};
       if (idEmpresa != null) params['id_empresa'] = idEmpresa;
@@ -236,13 +353,30 @@ class CarritoService extends ChangeNotifier {
       );
 
       if (res.data['success'] == true && res.data['data'] != null) {
-        _carrito = CarritoModel.fromJson(res.data['data']);
+        final dataMap = Map<String, dynamic>.from(res.data['data'] as Map);
+        _carrito = CarritoModel.fromJson(dataMap);
+        await _dbHelper.saveCartDraft(activeEmpresa, userId, _carrito!.items);
         notifyListeners();
+      }
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.connectionError ||
+          e.type == DioExceptionType.connectionTimeout) {
+        await _syncCoordinator.enqueueOperation(
+          kind: 'CART_REMOVE_ITEM',
+          tenantId: activeEmpresa,
+          payload: {
+            'id_detalle_carrito': idDetalleCarrito,
+            'id_empresa': activeEmpresa,
+          },
+        );
       }
     } catch (_) {}
   }
 
   Future<void> vaciarCarrito({int? idEmpresa}) async {
+    final activeEmpresa = idEmpresa ?? _carrito?.idEmpresa ?? (await TokenStorage.getEmpresaId()) ?? 1;
+    final userId = (await TokenStorage.getUsuario())?['id_usuario'] as int? ?? 1;
+
     try {
       final params = <String, dynamic>{};
       if (idEmpresa != null) params['id_empresa'] = idEmpresa;
@@ -253,8 +387,20 @@ class CarritoService extends ChangeNotifier {
       );
 
       if (res.data['success'] == true && res.data['data'] != null) {
-        _carrito = CarritoModel.fromJson(res.data['data']);
+        final dataMap = Map<String, dynamic>.from(res.data['data'] as Map);
+        _carrito = CarritoModel.fromJson(dataMap);
+        await _dbHelper.clearCartDraft(activeEmpresa, userId);
         notifyListeners();
+      }
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.connectionError ||
+          e.type == DioExceptionType.connectionTimeout) {
+        await _syncCoordinator.enqueueOperation(
+          kind: 'CART_CLEAR',
+          tenantId: activeEmpresa,
+          payload: {'id_empresa': activeEmpresa},
+        );
+        await _dbHelper.clearCartDraft(activeEmpresa, userId);
       }
     } catch (_) {}
   }

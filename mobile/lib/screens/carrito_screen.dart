@@ -123,6 +123,35 @@ class _CarritoScreenState extends State<CarritoScreen> {
                 )
               : Column(
                   children: [
+                    // Identificador de Tienda para aislamiento multitenant
+                    if (carrito.nombreEmpresa.isNotEmpty)
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: AppTheme.goldLight,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.storefront, size: 16, color: AppTheme.primaryGold),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Bolsa activa en: ${carrito.nombreEmpresa}',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppTheme.primaryGold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
                     // Alerta de Stock si alguna prenda tiene advertencia
                     ...carrito.items.where((i) => i.advertenciaStock != null).map(
                           (i) => Container(

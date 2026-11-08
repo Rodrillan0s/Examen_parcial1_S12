@@ -51,8 +51,26 @@ export class PrediccionesComponent implements OnInit {
   datosReposicion: RespuestaReposicion | null = null;
   datosEvaluacion: RespuestaEvaluacion | null = null;
 
-  get sucursalesDisponibles() {
-    return this.authService.branchList || [
+  get sucursalesDisponibles(): { id: number; nombre: string; ciudad: string }[] {
+    if (this.empresaSeleccionada && this.tenants && this.tenants.length > 0) {
+      const t = this.tenants.find(x => Number(x.id_empresa) === Number(this.empresaSeleccionada));
+      if (t && Array.isArray(t.sucursales) && t.sucursales.length > 0) {
+        return t.sucursales;
+      }
+    }
+    const selComp = typeof this.authService.selectedCompany === 'function' ? this.authService.selectedCompany() : null;
+    if (selComp && Array.isArray((selComp as any).sucursales) && (selComp as any).sucursales.length > 0) {
+      return (selComp as any).sucursales;
+    }
+    const brList = this.authService.branchList;
+    if (Array.isArray(brList) && brList.length > 0) {
+      return brList;
+    }
+    const active = typeof this.authService.activeBranch === 'function' ? this.authService.activeBranch() : null;
+    if (active && active.id) {
+      return [active];
+    }
+    return [
       { id: 1, nombre: 'Sucursal Central Equipetrol', ciudad: 'Santa Cruz' },
       { id: 2, nombre: 'Sucursal Calacoto Luxury', ciudad: 'La Paz' }
     ];
@@ -65,41 +83,75 @@ export class PrediccionesComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.empresaSeleccionada = this.authService.getEffectiveCompanyId();
-    this.sucursalSeleccionada = this.authService.activeBranch()?.id || null;
+    const tiAct = typeof this.kpisService.obtenerTiendaActual === 'function' ? this.kpisService.obtenerTiendaActual() : null;
+    this.empresaSeleccionada = this.authService.getEffectiveCompanyId() || tiAct?.id_empresa || null;
+    if (!this.empresaSeleccionada && this.authService.isGlobalAdmin()) {
+      this.empresaSeleccionada = 1;
+    }
+
+    const currentBranchId = typeof this.authService.activeBranch === 'function' ? this.authService.activeBranch()?.id : null;
+    this.sucursalSeleccionada = currentBranchId ? Number(currentBranchId) : null;
 
     if (this.authService.isGlobalAdmin()) {
       this.cargarTenants();
+    } else {
+      this.cargarDatos();
     }
 
     // Suscribirse reactivamente al cambio de Tenant en el Header
-    this.authService.companyChanged$
-      .pipe(
-        distinctUntilChanged((p, c) => p?.id_empresa === c?.id_empresa),
-        takeUntilDestroyed(this.destroyRef)
-      )
-      .subscribe(empresa => {
-        if (empresa && this.empresaSeleccionada !== empresa.id_empresa) {
-          this.empresaSeleccionada = empresa.id_empresa;
-          this.cargarDatos();
-        }
-      });
+    if (this.authService.companyChanged$) {
+      this.authService.companyChanged$
+        .pipe(
+          distinctUntilChanged((p, c) => p?.id_empresa === c?.id_empresa),
+          takeUntilDestroyed(this.destroyRef)
+        )
+        .subscribe(empresa => {
+          if (empresa && this.empresaSeleccionada !== empresa.id_empresa) {
+            this.empresaSeleccionada = empresa.id_empresa;
+            this.verificarAlineacionSucursal();
+            this.cargarDatos();
+          }
+        });
+    }
+
+    // Suscribirse reactivamente al cambio de Tienda en KpisService
+    if (this.kpisService.tiendaSeleccionada$) {
+      this.kpisService.tiendaSeleccionada$
+        .pipe(
+          distinctUntilChanged((p, c) => p?.id_empresa === c?.id_empresa),
+          takeUntilDestroyed(this.destroyRef)
+        )
+        .subscribe(tienda => {
+          if (tienda && this.empresaSeleccionada !== tienda.id_empresa) {
+            this.empresaSeleccionada = tienda.id_empresa;
+            this.verificarAlineacionSucursal();
+            this.cargarDatos();
+          }
+        });
+    }
 
     // Suscribirse reactivamente al cambio de Sucursal en el Header
-    this.authService.branchChanged$
-      .pipe(
-        distinctUntilChanged((p, c) => p?.id === c?.id),
-        takeUntilDestroyed(this.destroyRef)
-      )
-      .subscribe(branch => {
-        const newBranchId = branch ? branch.id : null;
-        if (this.sucursalSeleccionada !== newBranchId) {
-          this.sucursalSeleccionada = newBranchId;
-          this.cargarDatos();
-        }
-      });
+    if (this.authService.branchChanged$) {
+      this.authService.branchChanged$
+        .pipe(
+          distinctUntilChanged((p, c) => p?.id === c?.id),
+          takeUntilDestroyed(this.destroyRef)
+        )
+        .subscribe(branch => {
+          const newBranchId = branch ? Number(branch.id) : null;
+          if (this.sucursalSeleccionada !== newBranchId) {
+            this.sucursalSeleccionada = newBranchId;
+            this.cargarDatos();
+          }
+        });
+    }
+  }
 
-    this.cargarDatos();
+  private verificarAlineacionSucursal(): void {
+    const disponibles = this.sucursalesDisponibles;
+    if (this.sucursalSeleccionada && !disponibles.some((s: any) => s.id === this.sucursalSeleccionada)) {
+      this.sucursalSeleccionada = null; // Consolidado
+    }
   }
 
   cargarTenants(): void {
@@ -112,11 +164,21 @@ export class PrediccionesComponent implements OnInit {
             this.empresaSeleccionada = Number(current);
           } else if (!this.empresaSeleccionada && this.tenants.length > 0) {
             this.empresaSeleccionada = Number(this.tenants[0].id_empresa);
+            this.authService.setSelectedCompany({
+              id_empresa: this.tenants[0].id_empresa,
+              nombre_empresa: this.tenants[0].nombre_empresa,
+              sucursales: this.tenants[0].sucursales
+            });
           }
-          this.cdr.detectChanges();
+          this.verificarAlineacionSucursal();
         }
+        this.cargarDatos();
+        this.cdr.markForCheck();
       },
-      error: () => {}
+      error: () => {
+        this.cargarDatos();
+        this.cdr.markForCheck();
+      }
     });
   }
 
@@ -127,10 +189,12 @@ export class PrediccionesComponent implements OnInit {
       if (t) {
         this.authService.setSelectedCompany({
           id_empresa: t.id_empresa,
-          nombre_empresa: t.nombre_empresa
+          nombre_empresa: t.nombre_empresa,
+          sucursales: t.sucursales
         });
       }
     }
+    this.verificarAlineacionSucursal();
     this.cargarDatos();
   }
 
@@ -143,7 +207,17 @@ export class PrediccionesComponent implements OnInit {
     this.mensajeError = '';
     this.cargando = true;
 
-    const idEmpresa = this.empresaSeleccionada || this.authService.getEffectiveCompanyId() || undefined;
+    let idEmpresa: number | undefined = (this.empresaSeleccionada || this.authService.getEffectiveCompanyId()) ?? undefined;
+    if (!idEmpresa && this.tenants && this.tenants.length > 0) {
+      idEmpresa = Number(this.tenants[0].id_empresa);
+      this.empresaSeleccionada = idEmpresa;
+    }
+    if (!idEmpresa && this.authService.isGlobalAdmin()) {
+      idEmpresa = 1;
+      this.empresaSeleccionada = 1;
+    }
+
+    this.verificarAlineacionSucursal();
     const idSucursal = this.sucursalSeleccionada ? Number(this.sucursalSeleccionada) : undefined;
 
     if (this.pestanaActiva === 'demanda') {
@@ -158,12 +232,12 @@ export class PrediccionesComponent implements OnInit {
         next: (res) => {
           this.datosDemanda = res;
           this.cargando = false;
-          this.cdr.detectChanges();
+          this.cdr.markForCheck();
         },
         error: (err) => {
           this.cargando = false;
           this.mensajeError = extraerMensajeError(err, 'Error cargando proyecciones de demanda');
-          this.cdr.detectChanges();
+          this.cdr.markForCheck();
         }
       });
     } else if (this.pestanaActiva === 'reposicion') {
@@ -177,12 +251,12 @@ export class PrediccionesComponent implements OnInit {
         next: (res) => {
           this.datosReposicion = res;
           this.cargando = false;
-          this.cdr.detectChanges();
+          this.cdr.markForCheck();
         },
         error: (err) => {
           this.cargando = false;
           this.mensajeError = extraerMensajeError(err, 'Error calculando recomendaciones de reposición');
-          this.cdr.detectChanges();
+          this.cdr.markForCheck();
         }
       });
     } else {
@@ -196,12 +270,12 @@ export class PrediccionesComponent implements OnInit {
         next: (res) => {
           this.datosEvaluacion = res;
           this.cargando = false;
-          this.cdr.detectChanges();
+          this.cdr.markForCheck();
         },
         error: (err) => {
           this.cargando = false;
           this.mensajeError = extraerMensajeError(err, 'Error evaluando backtesting del modelo');
-          this.cdr.detectChanges();
+          this.cdr.markForCheck();
         }
       });
     }

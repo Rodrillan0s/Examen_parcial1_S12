@@ -110,6 +110,7 @@ class PoseProcessor {
       return BodyPoint(
         x: normX,
         y: normY,
+        z: lm.z,
         confidence: lm.likelihood,
       );
     }

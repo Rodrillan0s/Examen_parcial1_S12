@@ -1,6 +1,9 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'api_client.dart';
+import 'token_storage.dart';
+import '../core/database/database_helper.dart';
+import '../core/sync/sync_coordinator.dart';
 
 class SucursalReservaModel {
   final int idSucursal;
@@ -127,6 +130,8 @@ class ReservaModel {
 
 class ReservaService extends ChangeNotifier {
   final Dio _dio = ApiClient.dio;
+  final DatabaseHelper _dbHelper = DatabaseHelper();
+  final SyncCoordinator _syncCoordinator = SyncCoordinator();
 
   List<ReservaModel> _misReservas = [];
   bool _cargando = false;
@@ -140,6 +145,9 @@ class ReservaService extends ChangeNotifier {
     _cargando = true;
     _error = null;
     notifyListeners();
+
+    final activeEmpresa = idEmpresa ?? (await TokenStorage.getEmpresaId()) ?? 1;
+    final userId = (await TokenStorage.getUsuario())?['id_usuario'] as int? ?? 1;
 
     try {
       final params = <String, dynamic>{};
@@ -158,10 +166,21 @@ class ReservaService extends ChangeNotifier {
       if (e.response?.statusCode == 401) {
         _misReservas = [];
       } else {
-        _error = e.response?.data?['detail'] ?? 'Error al cargar reservas.';
+        // Fallback a reservas guardadas localmente
+        final localDrafts = await _dbHelper.getReservationDrafts(activeEmpresa, userId);
+        if (localDrafts.isNotEmpty) {
+          _misReservas = localDrafts;
+        } else {
+          _error = e.response?.data?['detail'] ?? 'Error al cargar reservas.';
+        }
       }
     } catch (_) {
-      _error = 'Error de conexión con el servicio de reservas.';
+      final localDrafts = await _dbHelper.getReservationDrafts(activeEmpresa, userId);
+      if (localDrafts.isNotEmpty) {
+        _misReservas = localDrafts;
+      } else {
+        _error = 'Error de conexión con el servicio de reservas.';
+      }
     } finally {
       _cargando = false;
       notifyListeners();
@@ -171,12 +190,15 @@ class ReservaService extends ChangeNotifier {
   Future<ReservaModel> crearReserva({
     required int idSucursal,
     required String fechaHoraVisita,
-    required List<Map<String, dynamic>> items, // [{'id_variante': 1, 'cantidad': 1}]
+    required List<Map<String, dynamic>> items,
     String? observaciones,
     int? idEmpresa,
     bool conPago = false,
     double montoPagado = 0.0,
   }) async {
+    final activeEmpresa = idEmpresa ?? (await TokenStorage.getEmpresaId()) ?? 1;
+    final userId = (await TokenStorage.getUsuario())?['id_usuario'] as int? ?? 1;
+
     try {
       final body = <String, dynamic>{
         'id_sucursal': idSucursal,
@@ -184,8 +206,8 @@ class ReservaService extends ChangeNotifier {
         'items': items,
         if (observaciones != null && observaciones.isNotEmpty) 'observaciones': observaciones.trim(),
         if (idEmpresa != null) 'id_empresa': idEmpresa,
-        'con_pago': conPago,
-        'monto_pagado': montoPagado,
+        'con_pago': false, // Política estricta: citas presenciales son 100% gratuitas
+        'monto_pagado': 0.0,
       };
 
       final res = await _dio.post('/api/reservas', data: body);
@@ -196,6 +218,50 @@ class ReservaService extends ChangeNotifier {
       }
       throw Exception(res.data['message'] ?? 'Error al agendar reserva.');
     } on DioException catch (e) {
+      if (e.type == DioExceptionType.connectionError ||
+          e.type == DioExceptionType.connectionTimeout) {
+        // Modo offline: encolar sincronización diferida y guardar borrador local
+        await _dbHelper.saveReservationDraft(
+          draftId: 'draft_${DateTime.now().millisecondsSinceEpoch}',
+          idEmpresa: activeEmpresa,
+          idUsuario: userId,
+          idSucursal: idSucursal,
+          sucursalNombre: 'Sucursal Seleccionada',
+          fechaHoraVisita: fechaHoraVisita,
+          items: items,
+          observaciones: observaciones,
+        );
+
+        await _syncCoordinator.enqueueOperation(
+          kind: 'RESERVA_SOLICITUD',
+          tenantId: activeEmpresa,
+          idSucursal: idSucursal,
+          payload: {
+            'id_sucursal': idSucursal,
+            'fecha_hora_visita': fechaHoraVisita,
+            'items': items,
+            'observaciones': observaciones,
+            'id_empresa': activeEmpresa,
+            'con_pago': false,
+            'monto_pagado': 0.0,
+          },
+        );
+
+        cargarMisReservas(idEmpresa: activeEmpresa);
+
+        return ReservaModel(
+          idReserva: DateTime.now().millisecondsSinceEpoch,
+          codigoReserva: 'OFFLINE-SOLICITUD',
+          fechaReserva: DateTime.now().toIso8601String(),
+          fechaHoraVisita: fechaHoraVisita,
+          estado: 'PENDIENTE_SYNC',
+          observaciones: observaciones,
+          totalPrendas: items.length,
+          conPago: false,
+          estadoPago: 'SIN_PAGO',
+          montoPagado: 0.0,
+        );
+      }
       final msg = e.response?.data?['detail'] ?? 'Stock no disponible para reservar en la sucursal seleccionada.';
       throw Exception(msg.toString());
     }

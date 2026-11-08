@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'api_client.dart';
 import 'token_storage.dart';
+import '../core/database/database_helper.dart';
 
 class TenantModel {
   final int idEmpresa;
@@ -283,6 +284,7 @@ class DetallePrendaModel {
   final bool permiteCompra;
   final bool tieneRa;
   final String? modelo2dUrl;
+  final String? modelo3dUrl;
   final String? tipoPrendaRa;
 
   DetallePrendaModel({
@@ -308,6 +310,7 @@ class DetallePrendaModel {
     required this.permiteCompra,
     this.tieneRa = false,
     this.modelo2dUrl,
+    this.modelo3dUrl,
     this.tipoPrendaRa,
   });
 
@@ -361,6 +364,7 @@ class DetallePrendaModel {
       permiteCompra: json['permite_compra'] ?? true,
       tieneRa: json['tiene_ra'] == true,
       modelo2dUrl: json['modelo_2d_url'],
+      modelo3dUrl: json['modelo_3d_url'] ?? json['modelo_ar_url'],
       tipoPrendaRa: json['tipo_prenda_ra'],
     );
   }
@@ -423,6 +427,7 @@ class SucursalContextModel {
 
 class CatalogoService extends ChangeNotifier {
   final Dio _dio = ApiClient.dio;
+  final DatabaseHelper _dbHelper = DatabaseHelper();
 
   List<TenantModel> _tenants = [];
   TenantModel? _tenantSeleccionado;
@@ -585,21 +590,52 @@ class CatalogoService extends ChangeNotifier {
       final res =
           await _dio.get('/api/catalogo/productos', queryParameters: params);
       if (res.data['success'] == true && res.data['data'] != null) {
-        _productos = (res.data['data'] as List<dynamic>)
-            .map((e) => PrendaModel.fromJson(e))
+        final list = (res.data['data'] as List<dynamic>)
+            .map((e) => Map<String, dynamic>.from(e as Map))
             .toList();
+        _productos = list.map((e) => PrendaModel.fromJson(e)).toList();
         _totalProductos = res.data['total'] ?? _productos.length;
+
+        // Persistir en SQLite para navegación offline
+        final activeTenantId = _tenantSeleccionado?.idEmpresa ??
+            (list.isNotEmpty ? list.first['id_empresa'] as int? ?? 1 : 1);
+        await _dbHelper.saveProducts(activeTenantId, _productos);
       } else {
         _productos = [];
         _totalProductos = 0;
       }
     } on DioException catch (e) {
-      _error = e.response?.data?['detail'] ??
-          'Error al cargar catálogo de productos.';
-      _productos = [];
+      // Fallback a caché local SQLite si no hay conexión
+      final activeTenantId = _tenantSeleccionado?.idEmpresa ?? 1;
+      final cached = await _dbHelper.getProducts(
+        activeTenantId,
+        categoriaId: _categoriaId,
+        busqueda: _busqueda.trim().isNotEmpty ? _busqueda.trim() : null,
+      );
+      if (cached.isNotEmpty) {
+        _productos = cached;
+        _totalProductos = _productos.length;
+        _error = null;
+      } else {
+        _error = e.response?.data?['detail'] ??
+            'Error al cargar catálogo de productos.';
+        _productos = [];
+      }
     } catch (e) {
-      _error = 'Error de conexión con el catálogo.';
-      _productos = [];
+      final activeTenantId = _tenantSeleccionado?.idEmpresa ?? 1;
+      final cached = await _dbHelper.getProducts(
+        activeTenantId,
+        categoriaId: _categoriaId,
+        busqueda: _busqueda.trim().isNotEmpty ? _busqueda.trim() : null,
+      );
+      if (cached.isNotEmpty) {
+        _productos = cached;
+        _totalProductos = _productos.length;
+        _error = null;
+      } else {
+        _error = 'Error de conexión con el catálogo.';
+        _productos = [];
+      }
     } finally {
       _cargando = false;
       notifyListeners();
@@ -637,6 +673,7 @@ class CatalogoService extends ChangeNotifier {
   }
 
   Future<DetallePrendaModel> obtenerDetalleProducto(int idProducto) async {
+    final activeTenantId = _tenantSeleccionado?.idEmpresa ?? 1;
     try {
       final params = <String, dynamic>{};
       if (_tenantSeleccionado != null) {
@@ -646,13 +683,26 @@ class CatalogoService extends ChangeNotifier {
       final res = await _dio.get('/api/catalogo/productos/$idProducto',
           queryParameters: params);
       if (res.data['success'] == true && res.data['data'] != null) {
-        return DetallePrendaModel.fromJson(res.data['data']);
+        final dataMap = Map<String, dynamic>.from(res.data['data'] as Map);
+        final detail = DetallePrendaModel.fromJson(dataMap);
+        await _dbHelper.saveProductDetail(activeTenantId, idProducto, detail);
+        return detail;
       }
       throw Exception(res.data['message'] ?? 'No se pudo cargar la prenda.');
     } on DioException catch (e) {
+      final cached = await _dbHelper.getProductDetail(activeTenantId, idProducto);
+      if (cached != null) {
+        return cached;
+      }
       final msg = e.response?.data?['detail'] ??
           'Error al consultar detalle de la prenda.';
       throw Exception(msg.toString());
+    } catch (e) {
+      final cached = await _dbHelper.getProductDetail(activeTenantId, idProducto);
+      if (cached != null) {
+        return cached;
+      }
+      rethrow;
     }
   }
 

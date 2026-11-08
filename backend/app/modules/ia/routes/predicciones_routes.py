@@ -78,6 +78,25 @@ def _validar_permisos_ia(token_data: dict, id_empresa_param: Optional[int] = Non
         
     empresa = resolver_tenant_operacion(token_data, id_empresa_param, permitir_global=False)
     sucursal = resolver_sucursal_autorizada(token_data, id_sucursal_param)
+    
+    # Validar que si se indicó sucursal, efectivamente pertenezca a la empresa resuelta
+    if sucursal and empresa:
+        from app.core.postgres import PostgreSQL
+        from app.core.config import Config
+        db = PostgreSQL()
+        db.create_connection()
+        try:
+            schema = Config.SCHEMA or 'comercio'
+            row = db.execute_query(
+                f"SELECT id_empresa FROM {schema}.t_sucursal WHERE id_sucursal = %s;",
+                (sucursal,),
+                fetchone=True
+            )
+            if not row or int(row[0]) != int(empresa):
+                sucursal = None  # No pertenece al tenant seleccionado; consolidar
+        finally:
+            db.close_connection()
+
     return empresa, sucursal
 
 

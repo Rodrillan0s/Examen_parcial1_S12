@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import '../config/app_config.dart';
+import '../core/tenant/tenant_context_manager.dart';
 import 'token_storage.dart';
 
 class ApiClient {
@@ -34,6 +35,10 @@ class ApiClient {
           final token = await TokenStorage.getToken();
           if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
+          }
+          final tenantId = TenantContextManager().idEmpresaActiva;
+          if (tenantId != null) {
+            options.headers['X-Tenant-Id'] = tenantId.toString();
           }
           return handler.next(options);
         },

@@ -176,38 +176,93 @@ class _DetalleProductoScreenState extends State<DetalleProductoScreen> {
     });
 
     final carrito = context.read<CarritoService>();
-    final ok = await carrito.agregarItem(
-      idVariante: _varianteSeleccionada!.idVariante,
-      cantidad: 1,
-      idEmpresa: _prenda?.idEmpresa,
-    );
+    try {
+      final ok = await carrito.agregarItem(
+        idVariante: _varianteSeleccionada!.idVariante,
+        cantidad: 1,
+        idEmpresa: _prenda?.idEmpresa,
+      );
 
-    if (mounted) {
+      if (mounted) {
+        setState(() {
+          _agregandoAlCarrito = false;
+        });
+
+        if (ok) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${_prenda!.nombre} agregada a la bolsa.'),
+              backgroundColor: AppTheme.success,
+              action: SnackBarAction(
+                label: 'Ver bolsa',
+                textColor: Colors.white,
+                onPressed: () {
+                  Navigator.pop(context); // Regresa al shell
+                },
+              ),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(carrito.error ?? 'No se pudo agregar a la bolsa.'),
+              backgroundColor: AppTheme.error,
+            ),
+          );
+        }
+      }
+    } on DifferentStoreCartException catch (e) {
+      if (!mounted) return;
       setState(() {
         _agregandoAlCarrito = false;
       });
 
-      if (ok) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${_prenda!.nombre} agregada a la bolsa.'),
-            backgroundColor: AppTheme.success,
-            action: SnackBarAction(
-              label: 'Ver bolsa',
-              textColor: Colors.white,
-              onPressed: () {
-                Navigator.pop(context); // Regresa al shell
-              },
+      final comenzarNueva = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(
+            'Bolsa en otra tienda',
+            style: GoogleFonts.playfairDisplay(fontSize: 18, fontWeight: FontWeight.w700),
+          ),
+          content: Text(
+            'Tu bolsa actual contiene prendas de ${e.existingTenantName}.\n\n¿Deseas iniciar una nueva bolsa para esta tienda o prefieres conservar tus prendas anteriores?',
+            style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textSecondary),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Conservar anterior'),
             ),
-          ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Comenzar nueva bolsa'),
+            ),
+          ],
+        ),
+      );
+
+      if (comenzarNueva == true && mounted) {
+        await carrito.vaciarCarrito(idEmpresa: e.existingTenantId);
+        final ok = await carrito.agregarItem(
+          idVariante: _varianteSeleccionada!.idVariante,
+          cantidad: 1,
+          idEmpresa: e.newTenantId,
         );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(carrito.error ?? 'No se pudo agregar a la bolsa.'),
-            backgroundColor: AppTheme.error,
-          ),
-        );
+        if (ok && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${_prenda!.nombre} agregada a la nueva bolsa.'),
+              backgroundColor: AppTheme.success,
+            ),
+          );
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _agregandoAlCarrito = false;
+        });
       }
     }
   }
@@ -237,62 +292,38 @@ class _DetalleProductoScreenState extends State<DetalleProductoScreen> {
     );
   }
 
-  Future<void> _abrirVestidorVirtual() async {
+  Future<void> _abrirVestidorVirtual({bool directTo3D = false}) async {
     if (_prenda == null) return;
 
-    final status = await Permission.camera.request();
-    if (!mounted) return;
+    if (!directTo3D) {
+      final status = await Permission.camera.request();
+      if (!mounted) return;
 
-    if (status.isGranted) {
-      final garment = GarmentModel(
-        idProducto: _prenda!.idProducto,
-        nombre: _prenda!.nombre,
-        modelo2dUrl: _prenda!.modelo2dUrl ?? _prenda!.imagenPrincipal ?? '',
-        tipo: GarmentType.fromString(_prenda!.tipoPrendaRa),
-        precio: _prenda!.precio,
-        imagenPreview: _prenda!.imagenPrincipal,
-      );
-
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => VestidorVirtualScreen(
-            initialGarment: garment,
-            initialProductoId: _prenda!.idProducto,
-          ),
-        ),
-      );
-    } else if (status.isPermanentlyDenied) {
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Permiso de Cámara Requerido'),
-          content: const Text(
-            'Para usar el vestidor virtual en realidad aumentada, por favor habilita el permiso de cámara en los ajustes de tu dispositivo.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(ctx).pop();
-                openAppSettings();
-              },
-              child: const Text('Abrir Ajustes'),
-            ),
-          ],
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content:
-              Text('Se requiere acceso a la cámara para el vestidor virtual.'),
-          backgroundColor: Colors.black87,
-        ),
-      );
+      if (!status.isGranted && !status.isLimited) {
+        // Si la cámara no tiene permiso, abrimos directamente en Visor 3D
+        directTo3D = true;
+      }
     }
+
+    final garment = GarmentModel(
+      idProducto: _prenda!.idProducto,
+      nombre: _prenda!.nombre,
+      modelo2dUrl: _prenda!.modelo2dUrl ?? _prenda!.imagenPrincipal ?? '',
+      modelo3dUrl: _prenda!.modelo3dUrl,
+      tipo: GarmentType.fromString(_prenda!.tipoPrendaRa),
+      precio: _prenda!.precio,
+      imagenPreview: _prenda!.imagenPrincipal,
+    );
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => VestidorVirtualScreen(
+          initialGarment: garment,
+          initialProductoId: _prenda!.idProducto,
+          openDirectTo3D: directTo3D,
+        ),
+      ),
+    );
   }
 
   @override
@@ -494,84 +525,78 @@ class _DetalleProductoScreenState extends State<DetalleProductoScreen> {
                                     ],
                                   ),
 
-                                  // Botón de Realidad Aumentada (M14)
+                                  // Botones de Realidad Aumentada Híbrida (En Vivo + 3D ARCore)
                                   if (_prenda!.tieneRa) ...[
                                     const SizedBox(height: 14),
-                                    InkWell(
-                                      onTap: _abrirVestidorVirtual,
-                                      borderRadius: BorderRadius.circular(14),
-                                      child: Container(
-                                        width: double.infinity,
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 13, horizontal: 16),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF09090B),
-                                          borderRadius:
-                                              BorderRadius.circular(14),
-                                          border: Border.all(
-                                              color: const Color(0xFFB45309),
-                                              width: 1.2),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: const Color(0xFFB45309)
-                                                  .withValues(alpha: 0.18),
-                                              blurRadius: 10,
-                                              offset: const Offset(0, 4),
-                                            ),
-                                          ],
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            Container(
-                                              padding: const EdgeInsets.all(8),
+                                    Row(
+                                      children: [
+                                        // Opción 1: Probar en Cámara En Vivo
+                                        Expanded(
+                                          child: InkWell(
+                                            onTap: () => _abrirVestidorVirtual(directTo3D: false),
+                                            borderRadius: BorderRadius.circular(12),
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 10),
                                               decoration: BoxDecoration(
-                                                color: const Color(0xFFB45309)
-                                                    .withValues(alpha: 0.2),
-                                                borderRadius:
-                                                    BorderRadius.circular(10),
+                                                color: const Color(0xFF09090B),
+                                                borderRadius: BorderRadius.circular(12),
+                                                border: Border.all(color: const Color(0xFFB45309), width: 1.1),
                                               ),
-                                              child: const Icon(
-                                                Icons.view_in_ar_rounded,
-                                                color: Color(0xFFF59E0B),
-                                                size: 20,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 12),
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                mainAxisSize: MainAxisSize.min,
+                                              child: Row(
+                                                mainAxisAlignment: MainAxisAlignment.center,
                                                 children: [
-                                                  Text(
-                                                    'Probar en Vestidor RA',
-                                                    style: GoogleFonts
-                                                        .plusJakartaSans(
-                                                      color: Colors.white,
-                                                      fontSize: 14,
-                                                      fontWeight:
-                                                          FontWeight.w700,
-                                                    ),
-                                                  ),
-                                                  Text(
-                                                    'Pruébate esta prenda con tu cámara en tiempo real',
-                                                    style: GoogleFonts
-                                                        .plusJakartaSans(
-                                                      color: Colors.white70,
-                                                      fontSize: 11,
+                                                  const Icon(Icons.videocam_rounded, color: Color(0xFFF59E0B), size: 17),
+                                                  const SizedBox(width: 6),
+                                                  Flexible(
+                                                    child: Text(
+                                                      'Probar En Vivo',
+                                                      style: GoogleFonts.plusJakartaSans(
+                                                        color: Colors.white,
+                                                        fontSize: 12,
+                                                        fontWeight: FontWeight.w700,
+                                                      ),
                                                     ),
                                                   ),
                                                 ],
                                               ),
                                             ),
-                                            const Icon(
-                                              Icons.arrow_forward_ios_rounded,
-                                              color: Color(0xFFF59E0B),
-                                              size: 14,
-                                            ),
-                                          ],
+                                          ),
                                         ),
-                                      ),
+                                        const SizedBox(width: 10),
+
+                                        // Opción 2: Visor 3D 360° & ARCore
+                                        Expanded(
+                                          child: InkWell(
+                                            onTap: () => _abrirVestidorVirtual(directTo3D: true),
+                                            borderRadius: BorderRadius.circular(12),
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 10),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFF131722),
+                                                borderRadius: BorderRadius.circular(12),
+                                                border: Border.all(color: AppTheme.primaryGold, width: 1.1),
+                                              ),
+                                              child: Row(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                children: [
+                                                  const Icon(Icons.view_in_ar_rounded, color: AppTheme.primaryGold, size: 17),
+                                                  const SizedBox(width: 6),
+                                                  Flexible(
+                                                    child: Text(
+                                                      'Modelo 3D & AR',
+                                                      style: GoogleFonts.plusJakartaSans(
+                                                        color: AppTheme.primaryGold,
+                                                        fontSize: 12,
+                                                        fontWeight: FontWeight.w700,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
 

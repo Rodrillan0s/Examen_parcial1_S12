@@ -130,7 +130,9 @@ describe('CU23W: PrediccionesComponent & PrediccionesService (Frontend)', () => 
       obtenerToken: () => 'fake-jwt-token',
       obtenerUsuario: () => ({ id_usuario: 1, id_empresa: 1, nombre_rol: 'ADMINISTRADOR' }),
       getEffectiveCompanyId: vi.fn(() => 1),
+      getEffectiveCompanyName: vi.fn(() => 'Shopping Bolivia'),
       isGlobalAdmin: vi.fn(() => true),
+      selectedCompany: signal({ id_empresa: 1, nombre_empresa: 'Shopping Bolivia' }),
       activeBranch: signal({ id: 3, nombre: 'Sucursal Cochabamba Jardin', ciudad: 'Cochabamba' }),
       companyChanged$: companyChanged$.asObservable(),
       branchChanged$: branchChanged$.asObservable(),
@@ -149,7 +151,9 @@ describe('CU23W: PrediccionesComponent & PrediccionesService (Frontend)', () => 
           { id_empresa: 1, nombre_empresa: 'Shopping Bolivia', ciudad: 'Santa Cruz' },
           { id_empresa: 2, nombre_empresa: 'Fashion World', ciudad: 'La Paz' }
         ]
-      }))
+      })),
+      obtenerTiendaActual: vi.fn(() => ({ id_empresa: 1, nombre_empresa: 'Shopping Bolivia' })),
+      tiendaSeleccionada$: of({ id_empresa: 1, nombre_empresa: 'Shopping Bolivia' })
     };
 
     await TestBed.configureTestingModule({

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class TokenStorage {
@@ -27,6 +28,18 @@ class TokenStorage {
 
   static Future<String?> getUserJson() async {
     return _storage.read(key: _keyUserJson);
+  }
+
+  static Future<Map<String, dynamic>?> getUsuario() async {
+    final str = await getUserJson();
+    if (str != null && str.isNotEmpty) {
+      try {
+        return jsonDecode(str) as Map<String, dynamic>;
+      } catch (_) {
+        return null;
+      }
+    }
+    return null;
   }
 
   static Future<void> saveEmpresaId(int idEmpresa) async {

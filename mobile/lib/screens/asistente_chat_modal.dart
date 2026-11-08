@@ -89,7 +89,7 @@ class _AsistenteChatModalState extends State<AsistenteChatModal> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Asistente Aurora',
+                        'Aurora Advisor',
                         style: GoogleFonts.playfairDisplay(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
@@ -97,7 +97,7 @@ class _AsistenteChatModalState extends State<AsistenteChatModal> {
                         ),
                       ),
                       Text(
-                        'Inteligencia Artificial de Moda',
+                        'Asesor Inteligente de Moda',
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 11,
                           color: AppTheme.textMuted,
@@ -108,12 +108,103 @@ class _AsistenteChatModalState extends State<AsistenteChatModal> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.refresh_outlined, size: 20),
-                  tooltip: 'Reiniciar chat',
+                  tooltip: 'Reiniciar conversación',
                   onPressed: () => asistente.limpiarConversacion(),
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
                   onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+          ),
+
+          // Selector de Modelo DeepSeek (V3 Chat vs R1 Reasoner)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 2, 20, 8),
+            child: Row(
+              children: [
+                Text(
+                  'Modelo IA:',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textMuted,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: () => asistente.setModelo('deepseek-chat'),
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: asistente.modeloSeleccionado == 'deepseek-chat'
+                          ? AppTheme.primary
+                          : AppTheme.surfaceVariant,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.flash_on,
+                          size: 13,
+                          color: asistente.modeloSeleccionado == 'deepseek-chat'
+                              ? AppTheme.primaryGold
+                              : AppTheme.textSecondary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '⚡ V3 Chat',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: asistente.modeloSeleccionado == 'deepseek-chat'
+                                ? Colors.white
+                                : AppTheme.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                InkWell(
+                  onTap: () => asistente.setModelo('deepseek-reasoner'),
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: asistente.modeloSeleccionado == 'deepseek-reasoner'
+                          ? AppTheme.primary
+                          : AppTheme.surfaceVariant,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.psychology,
+                          size: 13,
+                          color: asistente.modeloSeleccionado == 'deepseek-reasoner'
+                              ? AppTheme.primaryGold
+                              : AppTheme.textSecondary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '🧠 R1 Reasoner',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: asistente.modeloSeleccionado == 'deepseek-reasoner'
+                                ? Colors.white
+                                : AppTheme.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
