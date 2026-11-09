@@ -481,6 +481,52 @@ def asegurar_vistas_sql(force: bool = False):
         """
         _crear_vista(db, schema, 'vw_stock_inmovilizado_reporte', v_inmovilizado)
 
+        # 14. Vista de Valoraciones y Satisfacción del Cliente
+        v_valoraciones = f"""
+        CREATE OR REPLACE VIEW {schema}.vw_valoraciones_reporte AS
+        SELECT 
+            val.id_valoracion,
+            val.id_empresa,
+            val.id_sucursal,
+            COALESCE(s.nombre, 'Sin sucursal asignada') AS sucursal,
+            val.id_producto,
+            COALESCE(p.nombre, 'Servicio General de Tienda') AS producto,
+            p.id_categoria,
+            COALESCE(cat.nombre, 'Servicio / General') AS categoria,
+            val.id_cliente,
+            COALESCE(u.nombre || ' ' || COALESCE(u.apellido, ''), 'Cliente') AS cliente,
+            DATE(val.fecha_creacion) AS fecha,
+            val.fecha_creacion,
+            val.puntuacion,
+            CASE 
+                WHEN val.id_producto IS NOT NULL THEN 'PRENDA'
+                WHEN val.id_reserva IS NOT NULL THEN 'RESERVA_PROBADOR'
+                ELSE 'SERVICIO_COMPRA'
+            END AS tipo_valoracion,
+            val.id_pedido,
+            COALESCE(ped.codigo_pedido, v.numero_venta, 'Sin código') AS codigo_referencia,
+            val.id_venta,
+            val.id_reserva,
+            COALESCE(val.motivo_negativo, 'Ninguno') AS motivo_negativo,
+            COALESCE(val.comentario, '') AS comentario,
+            val.requiere_revision,
+            val.atendido,
+            CASE 
+                WHEN val.puntuacion >= 4 THEN 'POSITIVA'
+                WHEN val.puntuacion = 3 THEN 'NEUTRA'
+                ELSE 'CRITICA'
+            END AS estado_satisfaccion
+        FROM {schema}.t_valoracion val
+        LEFT JOIN {schema}.t_sucursal s ON s.id_sucursal = val.id_sucursal
+        LEFT JOIN {schema}.t_producto p ON p.id_producto = val.id_producto
+        LEFT JOIN {schema}.t_categoria cat ON cat.id_categoria = p.id_categoria
+        LEFT JOIN {schema}.t_cliente cli ON cli.id_cliente = val.id_cliente
+        LEFT JOIN {schema}.t_usuario u ON u.id_usuario = cli.id_usuario
+        LEFT JOIN {schema}.t_pedido ped ON ped.id_pedido = val.id_pedido
+        LEFT JOIN {schema}.t_venta v ON v.id_venta = val.id_venta;
+        """
+        _crear_vista(db, schema, 'vw_valoraciones_reporte', v_valoraciones)
+
         _VISTAS_INICIALIZADAS = True
         return True
     finally:

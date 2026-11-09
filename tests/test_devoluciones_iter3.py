@@ -28,7 +28,8 @@ DEVOLUCIONES_BASE_SCHEMA = """
 ALTER TABLE empresa
     ADD COLUMN IF NOT EXISTS razon_social TEXT,
     ADD COLUMN IF NOT EXISTS logo TEXT,
-    ADD COLUMN IF NOT EXISTS ciudad TEXT DEFAULT 'Santa Cruz';
+    ADD COLUMN IF NOT EXISTS ciudad TEXT DEFAULT 'Santa Cruz',
+    ADD COLUMN IF NOT EXISTS politica_devolucion JSONB DEFAULT '{"dias_limite_cambio": 15, "dias_limite_defecto": 90, "permite_cambio": true, "permite_saldo_favor": true, "permite_reembolso": true}'::jsonb;
 
 INSERT INTO t_rol (id_rol, nombre, descripcion) 
 VALUES (104, 'ENCARGADO_SUCURSAL', 'Encargado de Sucursal')
@@ -142,6 +143,42 @@ CREATE TABLE IF NOT EXISTS t_venta (
     correo_facturacion TEXT
 );
 
+CREATE TABLE IF NOT EXISTS t_caja (
+    id_caja SERIAL PRIMARY KEY,
+    id_sucursal INTEGER REFERENCES t_sucursal(id_sucursal),
+    id_empresa INTEGER REFERENCES empresa(id_empresa),
+    nombre TEXT DEFAULT 'Caja 1',
+    estado TEXT DEFAULT 'ACTIVA'
+);
+
+CREATE TABLE IF NOT EXISTS t_caja_sesion (
+    id_sesion_caja SERIAL PRIMARY KEY,
+    id_caja INTEGER REFERENCES t_caja(id_caja),
+    id_usuario INTEGER REFERENCES t_usuario(id_usuario),
+    id_sucursal INTEGER REFERENCES t_sucursal(id_sucursal),
+    id_empresa INTEGER REFERENCES empresa(id_empresa),
+    fecha_apertura TIMESTAMP DEFAULT now(),
+    fecha_cierre TIMESTAMP,
+    monto_inicial NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    estado TEXT NOT NULL DEFAULT 'ABIERTA'
+);
+
+CREATE TABLE IF NOT EXISTS t_pedido (
+    id_pedido SERIAL PRIMARY KEY,
+    id_venta INTEGER REFERENCES t_venta(id_venta),
+    codigo_pedido TEXT,
+    nombre_contacto TEXT
+);
+
+CREATE TABLE IF NOT EXISTS t_pago (
+    id_pago SERIAL PRIMARY KEY,
+    id_venta INTEGER REFERENCES t_venta(id_venta),
+    id_metodo_pago INTEGER REFERENCES t_metodo_pago(id_metodo_pago),
+    monto NUMERIC(12, 2) NOT NULL,
+    codigo_transaccion TEXT,
+    estado TEXT DEFAULT 'APROBADO'
+);
+
 CREATE TABLE IF NOT EXISTS t_detalle_venta (
     id_detalle_venta SERIAL PRIMARY KEY,
     id_venta INTEGER NOT NULL REFERENCES t_venta(id_venta) ON DELETE CASCADE,
@@ -214,6 +251,8 @@ class TestDevolucionesIteracion3(unittest.TestCase):
                 cur.execute(render(ROOT / "backend/migrations/004_iter2_sync_transactional.up.sql", cls.schema))
                 # 4. Migración 005 (UP) de Devoluciones
                 cur.execute(render(ROOT / "backend/migrations/005_iter3_devoluciones.up.sql", cls.schema))
+                # 5. Migración 007 (UP) de Devoluciones y Políticas Triples
+                cur.execute(render(ROOT / "backend/migrations/007_iter5_devoluciones_politicas.up.sql", cls.schema))
 
                 # Semillas de usuarios adicionales
                 # Usuario 6: ENCARGADO_SUCURSAL (rol 104, empresa 1, sucursal 1)

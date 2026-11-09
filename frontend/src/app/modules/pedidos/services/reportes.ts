@@ -104,6 +104,32 @@ export interface ReporteSucursalesData {
   };
 }
 
+export interface ReporteValoracionItem {
+  id_valoracion: number;
+  fecha: string;
+  cliente: string;
+  producto: string;
+  categoria: string;
+  sucursal: string;
+  puntuacion: number;
+  codigo_referencia: string;
+  motivo_negativo: string;
+  comentario: string;
+  estado_satisfaccion: string;
+  requiere_revision: boolean;
+}
+
+export interface ReporteValoracionesData {
+  items: ReporteValoracionItem[];
+  resumen: {
+    total_valoraciones: number;
+    calificacion_promedio: number;
+    tasa_satisfaccion_pct: number;
+    valoraciones_positivas: number;
+    alertas_criticas: number;
+  };
+}
+
 export interface RespuestaApiReporte<T> {
   success: boolean;
   message: string;
@@ -233,6 +259,51 @@ export class ReportesService {
 
     return this.http.get(
       `${this.apiUrl}/api/reportes/sucursales`,
+      { headers: this.getHeaders(), params, responseType: 'blob' }
+    );
+  }
+
+  // --- REPORTE 5: VALORACIONES Y SATISFACCIÓN (CSAT / CALIDAD) ---
+  obtenerReporteValoraciones(filtros: {
+    fecha_inicio?: string;
+    fecha_fin?: string;
+    id_sucursal?: number;
+    puntuacion?: number;
+    requiere_revision?: boolean;
+    id_empresa?: number;
+  }): Observable<RespuestaApiReporte<ReporteValoracionesData>> {
+    let params = new HttpParams().set('formato', 'json');
+    if (filtros.fecha_inicio) params = params.set('fecha_inicio', filtros.fecha_inicio);
+    if (filtros.fecha_fin) params = params.set('fecha_fin', filtros.fecha_fin);
+    if (filtros.id_sucursal) params = params.set('id_sucursal', filtros.id_sucursal.toString());
+    if (filtros.puntuacion) params = params.set('puntuacion', filtros.puntuacion.toString());
+    if (filtros.requiere_revision !== undefined) params = params.set('requiere_revision', String(filtros.requiere_revision));
+    if (filtros.id_empresa) params = params.set('id_empresa', filtros.id_empresa.toString());
+
+    return this.http.get<RespuestaApiReporte<ReporteValoracionesData>>(
+      `${this.apiUrl}/api/reportes/valoraciones`,
+      { headers: this.getHeaders(), params }
+    );
+  }
+
+  descargarPdfValoraciones(filtros: {
+    fecha_inicio?: string;
+    fecha_fin?: string;
+    id_sucursal?: number;
+    puntuacion?: number;
+    requiere_revision?: boolean;
+    id_empresa?: number;
+  }): Observable<Blob> {
+    let params = new HttpParams().set('formato', 'pdf');
+    if (filtros.fecha_inicio) params = params.set('fecha_inicio', filtros.fecha_inicio);
+    if (filtros.fecha_fin) params = params.set('fecha_fin', filtros.fecha_fin);
+    if (filtros.id_sucursal) params = params.set('id_sucursal', filtros.id_sucursal.toString());
+    if (filtros.puntuacion) params = params.set('puntuacion', filtros.puntuacion.toString());
+    if (filtros.requiere_revision !== undefined) params = params.set('requiere_revision', String(filtros.requiere_revision));
+    if (filtros.id_empresa) params = params.set('id_empresa', filtros.id_empresa.toString());
+
+    return this.http.get(
+      `${this.apiUrl}/api/reportes/valoraciones`,
       { headers: this.getHeaders(), params, responseType: 'blob' }
     );
   }

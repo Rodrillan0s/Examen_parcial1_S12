@@ -352,6 +352,34 @@ CATALOGO_REPORTES: Dict[str, Any] = {
             {"campo": "ultima_venta", "titulo": "Última Actividad", "tipo": "date"}
         ],
         "campo_monto": "capital_estancado_bs"
+    },
+
+    "valoraciones": {
+        "codigo": "valoraciones",
+        "nombre": "Reporte de Valoraciones y Satisfacción",
+        "descripcion": "Auditoría de satisfacción de clientes, calidad de prendas, estrellas CSAT y alertas críticas de servicio.",
+        "vista": "vw_valoraciones_reporte",
+        "permiso": "reportes.ver",
+        "activo": True,
+        "filtros_permitidos": [
+            "fechaDesde", "fechaHasta", "sucursalId", "productoId", "categoriaId", "clienteId", "puntuacion", "estado", "requiereRevision"
+        ],
+        "agrupaciones_permitidas": [
+            "sucursal", "producto", "categoria", "puntuacion", "estado_satisfaccion", "dia"
+        ],
+        "columnas": [
+            {"campo": "fecha", "titulo": "Fecha", "tipo": "date"},
+            {"campo": "cliente", "titulo": "Cliente", "tipo": "string"},
+            {"campo": "producto", "titulo": "Prenda / Concepto", "tipo": "string"},
+            {"campo": "categoria", "titulo": "Categoría", "tipo": "string"},
+            {"campo": "sucursal", "titulo": "Sucursal", "tipo": "string"},
+            {"campo": "puntuacion", "titulo": "Estrellas (1-5)", "tipo": "number"},
+            {"campo": "codigo_referencia", "titulo": "N° Ref / Pedido", "tipo": "string"},
+            {"campo": "motivo_negativo", "titulo": "Motivo Observación", "tipo": "string"},
+            {"campo": "comentario", "titulo": "Comentario del Cliente", "tipo": "string"},
+            {"campo": "estado_satisfaccion", "titulo": "Satisfacción", "tipo": "badge"}
+        ],
+        "campo_monto": "puntuacion"
     }
 }
 
@@ -376,6 +404,14 @@ ALIASES_REPORTES: Dict[str, str] = {
     "inmovilizado": "stock_inmovilizado",
     "estancado": "stock_inmovilizado",
     "rotacion_lenta": "stock_inmovilizado",
+    "valoracion": "valoraciones",
+    "calificacion": "valoraciones",
+    "calificaciones": "valoraciones",
+    "satisfaccion": "valoraciones",
+    "opiniones": "valoraciones",
+    "resenas": "valoraciones",
+    "csat": "valoraciones",
+    "quejas": "valoraciones",
 }
 
 

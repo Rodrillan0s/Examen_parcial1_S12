@@ -236,6 +236,19 @@
               {{ producto.nombre }}
             </h1>
 
+            <!-- Stars and Review Summary -->
+            <div *ngIf="resumenValoraciones && resumenValoraciones.total > 0" class="flex items-center gap-2 pt-1">
+              <div class="flex items-center text-amber-500 text-xs">
+                <span *ngFor="let s of [1,2,3,4,5]">{{ s <= resumenValoraciones.promedio ? '★' : '☆' }}</span>
+              </div>
+              <span class="text-xs font-mono font-bold text-stone-700 dark:text-zinc-300">
+                {{ resumenValoraciones.promedio | number:'1.1-1' }}
+              </span>
+              <span class="text-xs text-stone-400 font-mono">
+                ({{ resumenValoraciones.total }} {{ resumenValoraciones.total === 1 ? 'opinión' : 'opiniones' }})
+              </span>
+            </div>
+
             <div class="flex items-baseline space-x-3 pt-1">
               <span class="text-2xl sm:text-3xl font-mono font-bold text-amber-600 dark:text-amber-300">
                 Bs. {{ getPrecioActual() | number:'1.2-2' }}
@@ -413,6 +426,39 @@
                [class.dark:text-emerald-300]="!toastEsError"
                class="p-3 rounded-xl border text-xs text-center font-medium animate-fade-in flex items-center justify-center space-x-2">
             <span>{{ toastMessage }}</span>
+          </div>
+
+          <!-- Sección de Reseñas y Opiniones Verificadas -->
+          <div *ngIf="resumenValoraciones && resumenValoraciones.total > 0" class="pt-4 border-t border-zinc-200 dark:border-zinc-800 space-y-3">
+            <div class="flex items-center justify-between">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-zinc-900 dark:text-zinc-100 font-mono">
+                Opiniones Verificadas ({{ resumenValoraciones.total }})
+              </h3>
+              <div class="flex items-center gap-1 text-xs font-mono font-bold text-amber-500">
+                <span>★ {{ resumenValoraciones.promedio | number:'1.1-1' }}</span>
+                <span class="text-stone-400 font-normal">/ 5.0</span>
+              </div>
+            </div>
+
+            <!-- Lista de Opiniones Recientes -->
+            <div class="space-y-2.5 max-h-48 overflow-y-auto pr-1">
+              <div *ngFor="let op of resumenValoraciones.ultimas_opiniones" class="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200/60 dark:border-zinc-700/60 space-y-1 text-left">
+                <div class="flex items-center justify-between text-[11px]">
+                  <div class="flex items-center gap-1 text-amber-500">
+                    <span *ngFor="let s of [1,2,3,4,5]">
+                      {{ s <= op.puntuacion ? '★' : '☆' }}
+                    </span>
+                    <span class="font-semibold text-zinc-700 dark:text-zinc-300 ml-1">{{ op.nombre_cliente }}</span>
+                  </div>
+                  <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono font-semibold">
+                    ✓ Compra verificada
+                  </span>
+                </div>
+                <p *ngIf="op.comentario" class="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                  {{ op.comentario }}
+                </p>
+              </div>
+            </div>
           </div>
 
         </div>

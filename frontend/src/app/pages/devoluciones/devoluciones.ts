@@ -102,11 +102,12 @@ export class DevolucionesComponent implements OnInit {
   observacionesRecepcion: string = '';
   guardandoRecepcion: boolean = false;
 
-  // --- MODAL LIQUIDACIÓN REEMBOLSO ---
+  // --- MODAL LIQUIDACIÓN REEMBOLSO O ENTREGA DE CAMBIO ---
   mostrarModalReembolso: boolean = false;
   idDevolucionReembolso: number | null = null;
   codigoDevolucionReembolso: string = '';
   montoReembolsoLiquidacion: number = 0;
+  tipoResolucionReembolso: string = 'REEMBOLSO_DINERO';
   metodoReembolso: string = 'EFECTIVO';
   referenciaReembolso: string = '';
   observacionesReembolso: string = '';
@@ -647,24 +648,33 @@ export class DevolucionesComponent implements OnInit {
     this.idDevolucionReembolso = rawDev.id_devolucion;
     this.codigoDevolucionReembolso = rawDev.codigo_devolucion;
     this.montoReembolsoLiquidacion = rawDev.monto_reembolso;
+    this.tipoResolucionReembolso = rawDev.tipo_resolucion || 'REEMBOLSO_DINERO';
     this.observacionesReembolso = '';
 
-    const pagoOrig = rawDev.pago_origen;
-    if (pagoOrig?.es_paypal || pagoOrig?.metodo_pago === 'PAYPAL' || (pagoOrig?.codigo_transaccion && pagoOrig.codigo_transaccion.length > 10)) {
-      this.esPagoPayPalOriginal = true;
-      this.idCapturaPayPalOriginal = pagoOrig?.codigo_transaccion || '';
-      this.metodoReembolso = 'PAYPAL';
-      this.referenciaReembolso = this.idCapturaPayPalOriginal ? `PAYPAL-${this.idCapturaPayPalOriginal}` : 'PAYPAL_REFUND';
-    } else if (rawDev.tipo_resolucion === 'SALDO_A_FAVOR') {
+    if (rawDev.tipo_resolucion === 'CAMBIO_PRENDA') {
       this.esPagoPayPalOriginal = false;
       this.idCapturaPayPalOriginal = '';
-      this.metodoReembolso = 'SALDO_A_FAVOR';
-      this.referenciaReembolso = 'VALE_DIGITAL';
+      this.metodoReembolso = 'ENTREGA_PRENDA_CAMBIO';
+      this.referenciaReembolso = `CAMBIO-${rawDev.codigo_devolucion}`;
+      this.observacionesReembolso = 'Prenda de reemplazo verificada y entregada al cliente a satisfacción.';
     } else {
-      this.esPagoPayPalOriginal = false;
-      this.idCapturaPayPalOriginal = '';
-      this.metodoReembolso = 'EFECTIVO';
-      this.referenciaReembolso = 'REEMB-' + Date.now().toString().slice(-6);
+      const pagoOrig = rawDev.pago_origen;
+      if (pagoOrig?.es_paypal || pagoOrig?.metodo_pago === 'PAYPAL' || (pagoOrig?.codigo_transaccion && pagoOrig.codigo_transaccion.length > 10)) {
+        this.esPagoPayPalOriginal = true;
+        this.idCapturaPayPalOriginal = pagoOrig?.codigo_transaccion || '';
+        this.metodoReembolso = 'PAYPAL';
+        this.referenciaReembolso = this.idCapturaPayPalOriginal ? `PAYPAL-${this.idCapturaPayPalOriginal}` : 'PAYPAL_REFUND';
+      } else if (rawDev.tipo_resolucion === 'SALDO_A_FAVOR') {
+        this.esPagoPayPalOriginal = false;
+        this.idCapturaPayPalOriginal = '';
+        this.metodoReembolso = 'SALDO_A_FAVOR';
+        this.referenciaReembolso = 'VALE_DIGITAL';
+      } else {
+        this.esPagoPayPalOriginal = false;
+        this.idCapturaPayPalOriginal = '';
+        this.metodoReembolso = 'EFECTIVO';
+        this.referenciaReembolso = 'REEMB-' + Date.now().toString().slice(-6);
+      }
     }
 
     this.mostrarModalReembolso = true;
@@ -680,7 +690,7 @@ export class DevolucionesComponent implements OnInit {
   confirmarReembolso(): void {
     if (!this.idDevolucionReembolso) return;
     if (!this.referenciaReembolso.trim()) {
-      this.mostrarToast('info', 'Ingresa la referencia o comprobante de pago bancario.');
+      this.mostrarToast('info', 'Ingresa la referencia o comprobante.');
       return;
     }
 
@@ -697,7 +707,10 @@ export class DevolucionesComponent implements OnInit {
       next: (res: any) => {
         this.guardandoReembolso = false;
         this.cerrarModalReembolso();
-        this.mostrarToast('exito', `Reembolso financiero liquidado exitosamente para la devolución.`);
+        const msg = this.tipoResolucionReembolso === 'CAMBIO_PRENDA'
+          ? 'Cambio de prenda completado y entregado exitosamente al cliente.'
+          : 'Reembolso financiero liquidado exitosamente para la devolución.';
+        this.mostrarToast('exito', msg);
         if (this.mostrarModalDetalle && this.devolucionDetalle?.id_devolucion === this.idDevolucionReembolso) {
           this.abrirDetalle(this.idDevolucionReembolso);
         }
@@ -706,7 +719,7 @@ export class DevolucionesComponent implements OnInit {
       },
       error: (err: any) => {
         this.guardandoReembolso = false;
-        this.mostrarToast('error', err?.error?.detail || 'Error al liquidar el reembolso.');
+        this.mostrarToast('error', err?.error?.detail || 'Error al completar la liquidación.');
         this.cdr.markForCheck();
       }
     });
@@ -747,6 +760,8 @@ export class DevolucionesComponent implements OnInit {
         return 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-500/30';
       case 'PENDIENTE_REEMBOLSO':
         return 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border-cyan-500/30';
+      case 'PENDIENTE_ENTREGA':
+        return 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30';
       case 'COMPLETADA':
         return 'bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-500/30';
       case 'CANCELADA':
@@ -764,6 +779,7 @@ export class DevolucionesComponent implements OnInit {
       case 'RECHAZADA': return 'Rechazada ✕';
       case 'RECIBIDA': return 'Prendas Recibidas en Tienda';
       case 'PENDIENTE_REEMBOLSO': return 'Pendiente Liquidar Reembolso';
+      case 'PENDIENTE_ENTREGA': return 'Prendas Recibidas / Pendiente Entrega Cambio';
       case 'COMPLETADA': return 'Completada / Reembolsada ✓';
       case 'CANCELADA': return 'Cancelada';
       default: return estado || 'En Proceso';

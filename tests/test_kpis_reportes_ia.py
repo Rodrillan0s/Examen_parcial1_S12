@@ -109,12 +109,15 @@ class TestKpisReportesIA(unittest.TestCase):
         self.assertGreater(empresa_id, 0)
         self.assertEqual(sucursal_id, 3)
 
-    def test_todos_los_13_reportes_construyen_sql_valido(self):
-        """Verifica que los 13 reportes del motor dinámico construyan SQL válido y ejecutable sin error de columnas."""
+    def test_todos_los_14_reportes_construyen_sql_valido(self):
+        """Verifica que los 14 reportes del motor dinámico construyan SQL válido y ejecutable sin error de columnas."""
         from app.modules.pedidos.services.reports.engine.catalog import CATALOGO_REPORTES
         from app.modules.pedidos.services.reports.engine.query_builder import construir_consulta_reporte
         from app.core.postgres import PostgreSQL
         
+        self.assertIn("valoraciones", CATALOGO_REPORTES)
+        self.assertEqual(len(CATALOGO_REPORTES), 14)
+
         db = PostgreSQL()
         db.create_connection()
         try:
@@ -126,6 +129,38 @@ class TestKpisReportesIA(unittest.TestCase):
                 # Ejecutar contra PostgreSQL real para validar sintaxis de columnas
                 rows = db.execute_query(sql, params, fetchall=True)
                 self.assertIsNotNone(rows, f"Fallo ejecutando reporte {cod}")
+        finally:
+            db.close_connection()
+
+    def test_comando_voz_valoraciones_y_calidad(self):
+        """Verifica que los comandos de voz y texto para valoraciones y quejas se interpreten correctamente."""
+        from app.modules.pedidos.services.reports.parser.command_parser import parsear_comando_voz
+        from app.modules.pedidos.services.reports.engine.catalog import CATALOGO_REPORTES
+        from app.modules.pedidos.services.reports.engine.query_builder import construir_consulta_reporte
+        from app.core.postgres import PostgreSQL
+
+        comandos_val = [
+            ("Reporte de valoraciones de clientes", "valoraciones", None),
+            ("Calificaciones de prendas por estrellas", "valoraciones", "puntuacion"),
+            ("Opiniones de clientes por sucursal", "valoraciones", "sucursal"),
+            ("Quejas de calidad de prendas", "valoraciones", None),
+        ]
+
+        db = PostgreSQL()
+        db.create_connection()
+        try:
+            for cmd, expected_rep, expected_group in comandos_val:
+                parsed = parsear_comando_voz(cmd, id_empresa=1)
+                self.assertTrue(parsed["valido"], f"Comando inválido: {cmd}")
+                req = parsed["report_request"]
+                self.assertEqual(req["tipo_reporte"], expected_rep)
+                if expected_group:
+                    self.assertEqual(req.get("groupBy"), expected_group)
+
+                defn = CATALOGO_REPORTES[req["tipo_reporte"]]
+                sql, params, meta = construir_consulta_reporte(defn, req, id_empresa=1)
+                rows = db.execute_query(sql, params, fetchall=True)
+                self.assertIsNotNone(rows)
         finally:
             db.close_connection()
 
@@ -181,6 +216,50 @@ class TestKpisReportesIA(unittest.TestCase):
                 self.assertIsNotNone(rows)
         finally:
             db.close_connection()
+
+    def test_kpis_satisfaccion_canales_inventario_db(self):
+        """Verifica que el resumen de KPIs consolide satisfacción, canales, probador, devoluciones e inventario valuado sin N+1."""
+        from app.modules.pedidos.repos import kpis_repos
+        res = kpis_repos.obtener_resumen_kpis_db(id_empresa=1)
+        self.assertIn("satisfaccion", res)
+        self.assertIn("canales", res)
+        self.assertIn("reservas_probador", res)
+        self.assertIn("devoluciones", res)
+        self.assertIn("inventario", res)
+        self.assertIn("valoracion_inventario_disponible", res["inventario"])
+        self.assertIn("tasa_disponibilidad_stock", res["inventario"])
+
+        ranking = kpis_repos.obtener_ranking_satisfaccion_prendas_db(id_empresa=1, limit=5)
+        self.assertIsInstance(ranking, list)
+
+        alertas = kpis_repos.obtener_alertas_calidad_criticas_db(id_empresa=1, limit=10)
+        self.assertIsInstance(alertas, list)
+
+    def test_kpis_services_endpoints_autorizacion(self):
+        """Verifica que los servicios de KPIs resuelvan el contexto tenant y bloqueen a clientes."""
+        from app.modules.pedidos.services import kpis_services
+        token_admin = {
+            "id_usuario": 1,
+            "roles": ["ADMINISTRADOR"],
+            "permisos": ["kpis.ver"],
+            "id_empresa": 1,
+            "alcance": "EMPRESA"
+        }
+        res_ranking = kpis_services.obtener_ranking_satisfaccion_prendas(token_admin)
+        self.assertTrue(res_ranking["success"])
+
+        res_alertas = kpis_services.obtener_alertas_calidad_criticas(token_admin)
+        self.assertTrue(res_alertas["success"])
+
+        token_cliente = {
+            "id_usuario": 99,
+            "roles": ["CLIENTE"],
+            "permisos": [],
+            "id_empresa": None,
+            "alcance": "CLIENTE"
+        }
+        with self.assertRaises(ValueError):
+            kpis_services.obtener_ranking_satisfaccion_prendas(token_cliente)
 
 
 if __name__ == "__main__":

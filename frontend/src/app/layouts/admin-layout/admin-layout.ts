@@ -575,10 +575,10 @@ export class AdminLayoutComponent implements OnInit {
             permiso: 'bitacora.ver' 
           },
           { 
-            nombre: 'Copias de Respaldo', 
+            nombre: 'Copias de Respaldo & Nube', 
             ruta: '/admin/backup', 
             permiso: 'admin.acceder', 
-            alcances: ['PLATAFORMA'] 
+            alcances: ['PLATAFORMA', 'EMPRESA'] 
           }
         ]
       },

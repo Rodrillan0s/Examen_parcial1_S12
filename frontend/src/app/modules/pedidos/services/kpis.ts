@@ -88,6 +88,7 @@ export interface KpisResumen {
     ticket_promedio: number;
     ticket_minimo: number;
     ticket_maximo: number;
+    clientes_unicos?: number;
   };
   inventario: {
     total_productos_catalogo: number;
@@ -97,6 +98,53 @@ export interface KpisResumen {
     stock_reservado: number;
     productos_stock_bajo: number;
     productos_agotados: number;
+    valoracion_inventario_disponible?: number;
+    tasa_disponibilidad_stock?: number;
+  };
+  satisfaccion?: {
+    total_valoraciones: number;
+    calificacion_promedio: number;
+    tasa_satisfaccion_pct: number;
+    valoraciones_positivas: number;
+    valoraciones_neutras: number;
+    valoraciones_negativas: number;
+    alertas_criticas_pendientes: number;
+    estrellas_distribucion: { [key: number]: number };
+    valoraciones_prendas: number;
+    promedio_prendas: number;
+    valoraciones_servicio: number;
+    promedio_servicio: number;
+  };
+  canales?: {
+    ventas_online_cantidad: number;
+    ventas_online_total: number;
+    porcentaje_online: number;
+    ventas_pos_cantidad: number;
+    ventas_pos_total: number;
+    porcentaje_pos: number;
+    total_pedidos: number;
+    pedidos_delivery_cantidad: number;
+    pedidos_delivery_total: number;
+    pedidos_retiro_cantidad: number;
+    pedidos_retiro_total: number;
+    pedidos_entregados: number;
+    pedidos_en_proceso: number;
+  };
+  reservas_probador?: {
+    total_reservas: number;
+    reservas_atendidas: number;
+    reservas_canceladas: number;
+    reservas_vencidas: number;
+    reservas_activas: number;
+    tasa_asistencia_pct: number;
+  };
+  devoluciones?: {
+    total_solicitudes: number;
+    devoluciones_completadas: number;
+    devoluciones_rechazadas: number;
+    devoluciones_en_tramite: number;
+    monto_total_reembolsado: number;
+    casos_ley_453: number;
   };
   comparacion: {
     ventas_crecimiento_pct: number;
@@ -104,6 +152,28 @@ export interface KpisResumen {
     ingresos_crecimiento_pct: number;
     periodo_anterior_disponible: boolean;
   };
+}
+
+export interface PrendaRankingSatisfaccionItem {
+  id_producto: number;
+  nombre: string;
+  categoria: string;
+  imagen_url: string;
+  calificacion_promedio: number;
+  total_opiniones: number;
+  quejas_1_estrella: number;
+}
+
+export interface AlertaCalidadCriticaItem {
+  id_valoracion: number;
+  fecha_creacion: string;
+  nombre_cliente: string;
+  nombre_producto: string;
+  codigo_pedido: string | null;
+  motivo_negativo: string;
+  comentario: string;
+  atendido: boolean;
+  puntuacion: number;
 }
 
 export interface VentaTimelineItem {
@@ -330,6 +400,30 @@ export class KpisService {
 
     return this.http.get<RespuestaApi<VentaSucursalItem[]>>(
       `${this.apiUrl}/api/kpis/ventas-sucursal`,
+      { headers: this.getHeaders(), params }
+    );
+  }
+
+  // W32: Ranking de satisfacción de prendas por valoración
+  obtenerRankingSatisfaccion(id_sucursal?: number, limit: number = 5, id_empresa?: number): Observable<RespuestaApi<PrendaRankingSatisfaccionItem[]>> {
+    let params = new HttpParams().set('limit', limit.toString());
+    if (id_sucursal) params = params.set('id_sucursal', id_sucursal.toString());
+    if (id_empresa) params = params.set('id_empresa', id_empresa.toString());
+
+    return this.http.get<RespuestaApi<PrendaRankingSatisfaccionItem[]>>(
+      `${this.apiUrl}/api/kpis/ranking-satisfaccion`,
+      { headers: this.getHeaders(), params }
+    );
+  }
+
+  // W32: Alertas de calidad y valoraciones críticas (1 estrella o a revisar)
+  obtenerAlertasCalidad(id_sucursal?: number, limit: number = 10, id_empresa?: number): Observable<RespuestaApi<AlertaCalidadCriticaItem[]>> {
+    let params = new HttpParams().set('limit', limit.toString());
+    if (id_sucursal) params = params.set('id_sucursal', id_sucursal.toString());
+    if (id_empresa) params = params.set('id_empresa', id_empresa.toString());
+
+    return this.http.get<RespuestaApi<AlertaCalidadCriticaItem[]>>(
+      `${this.apiUrl}/api/kpis/alertas-calidad`,
       { headers: this.getHeaders(), params }
     );
   }

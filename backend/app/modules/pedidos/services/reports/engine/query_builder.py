@@ -140,6 +140,14 @@ def construir_consulta_reporte(
         where_clauses.append("LOWER(ciudad) LIKE LOWER(%s)")
         params.append(f"%{filtros['ciudad']}%")
 
+    if filtros.get("puntuacion") and "puntuacion" in filtros_permitidos:
+        where_clauses.append("puntuacion = %s")
+        params.append(int(filtros["puntuacion"]))
+
+    if filtros.get("requiereRevision") is not None and "requiereRevision" in filtros_permitidos:
+        where_clauses.append("requiere_revision = %s")
+        params.append(bool(filtros["requiereRevision"]))
+
     where_sql = " AND ".join(where_clauses)
 
     # =========================================================================
@@ -157,13 +165,14 @@ def construir_consulta_reporte(
             col_alias = columna_grupo
 
         campo_monto = definicion.get("campo_monto", "total")
+        is_score = campo_monto == "puntuacion"
         
         sql = f"""
             SELECT 
                 {col_expr} AS {col_alias},
                 COUNT(*) AS cantidad_registros,
                 COALESCE(SUM({campo_monto}), 0) AS total_monto,
-                COALESCE(AVG({campo_monto}), 0) AS promedio_monto
+                ROUND(COALESCE(AVG({campo_monto}), 0), 2) AS promedio_monto
             FROM {vista}
             WHERE {where_sql}
             GROUP BY {col_expr}
@@ -172,9 +181,9 @@ def construir_consulta_reporte(
         
         columnas_meta = [
             {"campo": col_alias, "titulo": col_alias.replace('_', ' ').capitalize(), "tipo": "string"},
-            {"campo": "cantidad_registros", "titulo": "Registros / Transacciones", "tipo": "number"},
-            {"campo": "total_monto", "titulo": "Monto Total (Bs.)", "tipo": "currency"},
-            {"campo": "promedio_monto", "titulo": "Promedio (Bs.)", "tipo": "currency"}
+            {"campo": "cantidad_registros", "titulo": "Opiniones / Registros" if is_score else "Registros / Transacciones", "tipo": "number"},
+            {"campo": "total_monto", "titulo": "Puntos Acumulados" if is_score else "Monto Total (Bs.)", "tipo": "number" if is_score else "currency"},
+            {"campo": "promedio_monto", "titulo": "Promedio (★)" if is_score else "Promedio (Bs.)", "tipo": "number" if is_score else "currency"}
         ]
         return sql, tuple(params), columnas_meta
 

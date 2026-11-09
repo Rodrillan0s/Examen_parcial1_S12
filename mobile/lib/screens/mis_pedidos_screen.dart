@@ -11,6 +11,7 @@ import '../theme/app_theme.dart';
 import '../widgets/aurora_badge.dart';
 import '../widgets/aurora_button.dart';
 import '../widgets/aurora_empty_state.dart';
+import '../widgets/valoracion_bottom_sheet.dart';
 import 'auth_screens.dart';
 import 'pago_screen.dart';
 import 'politicas_devolucion_modal.dart';
@@ -239,6 +240,31 @@ class _MisPedidosScreenState extends State<MisPedidosScreen> with SingleTickerPr
                         _abrirSolicitudDevolucion(pedido);
                       },
                     ),
+                    const SizedBox(height: 10),
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFF59E0B),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      icon: const Icon(Icons.star_rounded, size: 18),
+                      label: Text(
+                        'Calificar Compra y Servicio',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        ValoracionBottomSheet.mostrar(
+                          context,
+                          idPedido: pedido.idPedido,
+                          codigoPedido: pedido.codigoPedido,
+                        );
+                      },
+                    ),
                   ],
                 ],
               ),
@@ -448,6 +474,36 @@ class _MisPedidosScreenState extends State<MisPedidosScreen> with SingleTickerPr
                                       ),
                                     ),
                                   ],
+                                  if (pedido.estado.toUpperCase() == 'ENTREGADO' ||
+                                      pedido.estado.toUpperCase() == 'COMPLETADO' ||
+                                      pedido.estadoPago.toUpperCase() == 'PAGADO') ...[
+                                    const SizedBox(height: 10),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      height: 36,
+                                      child: OutlinedButton.icon(
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: const Color(0xFFD97706),
+                                          side: const BorderSide(color: Color(0xFFFDE68A)),
+                                          backgroundColor: const Color(0xFFFFFBEB),
+                                          elevation: 0,
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                        ),
+                                        icon: const Icon(Icons.star_rounded, size: 16, color: Color(0xFFD97706)),
+                                        label: Text(
+                                          'Calificar compra',
+                                          style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w600),
+                                        ),
+                                        onPressed: () {
+                                          ValoracionBottomSheet.mostrar(
+                                            context,
+                                            idPedido: pedido.idPedido,
+                                            codigoPedido: pedido.codigoPedido,
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ],
                                 ],
                               ),
                             ),
@@ -515,11 +571,27 @@ class _MisPedidosScreenState extends State<MisPedidosScreen> with SingleTickerPr
                                   style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w600),
                                 ),
                                 Text(
-                                  'Resolución: ${sol.tipoResolucion == 'CREDITO_TIENDA' ? 'Saldo a Favor' : sol.tipoResolucion == 'CAMBIO_PRENDA' ? 'Cambio de Prenda' : 'Reembolso'}',
+                                  'Resolución: ${sol.tipoResolucion == 'SALDO_A_FAVOR' || sol.tipoResolucion == 'CREDITO_TIENDA' ? 'Saldo a Favor / Vale Digital' : sol.tipoResolucion == 'CAMBIO_PRENDA' ? 'Cambio de Talla / Prenda' : 'Reembolso Monetario'}',
                                   style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textSecondary),
                                 ),
 
-                                if (sol.montoTotalEstimado > 0) ...[
+                                if (sol.tipoResolucion == 'CAMBIO_PRENDA') ...[
+                                  const SizedBox(height: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.cyan.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: Colors.cyan.withValues(alpha: 0.3)),
+                                    ),
+                                    child: Text(
+                                      sol.estado == 'PENDIENTE_ENTREGA'
+                                          ? '🔄 Prenda original recibida en tienda — Tu nueva talla está lista para entrega'
+                                          : '🔄 Canje directo por nueva talla (Sin desembolso monetario)',
+                                      style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.cyan.shade900),
+                                    ),
+                                  ),
+                                ] else if (sol.montoTotalEstimado > 0) ...[
                                   const SizedBox(height: 6),
                                   Text(
                                     'Monto estimado: ${currencyFormatter.format(sol.montoTotalEstimado)}',
@@ -530,17 +602,30 @@ class _MisPedidosScreenState extends State<MisPedidosScreen> with SingleTickerPr
                                 if (sol.items.isNotEmpty) ...[
                                   const Divider(height: 18),
                                   ...sol.items.map((it) => Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 2),
-                                    child: Row(
+                                    padding: const EdgeInsets.symmetric(vertical: 3),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        const Icon(Icons.circle, size: 6, color: AppTheme.primaryGold),
-                                        const SizedBox(width: 6),
-                                        Expanded(
-                                          child: Text(
-                                            '${it.productoNombre} (${it.talla} / ${it.color}) x${it.cantidad}',
-                                            style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary),
-                                          ),
+                                        Row(
+                                          children: [
+                                            const Icon(Icons.circle, size: 6, color: AppTheme.primaryGold),
+                                            const SizedBox(width: 6),
+                                            Expanded(
+                                              child: Text(
+                                                '${it.productoNombre} (Talla: ${it.talla} / ${it.color}) x${it.cantidad}',
+                                                style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary),
+                                              ),
+                                            ),
+                                          ],
                                         ),
+                                        if (it.tallaCambio != null && it.tallaCambio!.isNotEmpty)
+                                          Padding(
+                                            padding: const EdgeInsets.only(left: 12, top: 2),
+                                            child: Text(
+                                              '🔄 Nueva talla solicitada: ${it.tallaCambio}',
+                                              style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.cyan.shade800),
+                                            ),
+                                          ),
                                       ],
                                     ),
                                   )),

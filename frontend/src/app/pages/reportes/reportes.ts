@@ -10,7 +10,8 @@ import {
   ReporteVentaItem, 
   ReporteInventarioItem, 
   ReporteProductoItem, 
-  ReporteSucursalItem 
+  ReporteSucursalItem,
+  ReporteValoracionItem
 } from '../../services/reportes';
 import { 
   MotorReportesService, 
@@ -25,7 +26,7 @@ import { AuthService } from '../../services/auth';
 import { KpisService } from '../../services/kpis';
 import { extraerMensajeError } from '../../utils/error-helper';
 
-export type TipoReporte = 'ventas' | 'inventario' | 'productos' | 'sucursales';
+export type TipoReporte = 'ventas' | 'inventario' | 'productos' | 'sucursales' | 'valoraciones';
 
 @Component({
   selector: 'app-reportes',
@@ -65,6 +66,8 @@ export class ReportesComponent implements OnInit, OnDestroy {
   estadoVenta: string = 'TODOS';
   estadoStock: string = 'todos';
   categoriaSeleccionada: number | null = null;
+  filtroPuntuacion: number | null = null;
+  filtroCriticas: boolean = false;
 
   // ---- Estados de Carga ----
   cargando: boolean = false;
@@ -78,6 +81,7 @@ export class ReportesComponent implements OnInit, OnDestroy {
   datosInventario: { items: ReporteInventarioItem[]; resumen: any } | null = null;
   datosProductos: { items: ReporteProductoItem[]; resumen: any } | null = null;
   datosSucursales: { items: ReporteSucursalItem[]; resumen: any } | null = null;
+  datosValoraciones: { items: ReporteValoracionItem[]; resumen: any } | null = null;
 
   // ---- MOTOR DE REPORTES DINÁMICO & VOZ ----
   comandoTexto: string = '';
@@ -98,6 +102,9 @@ export class ReportesComponent implements OnInit, OnDestroy {
   comandosSugeridos: string[] = [
     'Ventas de hoy',
     'Ventas pendientes de pago',
+    'Valoraciones y satisfacción de clientes',
+    'Quejas de calidad de prendas (1★)',
+    'Opiniones de clientes por sucursal',
     'Reservas de prendas apartadas',
     'Auditoría y ventas POS',
     'Ventas de esta semana por sucursal',
@@ -187,7 +194,7 @@ export class ReportesComponent implements OnInit, OnDestroy {
           }
           if (params['tipo']) {
             const t = String(params['tipo']).toLowerCase();
-            if (t === 'ventas' || t === 'inventario' || t === 'productos' || t === 'sucursales') {
+            if (t === 'ventas' || t === 'inventario' || t === 'productos' || t === 'sucursales' || t === 'valoraciones') {
               this.tipoReporteActivo = t as TipoReporte;
               this.vistaActiva = 'estandar';
               this.consultarReporte();
@@ -541,6 +548,8 @@ export class ReportesComponent implements OnInit, OnDestroy {
     this.estadoVenta = 'TODOS';
     this.estadoStock = 'todos';
     this.categoriaSeleccionada = null;
+    this.filtroPuntuacion = null;
+    this.filtroCriticas = false;
     this.comandoTexto = '';
     this.comandoInterpretadoResumen = '';
     this.vistaActiva = 'estandar';
@@ -646,6 +655,26 @@ export class ReportesComponent implements OnInit, OnDestroy {
           if (err?.name !== 'EmptyError') this.manejarError(err);
         }
       });
+    } else if (this.tipoReporteActivo === 'valoraciones') {
+      this.reportesService.obtenerReporteValoraciones({
+        fecha_inicio: fIni,
+        fecha_fin: fFin,
+        id_sucursal: suc,
+        puntuacion: this.filtroPuntuacion || undefined,
+        requiere_revision: this.filtroCriticas ? true : undefined,
+        id_empresa: emp
+      })
+      .pipe(takeUntil(this.cancelReportePrevio$))
+      .subscribe({
+        next: (res) => {
+          this.datosValoraciones = res.data;
+          this.cargando = false;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          if (err?.name !== 'EmptyError') this.manejarError(err);
+        }
+      });
     }
   }
 
@@ -692,6 +721,16 @@ export class ReportesComponent implements OnInit, OnDestroy {
         fecha_fin: fFin,
         id_sucursal: suc,
         id_categoria: this.categoriaSeleccionada || undefined,
+        id_empresa: emp
+      });
+    } else if (this.tipoReporteActivo === 'valoraciones') {
+      nombreArchivo = `Reporte_Valoraciones_${timestamp}.pdf`;
+      obs = this.reportesService.descargarPdfValoraciones({
+        fecha_inicio: fIni,
+        fecha_fin: fFin,
+        id_sucursal: suc,
+        puntuacion: this.filtroPuntuacion || undefined,
+        requiere_revision: this.filtroCriticas ? true : undefined,
         id_empresa: emp
       });
     } else {
@@ -771,6 +810,21 @@ export class ReportesComponent implements OnInit, OnDestroy {
         'Participación %': p.participacion_pct
       }));
       this.reportesService.exportarAExcel(filas, `Reporte_Productos_Vendidos_${timestamp}`, 'Productos');
+    } else if (this.tipoReporteActivo === 'valoraciones') {
+      const filas = (this.datosValoraciones?.items || []).map(v => ({
+        'Fecha': v.fecha,
+        'Cliente': v.cliente,
+        'Prenda / Producto': v.producto,
+        'Categoría': v.categoria,
+        'Sucursal': v.sucursal,
+        'Puntuación (★)': v.puntuacion,
+        'N° Referencia': v.codigo_referencia,
+        'Motivo Queja': v.motivo_negativo || 'N/A',
+        'Comentario': v.comentario || '',
+        'Satisfacción': v.estado_satisfaccion,
+        'Requiere Revisión': v.requiere_revision ? 'SÍ' : 'NO'
+      }));
+      this.reportesService.exportarAExcel(filas, `Reporte_Valoraciones_${timestamp}`, 'Valoraciones');
     } else {
       const filas = (this.datosSucursales?.items || []).map(s => ({
         'Sucursal': s.sucursal,
@@ -832,6 +886,21 @@ export class ReportesComponent implements OnInit, OnDestroy {
         'Participación %': p.participacion_pct
       }));
       this.reportesService.exportarACSV(filas, `Reporte_Productos_Vendidos_${timestamp}`);
+    } else if (this.tipoReporteActivo === 'valoraciones') {
+      const filas = (this.datosValoraciones?.items || []).map(v => ({
+        'Fecha': v.fecha,
+        'Cliente': v.cliente,
+        'Prenda / Producto': v.producto,
+        'Categoría': v.categoria,
+        'Sucursal': v.sucursal,
+        'Puntuación (★)': v.puntuacion,
+        'N° Referencia': v.codigo_referencia,
+        'Motivo Queja': v.motivo_negativo || 'N/A',
+        'Comentario': v.comentario || '',
+        'Satisfacción': v.estado_satisfaccion,
+        'Requiere Revisión': v.requiere_revision ? 'SÍ' : 'NO'
+      }));
+      this.reportesService.exportarACSV(filas, `Reporte_Valoraciones_${timestamp}`);
     } else {
       const filas = (this.datosSucursales?.items || []).map(s => ({
         'Sucursal': s.sucursal,
@@ -855,6 +924,7 @@ export class ReportesComponent implements OnInit, OnDestroy {
     if (this.tipoReporteActivo === 'ventas') return this.datosVentas?.items.length || 0;
     if (this.tipoReporteActivo === 'inventario') return this.datosInventario?.items.length || 0;
     if (this.tipoReporteActivo === 'productos') return this.datosProductos?.items.length || 0;
+    if (this.tipoReporteActivo === 'valoraciones') return this.datosValoraciones?.items.length || 0;
     return this.datosSucursales?.items.length || 0;
   }
 
@@ -871,6 +941,7 @@ export class ReportesComponent implements OnInit, OnDestroy {
     if (this.tipoReporteActivo === 'ventas') return (this.datosVentas?.items || []).slice(inicio, fin);
     if (this.tipoReporteActivo === 'inventario') return (this.datosInventario?.items || []).slice(inicio, fin);
     if (this.tipoReporteActivo === 'productos') return (this.datosProductos?.items || []).slice(inicio, fin);
+    if (this.tipoReporteActivo === 'valoraciones') return (this.datosValoraciones?.items || []).slice(inicio, fin);
     return (this.datosSucursales?.items || []).slice(inicio, fin);
   }
 
@@ -888,13 +959,13 @@ export class ReportesComponent implements OnInit, OnDestroy {
 
   obtenerBadgeClass(valor: any): string {
     const val = String(valor || '').toUpperCase();
-    if (val.includes('⚠️') || val.includes('VENCIDA') || val.includes('AGOTADO') || val.includes('ANULADA') || val.includes('CANCELAD') || val.includes('SIN COBRO') || val.includes('SIN PAGO')) {
+    if (val.includes('⚠️') || val.includes('VENCIDA') || val.includes('AGOTADO') || val.includes('ANULADA') || val.includes('CANCELAD') || val.includes('SIN COBRO') || val.includes('SIN PAGO') || val.includes('CRITIC') || val.includes('NEGATIV')) {
       return 'bg-rose-100 text-rose-700 dark:bg-rose-950/70 dark:text-rose-300 border border-rose-200 dark:border-rose-900';
     }
-    if (val.includes('PENDIENTE') || val.includes('BAJO') || val.includes('ESPERA')) {
+    if (val.includes('PENDIENTE') || val.includes('BAJO') || val.includes('ESPERA') || val.includes('NEUTR')) {
       return 'bg-amber-100 text-amber-700 dark:bg-amber-950/70 dark:text-amber-300 border border-amber-200 dark:border-amber-900';
     }
-    if (val.includes('COMPLETAD') || val.includes('OPTIMO') || val.includes('VIGENTE') || val.includes('PAGADO') || val.includes('✓') || val.includes('CUADRADO')) {
+    if (val.includes('COMPLETAD') || val.includes('OPTIMO') || val.includes('VIGENTE') || val.includes('PAGADO') || val.includes('✓') || val.includes('CUADRADO') || val.includes('POSITIV')) {
       return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900';
     }
     return 'bg-stone-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300';

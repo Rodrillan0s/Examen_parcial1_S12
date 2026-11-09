@@ -17,6 +17,8 @@ router = APIRouter(prefix="/api/devoluciones", tags=["Devoluciones"])
 class ItemDevolucionSolicitudDTO(BaseModel):
     id_detalle_venta: int = Field(..., gt=0, description="ID del ítem en la venta original")
     cantidad: int = Field(..., gt=0, description="Cantidad a devolver")
+    id_variante_cambio: Optional[int] = Field(None, description="ID de la variante para cambio (nueva talla)")
+    talla_deseada: Optional[str] = Field(None, max_length=50, description="Nueva talla deseada para el cambio")
 
 class SolicitarDevolucionClienteDTO(BaseModel):
     id_venta: int = Field(..., gt=0, description="ID de la venta")

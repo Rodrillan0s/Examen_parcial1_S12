@@ -334,7 +334,12 @@ def obtener_resumen_kpis_db(id_empresa: int = None, id_sucursal: int = None, fec
                 COALESCE(SUM(v.total), 0) AS ingresos_totales,
                 COALESCE(AVG(v.total), 0) AS ticket_promedio,
                 COALESCE(MIN(v.total), 0) AS ticket_minimo,
-                COALESCE(MAX(v.total), 0) AS ticket_maximo
+                COALESCE(MAX(v.total), 0) AS ticket_maximo,
+                COUNT(DISTINCT v.id_cliente) AS clientes_unicos,
+                COUNT(CASE WHEN UPPER(COALESCE(v.tipo_venta, '')) = 'ONLINE' THEN 1 END) AS ventas_online,
+                COALESCE(SUM(CASE WHEN UPPER(COALESCE(v.tipo_venta, '')) = 'ONLINE' THEN v.total ELSE 0 END), 0) AS ingresos_online,
+                COUNT(CASE WHEN UPPER(COALESCE(v.tipo_venta, '')) = 'POS' THEN 1 END) AS ventas_pos,
+                COALESCE(SUM(CASE WHEN UPPER(COALESCE(v.tipo_venta, '')) = 'POS' THEN v.total ELSE 0 END), 0) AS ingresos_pos
             FROM {schema}.t_venta v
             WHERE {where_sql};
         """
@@ -358,9 +363,12 @@ def obtener_resumen_kpis_db(id_empresa: int = None, id_sucursal: int = None, fec
                 COALESCE(SUM(i.stock_disponible), 0) AS stock_disponible,
                 COALESCE(SUM(i.stock_reservado), 0) AS stock_reservado,
                 COUNT(CASE WHEN i.stock_disponible <= i.stock_minimo AND i.stock_disponible > 0 THEN 1 END) AS productos_stock_bajo,
-                COUNT(CASE WHEN i.stock_disponible = 0 THEN 1 END) AS productos_agotados
+                COUNT(CASE WHEN i.stock_disponible = 0 THEN 1 END) AS productos_agotados,
+                COALESCE(SUM(i.stock_disponible * COALESCE(ptc.precio, p.precio, 0)), 0) AS valoracion_inventario_disponible
             FROM {schema}.t_inventario i
             JOIN {schema}.t_sucursal s ON s.id_sucursal = i.id_sucursal
+            JOIN {schema}.t_producto_talla_color ptc ON ptc.id_variante = i.id_variante
+            JOIN {schema}.t_producto p ON p.id_producto = ptc.id_producto
             WHERE {inv_where_sql};
         """
         inv_res = db.execute_query(q_inv, tuple(inv_params) if inv_params else None, fetchone=True)
@@ -374,24 +382,224 @@ def obtener_resumen_kpis_db(id_empresa: int = None, id_sucursal: int = None, fec
         prod_where_sql = " AND ".join(prod_where)
         q_prod = f"SELECT COUNT(*) FROM {schema}.t_producto p WHERE {prod_where_sql};"
         prod_count = db.execute_query(q_prod, tuple(prod_params) if prod_params else None, fetchone=True)[0]
-        
+
+        # 4. Satisfacción de Clientes y Calidad (t_valoracion)
+        val_where = ["1=1"]
+        val_params = []
+        if id_empresa:
+            val_where.append("v.id_empresa = %s")
+            val_params.append(id_empresa)
+        if id_sucursal:
+            val_where.append("v.id_sucursal = %s")
+            val_params.append(id_sucursal)
+        if fecha_inicio:
+            val_where.append("DATE(v.fecha_creacion) >= %s")
+            val_params.append(fecha_inicio)
+        if fecha_fin:
+            val_where.append("DATE(v.fecha_creacion) <= %s")
+            val_params.append(fecha_fin)
+        val_where_sql = " AND ".join(val_where)
+
+        q_val = f"""
+            SELECT 
+                COUNT(v.id_valoracion) AS total_valoraciones,
+                COALESCE(ROUND(AVG(v.puntuacion), 2), 0.0) AS calificacion_promedio,
+                COUNT(CASE WHEN v.puntuacion IN (4, 5) THEN 1 END) AS valoraciones_positivas,
+                COUNT(CASE WHEN v.puntuacion = 3 THEN 1 END) AS valoraciones_neutras,
+                COUNT(CASE WHEN v.puntuacion IN (1, 2) THEN 1 END) AS valoraciones_negativas,
+                COUNT(CASE WHEN v.puntuacion = 5 THEN 1 END) AS estrellas_5,
+                COUNT(CASE WHEN v.puntuacion = 4 THEN 1 END) AS estrellas_4,
+                COUNT(CASE WHEN v.puntuacion = 3 THEN 1 END) AS estrellas_3,
+                COUNT(CASE WHEN v.puntuacion = 2 THEN 1 END) AS estrellas_2,
+                COUNT(CASE WHEN v.puntuacion = 1 THEN 1 END) AS estrellas_1,
+                COUNT(CASE WHEN v.puntuacion = 1 AND v.requiere_revision = TRUE AND v.atendido = FALSE THEN 1 END) AS alertas_criticas_pendientes,
+                COUNT(CASE WHEN v.id_producto IS NOT NULL THEN 1 END) AS valoraciones_prendas,
+                COALESCE(ROUND(AVG(CASE WHEN v.id_producto IS NOT NULL THEN v.puntuacion END), 2), 0.0) AS promedio_prendas,
+                COUNT(CASE WHEN v.id_producto IS NULL THEN 1 END) AS valoraciones_servicio,
+                COALESCE(ROUND(AVG(CASE WHEN v.id_producto IS NULL THEN v.puntuacion END), 2), 0.0) AS promedio_servicio
+            FROM {schema}.t_valoracion v
+            WHERE {val_where_sql};
+        """
+        val_res = db.execute_query(q_val, tuple(val_params) if val_params else None, fetchone=True)
+        total_val = int(val_res[0] or 0)
+        pos_val = int(val_res[2] or 0)
+        tasa_satisfaccion = round((pos_val / total_val * 100), 1) if total_val > 0 else 100.0
+
+        # 5. Pedidos, Modalidad de Compra y Despacho (t_pedido)
+        ped_where = ["1=1"]
+        ped_params = []
+        if id_empresa:
+            ped_where.append("p.id_empresa = %s")
+            ped_params.append(id_empresa)
+        if id_sucursal:
+            ped_where.append("p.id_sucursal = %s")
+            ped_params.append(id_sucursal)
+        if fecha_inicio:
+            ped_where.append("DATE(p.fecha_pedido) >= %s")
+            ped_params.append(fecha_inicio)
+        if fecha_fin:
+            ped_where.append("DATE(p.fecha_pedido) <= %s")
+            ped_params.append(fecha_fin)
+        ped_where_sql = " AND ".join(ped_where)
+
+        q_ped = f"""
+            SELECT 
+                COUNT(p.id_pedido) AS total_pedidos,
+                COUNT(CASE WHEN UPPER(COALESCE(p.modalidad_compra, '')) = 'ENTREGA_DOMICILIO' THEN 1 END) AS pedidos_delivery,
+                COALESCE(SUM(CASE WHEN UPPER(COALESCE(p.modalidad_compra, '')) = 'ENTREGA_DOMICILIO' THEN p.total ELSE 0 END), 0) AS ingresos_delivery,
+                COUNT(CASE WHEN UPPER(COALESCE(p.modalidad_compra, '')) IN ('RETIRO_SUCURSAL', 'RETIRO_TIENDA') THEN 1 END) AS pedidos_retiro,
+                COALESCE(SUM(CASE WHEN UPPER(COALESCE(p.modalidad_compra, '')) IN ('RETIRO_SUCURSAL', 'RETIRO_TIENDA') THEN p.total ELSE 0 END), 0) AS ingresos_retiro,
+                COUNT(CASE WHEN UPPER(COALESCE(p.estado, '')) = 'ENTREGADO' THEN 1 END) AS pedidos_entregados,
+                COUNT(CASE WHEN UPPER(COALESCE(p.estado, '')) IN ('PENDIENTE_PAGO', 'PAGADO', 'EN_CAMINO') THEN 1 END) AS pedidos_en_proceso
+            FROM {schema}.t_pedido p
+            WHERE {ped_where_sql};
+        """
+        ped_res = db.execute_query(q_ped, tuple(ped_params) if ped_params else None, fetchone=True)
+
+        # 6. Eficacia de Citas de Vestidor / Reservas (t_reserva)
+        res_where = ["1=1"]
+        res_params = []
+        if id_empresa:
+            res_where.append("s.id_empresa = %s")
+            res_params.append(id_empresa)
+        if id_sucursal:
+            res_where.append("r.id_sucursal = %s")
+            res_params.append(id_sucursal)
+        if fecha_inicio:
+            res_where.append("DATE(r.fecha_reserva) >= %s")
+            res_params.append(fecha_inicio)
+        if fecha_fin:
+            res_where.append("DATE(r.fecha_reserva) <= %s")
+            res_params.append(fecha_fin)
+        res_where_sql = " AND ".join(res_where)
+
+        q_res = f"""
+            SELECT 
+                COUNT(r.id_reserva) AS total_reservas,
+                COUNT(CASE WHEN UPPER(COALESCE(r.estado, '')) = 'ATENDIDA' THEN 1 END) AS reservas_atendidas,
+                COUNT(CASE WHEN UPPER(COALESCE(r.estado, '')) = 'CANCELADA' THEN 1 END) AS reservas_canceladas,
+                COUNT(CASE WHEN UPPER(COALESCE(r.estado, '')) = 'VENCIDA' THEN 1 END) AS reservas_vencidas,
+                COUNT(CASE WHEN UPPER(COALESCE(r.estado, '')) IN ('PENDIENTE', 'CONFIRMADA') THEN 1 END) AS reservas_activas
+            FROM {schema}.t_reserva r
+            JOIN {schema}.t_sucursal s ON s.id_sucursal = r.id_sucursal
+            WHERE {res_where_sql};
+        """
+        res_row = db.execute_query(q_res, tuple(res_params) if res_params else None, fetchone=True)
+        total_res = int(res_row[0] or 0)
+        atendidas_res = int(res_row[1] or 0)
+        cerradas_res = atendidas_res + int(res_row[2] or 0) + int(res_row[3] or 0)
+        tasa_asistencia = round((atendidas_res / cerradas_res * 100), 1) if cerradas_res > 0 else 0.0
+
+        # 7. Post-Venta y Devoluciones (t_devolucion)
+        dev_where = ["1=1"]
+        dev_params = []
+        if id_empresa:
+            dev_where.append("d.id_empresa = %s")
+            dev_params.append(id_empresa)
+        if id_sucursal:
+            dev_where.append("d.id_sucursal = %s")
+            dev_params.append(id_sucursal)
+        if fecha_inicio:
+            dev_where.append("DATE(d.fecha_devolucion) >= %s")
+            dev_params.append(fecha_inicio)
+        if fecha_fin:
+            dev_where.append("DATE(d.fecha_devolucion) <= %s")
+            dev_params.append(fecha_fin)
+        dev_where_sql = " AND ".join(dev_where)
+
+        q_dev = f"""
+            SELECT 
+                COUNT(d.id_devolucion) AS total_solicitudes,
+                COUNT(CASE WHEN UPPER(COALESCE(d.estado, '')) = 'COMPLETADA' THEN 1 END) AS devoluciones_completadas,
+                COUNT(CASE WHEN UPPER(COALESCE(d.estado, '')) = 'RECHAZADA' THEN 1 END) AS devoluciones_rechazadas,
+                COUNT(CASE WHEN UPPER(COALESCE(d.estado, '')) IN ('SOLICITADA', 'APROBADA', 'RECIBIDA') THEN 1 END) AS devoluciones_en_tramite,
+                COALESCE(SUM(CASE WHEN UPPER(COALESCE(d.estado, '')) = 'COMPLETADA' THEN d.monto_reembolso ELSE 0 END), 0) AS monto_total_reembolsado,
+                COUNT(CASE WHEN d.excepcion_ley_453 = TRUE THEN 1 END) AS casos_ley_453
+            FROM {schema}.t_devolucion d
+            WHERE {dev_where_sql};
+        """
+        dev_res = db.execute_query(q_dev, tuple(dev_params) if dev_params else None, fetchone=True)
+        total_ventas_val = float(v_res[1] or 0)
+        v_online = float(v_res[8] or 0)
+        v_pos = float(v_res[10] or 0)
+        pct_online = round((v_online / total_ventas_val * 100), 1) if total_ventas_val > 0 else 0.0
+        pct_pos = round((v_pos / total_ventas_val * 100), 1) if total_ventas_val > 0 else 0.0
+
+        stk_total = int(inv_res[1] or 0)
+        stk_disp = int(inv_res[2] or 0)
+        tasa_disponibilidad = round((stk_disp / stk_total * 100), 1) if stk_total > 0 else 0.0
+
         return {
             "ventas": {
                 "cantidad_ventas": int(v_res[0] or 0),
-                "ventas_totales": float(v_res[1] or 0),
+                "ventas_totales": total_ventas_val,
                 "ingresos_totales": float(v_res[2] or 0),
                 "ticket_promedio": float(v_res[3] or 0),
                 "ticket_minimo": float(v_res[4] or 0),
-                "ticket_maximo": float(v_res[5] or 0)
+                "ticket_maximo": float(v_res[5] or 0),
+                "clientes_unicos": int(v_res[6] or 0)
             },
             "inventario": {
                 "total_productos_catalogo": int(prod_count or 0),
                 "total_variantes": int(inv_res[0] or 0),
-                "stock_total": int(inv_res[1] or 0),
-                "stock_disponible": int(inv_res[2] or 0),
+                "stock_total": stk_total,
+                "stock_disponible": stk_disp,
                 "stock_reservado": int(inv_res[3] or 0),
                 "productos_stock_bajo": int(inv_res[4] or 0),
-                "productos_agotados": int(inv_res[5] or 0)
+                "productos_agotados": int(inv_res[5] or 0),
+                "valoracion_inventario_disponible": float(inv_res[6] or 0),
+                "tasa_disponibilidad_stock": tasa_disponibilidad
+            },
+            "satisfaccion": {
+                "total_valoraciones": total_val,
+                "calificacion_promedio": float(val_res[1] or 0),
+                "tasa_satisfaccion_pct": tasa_satisfaccion,
+                "valoraciones_positivas": pos_val,
+                "valoraciones_neutras": int(val_res[3] or 0),
+                "valoraciones_negativas": int(val_res[4] or 0),
+                "alertas_criticas_pendientes": int(val_res[10] or 0),
+                "estrellas_distribucion": {
+                    5: int(val_res[5] or 0),
+                    4: int(val_res[6] or 0),
+                    3: int(val_res[7] or 0),
+                    2: int(val_res[8] or 0),
+                    1: int(val_res[9] or 0)
+                },
+                "valoraciones_prendas": int(val_res[11] or 0),
+                "promedio_prendas": float(val_res[12] or 0),
+                "valoraciones_servicio": int(val_res[13] or 0),
+                "promedio_servicio": float(val_res[14] or 0)
+            },
+            "canales": {
+                "ventas_online_cantidad": int(v_res[7] or 0),
+                "ventas_online_total": v_online,
+                "porcentaje_online": pct_online,
+                "ventas_pos_cantidad": int(v_res[9] or 0),
+                "ventas_pos_total": v_pos,
+                "porcentaje_pos": pct_pos,
+                "total_pedidos": int(ped_res[0] or 0),
+                "pedidos_delivery_cantidad": int(ped_res[1] or 0),
+                "pedidos_delivery_total": float(ped_res[2] or 0),
+                "pedidos_retiro_cantidad": int(ped_res[3] or 0),
+                "pedidos_retiro_total": float(ped_res[4] or 0),
+                "pedidos_entregados": int(ped_res[5] or 0),
+                "pedidos_en_proceso": int(ped_res[6] or 0)
+            },
+            "reservas_probador": {
+                "total_reservas": total_res,
+                "reservas_atendidas": atendidas_res,
+                "reservas_canceladas": int(res_row[2] or 0),
+                "reservas_vencidas": int(res_row[3] or 0),
+                "reservas_activas": int(res_row[4] or 0),
+                "tasa_asistencia_pct": tasa_asistencia
+            },
+            "devoluciones": {
+                "total_solicitudes": int(dev_res[0] or 0),
+                "devoluciones_completadas": int(dev_res[1] or 0),
+                "devoluciones_rechazadas": int(dev_res[2] or 0),
+                "devoluciones_en_tramite": int(dev_res[3] or 0),
+                "monto_total_reembolsado": float(dev_res[4] or 0),
+                "casos_ley_453": int(dev_res[5] or 0)
             }
         }
     finally:
@@ -749,5 +957,114 @@ def obtener_tenants_dashboard_db():
             })
 
         return tenants
+    finally:
+        db.close_connection()
+
+
+def obtener_ranking_satisfaccion_prendas_db(id_empresa: int = None, id_sucursal: int = None, limit: int = 5) -> List[Dict[str, Any]]:
+    """
+    Retorna el ranking de prendas con mejor calificación promedio y volumen de opiniones.
+    Consulta única indexada, sin bucles N+1.
+    """
+    db = PostgreSQL()
+    db.create_connection()
+    try:
+        schema = Config.SCHEMA or 'comercio'
+        where = ["v.id_producto IS NOT NULL"]
+        params = []
+        if id_empresa:
+            where.append("v.id_empresa = %s")
+            params.append(id_empresa)
+        if id_sucursal:
+            where.append("v.id_sucursal = %s")
+            params.append(id_sucursal)
+
+        where_sql = " AND ".join(where)
+        params.append(limit)
+
+        q = f"""
+            SELECT 
+                p.id_producto,
+                p.nombre,
+                COALESCE(c.nombre, 'Sin categoría') AS categoria,
+                COALESCE(p.imagen_url, '') AS imagen_url,
+                ROUND(AVG(v.puntuacion), 2) AS calificacion_promedio,
+                COUNT(v.id_valoracion) AS total_opiniones,
+                COUNT(CASE WHEN v.puntuacion = 1 THEN 1 END) AS quejas_1_estrella
+            FROM {schema}.t_valoracion v
+            JOIN {schema}.t_producto p ON p.id_producto = v.id_producto
+            LEFT JOIN {schema}.t_categoria c ON c.id_categoria = p.id_categoria
+            WHERE {where_sql}
+            GROUP BY p.id_producto, p.nombre, c.nombre, p.imagen_url
+            ORDER BY calificacion_promedio DESC, total_opiniones DESC
+            LIMIT %s;
+        """
+        rows = db.execute_query(q, tuple(params), fetchall=True) or []
+        return [{
+            "id_producto": r[0],
+            "nombre": r[1],
+            "categoria": r[2],
+            "imagen_url": r[3],
+            "calificacion_promedio": float(r[4]),
+            "total_opiniones": int(r[5]),
+            "quejas_1_estrella": int(r[6])
+        } for r in rows]
+    finally:
+        db.close_connection()
+
+
+def obtener_alertas_calidad_criticas_db(id_empresa: int = None, id_sucursal: int = None, limit: int = 10) -> List[Dict[str, Any]]:
+    """
+    Retorna las valoraciones críticas de 1 estrella o que requieren revisión administrativa.
+    Consulta única con LEFT JOINs, sin bucles N+1.
+    """
+    db = PostgreSQL()
+    db.create_connection()
+    try:
+        schema = Config.SCHEMA or 'comercio'
+        where = ["(v.requiere_revision = TRUE OR v.puntuacion = 1)"]
+        params = []
+        if id_empresa:
+            where.append("v.id_empresa = %s")
+            params.append(id_empresa)
+        if id_sucursal:
+            where.append("v.id_sucursal = %s")
+            params.append(id_sucursal)
+
+        where_sql = " AND ".join(where)
+        params.append(limit)
+
+        q = f"""
+            SELECT 
+                v.id_valoracion,
+                v.fecha_creacion,
+                COALESCE(u.nombre || ' ' || COALESCE(u.apellido, ''), 'Cliente') AS nombre_cliente,
+                COALESCE(p.nombre, 'Servicio General') AS nombre_producto,
+                ped.codigo_pedido,
+                COALESCE(v.motivo_negativo, 'Sin motivo especificado') AS motivo_negativo,
+                COALESCE(v.comentario, '') AS comentario,
+                v.atendido,
+                v.puntuacion
+            FROM {schema}.t_valoracion v
+            LEFT JOIN {schema}.t_cliente cli ON cli.id_cliente = v.id_cliente
+            LEFT JOIN {schema}.t_usuario u ON u.id_usuario = cli.id_usuario
+            LEFT JOIN {schema}.t_producto p ON p.id_producto = v.id_producto
+            LEFT JOIN {schema}.t_pedido ped ON ped.id_pedido = v.id_pedido
+            WHERE {where_sql}
+            ORDER BY v.fecha_creacion DESC
+            LIMIT %s;
+        """
+        rows = db.execute_query(q, tuple(params), fetchall=True) or []
+        return [{
+            "id_valoracion": r[0],
+            "fecha_creacion": r[1].isoformat() if r[1] else None,
+            "nombre_cliente": r[2],
+            "nombre_producto": r[3],
+            "codigo_pedido": r[4],
+            "motivo_negativo": r[5],
+            "comentario": r[6],
+            "atendido": bool(r[7]),
+            "puntuacion": int(r[8])
+        } for r in rows]
     finally:
         db.close_connection()

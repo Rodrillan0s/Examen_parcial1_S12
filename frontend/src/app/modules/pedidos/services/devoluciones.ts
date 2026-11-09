@@ -3,9 +3,18 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 
+export interface VarianteDisponible {
+  id_variante: number;
+  talla: string;
+  color: string;
+  precio: number;
+  stock_disponible: number;
+}
+
 export interface ItemElegibleDevolucion {
   id_detalle_venta: number;
   id_variante: number;
+  id_producto?: number;
   cantidad_original: number;
   cantidad_devuelta: number;
   cantidad_elegible: number;
@@ -18,6 +27,7 @@ export interface ItemElegibleDevolucion {
   talla: string;
   color: string;
   imagen_url?: string;
+  variantes_disponibles?: VarianteDisponible[];
 }
 
 export interface ElegibilidadVentaResponse {
@@ -100,6 +110,8 @@ export interface VentaCandidataPresencial {
 export interface ItemSolicitudDevolucion {
   id_detalle_venta: number;
   cantidad: number;
+  talla_deseada?: string;
+  id_variante_cambio?: number;
 }
 
 export interface SolicitarDevolucionPayload {
@@ -151,6 +163,9 @@ export interface ItemDetalleDevolucion {
   cantidad_cambio?: number;
   precio_unitario_cambio?: number;
   destino_inventario?: string;
+  talla_cambio?: string;
+  sku_cambio?: string;
+  talla_deseada?: string;
 }
 
 export interface DevolucionResumen {

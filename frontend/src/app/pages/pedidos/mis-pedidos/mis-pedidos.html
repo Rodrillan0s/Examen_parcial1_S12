@@ -352,6 +352,20 @@
               <span>{{ descargandoPdfId === p.id_pedido ? 'Descargando...' : 'Comprobante' }}</span>
             </button>
 
+            <!-- Botón Calificar si está pagado o entregado -->
+            <button *ngIf="(p.estado_pago === 'PAGADO' || p.estado === 'ENTREGADO' || p.estado === 'COMPLETADO') && !pedidosValoradosIds.has(p.id_pedido)"
+                    (click)="abrirModalValoracion(p)"
+                    class="px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-400 border border-amber-500/30 text-xs font-semibold flex items-center space-x-1.5 cursor-pointer shrink-0"
+                    title="Calificar tu experiencia de compra">
+              <span>★</span>
+              <span>Calificar</span>
+            </button>
+            <span *ngIf="pedidosValoradosIds.has(p.id_pedido)"
+                  class="px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 text-xs font-medium flex items-center space-x-1 shrink-0">
+              <span>✓</span>
+              <span>Valorado</span>
+            </span>
+
             <button (click)="abrirDetalle(p.id_pedido)" 
                     class="px-3.5 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white font-semibold text-xs transition-colors flex items-center space-x-1.5 cursor-pointer shrink-0">
               <span>Detalle</span>
@@ -1060,22 +1074,48 @@
                     </div>
                   </div>
 
-                  <!-- Selector de cantidad -->
-                  <div *ngIf="itemsSeleccionados[it.id_detalle_venta]?.seleccionado" class="flex items-center space-x-3 self-end sm:self-center">
-                    <div class="text-right">
-                      <span class="text-[10px] text-zinc-500 block">Cant. a Devolver</span>
-                      <input type="number" 
-                             min="1" 
-                             [max]="it.cantidad_elegible" 
-                             [(ngModel)]="itemsSeleccionados[it.id_detalle_venta].cantidad"
-                             (ngModelChange)="ajustarCantidadItem(it.id_detalle_venta, itemsSeleccionados[it.id_detalle_venta].cantidad, it.cantidad_elegible)"
-                             class="w-16 px-2 py-1 text-xs font-mono font-bold text-center rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white" />
+                  <!-- Selector de cantidad y selector de talla si es cambio de prenda -->
+                  <div *ngIf="itemsSeleccionados[it.id_detalle_venta]?.seleccionado" class="flex flex-col sm:flex-row sm:items-center gap-2.5 self-end sm:self-center">
+                    
+                    <!-- Si es cambio de prenda, selector de nueva talla -->
+                    <div *ngIf="tipoResolucionDevolucion === 'CAMBIO_PRENDA'" class="flex items-center space-x-1.5 bg-amber-500/10 px-2.5 py-1 rounded-xl border border-amber-500/20">
+                      <span class="text-[10px] font-bold text-amber-700 dark:text-amber-300">Talla deseada:</span>
+                      <select *ngIf="it.variantes_disponibles && it.variantes_disponibles.length > 0"
+                              [(ngModel)]="itemsSeleccionados[it.id_detalle_venta].talla_deseada"
+                              (ngModelChange)="onSeleccionarVarianteCambio(it.id_detalle_venta, $event, it.variantes_disponibles)"
+                              class="bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-lg px-2 py-0.5 text-xs font-bold font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500 cursor-pointer">
+                        <option *ngFor="let v of it.variantes_disponibles" [value]="v.talla">
+                          {{ v.talla }} (Stock: {{ v.stock_disponible }})
+                        </option>
+                      </select>
+                      <select *ngIf="!it.variantes_disponibles || it.variantes_disponibles.length === 0"
+                              [(ngModel)]="itemsSeleccionados[it.id_detalle_venta].talla_deseada"
+                              class="bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-lg px-2 py-0.5 text-xs font-bold font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500 cursor-pointer">
+                        <option value="XS">XS</option>
+                        <option value="S">S</option>
+                        <option value="M">M</option>
+                        <option value="L">L</option>
+                        <option value="XL">XL</option>
+                        <option value="XXL">XXL</option>
+                      </select>
                     </div>
-                    <div class="text-right min-w-[75px]">
-                      <span class="text-[10px] text-zinc-500 block">Reembolso Est.</span>
-                      <span class="text-xs font-bold font-mono text-amber-600 dark:text-amber-400">
-                        Bs. {{ (it.precio_neto_unitario * itemsSeleccionados[it.id_detalle_venta].cantidad) | number:'1.2-2' }}
-                      </span>
+
+                    <div class="flex items-center space-x-3">
+                      <div class="text-right">
+                        <span class="text-[10px] text-zinc-500 block">Cant.</span>
+                        <input type="number" 
+                               min="1" 
+                               [max]="it.cantidad_elegible" 
+                               [(ngModel)]="itemsSeleccionados[it.id_detalle_venta].cantidad"
+                               (ngModelChange)="ajustarCantidadItem(it.id_detalle_venta, itemsSeleccionados[it.id_detalle_venta].cantidad, it.cantidad_elegible)"
+                               class="w-14 px-2 py-1 text-xs font-mono font-bold text-center rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white" />
+                      </div>
+                      <div class="text-right min-w-[75px]">
+                        <span class="text-[10px] text-zinc-500 block">{{ tipoResolucionDevolucion === 'CAMBIO_PRENDA' ? 'Valor Canje' : 'Reembolso Est.' }}</span>
+                        <span class="text-xs font-bold font-mono" [class.text-cyan-600]="tipoResolucionDevolucion === 'CAMBIO_PRENDA'" [class.text-amber-600]="tipoResolucionDevolucion !== 'CAMBIO_PRENDA'">
+                          Bs. {{ (it.precio_neto_unitario * itemsSeleccionados[it.id_detalle_venta].cantidad) | number:'1.2-2' }}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
@@ -1124,10 +1164,33 @@
                      class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500" />
             </div>
 
-            <!-- Resumen de Reembolso Estimado -->
-            <div class="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex justify-between items-center text-xs">
-              <span class="font-bold text-zinc-900 dark:text-white">Monto Total Estimado a Reembolsar:</span>
+            <!-- Resumen según tipo de resolución -->
+            <div *ngIf="tipoResolucionDevolucion === 'CAMBIO_PRENDA'" class="p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex justify-between items-center text-xs">
+              <div class="space-y-0.5">
+                <span class="font-bold text-cyan-900 dark:text-cyan-200 block">🔄 Solicitud de Cambio de Talla / Prenda</span>
+                <span class="text-[11px] text-zinc-600 dark:text-zinc-400">Canje directo de prenda en tienda física. Sin cobro ni desembolso adicional.</span>
+              </div>
+              <span class="font-mono text-xs font-bold px-2.5 py-1 rounded-full bg-cyan-500/20 text-cyan-700 dark:text-cyan-300">
+                Canje Directo
+              </span>
+            </div>
+
+            <div *ngIf="tipoResolucionDevolucion === 'SALDO_A_FAVOR'" class="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex justify-between items-center text-xs">
+              <div class="space-y-0.5">
+                <span class="font-bold text-zinc-900 dark:text-white block">🎫 Emisión de Saldo a Favor</span>
+                <span class="text-[11px] text-zinc-600 dark:text-zinc-400">Cupón digital acreditable para futuras compras.</span>
+              </div>
               <span class="font-mono text-base font-bold text-amber-600 dark:text-amber-400">
+                Bs. {{ calcularMontoEstimadoReembolso() | number:'1.2-2' }}
+              </span>
+            </div>
+
+            <div *ngIf="tipoResolucionDevolucion === 'REEMBOLSO_DINERO'" class="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex justify-between items-center text-xs">
+              <div class="space-y-0.5">
+                <span class="font-bold text-zinc-900 dark:text-white block">💳 Monto Total Estimado a Reembolsar:</span>
+                <span class="text-[11px] text-zinc-600 dark:text-zinc-400">Restitución monetaria al medio de pago original.</span>
+              </div>
+              <span class="font-mono text-base font-bold text-emerald-600 dark:text-emerald-400">
                 Bs. {{ calcularMontoEstimadoReembolso() | number:'1.2-2' }}
               </span>
             </div>
@@ -1146,7 +1209,7 @@
           <button (click)="enviarSolicitudDevolucion()" 
                   [disabled]="!hayItemsSeleccionados() || enviandoSolicitud || !datosElegibilidad?.es_elegible"
                   class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs uppercase tracking-wider transition-all disabled:opacity-40 cursor-pointer flex items-center space-x-2">
-            <span>{{ enviandoSolicitud ? 'Enviando Solicitud...' : 'Confirmar & Enviar Solicitud' }}</span>
+            <span>{{ enviandoSolicitud ? 'Procesando...' : (tipoResolucionDevolucion === 'CAMBIO_PRENDA' ? 'Confirmar Solicitud de Cambio de Talla' : 'Confirmar & Enviar Solicitud') }}</span>
           </button>
         </div>
 
@@ -1199,11 +1262,21 @@
             <p *ngIf="devolucionDetalle.estado === 'APROBADA'" class="mt-1 opacity-90">
               ¡Tu solicitud ha sido aprobada! Dirígete a la sucursal <b>{{ devolucionDetalle.nombre_sucursal || 'designada' }}</b> para entregar las prendas y realizar la recepción física.
             </p>
-            <p *ngIf="devolucionDetalle.estado === 'RECIBIDA'" class="mt-1 opacity-90">
-              Las prendas han sido recibidas y verificadas en sucursal. El personal está procesando la liquidación de tu reembolso.
+            <p *ngIf="devolucionDetalle.estado === 'RECIBIDA' || devolucionDetalle.estado === 'PENDIENTE_ENTREGA'" class="mt-1 opacity-90">
+              <span *ngIf="devolucionDetalle.tipo_resolucion === 'CAMBIO_PRENDA'">
+                ✓ Las prendas han sido recibidas en tienda. Tu cambio de talla está listo o en preparación para entrega.
+              </span>
+              <span *ngIf="devolucionDetalle.tipo_resolucion !== 'CAMBIO_PRENDA'">
+                Las prendas han sido recibidas y verificadas en sucursal. El personal está procesando la liquidación de tu reembolso.
+              </span>
             </p>
             <p *ngIf="devolucionDetalle.estado === 'COMPLETADA'" class="mt-1 opacity-90">
-              ✓ Proceso completado exitosamente. Tu resolución ha sido ejecutada y liquidada.
+              <span *ngIf="devolucionDetalle.tipo_resolucion === 'CAMBIO_PRENDA'">
+                ✓ Cambio de prenda completado exitosamente. Se ha entregado la nueva prenda de reemplazo.
+              </span>
+              <span *ngIf="devolucionDetalle.tipo_resolucion !== 'CAMBIO_PRENDA'">
+                ✓ Proceso completado exitosamente. Tu resolución ha sido ejecutada y liquidada.
+              </span>
             </p>
             <p *ngIf="devolucionDetalle.estado === 'RECHAZADA'" class="mt-1 opacity-90">
               ✕ Tu solicitud no fue aprobada tras la revisión. Consulta las observaciones adjuntas más abajo.
@@ -1237,13 +1310,18 @@
                 <div>
                   <h5 class="font-bold text-zinc-900 dark:text-white">{{ it.producto_nombre }}</h5>
                   <p class="text-[10px] text-zinc-500 font-mono">Talla: {{ it.talla }} • Color: {{ it.color }} • Cantidad: <b>{{ it.cantidad }}</b></p>
+                  <p *ngIf="it.talla_cambio" class="text-[10px] text-cyan-600 dark:text-cyan-400 font-bold mt-0.5">
+                    🔄 Nueva talla solicitada: {{ it.talla_cambio }}
+                  </p>
                   <span class="inline-block mt-0.5 text-[9px] px-2 py-0.5 rounded font-mono" [class.bg-emerald-500/15]="it.condicion === 'REVENDIBLE'" [class.text-emerald-700]="it.condicion === 'REVENDIBLE'" [class.bg-amber-500/15]="it.condicion !== 'REVENDIBLE'" [class.text-amber-700]="it.condicion !== 'REVENDIBLE'">
                     Condición: {{ it.condicion }}
                   </span>
                 </div>
                 <div class="text-right">
-                  <span class="text-[10px] text-zinc-500 block">Reembolso</span>
-                  <span class="font-mono font-bold text-amber-600 dark:text-amber-400">Bs. {{ it.monto_reembolso | number:'1.2-2' }}</span>
+                  <span class="text-[10px] text-zinc-500 block">{{ devolucionDetalle.tipo_resolucion === 'CAMBIO_PRENDA' ? 'Valor Prenda' : 'Reembolso' }}</span>
+                  <span class="font-mono font-bold" [class.text-cyan-600]="devolucionDetalle.tipo_resolucion === 'CAMBIO_PRENDA'" [class.text-amber-600]="devolucionDetalle.tipo_resolucion !== 'CAMBIO_PRENDA'">
+                    Bs. {{ it.monto_reembolso | number:'1.2-2' }}
+                  </span>
                 </div>
               </div>
             </div>
@@ -1259,8 +1337,24 @@
             </p>
           </div>
 
-          <!-- Liquidación de Reembolso -->
-          <div *ngIf="devolucionDetalle.metodo_reembolso" class="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-xs space-y-2">
+          <!-- Comprobante de Entrega de Cambio (si es CAMBIO_PRENDA) -->
+          <div *ngIf="devolucionDetalle.metodo_reembolso && devolucionDetalle.tipo_resolucion === 'CAMBIO_PRENDA'" 
+               class="p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-xs space-y-2">
+            <div class="flex items-center space-x-2 text-cyan-800 dark:text-cyan-300 font-bold">
+              <span>🔄</span>
+              <span>Comprobante de Cambio de Talla / Prenda</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-[11px] text-zinc-700 dark:text-zinc-300">
+              <div>Modalidad: <b class="font-mono">Canje de Prenda Directo</b></div>
+              <div>Referencia / Vale: <b class="font-mono">{{ devolucionDetalle.referencia_reembolso || 'CAMBIO-OK' }}</b></div>
+              <div *ngIf="devolucionDetalle.fecha_reembolso">Fecha Entrega: {{ devolucionDetalle.fecha_reembolso | date:'dd/MM/yyyy HH:mm' }}</div>
+              <div>Estado de Prenda: <b class="text-cyan-600 dark:text-cyan-400 font-bold">Entregada al Cliente</b></div>
+            </div>
+          </div>
+
+          <!-- Liquidación de Reembolso Financiero (si NO es CAMBIO_PRENDA) -->
+          <div *ngIf="devolucionDetalle.metodo_reembolso && devolucionDetalle.tipo_resolucion !== 'CAMBIO_PRENDA'" 
+               class="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-xs space-y-2">
             <div class="flex items-center space-x-2 text-emerald-800 dark:text-emerald-300 font-bold">
               <span>💳</span>
               <span>Datos de Liquidación del Reembolso</span>
@@ -1338,5 +1432,19 @@
 
     </div>
   </div>
+
+  <!-- Modal de Valoración de Pedido y Prendas -->
+  <app-valoracion-modal 
+    *ngIf="pedidoAValorar"
+    [visible]="modalValoracionVisible"
+    [idPedido]="pedidoAValorar.id_pedido"
+    [codigoPedido]="pedidoAValorar.codigo_pedido"
+    [idProducto]="pedidoAValorar.id_producto || null"
+    [nombreProducto]="pedidoAValorar.nombre_producto || ''"
+    [imagenProducto]="pedidoAValorar.imagen_producto || ''"
+    [nombreSucursal]="pedidoAValorar.nombre_sucursal || ''"
+    (cerrar)="modalValoracionVisible = false"
+    (valoracionEnviada)="onValoracionRegistrada($event)">
+  </app-valoracion-modal>
 
 </div>

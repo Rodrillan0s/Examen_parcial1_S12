@@ -13,11 +13,12 @@ import {
   ElegibilidadVentaResponse,
   SolicitarDevolucionPayload
 } from '../../../services/devoluciones';
+import { ValoracionModalComponent } from '../../../components/valoracion-modal/valoracion-modal';
 
 @Component({
   selector: 'app-mis-pedidos',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, ValoracionModalComponent],
   templateUrl: './mis-pedidos.html',
   styleUrls: ['./mis-pedidos.css']
 })
@@ -59,6 +60,29 @@ export class MisPedidosComponent implements OnInit {
   cargandoDetalle: boolean = false;
   descargandoPdfId: number | null = null;
 
+  // Valoración de Pedido y Prendas
+  modalValoracionVisible: boolean = false;
+  pedidoAValorar: { id_pedido: number; codigo_pedido: string; id_producto?: number | null; nombre_producto?: string; imagen_producto?: string; nombre_sucursal?: string } | null = null;
+  pedidosValoradosIds: Set<number> = new Set<number>();
+
+  abrirModalValoracion(p: any, item?: any): void {
+    this.pedidoAValorar = {
+      id_pedido: p.id_pedido,
+      codigo_pedido: p.codigo_pedido,
+      id_producto: item?.id_producto || null,
+      nombre_producto: item?.producto_nombre || item?.nombre_producto || '',
+      imagen_producto: item?.imagen_url || item?.imagen_principal || '',
+      nombre_sucursal: p.nombre_sucursal || ''
+    };
+    this.modalValoracionVisible = true;
+  }
+
+  onValoracionRegistrada(datos: any): void {
+    if (this.pedidoAValorar) {
+      this.pedidosValoradosIds.add(this.pedidoAValorar.id_pedido);
+    }
+  }
+
   // Modal Cancelar Pedido (CU11 / CU12)
   mostrarModalCancelar: boolean = false;
   pedidoACancelar: PedidoResumen | null = null;
@@ -79,7 +103,14 @@ export class MisPedidosComponent implements OnInit {
   datosElegibilidad: ElegibilidadVentaResponse | null = null;
   idVentaDevolucion: number | null = null;
   idEmpresaDevolucion: number | null = null;
-  itemsSeleccionados: { [id_detalle_venta: number]: { seleccionado: boolean; cantidad: number } } = {};
+  itemsSeleccionados: {
+    [id_detalle_venta: number]: {
+      seleccionado: boolean;
+      cantidad: number;
+      talla_deseada?: string;
+      id_variante_cambio?: number;
+    }
+  } = {};
   motivoDevolucion: string = 'DEFECTO_FABRICA';
   tipoResolucionDevolucion: 'CAMBIO_PRENDA' | 'SALDO_A_FAVOR' | 'REEMBOLSO_DINERO' = 'REEMBOLSO_DINERO';
   descripcionDevolucion: string = '';
@@ -319,9 +350,14 @@ export class MisPedidosComponent implements OnInit {
         if (res.es_elegible && res.items?.length) {
           res.items.forEach(it => {
             if (it.cantidad_elegible > 0) {
+              const primeraVar = (it.variantes_disponibles && it.variantes_disponibles.length > 0) 
+                ? it.variantes_disponibles.find(v => v.talla !== it.talla) || it.variantes_disponibles[0]
+                : null;
               this.itemsSeleccionados[it.id_detalle_venta] = {
                 seleccionado: false,
-                cantidad: it.cantidad_elegible
+                cantidad: it.cantidad_elegible,
+                talla_deseada: primeraVar ? primeraVar.talla : 'M',
+                id_variante_cambio: primeraVar ? primeraVar.id_variante : undefined
               };
             }
           });
@@ -360,6 +396,19 @@ export class MisPedidosComponent implements OnInit {
     }
   }
 
+  onSeleccionarVarianteCambio(idDetalleVenta: number, tallaSeleccionada: string, variantes?: any[]): void {
+    if (this.itemsSeleccionados[idDetalleVenta]) {
+      this.itemsSeleccionados[idDetalleVenta].talla_deseada = tallaSeleccionada;
+      if (variantes && variantes.length > 0) {
+        const found = variantes.find(v => v.talla === tallaSeleccionada);
+        if (found) {
+          this.itemsSeleccionados[idDetalleVenta].id_variante_cambio = found.id_variante;
+        }
+      }
+      this.cdr.markForCheck();
+    }
+  }
+
   hayItemsSeleccionados(): boolean {
     return Object.values(this.itemsSeleccionados).some(it => it.seleccionado && it.cantidad > 0);
   }
@@ -392,7 +441,9 @@ export class MisPedidosComponent implements OnInit {
       .filter(([_, val]) => val.seleccionado && val.cantidad > 0)
       .map(([idDet, val]) => ({
         id_detalle_venta: Number(idDet),
-        cantidad: val.cantidad
+        cantidad: val.cantidad,
+        talla_deseada: this.tipoResolucionDevolucion === 'CAMBIO_PRENDA' ? (val.talla_deseada || undefined) : undefined,
+        id_variante_cambio: this.tipoResolucionDevolucion === 'CAMBIO_PRENDA' ? (val.id_variante_cambio || undefined) : undefined
       }));
 
     const payload: SolicitarDevolucionPayload = {
@@ -553,6 +604,8 @@ export class MisPedidosComponent implements OnInit {
         return 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-500/30';
       case 'PENDIENTE_REEMBOLSO':
         return 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border-cyan-500/30';
+      case 'PENDIENTE_ENTREGA':
+        return 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30';
       case 'COMPLETADA':
         return 'bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-500/30';
       case 'CANCELADA':
@@ -570,6 +623,7 @@ export class MisPedidosComponent implements OnInit {
       case 'RECHAZADA': return 'Rechazada ✕';
       case 'RECIBIDA': return 'Prendas Recibidas';
       case 'PENDIENTE_REEMBOLSO': return 'Pendiente de Reembolso';
+      case 'PENDIENTE_ENTREGA': return 'Prenda Recibida — Listo para Entrega de Cambio';
       case 'COMPLETADA': return 'Devolución Completada';
       case 'CANCELADA': return 'Cancelada';
       default: return estado || 'En Proceso';

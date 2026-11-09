@@ -166,3 +166,45 @@ def get_kpis_ventas_sucursal(
         raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error al obtener ventas por sucursal: {str(e)}")
+
+
+@kpis_router.get('/ranking-satisfaccion')
+@router.get('/ranking-satisfaccion')
+def get_kpis_ranking_satisfaccion(
+    id_sucursal: Optional[int] = Query(None, description="Filtrar por sucursal específica"),
+    id_empresa: Optional[int] = Query(None, description="Filtrar por tienda/tenant específico"),
+    limit: int = Query(5, ge=1, le=20, description="Cantidad de prendas en ranking"),
+    token_data: dict = Depends(verificar_token)
+):
+    """
+    Retorna el ranking de prendas con mejor valoración de clientes.
+    """
+    try:
+        return kpis_services.obtener_ranking_satisfaccion_prendas(token_data, id_sucursal, limit, id_empresa)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error al obtener ranking de satisfacción: {str(e)}")
+
+
+@kpis_router.get('/alertas-calidad')
+@router.get('/alertas-calidad')
+def get_kpis_alertas_calidad(
+    id_sucursal: Optional[int] = Query(None, description="Filtrar por sucursal específica"),
+    id_empresa: Optional[int] = Query(None, description="Filtrar por tienda/tenant específico"),
+    limit: int = Query(10, ge=1, le=50, description="Cantidad de alertas críticas"),
+    token_data: dict = Depends(verificar_token)
+):
+    """
+    Retorna valoraciones de 1 estrella o marcadas para revisión administrativa urgente.
+    """
+    try:
+        return kpis_services.obtener_alertas_calidad_criticas(token_data, id_sucursal, limit, id_empresa)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error al obtener alertas críticas de satisfacción: {str(e)}")

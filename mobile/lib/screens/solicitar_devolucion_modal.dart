@@ -22,18 +22,20 @@ class _SolicitarDevolucionModalState extends State<SolicitarDevolucionModal> {
 
   bool _cargandoElegibilidad = true;
   String? _errorElegibilidad;
+  ElegibilidadVentaModel? _elegibilidad;
 
   final Map<int, bool> _itemsSeleccionados = {};
   final Map<int, int> _cantidadesDevolver = {};
+  final Map<int, String> _tallasDeseadas = {};
 
-  String _motivoSeleccionado = 'DEFECTO_FABRICA';
-  String _tipoResolucion = 'CREDITO_TIENDA';
+  String _motivoSeleccionado = 'TALLA_INCORRECTA';
+  String _tipoResolucion = 'CAMBIO_PRENDA';
   bool _enviando = false;
   String? _errorEnvio;
 
   final List<Map<String, String>> _motivosDisponibles = [
-    {'codigo': 'DEFECTO_FABRICA', 'nombre': 'Defecto de confección o costura'},
     {'codigo': 'TALLA_INCORRECTA', 'nombre': 'Talla no adecuada o ajuste incorrecto'},
+    {'codigo': 'DEFECTO_FABRICA', 'nombre': 'Defecto de confección o costura'},
     {'codigo': 'NO_COINCIDE_DESCRIPCION', 'nombre': 'No coincide con el diseño mostrado'},
     {'codigo': 'CAMBIO_MODELO', 'nombre': 'Preferencia de cambio por otro modelo'},
     {'codigo': 'GARANTIA_LEGAL', 'nombre': 'Garantía legal de calidad (Ley 453)'},
@@ -64,17 +66,45 @@ class _SolicitarDevolucionModalState extends State<SolicitarDevolucionModal> {
     if (mounted) {
       setState(() {
         _cargandoElegibilidad = false;
+        _elegibilidad = eleg;
         if (!eleg.esElegible) {
           _errorElegibilidad = eleg.motivoNoElegible ?? 'Esta compra no cumple el plazo para devolución.';
         } else {
-          // Inicializar checkboxes
+          // Inicializar checkboxes y tallas deseadas
           for (final item in widget.pedido.items) {
             _itemsSeleccionados[item.idDetallePedido] = true;
             _cantidadesDevolver[item.idDetallePedido] = item.cantidad;
+
+            final elegItem = eleg.items.cast<ItemElegibleDevolucionModel?>().firstWhere(
+              (e) => e?.idDetalleVenta == item.idDetallePedido,
+              orElse: () => null,
+            );
+            if (elegItem != null && elegItem.variantesDisponibles.isNotEmpty) {
+              final diff = elegItem.variantesDisponibles.firstWhere(
+                (v) => v.talla != item.talla,
+                orElse: () => elegItem.variantesDisponibles.first,
+              );
+              _tallasDeseadas[item.idDetallePedido] = diff.talla;
+            } else {
+              _tallasDeseadas[item.idDetallePedido] = item.talla;
+            }
           }
         }
       });
     }
+  }
+
+  List<String> _obtenerTallasOpciones(dynamic item) {
+    final elegItem = _elegibilidad?.items.cast<ItemElegibleDevolucionModel?>().firstWhere(
+      (e) => e?.idDetalleVenta == item.idDetallePedido,
+      orElse: () => null,
+    );
+    if (elegItem != null && elegItem.variantesDisponibles.isNotEmpty) {
+      final tallas = elegItem.variantesDisponibles.map((v) => v.talla).toSet().toList();
+      if (!tallas.contains(item.talla)) tallas.insert(0, item.talla);
+      return tallas;
+    }
+    return const ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
   }
 
   Future<void> _enviarSolicitud() async {
@@ -83,11 +113,15 @@ class _SolicitarDevolucionModalState extends State<SolicitarDevolucionModal> {
       if (_itemsSeleccionados[item.idDetallePedido] == true) {
         final cant = _cantidadesDevolver[item.idDetallePedido] ?? 1;
         if (cant > 0) {
+          final tallaDeseada = _tipoResolucion == 'CAMBIO_PRENDA'
+              ? (_tallasDeseadas[item.idDetallePedido] ?? item.talla)
+              : null;
           itemsDevolver.add({
             'id_detalle_venta': item.idDetallePedido,
             'id_variante': item.idVariante,
             'cantidad': cant,
             'motivo_item': _motivoSeleccionado,
+            if (tallaDeseada != null) 'talla_deseada': tallaDeseada,
           });
         }
       }
@@ -128,17 +162,22 @@ class _SolicitarDevolucionModalState extends State<SolicitarDevolucionModal> {
   }
 
   void _mostrarExitoDialog(SolicitudDevolucionModel sol) {
+    final esCambio = sol.tipoResolucion == 'CAMBIO_PRENDA';
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
-            const Icon(Icons.assignment_turned_in, color: AppTheme.primaryGold, size: 26),
+            Icon(
+              esCambio ? Icons.swap_horiz : Icons.assignment_turned_in,
+              color: esCambio ? Colors.cyan.shade700 : AppTheme.primaryGold,
+              size: 26,
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'Solicitud Registrada',
+                esCambio ? 'Solicitud de Cambio Registrada' : 'Solicitud Registrada',
                 style: GoogleFonts.playfairDisplay(fontSize: 18, fontWeight: FontWeight.w700),
               ),
             ),
@@ -149,7 +188,9 @@ class _SolicitarDevolucionModalState extends State<SolicitarDevolucionModal> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Hemos recibido tu solicitud de devolución correctamente:',
+              esCambio
+                  ? 'Hemos recibido tu solicitud de cambio de talla correctamente:'
+                  : 'Hemos recibido tu solicitud de devolución correctamente:',
               style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textSecondary),
             ),
             const SizedBox(height: 8),
@@ -157,16 +198,16 @@ class _SolicitarDevolucionModalState extends State<SolicitarDevolucionModal> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
-                  color: AppTheme.goldLight,
+                  color: esCambio ? Colors.cyan.withValues(alpha: 0.1) : AppTheme.goldLight,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.3)),
+                  border: Border.all(color: (esCambio ? Colors.cyan : AppTheme.primaryGold).withValues(alpha: 0.3)),
                 ),
                 child: Text(
                   sol.codigoSolicitud,
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: AppTheme.primaryGold,
+                    color: esCambio ? Colors.cyan.shade800 : AppTheme.primaryGold,
                     letterSpacing: 1,
                   ),
                 ),
@@ -174,7 +215,9 @@ class _SolicitarDevolucionModalState extends State<SolicitarDevolucionModal> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Estado: Solicitada y en revisión por el equipo de calidad.',
+              esCambio
+                  ? 'Podrás acercarte a la sucursal para entregar tu prenda original y retirar tu nueva talla una vez revisada.'
+                  : 'Estado: Solicitada y en revisión por el equipo de calidad.',
               style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 4),
@@ -345,59 +388,120 @@ class _SolicitarDevolucionModalState extends State<SolicitarDevolucionModal> {
                                   width: isSelected ? 1.5 : 1,
                                 ),
                               ),
-                              child: Row(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Checkbox(
-                                    value: isSelected,
-                                    activeColor: AppTheme.primaryGold,
-                                    onChanged: (val) {
-                                      setState(() {
-                                        _itemsSeleccionados[item.idDetallePedido] = val ?? false;
-                                      });
-                                    },
-                                  ),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          item.productoNombre,
-                                          style: GoogleFonts.plusJakartaSans(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w700,
-                                          ),
+                                  Row(
+                                    children: [
+                                      Checkbox(
+                                        value: isSelected,
+                                        activeColor: AppTheme.primaryGold,
+                                        onChanged: (val) {
+                                          setState(() {
+                                            _itemsSeleccionados[item.idDetallePedido] = val ?? false;
+                                          });
+                                        },
+                                      ),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              item.productoNombre,
+                                              style: GoogleFonts.plusJakartaSans(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                            Text(
+                                              'Talla original: ${item.talla} · Color: ${item.color}',
+                                              style: GoogleFonts.plusJakartaSans(
+                                                fontSize: 11,
+                                                color: AppTheme.textMuted,
+                                              ),
+                                            ),
+                                            Text(
+                                              _tipoResolucion == 'CAMBIO_PRENDA'
+                                                  ? 'Canje directo por nueva talla'
+                                                  : currencyFormatter.format(item.precioUnitario),
+                                              style: GoogleFonts.plusJakartaSans(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
+                                                color: _tipoResolucion == 'CAMBIO_PRENDA'
+                                                    ? Colors.cyan.shade700
+                                                    : AppTheme.primaryGold,
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                        Text(
-                                          'Talla: ${item.talla} · Color: ${item.color}',
-                                          style: GoogleFonts.plusJakartaSans(
-                                            fontSize: 11,
-                                            color: AppTheme.textMuted,
-                                          ),
+                                      ),
+                                      if (isSelected && item.cantidad > 1) ...[
+                                        IconButton(
+                                          icon: const Icon(Icons.remove_circle_outline, size: 20),
+                                          onPressed: cantActual > 1
+                                              ? () => setState(() => _cantidadesDevolver[item.idDetallePedido] = cantActual - 1)
+                                              : null,
                                         ),
-                                        Text(
-                                          currencyFormatter.format(item.precioUnitario),
-                                          style: GoogleFonts.plusJakartaSans(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                            color: AppTheme.primaryGold,
-                                          ),
+                                        Text('$cantActual', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700)),
+                                        IconButton(
+                                          icon: const Icon(Icons.add_circle_outline, size: 20),
+                                          onPressed: cantActual < item.cantidad
+                                              ? () => setState(() => _cantidadesDevolver[item.idDetallePedido] = cantActual + 1)
+                                              : null,
                                         ),
                                       ],
-                                    ),
+                                    ],
                                   ),
-                                  if (isSelected && item.cantidad > 1) ...[
-                                    IconButton(
-                                      icon: const Icon(Icons.remove_circle_outline, size: 20),
-                                      onPressed: cantActual > 1
-                                          ? () => setState(() => _cantidadesDevolver[item.idDetallePedido] = cantActual - 1)
-                                          : null,
-                                    ),
-                                    Text('$cantActual', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700)),
-                                    IconButton(
-                                      icon: const Icon(Icons.add_circle_outline, size: 20),
-                                      onPressed: cantActual < item.cantidad
-                                          ? () => setState(() => _cantidadesDevolver[item.idDetallePedido] = cantActual + 1)
-                                          : null,
+                                  if (isSelected && _tipoResolucion == 'CAMBIO_PRENDA') ...[
+                                    const SizedBox(height: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: Colors.cyan.withValues(alpha: 0.08),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: Colors.cyan.withValues(alpha: 0.25)),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          const Icon(Icons.swap_horiz, size: 16, color: Colors.cyan),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              'Nueva talla deseada:',
+                                              style: GoogleFonts.plusJakartaSans(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.cyan.shade900,
+                                              ),
+                                            ),
+                                          ),
+                                          DropdownButton<String>(
+                                            value: _tallasDeseadas[item.idDetallePedido] ?? item.talla,
+                                            isDense: true,
+                                            underline: const SizedBox(),
+                                            items: _obtenerTallasOpciones(item).map((t) {
+                                              return DropdownMenuItem(
+                                                value: t,
+                                                child: Text(
+                                                  'Talla $t',
+                                                  style: GoogleFonts.plusJakartaSans(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: t == item.talla ? AppTheme.textMuted : Colors.cyan.shade900,
+                                                  ),
+                                                ),
+                                              );
+                                            }).toList(),
+                                            onChanged: (val) {
+                                              if (val != null) {
+                                                setState(() {
+                                                  _tallasDeseadas[item.idDetallePedido] = val;
+                                                });
+                                              }
+                                            },
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ],
                                 ],
@@ -407,7 +511,7 @@ class _SolicitarDevolucionModalState extends State<SolicitarDevolucionModal> {
 
                           const SizedBox(height: 16),
                           Text(
-                            '2. Motivo de la Devolución',
+                            '2. Motivo de la Solicitud',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
@@ -450,21 +554,21 @@ class _SolicitarDevolucionModalState extends State<SolicitarDevolucionModal> {
                             child: Column(
                               children: [
                                 RadioListTile<String>(
-                                  title: Text('Saldo a Favor / Cupón Digital', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w600)),
-                                  subtitle: Text('Inmediato para comprar cualquier otra prenda en la tienda.', style: GoogleFonts.plusJakartaSans(fontSize: 10, color: AppTheme.textMuted)),
-                                  value: 'CREDITO_TIENDA',
+                                  title: Text('Cambio de Talla / Prenda', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w600)),
+                                  subtitle: Text('Canje directo en sucursal por la talla deseada (sin costo ni desembolso monetario).', style: GoogleFonts.plusJakartaSans(fontSize: 10, color: AppTheme.textMuted)),
+                                  value: 'CAMBIO_PRENDA',
                                   activeColor: AppTheme.primaryGold,
                                 ),
                                 RadioListTile<String>(
-                                  title: Text('Cambio de Prenda', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w600)),
-                                  subtitle: Text('Por otra talla o modelo del mismo valor.', style: GoogleFonts.plusJakartaSans(fontSize: 10, color: AppTheme.textMuted)),
-                                  value: 'CAMBIO_PRENDA',
+                                  title: Text('Saldo a Favor / Cupón Digital', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w600)),
+                                  subtitle: Text('Inmediato para comprar cualquier otra prenda en la tienda.', style: GoogleFonts.plusJakartaSans(fontSize: 10, color: AppTheme.textMuted)),
+                                  value: 'SALDO_A_FAVOR',
                                   activeColor: AppTheme.primaryGold,
                                 ),
                                 RadioListTile<String>(
                                   title: Text('Reembolso Monetario', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w600)),
                                   subtitle: Text('Reembolso al método de pago original (requiere revisión administrativa).', style: GoogleFonts.plusJakartaSans(fontSize: 10, color: AppTheme.textMuted)),
-                                  value: 'REEMBOLSO',
+                                  value: 'REEMBOLSO_DINERO',
                                   activeColor: AppTheme.primaryGold,
                                 ),
                               ],
@@ -512,7 +616,9 @@ class _SolicitarDevolucionModalState extends State<SolicitarDevolucionModal> {
             Padding(
               padding: const EdgeInsets.all(20),
               child: AuroraButton(
-                text: 'Enviar Solicitud de Devolución',
+                text: _tipoResolucion == 'CAMBIO_PRENDA'
+                    ? 'Confirmar Solicitud de Cambio de Talla'
+                    : 'Enviar Solicitud de Devolución',
                 isLoading: _enviando,
                 onPressed: _enviarSolicitud,
                 variant: AuroraButtonVariant.primary,

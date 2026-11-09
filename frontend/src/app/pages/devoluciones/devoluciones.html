@@ -263,12 +263,12 @@
                   📦 Recepcionar
                 </button>
 
-                <!-- Liquidar Reembolso Financiero -->
-                <button *ngIf="(dev.estado === 'RECIBIDA' || dev.estado === 'PENDIENTE_REEMBOLSO') && (authService.hasPermission('devoluciones.reembolsar') || authService.isGlobalAdmin() || authService.isStoreAdmin())"
+                <!-- Liquidar Reembolso Financiero o Confirmar Entrega de Cambio -->
+                <button *ngIf="(dev.estado === 'RECIBIDA' || dev.estado === 'PENDIENTE_REEMBOLSO' || dev.estado === 'PENDIENTE_ENTREGA') && (authService.hasPermission('devoluciones.reembolsar') || authService.isGlobalAdmin() || authService.isStoreAdmin())"
                         (click)="abrirModalReembolso(dev)"
-                        class="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] uppercase tracking-wider transition-colors cursor-pointer"
-                        title="Liquidar Reembolso">
-                  💳 Reembolsar
+                        [class]="dev.tipo_resolucion === 'CAMBIO_PRENDA' ? 'px-2 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-[10px] uppercase tracking-wider transition-colors cursor-pointer' : 'px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] uppercase tracking-wider transition-colors cursor-pointer'"
+                        [title]="dev.tipo_resolucion === 'CAMBIO_PRENDA' ? 'Entregar Cambio de Prenda' : 'Liquidar Reembolso'">
+                  {{ dev.tipo_resolucion === 'CAMBIO_PRENDA' ? '🔄 Entregar Cambio' : '💳 Reembolsar' }}
                 </button>
 
               </div>
@@ -413,7 +413,10 @@
                 <div>
                   <h5 class="font-bold text-zinc-900 dark:text-white">{{ it.producto_nombre }}</h5>
                   <p class="text-[10px] text-zinc-500 font-mono">
-                    Talla: {{ it.talla }} • Color: {{ it.color }} • SKU: {{ it.sku }} • Cantidad: <b>{{ it.cantidad }}</b>
+                    Talla original: {{ it.talla }} • Color: {{ it.color }} • SKU: {{ it.sku }} • Cantidad: <b>{{ it.cantidad }}</b>
+                  </p>
+                  <p *ngIf="it.talla_cambio" class="text-[11px] text-cyan-600 dark:text-cyan-400 font-bold font-mono mt-0.5">
+                    🔄 Cambio solicitado por Talla: {{ it.talla_cambio }} <span *ngIf="it.sku_cambio" class="text-zinc-400 font-normal">({{ it.sku_cambio }})</span>
                   </p>
                   <span class="inline-block mt-0.5 text-[9px] px-2 py-0.5 rounded font-mono"
                         [class.bg-emerald-500/15]="it.condicion === 'REVENDIBLE'"
@@ -424,8 +427,14 @@
                   </span>
                 </div>
                 <div class="text-right font-mono">
-                  <span class="text-[10px] text-zinc-400 block">Reembolso Neto</span>
-                  <span class="font-bold text-amber-600 dark:text-amber-400">Bs. {{ it.monto_reembolso | number:'1.2-2' }}</span>
+                  <ng-container *ngIf="devolucionDetalle.tipo_resolucion === 'CAMBIO_PRENDA'">
+                    <span class="text-[10px] text-cyan-600 dark:text-cyan-400 font-bold block">Canje de Prenda</span>
+                    <span class="text-[11px] text-zinc-500 font-mono">Sin egreso monetario</span>
+                  </ng-container>
+                  <ng-container *ngIf="devolucionDetalle.tipo_resolucion !== 'CAMBIO_PRENDA'">
+                    <span class="text-[10px] text-zinc-400 block">Reembolso Neto</span>
+                    <span class="font-bold text-amber-600 dark:text-amber-400">Bs. {{ it.monto_reembolso | number:'1.2-2' }}</span>
+                  </ng-container>
                 </div>
               </div>
             </div>
@@ -471,11 +480,11 @@
               📦 Registrar Recepción Física
             </button>
 
-            <!-- Botón Reembolsar -->
-            <button *ngIf="(devolucionDetalle.estado === 'RECIBIDA' || devolucionDetalle.estado === 'PENDIENTE_REEMBOLSO') && (authService.hasPermission('devoluciones.reembolsar') || authService.isGlobalAdmin() || authService.isStoreAdmin())"
+            <!-- Botón Reembolsar o Confirmar Entrega de Cambio -->
+            <button *ngIf="(devolucionDetalle.estado === 'RECIBIDA' || devolucionDetalle.estado === 'PENDIENTE_REEMBOLSO' || devolucionDetalle.estado === 'PENDIENTE_ENTREGA') && (authService.hasPermission('devoluciones.reembolsar') || authService.isGlobalAdmin() || authService.isStoreAdmin())"
                     (click)="abrirModalReembolso(devolucionDetalle)"
-                    class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer">
-              💳 Liquidar Reembolso
+                    [class]="devolucionDetalle.tipo_resolucion === 'CAMBIO_PRENDA' ? 'px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer' : 'px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer'">
+              {{ devolucionDetalle.tipo_resolucion === 'CAMBIO_PRENDA' ? '🔄 Confirmar Entrega de Cambio' : '💳 Liquidar Reembolso' }}
             </button>
 
           </div>
@@ -1337,21 +1346,41 @@
         
         <div class="px-5 sm:px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-950/60 flex items-center justify-between">
           <h3 class="text-sm sm:text-base font-bold text-zinc-900 dark:text-white flex items-center space-x-2">
-            <span>💳</span>
-            <span>Liquidar Reembolso — {{ codigoDevolucionReembolso }}</span>
+            <span>{{ tipoResolucionReembolso === 'CAMBIO_PRENDA' ? '🔄' : '💳' }}</span>
+            <span>{{ tipoResolucionReembolso === 'CAMBIO_PRENDA' ? 'Confirmar Entrega de Cambio de Talla' : 'Liquidar Reembolso' }} — {{ codigoDevolucionReembolso }}</span>
           </h3>
           <button (click)="cerrarModalReembolso()" class="text-zinc-400 hover:text-zinc-600">✕</button>
         </div>
 
         <div class="p-5 sm:p-6 space-y-4 text-xs">
           
-          <div class="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-300 flex justify-between items-center">
+          <!-- Banner para Cambio de Prenda / Talla -->
+          <div *ngIf="tipoResolucionReembolso === 'CAMBIO_PRENDA'" class="p-3.5 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-900 dark:text-cyan-200 space-y-2">
+            <div class="flex items-center space-x-2 font-bold text-xs">
+              <span>🔄</span>
+              <span>Resolución: Cambio Directo de Prenda / Talla</span>
+            </div>
+            <p class="text-[11px] leading-relaxed">
+              Esta operación registrará la entrega física de la prenda sustituta al cliente. 
+              <strong>Se descontará automáticamente la prenda del inventario</strong> y se completará el expediente sin egreso de dinero en caja.
+            </p>
+            <div *ngIf="devolucionDetalle && devolucionDetalle.items && devolucionDetalle.items.length" class="mt-2 pt-2 border-t border-cyan-500/20 space-y-1">
+              <div *ngFor="let it of devolucionDetalle.items" class="text-[11px]">
+                <span class="font-semibold text-zinc-900 dark:text-white">{{ it.producto_nombre }}</span>:
+                <span class="text-zinc-600 dark:text-zinc-400"> Talla devuelta <b>{{ it.talla }}</b></span>
+                <span class="text-cyan-600 dark:text-cyan-400 font-bold"> ➔ Entregar Talla: {{ it.talla_cambio || it.talla_deseada || 'Por confirmar' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Banner para Reembolso Monetario -->
+          <div *ngIf="tipoResolucionReembolso !== 'CAMBIO_PRENDA'" class="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-300 flex justify-between items-center">
             <span class="font-bold">Monto Total a Reembolsar:</span>
             <span class="font-mono text-base font-bold">Bs. {{ montoReembolsoLiquidacion | number:'1.2-2' }}</span>
           </div>
 
           <!-- Alerta de PayPal si la venta fue pagada con PayPal -->
-          <div *ngIf="esPagoPayPalOriginal" class="p-3.5 rounded-2xl bg-blue-500/10 border border-blue-500/30 text-blue-900 dark:text-blue-200 space-y-1.5">
+          <div *ngIf="tipoResolucionReembolso !== 'CAMBIO_PRENDA' && esPagoPayPalOriginal" class="p-3.5 rounded-2xl bg-blue-500/10 border border-blue-500/30 text-blue-900 dark:text-blue-200 space-y-1.5">
             <div class="flex items-center space-x-2 font-bold text-xs">
               <span>⚡</span>
               <span>Pago Original con PayPal REST API Detectado</span>
@@ -1361,8 +1390,16 @@
             </p>
           </div>
 
-          <!-- Método de Reembolso -->
-          <div class="space-y-1">
+          <!-- Modalidad / Método de Reembolso o Entrega -->
+          <div *ngIf="tipoResolucionReembolso === 'CAMBIO_PRENDA'" class="space-y-1">
+            <label class="font-bold text-zinc-700 dark:text-zinc-300">Modalidad de Cierre:</label>
+            <div class="p-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 font-mono text-xs flex items-center space-x-2">
+              <span>🔄</span>
+              <span>ENTREGA_PRENDA_CAMBIO (Descarga de stock de prenda sustituta)</span>
+            </div>
+          </div>
+
+          <div *ngIf="tipoResolucionReembolso !== 'CAMBIO_PRENDA'" class="space-y-1">
             <label class="font-bold text-zinc-700 dark:text-zinc-300">Método de Liquidación:</label>
             <select [(ngModel)]="metodoReembolso" class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-semibold cursor-pointer">
               <option value="EFECTIVO">💵 Efectivo en Caja (Cajero/Mostrador)</option>
@@ -1375,15 +1412,15 @@
           <!-- Referencia / Comprobante -->
           <div class="space-y-1">
             <label class="font-bold text-zinc-700 dark:text-zinc-300">
-              Nro. de Comprobante / Voucher / Referencia <span class="text-rose-500">*</span>:
+              {{ tipoResolucionReembolso === 'CAMBIO_PRENDA' ? 'Nro. de Comprobante / Vale de Entrega' : 'Nro. de Comprobante / Voucher / Referencia' }} <span class="text-rose-500">*</span>:
             </label>
-            <input type="text" [(ngModel)]="referenciaReembolso" placeholder="Ej. TRANSF-98231 o REC-0021" class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500" />
+            <input type="text" [(ngModel)]="referenciaReembolso" [placeholder]="tipoResolucionReembolso === 'CAMBIO_PRENDA' ? 'Ej. CAMBIO-DEV-001' : 'Ej. TRANSF-98231 o REC-0021'" class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500" />
           </div>
 
           <!-- Observaciones -->
           <div class="space-y-1">
-            <label class="font-bold text-zinc-700 dark:text-zinc-300">Observaciones Contables:</label>
-            <textarea [(ngModel)]="observacionesReembolso" rows="2" placeholder="Detalles del desembolso o recibo firmado..." class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl p-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500"></textarea>
+            <label class="font-bold text-zinc-700 dark:text-zinc-300">{{ tipoResolucionReembolso === 'CAMBIO_PRENDA' ? 'Observaciones de Entrega:' : 'Observaciones Contables:' }}</label>
+            <textarea [(ngModel)]="observacionesReembolso" rows="2" [placeholder]="tipoResolucionReembolso === 'CAMBIO_PRENDA' ? 'Detalles de la entrega física o conformidad del cliente...' : 'Detalles del desembolso o recibo firmado...'" class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl p-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500"></textarea>
           </div>
 
         </div>
@@ -1394,8 +1431,9 @@
           </button>
           <button (click)="confirmarReembolso()" 
                   [disabled]="!referenciaReembolso.trim() || guardandoReembolso"
-                  class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider disabled:opacity-40 transition-colors">
-            {{ guardandoReembolso ? 'Liquidando...' : 'Confirmar Liquidación' }}
+                  [ngClass]="tipoResolucionReembolso === 'CAMBIO_PRENDA' ? 'bg-cyan-600 hover:bg-cyan-500' : 'bg-emerald-600 hover:bg-emerald-500'"
+                  class="px-5 py-2 rounded-xl text-white font-bold text-xs uppercase tracking-wider disabled:opacity-40 transition-colors">
+            {{ guardandoReembolso ? (tipoResolucionReembolso === 'CAMBIO_PRENDA' ? 'Registrando Entrega...' : 'Liquidando...') : (tipoResolucionReembolso === 'CAMBIO_PRENDA' ? '✓ Confirmar Entrega de Cambio' : 'Confirmar Liquidación') }}
           </button>
         </div>
 

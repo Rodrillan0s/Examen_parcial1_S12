@@ -36,6 +36,10 @@ class AuroraBadge extends StatelessWidget {
         bg = AppTheme.goldLight;
         fg = AppTheme.primaryGold;
         break;
+      case 'PENDIENTE_ENTREGA':
+        bg = const Color(0xFFE0F7FA);
+        fg = const Color(0xFF00838F);
+        break;
       case 'CANCELADO':
       case 'CANCELADA':
       case 'VENCIDA':

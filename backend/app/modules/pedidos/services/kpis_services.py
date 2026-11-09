@@ -207,3 +207,23 @@ def obtener_tenants_dashboard(token_data: dict):
         "message": "Listado de tiendas y tenants obtenido exitosamente.",
         "data": tenants
     }
+
+
+def obtener_ranking_satisfaccion_prendas(token_data: dict, id_sucursal: int = None, limit: int = 5, id_empresa: int = None):
+    id_empresa_final, id_sucursal_final = _resolver_contexto_tenant(token_data, id_sucursal, id_empresa)
+    datos = kpis_repos.obtener_ranking_satisfaccion_prendas_db(id_empresa_final, id_sucursal_final, limit)
+    return {
+        "success": True,
+        "message": "Ranking de satisfacción de prendas obtenido.",
+        "data": datos
+    }
+
+
+def obtener_alertas_calidad_criticas(token_data: dict, id_sucursal: int = None, limit: int = 10, id_empresa: int = None):
+    id_empresa_final, id_sucursal_final = _resolver_contexto_tenant(token_data, id_sucursal, id_empresa)
+    datos = kpis_repos.obtener_alertas_calidad_criticas_db(id_empresa_final, id_sucursal_final, limit)
+    return {
+        "success": True,
+        "message": "Alertas críticas de calidad y servicio obtenidas.",
+        "data": datos
+    }

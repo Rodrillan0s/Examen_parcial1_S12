@@ -556,7 +556,8 @@ def consultar_venta_elegible(
                     WHERE img.id_producto = p.id_producto 
                     ORDER BY img.es_principal DESC, img.orden ASC, img.id_imagen ASC 
                     LIMIT 1
-                ) AS imagen_url
+                ) AS imagen_url,
+                p.id_producto
             FROM {schema}.t_detalle_venta dv
             JOIN {schema}.t_producto_talla_color v ON v.id_variante = dv.id_variante
             JOIN {schema}.t_producto p ON p.id_producto = v.id_producto
@@ -566,6 +567,32 @@ def consultar_venta_elegible(
             ORDER BY dv.id_detalle_venta ASC;
         """
         rows_items = db.execute_query(sql_items, (id_venta,), fetchall=True) or []
+
+        # 5.1 Cargar variantes alternativas de los productos (para cambio de talla) en 1 sola consulta
+        prod_ids = list({it[11] for it in rows_items if len(it) > 11 and it[11]})
+        mapa_variantes = {}
+        if prod_ids:
+            placeholders = ','.join(['%s'] * len(prod_ids))
+            sql_vars = f"""
+                SELECT v2.id_producto, v2.id_variante, t2.nombre AS talla, col2.nombre AS color, v2.precio,
+                       COALESCE(inv.stock_disponible, 0) AS stock
+                FROM {schema}.t_producto_talla_color v2
+                JOIN {schema}.t_talla t2 ON t2.id_talla = v2.id_talla
+                JOIN {schema}.t_color col2 ON col2.id_color = v2.id_color
+                LEFT JOIN {schema}.t_inventario inv ON inv.id_variante = v2.id_variante AND inv.id_sucursal = %s
+                WHERE v2.id_producto IN ({placeholders}) AND v2.activo = true AND v2.estado = true
+                ORDER BY t2.id_talla;
+            """
+            rows_v = db.execute_query(sql_vars, (v_suc, *prod_ids), fetchall=True) or []
+            for rv in rows_v:
+                pid, var_id, var_talla, var_col, var_precio, var_stock = rv
+                mapa_variantes.setdefault(pid, []).append({
+                    "id_variante": var_id,
+                    "talla": var_talla,
+                    "color": var_col,
+                    "precio": float(var_precio or 0),
+                    "stock_disponible": int(var_stock or 0)
+                })
 
         # 6. Calcular devoluciones activas o completadas para cada detalle de venta
         sql_dev_cant = f"""
@@ -611,7 +638,9 @@ def consultar_venta_elegible(
                 "sku": it[7],
                 "talla": it[8],
                 "color": it[9],
-                "imagen_url": it[10]
+                "imagen_url": it[10],
+                "id_producto": it[11] if len(it) > 11 else None,
+                "variantes_disponibles": mapa_variantes.get(it[11], []) if len(it) > 11 else []
             })
 
         if total_elegible_general == 0 and not motivo_bloqueo:
@@ -827,18 +856,45 @@ def crear_solicitud_cliente(
             subtotal_item_reembolso = partial_amount(entitlements[id_det_v],cant_original,cant_ya_dev,cant_req)
             monto_total_reembolso += subtotal_item_reembolso
 
+            # Resolver variante de cambio si la resolución es cambio de talla
+            id_var_cambio = req.get("id_variante_cambio")
+            talla_deseada = (req.get("talla_deseada") or "").strip()
+            if not id_var_cambio and talla_deseada and tipo_res_norm == 'CAMBIO_PRENDA':
+                var_orig = dv_row[1]
+                row_target = db.execute_query(f"""
+                    SELECT v2.id_variante
+                    FROM {schema}.t_producto_talla_color v_orig
+                    JOIN {schema}.t_producto_talla_color v2 ON v2.id_producto = v_orig.id_producto
+                    JOIN {schema}.t_talla t2 ON t2.id_talla = v2.id_talla
+                    WHERE v_orig.id_variante = %s AND UPPER(TRIM(t2.nombre)) = UPPER(TRIM(%s)) AND v2.activo = true
+                    LIMIT 1;
+                """, (var_orig, talla_deseada), fetchone=True)
+                if row_target:
+                    id_var_cambio = row_target[0]
+
             detalles_a_insertar.append({
                 "id_detalle_venta": id_det_v,
                 "cantidad": cant_req,
                 "precio_unitario": dv_row[3],
                 "descuento_unitario": dv_row[4],
                 "monto_reembolso": subtotal_item_reembolso,
-                "estado_item": "SOLICITADO"
+                "estado_item": "SOLICITADO",
+                "id_variante_cambio": id_var_cambio,
+                "cantidad_cambio": cant_req if tipo_res_norm == 'CAMBIO_PRENDA' else 0,
+                "precio_unitario_cambio": dv_row[3] if tipo_res_norm == 'CAMBIO_PRENDA' else Decimal('0.00'),
+                "talla_deseada": talla_deseada
             })
 
         _check_money_cap(db,schema,id_venta,entitlements,detalles_a_insertar)
         # Generar código de referencia
         codigo_dev = _generar_codigo_devolucion()
+
+        # Enriquecer descripción si se especificó cambio de talla
+        tallas_req = [d["talla_deseada"] for d in detalles_a_insertar if d.get("talla_deseada")]
+        descripcion_final = descripcion
+        if tallas_req and tipo_res_norm == 'CAMBIO_PRENDA':
+            nota_talla = f"[Cambio solicitado por talla: {', '.join(tallas_req)}]"
+            descripcion_final = f"{descripcion or ''} {nota_talla}".strip()
 
         # Insertar cabecera t_devolucion
         sql_ins_dev = f"""
@@ -853,7 +909,7 @@ def crear_solicitud_cliente(
         """
         params_ins_dev = (
             id_venta, id_usuario, id_empresa, v_suc, codigo_dev,
-            'SOLICITUD_CLIENTE', motivo, descripcion, evidencia_url,
+            'SOLICITUD_CLIENTE', motivo, descripcion_final, evidencia_url,
             monto_total_reembolso, 'SOLICITADA', tipo_res_norm,
             dias_transcurridos, True, es_defecto
         )
@@ -864,16 +920,19 @@ def crear_solicitud_cliente(
         sql_ins_det = f"""
             INSERT INTO {schema}.t_detalle_devolucion (
                 id_devolucion, id_detalle_venta, cantidad, precio_unitario,
-                descuento_unitario, monto_reembolso, estado_item
+                descuento_unitario, monto_reembolso, estado_item,
+                id_variante_cambio, cantidad_cambio, precio_unitario_cambio
             ) VALUES (
-                %s, %s, %s, %s, %s, %s, %s
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
             );
         """
         for d in detalles_a_insertar:
             db.execute_query(sql_ins_det, (
                 id_devolucion, d["id_detalle_venta"], d["cantidad"],
                 d["precio_unitario"], d["descuento_unitario"],
-                d["monto_reembolso"], d["estado_item"]
+                d["monto_reembolso"], d["estado_item"],
+                d["id_variante_cambio"], d["cantidad_cambio"],
+                d["precio_unitario_cambio"]
             ))
 
         db.commit()
@@ -1608,13 +1667,17 @@ def obtener_detalle_devolucion(
                 dd.id_variante_cambio,
                 dd.cantidad_cambio,
                 dd.precio_unitario_cambio,
-                COALESCE(dd.destino_inventario, 'STOCK_DISPONIBLE') AS destino_inventario
+                COALESCE(dd.destino_inventario, 'STOCK_DISPONIBLE') AS destino_inventario,
+                tc.nombre AS talla_cambio,
+                vc.sku AS sku_cambio
             FROM {schema}.t_detalle_devolucion dd
             JOIN {schema}.t_detalle_venta dv ON dv.id_detalle_venta = dd.id_detalle_venta
             JOIN {schema}.t_producto_talla_color v ON v.id_variante = dv.id_variante
             JOIN {schema}.t_producto p ON p.id_producto = v.id_producto
             JOIN {schema}.t_talla t ON t.id_talla = v.id_talla
             JOIN {schema}.t_color col ON col.id_color = v.id_color
+            LEFT JOIN {schema}.t_producto_talla_color vc ON vc.id_variante = dd.id_variante_cambio
+            LEFT JOIN {schema}.t_talla tc ON tc.id_talla = vc.id_talla
             WHERE dd.id_devolucion = %s
             ORDER BY dd.id_detalle_devolucion ASC;
         """
@@ -1638,7 +1701,9 @@ def obtener_detalle_devolucion(
                 "id_variante_cambio": it[13],
                 "cantidad_cambio": it[14],
                 "precio_unitario_cambio": float(it[15] or 0),
-                "destino_inventario": it[16]
+                "destino_inventario": it[16],
+                "talla_cambio": it[17] if len(it) > 17 else None,
+                "sku_cambio": it[18] if len(it) > 18 else None
             })
 
         cliente_nom = f"{row[11] or ''} {row[12] or ''}".strip() or "Cliente"
@@ -1787,7 +1852,7 @@ def registrar_recepcion_prendas(
         _require_structure(db,schema)
 
         sql_dev = f"""
-            SELECT id_devolucion, id_empresa, id_sucursal, codigo_devolucion, estado
+            SELECT id_devolucion, id_empresa, id_sucursal, codigo_devolucion, estado, tipo_resolucion, id_venta, id_usuario, monto_reembolso
             FROM {schema}.t_devolucion
             WHERE id_devolucion = %s
             FOR UPDATE;
@@ -1797,7 +1862,8 @@ def registrar_recepcion_prendas(
             db.rollback()
             raise HTTPException(status_code=404, detail="Devolución no encontrada.")
 
-        d_id, d_emp, d_suc_orig, d_cod, d_estado = row
+        d_id, d_emp, d_suc_orig, d_cod, d_estado, d_tipo_res, d_venta, d_usuario, d_monto = row
+        tipo_res_act = (d_tipo_res or 'REEMBOLSO_DINERO').strip().upper()
         if d_emp != id_empresa:
             db.rollback()
             raise HTTPException(status_code=403, detail="No tiene permisos sobre la empresa de esta devolución.")
@@ -1835,7 +1901,7 @@ def registrar_recepcion_prendas(
             condiciones_validas = ('REVENDIBLE','NUEVO','DEFECTUOSO','CON_DEFECTO','DAÑADO','DANADO','NO_REVENDIBLE','EN_INSPECCION')
             if condicion_chk not in condiciones_validas:
                 raise HTTPException(400, f"Condicion invalida '{condicion_chk}'.")
-        if estado_act in ('PENDIENTE_REEMBOLSO','RECIBIDA'):
+        if estado_act in ('PENDIENTE_REEMBOLSO', 'RECIBIDA', 'PENDIENTE_ENTREGA', 'COMPLETADA'):
             evidence = db.execute_query(f'''SELECT datos_nuevos FROM {schema}.t_bitacora WHERE entidad='t_devolucion' AND id_entidad=%s AND accion='RECEPCION_PRENDAS_DEVOLUCION' ORDER BY id_bitacora DESC LIMIT 1''', (str(id_devolucion),), fetchone=True)
             received = evidence[0] if evidence else {}
             def canonical(items):
@@ -1920,25 +1986,75 @@ def registrar_recepcion_prendas(
             """
             db.execute_query(sql_upd_det, (condicion, destino_inv, id_det_dev))
 
+        # Determinar nuevo estado y mensaje según tipo de resolución
+        if tipo_res_act == 'CAMBIO_PRENDA':
+            nuevo_estado = 'PENDIENTE_ENTREGA'
+            mensaje_res = "Prendas recibidas e inspeccionadas. Pendiente entrega de prenda de cambio."
+        elif tipo_res_act == 'SALDO_A_FAVOR':
+            monto_float = float(d_monto or 0.0)
+            row_cli = db.execute_query(f"SELECT id_cliente FROM {schema}.t_venta WHERE id_venta = %s", (d_venta,), fetchone=True)
+            id_cliente = row_cli[0] if (row_cli and row_cli[0]) else None
+            if not id_cliente:
+                row_cli2 = db.execute_query(f"SELECT id_cliente FROM {schema}.t_cliente WHERE id_usuario = %s ORDER BY id_cliente LIMIT 1", (d_usuario,), fetchone=True)
+                id_cliente = row_cli2[0] if (row_cli2 and row_cli2[0]) else None
+            if not id_cliente:
+                row_ins_cli = db.execute_query(f"INSERT INTO {schema}.t_cliente (id_usuario, fecha_registro) VALUES (%s, CURRENT_TIMESTAMP) RETURNING id_cliente", (d_usuario,), fetchone=True)
+                id_cliente = row_ins_cli[0]
+
+            cod_credito = f"CRED-{id_empresa}-{uuid.uuid4().hex[:8].upper()}"
+            sql_ins_cred = f"""
+                INSERT INTO {schema}.t_credito_cliente (
+                    id_cliente, id_empresa, id_devolucion, codigo_credito,
+                    monto_inicial, saldo_disponible, fecha_expiracion, estado
+                ) VALUES (
+                    %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP + interval '180 days', 'ACTIVO'
+                ) RETURNING id_credito;
+            """
+            row_cred = db.execute_query(sql_ins_cred, (id_cliente, id_empresa, id_devolucion, cod_credito, monto_float, monto_float), fetchone=True)
+            if row_cred:
+                id_cred = row_cred[0]
+                sql_mov = f"""
+                    INSERT INTO {schema}.t_movimiento_credito (
+                        id_credito, tipo_movimiento, monto, saldo_anterior, saldo_nuevo, id_usuario, motivo
+                    ) VALUES (
+                        %s, 'EMISION', %s, 0.00, %s, %s, %s
+                    );
+                """
+                db.execute_query(sql_mov, (id_cred, monto_float, monto_float, id_usuario_receptor, f"Crédito emitido por devolución {d_cod}"))
+
+            nuevo_estado = 'COMPLETADA'
+            mensaje_res = f"Prendas recibidas. Crédito en tienda emitido exitosamente ({cod_credito})."
+            db.execute_query(f"""
+                UPDATE {schema}.t_devolucion
+                SET metodo_reembolso = 'SALDO_A_FAVOR',
+                    referencia_reembolso = %s,
+                    fecha_reembolso = CURRENT_TIMESTAMP
+                WHERE id_devolucion = %s;
+            """, (cod_credito, id_devolucion))
+        else:
+            nuevo_estado = 'PENDIENTE_REEMBOLSO'
+            mensaje_res = "Prendas recibidas e inspeccionadas. Pendiente liquidación de reembolso."
+
         # Actualizar estado de la devolución
         sql_upd_dev = f"""
             UPDATE {schema}.t_devolucion
-            SET estado = 'PENDIENTE_REEMBOLSO',
+            SET estado = %s,
                 observaciones_resolucion = COALESCE(observaciones_resolucion, '') || ' | ' || %s,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id_devolucion = %s;
         """
-        db.execute_query(sql_upd_dev, (observaciones or "Prendas recibidas e inspeccionadas.", id_devolucion))
+        db.execute_query(sql_upd_dev, (nuevo_estado, observaciones or mensaje_res, id_devolucion))
         db.commit()
 
         return {
             "success": True,
             "id_devolucion": id_devolucion,
-            "nuevo_estado": "PENDIENTE_REEMBOLSO",
+            "nuevo_estado": nuevo_estado,
+            "tipo_resolucion": tipo_res_act,
             "items_recibidos": items_inspeccionados,
             "id_usuario_receptor": id_usuario_receptor,
             "id_sucursal": sucursal_destino,
-            "mensaje": "Prendas recibidas y stock actualizado para artículos revendibles."
+            "mensaje": mensaje_res
         }
     except Exception as e:
         db.rollback()
@@ -1988,11 +2104,11 @@ def registrar_reembolso_financiero(
             raise HTTPException(status_code=403, detail="No tiene permisos sobre la empresa de esta devolución.")
 
         estado_act = (d_estado or "").strip().upper()
-        if estado_act not in ('PENDIENTE_REEMBOLSO', 'RECIBIDA'):
+        if estado_act not in ('PENDIENTE_REEMBOLSO', 'RECIBIDA', 'PENDIENTE_ENTREGA'):
             db.rollback()
             raise HTTPException(
                 status_code=400,
-                detail=f"La devolución debe encontrarse en estado 'PENDIENTE_REEMBOLSO' o 'RECIBIDA' (estado actual: '{estado_act}')."
+                detail=f"La devolución debe encontrarse en estado 'PENDIENTE_REEMBOLSO', 'PENDIENTE_ENTREGA' o 'RECIBIDA' (estado actual: '{estado_act}')."
             )
 
         resolucion_final = (tipo_resolucion or d_tipo_res or 'REEMBOLSO_DINERO').strip().upper()
@@ -2076,8 +2192,38 @@ def registrar_reembolso_financiero(
         # 3. RESOLUCIÓN: CAMBIO DE PRENDA
         # ---------------------------------------------------------------------
         elif resolucion_final == 'CAMBIO_PRENDA':
-            metodo_reembolso = metodo_reembolso or 'CAMBIO_PRENDA'
+            metodo_reembolso = metodo_reembolso or 'ENTREGA_PRENDA_CAMBIO'
             referencia_reembolso = referencia_reembolso or f"CAMBIO-{d_cod}"
+
+            # Descontar stock de la prenda o talla de reemplazo
+            sql_det_cambio = f"""
+                SELECT dd.id_variante_cambio, COALESCE(dd.cantidad_cambio, dd.cantidad, 1)
+                FROM {schema}.t_detalle_devolucion dd
+                WHERE dd.id_devolucion = %s AND dd.id_variante_cambio IS NOT NULL;
+            """
+            rows_cambio = db.execute_query(sql_det_cambio, (id_devolucion,), fetchall=True) or []
+            row_suc = db.execute_query(f"SELECT id_sucursal FROM {schema}.t_devolucion WHERE id_devolucion = %s", (id_devolucion,), fetchone=True)
+            dev_suc = row_suc[0] if row_suc else 1
+
+            for rc in rows_cambio:
+                var_cambio_id = rc[0]
+                cant_cambio = int(rc[1] or 1)
+                if var_cambio_id and cant_cambio > 0:
+                    sql_stock_desc = f"""
+                        UPDATE {schema}.t_inventario
+                        SET stock_actual = stock_actual - %s,
+                            stock_disponible = stock_disponible - %s,
+                            fecha_actualizacion = CURRENT_TIMESTAMP
+                        WHERE id_sucursal = %s AND id_variante = %s AND stock_disponible >= %s;
+                    """
+                    db.execute_query(sql_stock_desc, (cant_cambio, cant_cambio, dev_suc, var_cambio_id, cant_cambio))
+                    sql_mov = f"""
+                        INSERT INTO {schema}.t_movimiento_inventario (
+                            id_inventario, id_usuario, tipo_movimiento, cantidad, motivo, fecha_movimiento
+                        ) SELECT id_inventario, %s, 'SALIDA_CAMBIO_PRENDA', %s, 'Entrega de prenda en cambio de talla', CURRENT_TIMESTAMP
+                        FROM {schema}.t_inventario WHERE id_sucursal = %s AND id_variante = %s;
+                    """
+                    db.execute_query(sql_mov, (id_usuario_responsable, cant_cambio, dev_suc, var_cambio_id))
 
         # ---------------------------------------------------------------------
         # 4. ACTUALIZACIÓN FINAL EN t_devolucion

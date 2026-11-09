@@ -13,7 +13,9 @@ import {
   InventarioAlertaItem, 
   VentaSucursalItem,
   DashboardMetricas,
-  TenantDashboardItem
+  TenantDashboardItem,
+  PrendaRankingSatisfaccionItem,
+  AlertaCalidadCriticaItem
 } from '../../services/kpis';
 import { AuthService } from '../../services/auth';
 
@@ -42,7 +44,7 @@ export class DashboardKpisComponent implements OnInit, OnDestroy {
   tiendaSeleccionada: TenantDashboardItem | null = null;
   cargandoTenants: boolean = false;
   filtroBusquedaTienda: string = '';
-  pestanaActiva: 'indicadores' | 'inventario' | 'reportes' | 'sucursales' = 'indicadores';
+  pestanaActiva: 'indicadores' | 'inventario' | 'satisfaccion' | 'reportes' | 'sucursales' = 'indicadores';
 
   // ---- Filtros W32 ----
   fechaInicio: string = '';
@@ -56,6 +58,8 @@ export class DashboardKpisComponent implements OnInit, OnDestroy {
   productosTop: ProductoMasVendidoItem[] = [];
   alertasInventario: InventarioAlertaItem[] = [];
   ventasPorSucursal: VentaSucursalItem[] = [];
+  rankingSatisfaccion: PrendaRankingSatisfaccionItem[] = [];
+  alertasCalidad: AlertaCalidadCriticaItem[] = [];
   
   // Hover en gráfico interactivo
   puntoHover: VentaTimelineItem | null = null;
@@ -256,11 +260,11 @@ export class DashboardKpisComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  cambiarPestana(pestana: 'indicadores' | 'inventario' | 'reportes' | 'sucursales'): void {
+  cambiarPestana(pestana: 'indicadores' | 'inventario' | 'satisfaccion' | 'reportes' | 'sucursales'): void {
     this.pestanaActiva = pestana;
     this.cdr.detectChanges();
   }
-  cambiarPestaña(p: 'indicadores' | 'inventario' | 'reportes' | 'sucursales'): void {
+  cambiarPestaña(p: 'indicadores' | 'inventario' | 'satisfaccion' | 'reportes' | 'sucursales'): void {
     this.cambiarPestana(p);
   }
 
@@ -402,7 +406,35 @@ export class DashboardKpisComponent implements OnInit, OnDestroy {
         }
       });
 
-    // 6. Cargar también resumen de empresa si es nivel alto
+    // 6. Ranking de satisfacción por prendas (W32 + CSAT)
+    this.kpisService.obtenerRankingSatisfaccion(suc, 5, idEmpresa)
+      .pipe(takeUntil(this.cancelPeticionesPrevias$))
+      .subscribe({
+        next: (res) => {
+          if (res.success) {
+            this.rankingSatisfaccion = res.data || [];
+          }
+        },
+        error: (err) => {
+          if (err?.name !== 'EmptyError') console.error('Error ranking satisfacción:', err);
+        }
+      });
+
+    // 7. Alertas críticas de calidad (1 estrella o a revisar)
+    this.kpisService.obtenerAlertasCalidad(suc, 10, idEmpresa)
+      .pipe(takeUntil(this.cancelPeticionesPrevias$))
+      .subscribe({
+        next: (res) => {
+          if (res.success) {
+            this.alertasCalidad = res.data || [];
+          }
+        },
+        error: (err) => {
+          if (err?.name !== 'EmptyError') console.error('Error alertas calidad:', err);
+        }
+      });
+
+    // 8. Cargar también resumen de empresa si es nivel alto
     if (this.authService.getAuthorityLevel() <= 3) {
       this.kpisService.obtenerMetricasDashboard(idEmpresa)
         .pipe(takeUntil(this.cancelPeticionesPrevias$))

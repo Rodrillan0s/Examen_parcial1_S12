@@ -4,11 +4,12 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { PedidoService, PedidoData } from '../../services/pedido';
 import { PagoService } from '../../services/pago';
 import { AuthService } from '../../services/auth';
+import { ValoracionModalComponent } from '../../components/valoracion-modal/valoracion-modal';
 
 @Component({
   selector: 'app-pedido-confirmado',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, ValoracionModalComponent],
   templateUrl: './pedido-confirmado.html'
 })
 export class PedidoConfirmadoComponent implements OnInit {
@@ -21,6 +22,16 @@ export class PedidoConfirmadoComponent implements OnInit {
   pedido: PedidoData | null = null;
   cargando: boolean = true;
   errorMensaje: string | null = null;
+  modalValoracionVisible: boolean = false;
+  valoracionRegistrada: boolean = false;
+
+  abrirModalValoracion(): void {
+    this.modalValoracionVisible = true;
+  }
+
+  onValoracionRegistrada(datos: any): void {
+    this.valoracionRegistrada = true;
+  }
 
   ngOnInit(): void {
     if (!this.authService.estaAutenticado()) {

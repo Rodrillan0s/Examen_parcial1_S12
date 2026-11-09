@@ -90,7 +90,7 @@ export const routes: Routes = [
       { 
         path: 'backup', 
         loadComponent: () => import('./pages/backup/backup').then(m => m.BackupComponent), 
-        canActivate: [scopeGuard(['PLATAFORMA'])] 
+        canActivate: [scopeGuard(['PLATAFORMA', 'EMPRESA'])] 
       },
       { path: 'bi_dashboard', loadComponent: () => import('./pages/bi-dashboard/bi-dashboard').then(m => m.BiDashboardComponent), canActivate: [permissionGuard('reportes.ver')] },
       { path: 'bi-dashboard', loadComponent: () => import('./pages/bi-dashboard/bi-dashboard').then(m => m.BiDashboardComponent), canActivate: [permissionGuard('reportes.ver')] },

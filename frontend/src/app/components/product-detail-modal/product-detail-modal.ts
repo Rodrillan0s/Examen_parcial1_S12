@@ -7,6 +7,7 @@ import { CarritoService } from '../../services/carrito';
 import { ReservaService } from '../../services/reserva';
 import { DetallePrendaCatalogo, VarianteDetalle, SucursalStockDetalle } from '../../services/catalogo-publico';
 import { SyncQueueService } from '../../core/sync/sync-queue.service';
+import { ValoracionService, ResumenValoracionesProducto } from '../../services/valoracion';
 
 // Interfaz retrocompatible para páginas estáticas previas
 export interface ProductoFashion {
@@ -48,7 +49,12 @@ export class ProductDetailModalComponent implements OnChanges, OnDestroy {
   public reservaService = inject(ReservaService);
   public syncQueue = inject(SyncQueueService);
   public router = inject(Router);
+  public valoracionService = inject(ValoracionService);
   private cdr = inject(ChangeDetectorRef);
+
+  // Resumen de valoraciones del producto
+  resumenValoraciones: ResumenValoracionesProducto | null = null;
+  cargandoValoraciones: boolean = false;
 
   // Estados visuales de selección
   selectedImageIndex: number = 0;
@@ -119,6 +125,13 @@ export class ProductDetailModalComponent implements OnChanges, OnDestroy {
 
       // Inicializar parámetros de la reserva en tienda
       this.inicializarDatosReserva();
+
+      // Cargar valoraciones reales del producto
+      const prodId = (this.producto as any).id_producto || (this.producto as any).id;
+      if (prodId) {
+        this.cargarValoraciones(prodId);
+      }
+
       this.cdr.markForCheck();
     }
   }
@@ -141,6 +154,26 @@ export class ProductDetailModalComponent implements OnChanges, OnDestroy {
         document.body.style.overflow = '';
       }
     } catch (_) { }
+  }
+
+  cargarValoraciones(idProducto: number): void {
+    this.cargandoValoraciones = true;
+    this.valoracionService.obtenerValoracionesProducto(idProducto).subscribe({
+      next: (res) => {
+        this.cargandoValoraciones = false;
+        if (res && res.success && res.data) {
+          this.resumenValoraciones = res.data;
+        } else {
+          this.resumenValoraciones = null;
+        }
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.cargandoValoraciones = false;
+        this.resumenValoraciones = null;
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   inicializarDatosReserva(): void {

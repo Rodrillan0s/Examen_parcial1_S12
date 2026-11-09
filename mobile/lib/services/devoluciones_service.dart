@@ -2,6 +2,32 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'api_client.dart';
 
+class VarianteDisponibleModel {
+  final int idVariante;
+  final String talla;
+  final String color;
+  final String sku;
+  final int stock;
+
+  VarianteDisponibleModel({
+    required this.idVariante,
+    required this.talla,
+    required this.color,
+    required this.sku,
+    required this.stock,
+  });
+
+  factory VarianteDisponibleModel.fromJson(Map<String, dynamic> json) {
+    return VarianteDisponibleModel(
+      idVariante: json['id_variante'] ?? 0,
+      talla: json['talla'] ?? '',
+      color: json['color'] ?? '',
+      sku: json['sku'] ?? '',
+      stock: json['stock'] ?? 0,
+    );
+  }
+}
+
 class ItemElegibleDevolucionModel {
   final int idDetalleVenta;
   final int idVariante;
@@ -16,6 +42,7 @@ class ItemElegibleDevolucionModel {
   final double precioUnitario;
   final double subtotalNeto;
   final String? imagenUrl;
+  final List<VarianteDisponibleModel> variantesDisponibles;
 
   ItemElegibleDevolucionModel({
     required this.idDetalleVenta,
@@ -31,9 +58,11 @@ class ItemElegibleDevolucionModel {
     required this.precioUnitario,
     required this.subtotalNeto,
     this.imagenUrl,
+    this.variantesDisponibles = const [],
   });
 
   factory ItemElegibleDevolucionModel.fromJson(Map<String, dynamic> json) {
+    final rawVariantes = json['variantes_disponibles'] as List<dynamic>? ?? [];
     return ItemElegibleDevolucionModel(
       idDetalleVenta: json['id_detalle_venta'] ?? 0,
       idVariante: json['id_variante'] ?? 0,
@@ -52,6 +81,9 @@ class ItemElegibleDevolucionModel {
           ? double.tryParse(json['subtotal_neto'].toString()) ?? 0.0
           : 0.0,
       imagenUrl: json['imagen_url'],
+      variantesDisponibles: rawVariantes
+          .map((v) => VarianteDisponibleModel.fromJson(Map<String, dynamic>.from(v)))
+          .toList(),
     );
   }
 }
@@ -108,6 +140,8 @@ class ItemDevolucionSolicitadaModel {
   final double subtotalDevuelto;
   final String condicion;
   final String? imagenUrl;
+  final String? tallaCambio;
+  final String? skuCambio;
 
   String get talla => tallaNombre;
   String get color => colorNombre;
@@ -124,6 +158,8 @@ class ItemDevolucionSolicitadaModel {
     required this.subtotalDevuelto,
     required this.condicion,
     this.imagenUrl,
+    this.tallaCambio,
+    this.skuCambio,
   });
 
   factory ItemDevolucionSolicitadaModel.fromJson(Map<String, dynamic> json) {
@@ -143,6 +179,8 @@ class ItemDevolucionSolicitadaModel {
           : 0.0,
       condicion: json['condicion'] ?? 'REVENDIBLE',
       imagenUrl: json['imagen_url'],
+      tallaCambio: json['talla_cambio'] ?? json['talla_deseada'],
+      skuCambio: json['sku_cambio'],
     );
   }
 }

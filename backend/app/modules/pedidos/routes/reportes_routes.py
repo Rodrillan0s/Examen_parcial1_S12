@@ -225,3 +225,61 @@ def reporte_sucursales(
         raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error generando reporte de sucursales: {str(e)}")
+
+
+@router.get('/valoraciones')
+def reporte_valoraciones(
+    fecha_inicio: Optional[str] = Query(None, description="Fecha inicial YYYY-MM-DD"),
+    fecha_fin: Optional[str] = Query(None, description="Fecha final YYYY-MM-DD"),
+    id_sucursal: Optional[int] = Query(None, description="ID de sucursal específica"),
+    puntuacion: Optional[int] = Query(None, ge=1, le=5, description="Filtrar por estrellas (1 a 5)"),
+    requiere_revision: Optional[bool] = Query(None, description="Filtrar solo alertas críticas (1★ o a revisar)"),
+    id_empresa: Optional[int] = Query(None, description="Filtrar por empresa / tenant"),
+    formato: str = Query('json', description="Formato de salida: 'json', 'pdf', 'csv' o 'xlsx'"),
+    token_data: dict = Depends(require_permission('reportes.ver'))
+):
+    """
+    Genera el reporte de satisfacción, opiniones y valoraciones de clientes bajo demanda.
+    Soporta visualización JSON, PDF, CSV y XLSX.
+    """
+    try:
+        fmt = formato.lower().strip()
+        ts = datetime.now().strftime('%Y%m%d_%H%M%S')
+        if fmt == 'pdf':
+            pdf_buffer = reportes_services.generar_pdf_reporte_valoraciones(
+                token_data, id_sucursal, fecha_inicio, fecha_fin, puntuacion, requiere_revision, id_empresa
+            )
+            return StreamingResponse(
+                pdf_buffer,
+                media_type="application/pdf",
+                headers={"Content-Disposition": f"attachment; filename=reporte_valoraciones_{ts}.pdf"}
+            )
+        elif fmt == 'csv':
+            csv_buffer = reportes_services.generar_csv_reporte_valoraciones(
+                token_data, id_sucursal, fecha_inicio, fecha_fin, puntuacion, requiere_revision, id_empresa
+            )
+            return StreamingResponse(
+                csv_buffer,
+                media_type="text/csv; charset=utf-8",
+                headers={"Content-Disposition": f"attachment; filename=reporte_valoraciones_{ts}.csv"}
+            )
+        elif fmt == 'xlsx':
+            xlsx_buffer = reportes_services.generar_xlsx_reporte_valoraciones(
+                token_data, id_sucursal, fecha_inicio, fecha_fin, puntuacion, requiere_revision, id_empresa
+            )
+            return StreamingResponse(
+                xlsx_buffer,
+                media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                headers={"Content-Disposition": f"attachment; filename=reporte_valoraciones_{ts}.xlsx"}
+            )
+        else:
+            return reportes_services.generar_reporte_valoraciones(
+                token_data, id_sucursal, fecha_inicio, fecha_fin, puntuacion, requiere_revision, id_empresa
+            )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error generando reporte de valoraciones: {str(e)}")
+

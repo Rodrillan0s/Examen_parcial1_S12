@@ -458,3 +458,120 @@ def obtener_reporte_sucursales_db(
         }
     finally:
         db.close_connection()
+
+
+def obtener_reporte_valoraciones_db(
+    id_empresa: Optional[int] = None,
+    id_sucursal: Optional[int] = None,
+    fecha_inicio: Optional[str] = None,
+    fecha_fin: Optional[str] = None,
+    puntuacion: Optional[int] = None,
+    requiere_revision: Optional[bool] = None
+) -> Dict[str, Any]:
+    """
+    Recupera el listado detallado de valoraciones y satisfacción de clientes con métricas agregadas.
+    """
+    db = PostgreSQL()
+    db.create_connection()
+    try:
+        schema = _get_schema()
+        where = ["1=1"]
+        params = []
+
+        if id_empresa:
+            where.append("val.id_empresa = %s")
+            params.append(id_empresa)
+        if id_sucursal:
+            where.append("val.id_sucursal = %s")
+            params.append(id_sucursal)
+        if fecha_inicio:
+            where.append("val.fecha_creacion >= %s")
+            params.append(fecha_inicio)
+        if fecha_fin:
+            where.append("val.fecha_creacion <= %s")
+            params.append(fecha_fin)
+        if puntuacion:
+            where.append("val.puntuacion = %s")
+            params.append(puntuacion)
+        if requiere_revision is not None:
+            where.append("val.requiere_revision = %s")
+            params.append(requiere_revision)
+
+        where_sql = " AND ".join(where)
+
+        q = f"""
+            SELECT 
+                val.id_valoracion,
+                TO_CHAR(val.fecha_creacion, 'YYYY-MM-DD HH24:MI') AS fecha,
+                COALESCE(u.nombre || ' ' || COALESCE(u.apellido, ''), 'Cliente Anónimo') AS cliente,
+                COALESCE(p.nombre, 'Servicio General') AS producto,
+                COALESCE(cat.nombre, 'Servicio / General') AS categoria,
+                COALESCE(s.nombre, 'Sin sucursal') AS sucursal,
+                val.puntuacion,
+                COALESCE(ped.codigo_pedido, v.numero_venta, 'Sin código') AS codigo_referencia,
+                COALESCE(val.motivo_negativo, 'Ninguno') AS motivo_negativo,
+                COALESCE(val.comentario, '') AS comentario,
+                CASE 
+                    WHEN val.puntuacion >= 4 THEN 'POSITIVA'
+                    WHEN val.puntuacion = 3 THEN 'NEUTRA'
+                    ELSE 'CRITICA'
+                END AS estado_satisfaccion,
+                val.requiere_revision
+            FROM {schema}.t_valoracion val
+            LEFT JOIN {schema}.t_sucursal s ON s.id_sucursal = val.id_sucursal
+            LEFT JOIN {schema}.t_producto p ON p.id_producto = val.id_producto
+            LEFT JOIN {schema}.t_categoria cat ON cat.id_categoria = p.id_categoria
+            LEFT JOIN {schema}.t_cliente cli ON cli.id_cliente = val.id_cliente
+            LEFT JOIN {schema}.t_usuario u ON u.id_usuario = cli.id_usuario
+            LEFT JOIN {schema}.t_pedido ped ON ped.id_pedido = val.id_pedido
+            LEFT JOIN {schema}.t_venta v ON v.id_venta = val.id_venta
+            WHERE {where_sql}
+            ORDER BY val.fecha_creacion DESC;
+        """
+        rows = db.execute_query(q, tuple(params) if params else None, fetchall=True) or []
+
+        items = []
+        suma_puntuacion = 0
+        positivas = 0
+        criticas = 0
+
+        for r in rows:
+            pts = int(r[6] or 0)
+            suma_puntuacion += pts
+            if pts >= 4:
+                positivas += 1
+            elif pts <= 2:
+                criticas += 1
+
+            items.append({
+                "id_valoracion": r[0],
+                "fecha": r[1],
+                "cliente": r[2],
+                "producto": r[3],
+                "categoria": r[4],
+                "sucursal": r[5],
+                "puntuacion": pts,
+                "codigo_referencia": r[7],
+                "motivo_negativo": r[8],
+                "comentario": r[9],
+                "estado_satisfaccion": r[10],
+                "requiere_revision": bool(r[11])
+            })
+
+        total_reg = len(items)
+        promedio = round(suma_puntuacion / total_reg, 2) if total_reg > 0 else 0.0
+        csat_pct = round((positivas / total_reg * 100), 1) if total_reg > 0 else 0.0
+
+        return {
+            "items": items,
+            "resumen": {
+                "total_valoraciones": total_reg,
+                "calificacion_promedio": promedio,
+                "tasa_satisfaccion_pct": csat_pct,
+                "valoraciones_positivas": positivas,
+                "alertas_criticas": criticas
+            }
+        }
+    finally:
+        db.close_connection()
+

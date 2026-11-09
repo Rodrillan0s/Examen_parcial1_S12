@@ -31,6 +31,7 @@ from app.modules.pedidos.routes import (
     pedido_routes, reportes_routes, kpis_routes, motor_reportes_routes, devoluciones_routes
 )
 from app.modules.ia.routes import asistente_routes, recomendaciones_routes, predicciones_routes
+from app.modules.valoraciones.routes import valoracion_routes
 from app.modules.admin.routes import (
     backup_routes, bitacora_routes, main_routes, notificaciones_routes
 )
@@ -149,6 +150,7 @@ def create_app() -> FastAPI:
     app.include_router(predicciones_routes.router)
     app.include_router(motor_reportes_routes.router)
     app.include_router(atender_reserva_routes.router)
+    app.include_router(valoracion_routes.router)
 
     return app
 

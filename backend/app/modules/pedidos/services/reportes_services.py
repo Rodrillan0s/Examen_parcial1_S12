@@ -252,6 +252,19 @@ def generar_reporte_sucursales(token_data: dict, fecha_inicio: Optional[str] = N
     }
 
 
+def generar_reporte_valoraciones(token_data: dict, id_sucursal: Optional[int] = None, fecha_inicio: Optional[str] = None, fecha_fin: Optional[str] = None, puntuacion: Optional[int] = None, requiere_revision: Optional[bool] = None, id_empresa: Optional[int] = None):
+    id_empresa_final, id_sucursal_final = _resolver_contexto_tenant(token_data, id_sucursal, id_empresa)
+    f_ini, f_fin, _, _ = _normalizar_fechas(fecha_inicio, fecha_fin)
+    
+    data = reportes_repos.obtener_reporte_valoraciones_db(id_empresa_final, id_sucursal_final, f_ini, f_fin, puntuacion, requiere_revision)
+    return {
+        "success": True,
+        "message": "Reporte de valoraciones generado exitosamente.",
+        "data": data
+    }
+
+
+
 # ==============================================================================
 # GENERADOR OFICIAL DE PDFs REPORTLAB
 # ==============================================================================
@@ -710,4 +723,41 @@ def generar_xlsx_reporte_sucursales(token_data: dict, fecha_inicio: Optional[str
     keys = ["sucursal", "ciudad", "cantidad_ventas", "unidades_vendidas", "ticket_promedio", "total_ingresos", "participacion_ingresos_pct"]
     tipos = ["string", "string", "number", "number", "currency", "currency", "string"]
     return exportar_a_xlsx("Reporte Comparativo de Sucursales", headers, keys, tipos, datos.get("items", []), datos.get("resumen"))
+
+
+def generar_pdf_reporte_valoraciones(token_data: dict, id_sucursal: Optional[int] = None, fecha_inicio: Optional[str] = None, fecha_fin: Optional[str] = None, puntuacion: Optional[int] = None, requiere_revision: Optional[bool] = None, id_empresa: Optional[int] = None) -> io.BytesIO:
+    from app.modules.pedidos.services.reports.engine.report_engine import ejecutar_reporte_dinamico, generar_pdf_reporte_dinamico
+    req = {
+        "tipo_reporte": "valoraciones",
+        "filtros": {
+            "sucursalId": id_sucursal,
+            "fechaDesde": fecha_inicio,
+            "fechaHasta": fecha_fin,
+            "puntuacion": puntuacion,
+            "requiereRevision": requiere_revision
+        }
+    }
+    token_mod = {**token_data, '_empresa_reporte': id_empresa} if id_empresa else token_data
+    datos = ejecutar_reporte_dinamico(req, token_mod)
+    return generar_pdf_reporte_dinamico(datos, token_mod)
+
+
+def generar_csv_reporte_valoraciones(token_data: dict, id_sucursal: Optional[int] = None, fecha_inicio: Optional[str] = None, fecha_fin: Optional[str] = None, puntuacion: Optional[int] = None, requiere_revision: Optional[bool] = None, id_empresa: Optional[int] = None) -> io.BytesIO:
+    id_empresa_final, id_sucursal_final = _resolver_contexto_tenant(token_data, id_sucursal, id_empresa)
+    f_ini, f_fin, _, _ = _normalizar_fechas(fecha_inicio, fecha_fin)
+    datos = reportes_repos.obtener_reporte_valoraciones_db(id_empresa_final, id_sucursal_final, f_ini, f_fin, puntuacion, requiere_revision)
+    headers = ["Fecha", "Cliente", "Prenda / Concepto", "Categoría", "Sucursal", "Estrellas (1-5)", "N° Referencia", "Motivo Observación", "Comentario", "Satisfacción"]
+    keys = ["fecha", "cliente", "producto", "categoria", "sucursal", "puntuacion", "codigo_referencia", "motivo_negativo", "comentario", "estado_satisfaccion"]
+    return exportar_a_csv(headers, keys, datos.get("items", []))
+
+
+def generar_xlsx_reporte_valoraciones(token_data: dict, id_sucursal: Optional[int] = None, fecha_inicio: Optional[str] = None, fecha_fin: Optional[str] = None, puntuacion: Optional[int] = None, requiere_revision: Optional[bool] = None, id_empresa: Optional[int] = None) -> io.BytesIO:
+    id_empresa_final, id_sucursal_final = _resolver_contexto_tenant(token_data, id_sucursal, id_empresa)
+    f_ini, f_fin, _, _ = _normalizar_fechas(fecha_inicio, fecha_fin)
+    datos = reportes_repos.obtener_reporte_valoraciones_db(id_empresa_final, id_sucursal_final, f_ini, f_fin, puntuacion, requiere_revision)
+    headers = ["Fecha", "Cliente", "Prenda / Concepto", "Categoría", "Sucursal", "Estrellas (1-5)", "N° Referencia", "Motivo Observación", "Comentario", "Satisfacción"]
+    keys = ["fecha", "cliente", "producto", "categoria", "sucursal", "puntuacion", "codigo_referencia", "motivo_negativo", "comentario", "estado_satisfaccion"]
+    tipos = ["date", "string", "string", "string", "string", "number", "string", "string", "string", "badge"]
+    return exportar_a_xlsx("Reporte de Valoraciones y Calidad", headers, keys, tipos, datos.get("items", []), datos.get("resumen"))
+
 

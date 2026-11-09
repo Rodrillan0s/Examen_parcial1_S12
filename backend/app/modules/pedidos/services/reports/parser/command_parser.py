@@ -65,6 +65,12 @@ DICCIONARIO_REPORTES = {
     "sucursales": [
         "comparativa sucursales", "sucursales", "sucursal",
         "rendimiento por sucursal", "rendimiento sucursales"
+    ],
+    "valoraciones": [
+        "valoraciones", "valoracion", "calificaciones", "calificacion", "estrellas",
+        "satisfaccion", "satisfaccion del cliente", "opiniones", "resenas", "quejas",
+        "alertas de calidad", "csat", "calidad de prendas", "evaluaciones", "evaluacion",
+        "calidad del servicio"
     ]
 }
 
@@ -107,6 +113,9 @@ def parsear_comando_voz(comando_crudo: str, id_empresa: int = 1) -> Dict[str, An
     elif re.search(r'\bpor\s+(?:dia|fecha)\b', texto_limpio):
         group_by = "dia"
         texto_limpio = re.sub(r'\bpor\s+(?:dia|fecha)\b', ' ', texto_limpio)
+    elif re.search(r'\bpor\s+(?:puntuacion|estrellas|calificacion|satisfaccion)\b', texto_limpio):
+        group_by = "puntuacion"
+        texto_limpio = re.sub(r'\bpor\s+(?:puntuacion|estrellas|calificacion|satisfaccion)\b', ' ', texto_limpio)
     elif re.search(r'\bpor\s+(?:mes)\b', texto_limpio):
         group_by = "mes"
         texto_limpio = re.sub(r'\bpor\s+(?:mes)\b', ' ', texto_limpio)

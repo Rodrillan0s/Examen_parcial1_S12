@@ -8,6 +8,7 @@ import '../features/virtual_try_on/presentation/vestidor_virtual_screen.dart';
 import '../services/auth_provider.dart';
 import '../services/carrito_service.dart';
 import '../services/catalogo_service.dart';
+import '../services/valoracion_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/aurora_badge.dart';
 import '../widgets/aurora_button.dart';
@@ -25,6 +26,7 @@ class DetalleProductoScreen extends StatefulWidget {
 
 class _DetalleProductoScreenState extends State<DetalleProductoScreen> {
   DetallePrendaModel? _prenda;
+  ResumenValoracionesProductoModel? _resumenValoraciones;
   bool _cargando = true;
   String? _error;
 
@@ -79,6 +81,10 @@ class _DetalleProductoScreenState extends State<DetalleProductoScreen> {
         if (_varianteSeleccionada != null) {
           _consultarDisponibilidad(_varianteSeleccionada!.idVariante);
         }
+
+        ValoracionService().obtenerResumenProducto(widget.idProducto).then((res) {
+          if (mounted) setState(() => _resumenValoraciones = res);
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -490,6 +496,40 @@ class _DetalleProductoScreenState extends State<DetalleProductoScreen> {
                                       height: 1.2,
                                     ),
                                   ),
+                                  if (_resumenValoraciones != null && _resumenValoraciones!.total > 0) ...[
+                                    const SizedBox(height: 6),
+                                    Row(
+                                      children: [
+                                        Row(
+                                          children: List.generate(5, (i) {
+                                            final isFull = (i + 1) <= _resumenValoraciones!.promedio;
+                                            return Icon(
+                                              isFull ? Icons.star_rounded : Icons.star_outline_rounded,
+                                              size: 16,
+                                              color: const Color(0xFFF59E0B),
+                                            );
+                                          }),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          _resumenValoraciones!.promedio.toStringAsFixed(1),
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                            color: AppTheme.textPrimary,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '(${_resumenValoraciones!.total} ${_resumenValoraciones!.total == 1 ? 'opinión' : 'opiniones'})',
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 11,
+                                            color: AppTheme.textMuted,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                   const SizedBox(height: 8),
 
                                   // Precio y Estado de Disponibilidad
