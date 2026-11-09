@@ -1,7 +1,7 @@
 import json
 import logging
 from decimal import Decimal, InvalidOperation
-from typing import Dict, Any, Optional
+from typing import List,Dict, Any, Optional
 from app.core.postgres import PostgreSQL, atomic
 from app.core.inventory_integrity import lock_items
 from fastapi import HTTPException
