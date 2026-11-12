@@ -51,6 +51,7 @@ class _CrearReservaModalState extends State<CrearReservaModal> {
     final catalogo = context.read<CatalogoService>();
     final sucursales = await catalogo.consultarDisponibilidadVariante(
       widget.varianteSeleccionada.idVariante,
+      idEmpresa: widget.prenda.idEmpresa,
     );
 
     if (mounted) {
@@ -59,6 +60,8 @@ class _CrearReservaModalState extends State<CrearReservaModal> {
         final conStock = sucursales.where((s) => s.stockDisponible > 0).toList();
         if (conStock.isNotEmpty) {
           _sucursalSeleccionada = conStock.first;
+        } else if (sucursales.isNotEmpty) {
+          _sucursalSeleccionada = sucursales.first;
         } else {
           _sucursalSeleccionada = null;
         }
@@ -170,21 +173,22 @@ class _CrearReservaModalState extends State<CrearReservaModal> {
 
       if (mounted) {
         Navigator.pop(context);
+        final esOffline = reserva.estado == 'PENDIENTE_SYNC';
         showDialog(
           context: context,
           builder: (ctx) => AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             title: Row(
               children: [
-                const Icon(
-                  Icons.event_available,
-                  color: AppTheme.primaryGold,
+                Icon(
+                  esOffline ? Icons.cloud_off : Icons.event_available,
+                  color: esOffline ? Colors.amber.shade700 : AppTheme.primaryGold,
                   size: 26,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    '¡Cita Confirmada!',
+                    esOffline ? '¡Cita Guardada Sin Conexión!' : '¡Cita Confirmada!',
                     style: GoogleFonts.playfairDisplay(fontSize: 19, fontWeight: FontWeight.w700),
                   ),
                 ),
@@ -195,7 +199,9 @@ class _CrearReservaModalState extends State<CrearReservaModal> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Tu cita en probador ha sido agendada exitosamente (100% gratuita):',
+                  esOffline
+                      ? 'Tu cita en probador se guardó localmente en SQLite y se enviará a la tienda automáticamente:'
+                      : 'Tu cita en probador ha sido agendada exitosamente (100% gratuita):',
                   style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textSecondary),
                 ),
                 const SizedBox(height: 8),

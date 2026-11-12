@@ -72,6 +72,9 @@ def registrar_categoria(
         id_empresa_solicitado = int(id_empresa_solicitado)
 
     empresa_id = resolver_tenant_operacion(payload, id_empresa_solicitado, permitir_global=False)
+    if empresa_id:
+        from app.core.tenant_guard import exigir_suscripcion_activa
+        exigir_suscripcion_activa(empresa_id, payload)
 
     # Validar Unicidad de Nombre en el Tenant
     if categorias_repos.verificar_nombre_duplicado(nombre, empresa_id):
@@ -163,6 +166,9 @@ def actualizar_categoria(
 
     # Tenant check
     validar_acceso_recurso_tenant(payload, categoria_db.get('id_empresa'), "categoría")
+    if categoria_db.get('id_empresa'):
+        from app.core.tenant_guard import exigir_suscripcion_activa
+        exigir_suscripcion_activa(categoria_db.get('id_empresa'), payload)
 
     nombre = data.get('nombre')
     if not nombre or not str(nombre).strip():
@@ -281,6 +287,9 @@ def cambiar_estado_categoria(
         raise HTTPException(status_code=404, detail="Categoría no encontrada.")
 
     validar_acceso_recurso_tenant(payload, categoria_db.get('id_empresa'), "categoría")
+    if categoria_db.get('id_empresa'):
+        from app.core.tenant_guard import exigir_suscripcion_activa
+        exigir_suscripcion_activa(categoria_db.get('id_empresa'), payload)
 
     exito = categorias_repos.cambiar_estado_categoria_db(id_categoria, bool(activo))
     if not exito:
@@ -323,6 +332,9 @@ def eliminar_categoria(
         raise HTTPException(status_code=404, detail="Categoría no encontrada.")
 
     validar_acceso_recurso_tenant(payload, categoria_db.get('id_empresa'), "categoría")
+    if categoria_db.get('id_empresa'):
+        from app.core.tenant_guard import exigir_suscripcion_activa
+        exigir_suscripcion_activa(categoria_db.get('id_empresa'), payload)
 
     # Regla de integridad: No eliminar físicamente si tiene productos asociados
     productos_vinculados = categorias_repos.contar_productos_por_categoria(id_categoria)

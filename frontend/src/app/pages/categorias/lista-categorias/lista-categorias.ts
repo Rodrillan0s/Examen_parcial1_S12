@@ -6,6 +6,7 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { AuthService } from '../../../services/auth';
 import { Categoria, CategoriasService } from '../../../services/categorias';
 import { Empresa, EmpresaService } from '../../../services/empresa';
+import { SaasService } from '../../../services/saas';
 
 @Component({
   selector: 'app-lista-categorias',
@@ -17,10 +18,13 @@ export class ListaCategoriasComponent implements OnInit {
   private categoriasService = inject(CategoriasService);
   private empresaService = inject(EmpresaService);
   public authService = inject(AuthService);
+  private saasService = inject(SaasService);
   private cdr = inject(ChangeDetectorRef);
   private ngZone = inject(NgZone);
   private destroyRef = inject(DestroyRef);
   private busquedaSubject = new Subject<string>();
+
+  planVigente: boolean = true;
 
   // Data
   categorias: Categoria[] = [];
@@ -63,6 +67,33 @@ export class ListaCategoriasComponent implements OnInit {
   categoriaAeliminar: Categoria | null = null;
 
   ngOnInit(): void {
+    this.saasService.planActual$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(plan => {
+        if (this.esSuperAdmin) {
+          this.planVigente = true;
+        } else if (plan) {
+          this.planVigente = plan.vigente === true;
+        }
+        this.cdr.detectChanges();
+      });
+
+    const empId = this.esSuperAdmin ? this.filtroEmpresaId : this.tenantActualId;
+    if (empId && !this.esSuperAdmin) {
+      this.saasService.consultarPlan(empId).subscribe({
+        next: (res) => {
+          if (res?.data) {
+            this.planVigente = res.data.vigente;
+            this.cdr.detectChanges();
+          }
+        },
+        error: () => {
+          this.planVigente = false;
+          this.cdr.detectChanges();
+        }
+      });
+    }
+
     this.busquedaSubject
       .pipe(
         debounceTime(200),
@@ -247,6 +278,10 @@ export class ListaCategoriasComponent implements OnInit {
 
   // Modal Actions
   abrirModalCrear(): void {
+    if (!this.esSuperAdmin && !this.planVigente) {
+      this.mensajeError = 'Operación restringida: La tienda no cuenta con una suscripción activa para crear categorías.';
+      return;
+    }
     this.modoEdicion = false;
     this.categoriaForm = this.inicializarCategoria();
     this.previewImagenLocal = null;
@@ -257,6 +292,10 @@ export class ListaCategoriasComponent implements OnInit {
   }
 
   abrirModalEditar(cat: Categoria): void {
+    if (!this.esSuperAdmin && !this.planVigente) {
+      this.mensajeError = 'Operación restringida: La tienda no cuenta con una suscripción activa para editar categorías.';
+      return;
+    }
     this.modoEdicion = true;
     this.categoriaForm = { ...cat };
     this.previewImagenLocal = cat.imagen_url || null;
@@ -322,6 +361,10 @@ export class ListaCategoriasComponent implements OnInit {
   }
 
   guardarCategoria(): void {
+    if (!this.esSuperAdmin && !this.planVigente) {
+      this.mensajeModalError = 'Operación restringida: La tienda no cuenta con una suscripción activa.';
+      return;
+    }
     if (!this.categoriaForm.nombre || !this.categoriaForm.nombre.trim()) {
       this.mensajeModalError = 'El nombre de la categoría es obligatorio.';
       return;
@@ -416,6 +459,10 @@ export class ListaCategoriasComponent implements OnInit {
   // Cambio de estado directo
   toggleEstado(cat: Categoria, event: Event): void {
     event.stopPropagation();
+    if (!this.esSuperAdmin && !this.planVigente) {
+      this.mensajeError = 'Operación restringida: La tienda no cuenta con una suscripción activa para modificar categorías.';
+      return;
+    }
     const nuevoEstado = !cat.activo;
     
     this.categoriasService.cambiarEstadoCategoria(cat.id_categoria!, nuevoEstado)
@@ -440,6 +487,10 @@ export class ListaCategoriasComponent implements OnInit {
 
   // Eliminación con regla de integridad
   confirmarEliminacion(cat: Categoria): void {
+    if (!this.esSuperAdmin && !this.planVigente) {
+      this.mensajeError = 'Operación restringida: La tienda no cuenta con una suscripción activa para eliminar categorías.';
+      return;
+    }
     this.categoriaAeliminar = cat;
     this.mostrarModalConfirmacion = true;
     this.cdr.detectChanges();
@@ -452,6 +503,10 @@ export class ListaCategoriasComponent implements OnInit {
   }
 
   ejecutarEliminacion(): void {
+    if (!this.esSuperAdmin && !this.planVigente) {
+      this.mensajeError = 'Operación restringida: Suscripción no vigente.';
+      return;
+    }
     if (!this.categoriaAeliminar || !this.categoriaAeliminar.id_categoria) return;
 
     this.guardando = true;

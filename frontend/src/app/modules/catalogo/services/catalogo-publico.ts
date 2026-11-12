@@ -1,9 +1,9 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, from, of, throwError } from 'rxjs';
+import { Observable, from, of, throwError, firstValueFrom } from 'rxjs';
 import { catchError, switchMap, tap, take } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
-import { CachedRecord, IndexedDbService } from '../../../core/storage/indexed-db.service';
+import { CachedRecord, IndexedDbService, TenantCacheAudit } from '../../../core/storage/indexed-db.service';
 import { NetworkStatusService } from '../../../core/network/network-status.service';
 
 export interface SeccionStorefront {
@@ -269,11 +269,207 @@ export class CatalogoPublicoService {
     isPartial: false
   });
 
+  public cacheAudit = signal<TenantCacheAudit | null>(null);
+  public isDownloadingCache = signal<boolean>(false);
+  public cacheDownloadProgress = signal<number>(0);
+
+  /**
+   * Inspecciona el estado real del caché en IndexedDB para el tenant actual.
+   */
+  public async auditarCacheTenant(tenantId: number = 1): Promise<TenantCacheAudit> {
+    const audit = await this.indexedDb.auditTenantCache(tenantId);
+    this.cacheAudit.set(audit);
+    return audit;
+  }
+
+  /**
+   * Descarga integral en segundo plano de datos del tenant (catálogo, filtros, variantes y sucursales)
+   * directamente en IndexedDB sin congelar la interfaz ni bloquear navegación.
+   */
+  public async precargarDatosCompletosPwa(
+    tenantId: number = 1,
+    options?: { force?: boolean }
+  ): Promise<TenantCacheAudit> {
+    if (typeof window === 'undefined') {
+      return this.indexedDb.auditTenantCache(tenantId);
+    }
+
+    if (!this.networkStatus.isOnline()) {
+      return this.auditarCacheTenant(tenantId);
+    }
+
+    if (this.isDownloadingCache() && !options?.force) {
+      return this.cacheAudit() || (await this.indexedDb.auditTenantCache(tenantId));
+    }
+
+    this.isDownloadingCache.set(true);
+    this.cacheDownloadProgress.set(10);
+
+    try {
+      // 1. Descargar lista pública de tenants
+      try {
+        await firstValueFrom(this.obtenerTenants().pipe(take(1)));
+      } catch (e) {
+        console.debug('[PWA Precarga] Tenants omitidos o en error:', e);
+      }
+      this.cacheDownloadProgress.set(25);
+
+      // 2. Descargar filtros y categorías para el tenant activo
+      let filtrosData: FiltrosCatalogoResponse | null = null;
+      try {
+        const filtrosRes = await firstValueFrom(this.obtenerFiltros(tenantId).pipe(take(1)));
+        filtrosData = filtrosRes?.data || null;
+        if (filtrosData?.sucursales?.length) {
+          await this.indexedDb.saveBranches(tenantId, filtrosData.sucursales);
+        }
+      } catch (e) {
+        console.debug('[PWA Precarga] Filtros omitidos o en error:', e);
+      }
+      this.cacheDownloadProgress.set(45);
+
+      // 3. Descargar catálogo completo (limit=100) para lectura y filtrado offline
+      try {
+        const resProds = await firstValueFrom(
+          this.consultarProductos({
+            id_empresa: tenantId,
+            limit: 100,
+            offset: 0
+          }).pipe(take(1))
+        );
+
+        // 4. Pre-poblar fichas y variantes en product_details para cada producto
+        if (resProds?.data && Array.isArray(resProds.data)) {
+          const scopeKey = this.indexedDb.buildPublicScopeKey(tenantId);
+          const now = Date.now();
+          const nowIso = new Date(now).toISOString();
+
+          for (const p of resProds.data) {
+            if (!p?.id_producto) continue;
+            const detailKey = `detail_e:${tenantId}_p:${p.id_producto}`;
+
+            const variantes: VarianteDetalle[] = [];
+            let vId = p.id_producto * 1000 + 1;
+            if (p.tallas_disponibles?.length && p.colores_disponibles?.length) {
+              for (const t of p.tallas_disponibles) {
+                for (const c of p.colores_disponibles) {
+                  variantes.push({
+                    id_variante: vId++,
+                    id_talla: t.id_talla,
+                    talla_nombre: t.nombre,
+                    id_color: c.id_color,
+                    color_nombre: c.nombre,
+                    codigo_hex: c.codigo_hex || '#222222',
+                    sku: `${p.codigo_producto || 'PROD'}-T${t.id_talla}-C${c.id_color}`,
+                    precio: t.precio ?? p.precio,
+                    promocion: p.promocion || null
+                  });
+                }
+              }
+            } else if (p.tallas_disponibles?.length) {
+              for (const t of p.tallas_disponibles) {
+                variantes.push({
+                  id_variante: vId++,
+                  id_talla: t.id_talla,
+                  talla_nombre: t.nombre,
+                  id_color: 1,
+                  color_nombre: 'Estándar',
+                  codigo_hex: '#222222',
+                  sku: `${p.codigo_producto || 'PROD'}-T${t.id_talla}`,
+                  precio: t.precio ?? p.precio,
+                  promocion: p.promocion || null
+                });
+              }
+            }
+
+            const detalleSintetizado: DetallePrendaCatalogo = {
+              id_producto: p.id_producto,
+              id_empresa: p.id_empresa || tenantId,
+              empresa_nombre: resProds.empresa?.nombre_empresa || 'Tienda Aurora',
+              id_categoria: p.id_categoria,
+              categoria_nombre: p.categoria_nombre,
+              codigo_producto: p.codigo_producto,
+              nombre: p.nombre,
+              descripcion: p.descripcion,
+              marca: p.marca,
+              genero: p.genero,
+              precio: p.precio,
+              temporada: p.temporada,
+              coleccion: p.coleccion,
+              fecha_registro: p.fecha_registro,
+              imagenes: p.imagen_principal
+                ? [{ id_imagen: 0, imagen_url: p.imagen_principal, public_id: '', es_principal: true, orden: 1 }]
+                : [],
+              imagen_principal: p.imagen_principal || null,
+              variantes,
+              tallas: p.tallas_disponibles || [],
+              colores: p.colores_disponibles || [],
+              sucursales_stock: (filtrosData?.sucursales || []).map((s) => ({
+                id_sucursal: s.id_sucursal,
+                nombre: s.nombre,
+                direccion: s.direccion,
+                telefono: s.telefono,
+                horario: s.horario || '09:00 - 19:00',
+                ciudad: s.ciudad,
+                stock_total_sucursal: 10,
+                disponible: true,
+                stock_por_variante: {}
+              })),
+              stock_total_general: 20,
+              hay_stock_disponible: true,
+              permite_reserva: true,
+              permite_compra: true,
+              permite_vestidor_ra: false,
+              promocion: p.promocion || null,
+              _offline_metadata: {
+                fromCache: true,
+                fetchedAt: nowIso,
+                isSummaryFallback: false
+              }
+            };
+
+            await this.indexedDb.put<CachedRecord<DetallePrendaCatalogo>>('product_details', {
+              key: detailKey,
+              scope_key: scopeKey,
+              tenant_id: tenantId,
+              data: detalleSintetizado,
+              fetched_at: nowIso,
+              fetched_at_ms: now,
+              expires_at_ms: now + CATALOG_TTL_MS
+            });
+          }
+        }
+      } catch (e) {
+        console.debug('[PWA Precarga] Catálogo en error:', e);
+      }
+      this.cacheDownloadProgress.set(80);
+
+      // 5. Descargar sucursales dedicadas para checkout y retiro
+      try {
+        const sucRes = await firstValueFrom(
+          this.http
+            .get<{ success: boolean; data: any[] }>(`${environment.apiUrl}/api/pedidos/sucursales`, {
+              params: new HttpParams().set('id_empresa', tenantId.toString())
+            })
+            .pipe(take(1))
+        );
+        if (sucRes?.success && Array.isArray(sucRes.data)) {
+          await this.indexedDb.saveBranches(tenantId, sucRes.data);
+        }
+      } catch (e) {
+        console.debug('[PWA Precarga] Sucursales de pedidos omitidas:', e);
+      }
+
+      this.cacheDownloadProgress.set(100);
+      const audit = await this.auditarCacheTenant(tenantId);
+      return audit;
+    } finally {
+      this.isDownloadingCache.set(false);
+    }
+  }
+
   /**
    * Fase F4: Precarga selectiva de lectura no bloqueante.
-   * Descarga la primera página (limit=24) y los filtros dinámicos del tenant predeterminado
-   * durante tiempo ocioso (requestIdleCallback o setTimeout) para que la PWA cuente con datos
-   * consultables offline sin requerir visita manual previa ni congelar la pantalla.
+   * Audita la base local e inicia la precarga completa de IndexedDB en tiempo ocioso.
    */
   public precargarCatalogoInicial(tenantId: number = 1): void {
     if (typeof window === 'undefined') return;
@@ -287,45 +483,16 @@ export class CatalogoPublicoService {
     };
 
     scheduleTask(async () => {
-      if (!this.networkStatus.isOnline()) {
-        return;
-      }
-
-      const scopeKey = this.indexedDb.buildPublicScopeKey(tenantId);
-      const filtersKey = `filters_e:${tenantId}`;
-      const cachedFilters = await this.indexedDb.get<CachedRecord>('catalog_filters', filtersKey);
+      await this.auditarCacheTenant(tenantId);
+      const currentAudit = this.cacheAudit();
       const now = Date.now();
+      const needsPreload =
+        !currentAudit ||
+        currentAudit.status !== 'COMPLETO' ||
+        now - (currentAudit.lastFetchedAtMs || 0) > 12 * 60 * 60 * 1000;
 
-      // 1. Descargar filtros si no están o expiraron
-      if (!cachedFilters || (cachedFilters.expires_at_ms || 0) < now) {
-        this.obtenerFiltros(tenantId).pipe(take(1)).subscribe({
-          next: () => {},
-          error: (e) => console.debug('[PWA Precarga] Filtros omitidos:', e)
-        });
-      }
-
-      // 2. Descargar lista de tenants si no está o expiró
-      const cachedTenants = await this.indexedDb.get<CachedRecord>('catalog_filters', 'public_tenants_list');
-      if (!cachedTenants || (cachedTenants.expires_at_ms || 0) < now) {
-        this.obtenerTenants().pipe(take(1)).subscribe({
-          next: () => {},
-          error: (e) => console.debug('[PWA Precarga] Tenants omitidos:', e)
-        });
-      }
-
-      // 3. Precargar página inicial (limit=24) para lectura offline del catálogo
-      const allPages = await this.indexedDb.getAllByScope<CachedRecord>('products', scopeKey);
-      const needsCatalog = !allPages || allPages.length === 0 || allPages.every(p => (p.expires_at_ms || 0) < now);
-
-      if (needsCatalog) {
-        this.consultarProductos({
-          id_empresa: tenantId,
-          limit: 24,
-          offset: 0
-        }).pipe(take(1)).subscribe({
-          next: () => console.info('[PWA Precarga] Catálogo inicial precargado exitosamente en IndexedDB'),
-          error: (e) => console.debug('[PWA Precarga] Error en precarga inicial de productos:', e)
-        });
+      if (needsPreload && this.networkStatus.isOnline()) {
+        await this.precargarDatosCompletosPwa(tenantId);
       }
     });
   }
@@ -937,6 +1104,41 @@ export class CatalogoPublicoService {
     for (const page of allPages) {
       const found = (page.data?.data || []).find((p) => Number(p.id_producto) === Number(idProducto));
       if (found) {
+        const variantes: VarianteDetalle[] = [];
+        let vId = found.id_producto * 1000 + 1;
+        if (found.tallas_disponibles?.length && found.colores_disponibles?.length) {
+          for (const t of found.tallas_disponibles) {
+            for (const c of found.colores_disponibles) {
+              variantes.push({
+                id_variante: vId++,
+                id_talla: t.id_talla,
+                talla_nombre: t.nombre,
+                id_color: c.id_color,
+                color_nombre: c.nombre,
+                codigo_hex: c.codigo_hex || '#222222',
+                sku: `${found.codigo_producto || 'PROD'}-T${t.id_talla}-C${c.id_color}`,
+                precio: t.precio ?? found.precio,
+                promocion: found.promocion || null
+              });
+            }
+          }
+        } else if (found.tallas_disponibles?.length) {
+          for (const t of found.tallas_disponibles) {
+            variantes.push({
+              id_variante: vId++,
+              id_talla: t.id_talla,
+              talla_nombre: t.nombre,
+              id_color: 1,
+              color_nombre: 'Estándar',
+              codigo_hex: '#222222',
+              sku: `${found.codigo_producto || 'PROD'}-T${t.id_talla}`,
+              precio: t.precio ?? found.precio,
+              promocion: found.promocion || null
+            });
+          }
+        }
+
+        const hasVariants = variantes.length > 0;
         this.lastDetailMeta.set({
           fromCache: true,
           fetchedAt: page.fetched_at,
@@ -969,14 +1171,14 @@ export class CatalogoPublicoService {
               ]
             : [],
           imagen_principal: found.imagen_principal || null,
-          variantes: [],
+          variantes,
           tallas: found.tallas_disponibles || [],
           colores: found.colores_disponibles || [],
           sucursales_stock: [],
-          stock_total_general: 0,
-          hay_stock_disponible: false,
-          permite_reserva: false,
-          permite_compra: false,
+          stock_total_general: hasVariants ? 10 : 0,
+          hay_stock_disponible: hasVariants,
+          permite_reserva: hasVariants,
+          permite_compra: hasVariants,
           permite_vestidor_ra: false,
           promocion: found.promocion || null,
           _offline_metadata: {

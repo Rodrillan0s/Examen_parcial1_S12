@@ -24,12 +24,24 @@
     <div class="relative z-10 shrink-0 flex items-center gap-3">
 
       <button
-        *ngIf="tabActiva === 'SUCURSALES'"
+        *ngIf="tabActiva === 'SUCURSALES' && (planVigente || isGlobalAdmin)"
         (click)="abrirModalNuevaSucursal()"
         class="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-[0.98] text-zinc-950 text-xs font-black rounded-2xl shadow-lg shadow-amber-500/20 transition-all ring-1 ring-amber-400/40 focus:outline-none cursor-pointer"
       >
         <i class="ph ph-plus-circle text-base"></i>
         <span>Registrar Sucursal</span>
+      </button>
+
+      <button
+        *ngIf="tabActiva === 'SUCURSALES' && (!planVigente && !isGlobalAdmin)"
+        disabled
+        title="Creación restringida: La tienda no cuenta con una suscripción activa o su vigencia ha expirado."
+        class="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 bg-zinc-200 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 text-xs font-black rounded-2xl cursor-not-allowed border border-rose-300 dark:border-rose-900/40"
+      >
+        <svg class="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+        </svg>
+        <span>Registro Restringido</span>
       </button>
 
       <button
@@ -45,7 +57,7 @@
   </div>
 
   <!-- Navigation Tabs -->
-  <div class="flex items-center gap-3 border-b border-stone-200 dark:border-zinc-800 pb-3">
+  <div class="flex items-center gap-2 sm:gap-3 border-b border-stone-200 dark:border-zinc-800 pb-3 overflow-x-auto whitespace-nowrap no-scrollbar">
 
     <!-- Sucursales Físicas -->
     <button
@@ -330,7 +342,7 @@
         *ngIf="!cargando || mostrarModalSucursal"
         class="overflow-x-auto"
       >
-        <table class="w-full text-left border-collapse">
+        <table class="w-full text-left border-collapse min-w-[750px]">
 
           <thead>
             <tr class="bg-stone-50/80 dark:bg-zinc-900/80 border-b border-stone-200 dark:border-zinc-800 text-[11px] font-bold uppercase tracking-widest text-zinc-600 dark:text-zinc-400">
@@ -447,6 +459,7 @@
                 <div class="flex items-center justify-end gap-1.5">
 
                   <button
+                    *ngIf="isGlobalAdmin || planVigente"
                     (click)="abrirModalEditarSucursal(s)"
                     title="Editar Sucursal"
                     class="p-2 text-zinc-400 hover:text-amber-300 hover:bg-zinc-900 border border-transparent hover:border-zinc-800 rounded-xl transition-all cursor-pointer"
@@ -455,6 +468,7 @@
                   </button>
 
                   <button
+                    *ngIf="isGlobalAdmin || planVigente"
                     (click)="cambiarEstadoSucursal(s)"
                     [title]="s.activo ? 'Desactivar Sucursal' : 'Activar Sucursal'"
                     class="p-2 text-zinc-400 hover:bg-zinc-900 border border-transparent hover:border-zinc-800 rounded-xl transition-all cursor-pointer"
@@ -559,7 +573,7 @@
 
       <div class="overflow-x-auto">
 
-        <table class="w-full text-left border-collapse">
+        <table class="w-full text-left border-collapse min-w-[750px]">
 
           <thead>
             <tr class="bg-stone-50/80 dark:bg-zinc-900/80 border-b border-stone-200 dark:border-zinc-800 text-[11px] font-bold uppercase tracking-widest text-zinc-600 dark:text-zinc-400">

@@ -5,6 +5,7 @@ import { RouterModule } from '@angular/router';
 
 import { AuthService } from '../../services/auth';
 import { SucursalService, Sucursal } from '../../services/sucursales';
+import { SaasService } from '../../services/saas';
 import {
   DevolucionesService,
   DevolucionResumen,
@@ -27,7 +28,10 @@ export class DevolucionesComponent implements OnInit {
   public authService = inject(AuthService);
   private devolucionesService = inject(DevolucionesService);
   private sucursalService = inject(SucursalService);
+  private saasService = inject(SaasService);
   private cdr = inject(ChangeDetectorRef);
+
+  planVigente: boolean = true;
 
   // --- DATOS Y LISTADO ---
   devoluciones: DevolucionResumen[] = [];
@@ -135,6 +139,31 @@ export class DevolucionesComponent implements OnInit {
   mensajeToast: { tipo: 'exito' | 'error' | 'info'; texto: string } | null = null;
 
   ngOnInit(): void {
+    this.saasService.planActual$.subscribe(plan => {
+      if (this.authService.isGlobalAdmin()) {
+        this.planVigente = true;
+      } else if (plan) {
+        this.planVigente = plan.vigente === true;
+      }
+      this.cdr.detectChanges();
+    });
+
+    const empId = this.authService.getEffectiveCompanyId();
+    if (empId && !this.authService.isGlobalAdmin()) {
+      this.saasService.consultarPlan(empId).subscribe({
+        next: (res) => {
+          if (res?.data) {
+            this.planVigente = res.data.vigente;
+            this.cdr.detectChanges();
+          }
+        },
+        error: () => {
+          this.planVigente = false;
+          this.cdr.detectChanges();
+        }
+      });
+    }
+
     this.cargarSucursales();
     this.cargarDevoluciones(1);
   }
@@ -241,6 +270,10 @@ export class DevolucionesComponent implements OnInit {
   // =========================================================================
 
   abrirModalPresencial(): void {
+    if (!this.authService.isGlobalAdmin() && !this.planVigente) {
+      this.mostrarToast('error', 'Operación restringida: La tienda no cuenta con una suscripción activa para registrar devoluciones.');
+      return;
+    }
     this.mostrarModalPresencial = true;
     this.pasoPresencial = 1;
     this.criterioBusquedaPresencial = '';
@@ -412,6 +445,10 @@ export class DevolucionesComponent implements OnInit {
   }
 
   confirmarDevolucionPresencial(): void {
+    if (!this.authService.isGlobalAdmin() && !this.planVigente) {
+      this.mostrarToast('error', 'Operación restringida: Suscripción no vigente.');
+      return;
+    }
     if (!this.hayItemsPresenciales()) {
       this.mostrarToast('info', 'Selecciona al menos una prenda para la devolución presencial.');
       return;
@@ -480,6 +517,10 @@ export class DevolucionesComponent implements OnInit {
   }
 
   confirmarDictamen(): void {
+    if (!this.authService.isGlobalAdmin() && !this.planVigente) {
+      this.mostrarToast('error', 'Operación restringida: Suscripción no vigente.');
+      return;
+    }
     if (!this.idDevolucionDictamen) return;
     if (!this.observacionesDictamen.trim()) {
       this.mostrarToast('info', 'Debes ingresar una justificación técnica para el dictamen.');
@@ -573,6 +614,10 @@ export class DevolucionesComponent implements OnInit {
   }
 
   confirmarRecepcion(): void {
+    if (!this.authService.isGlobalAdmin() && !this.planVigente) {
+      this.mostrarToast('error', 'Operación restringida: Suscripción no vigente.');
+      return;
+    }
     if (!this.idDevolucionRecepcion) return;
 
     const itemsPayload = Object.entries(this.itemsRecepcion).map(([idDetDev, val]) => ({
@@ -688,6 +733,10 @@ export class DevolucionesComponent implements OnInit {
   }
 
   confirmarReembolso(): void {
+    if (!this.authService.isGlobalAdmin() && !this.planVigente) {
+      this.mostrarToast('error', 'Operación restringida: Suscripción no vigente.');
+      return;
+    }
     if (!this.idDevolucionReembolso) return;
     if (!this.referenciaReembolso.trim()) {
       this.mostrarToast('info', 'Ingresa la referencia o comprobante.');

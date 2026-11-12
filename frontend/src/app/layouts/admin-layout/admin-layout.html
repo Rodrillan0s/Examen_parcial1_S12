@@ -162,41 +162,41 @@
   <div class="flex-1 flex flex-col min-w-0 bg-stone-100/70 dark:bg-slate-900 overflow-hidden transition-colors duration-200">
 
     <!-- Header / Topbar Command Strip -->
-    <header class="relative h-20 bg-white/90 dark:bg-slate-950/80 backdrop-blur-xl border-b border-stone-200 dark:border-slate-800/80 flex items-center justify-between px-6 z-10 shrink-0 transition-colors duration-200 shadow-sm">
+    <header class="relative h-16 sm:h-20 bg-white/90 dark:bg-slate-950/80 backdrop-blur-xl border-b border-stone-200 dark:border-slate-800/80 flex items-center justify-between px-3 sm:px-6 z-10 shrink-0 transition-colors duration-200 shadow-sm">
 
       <!-- Context Transition Progress Line -->
       <div *ngIf="cargandoContexto" class="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-indigo-500 via-violet-600 to-indigo-500 animate-pulse z-20"></div>
 
       <!-- Left: Sidebar Toggle + Breadcrumb / Scope Context -->
-      <div class="flex items-center gap-3 min-w-0">
+      <div class="flex items-center gap-2 sm:gap-3 min-w-0">
         <button (click)="toggleSidebar()"
-                class="p-2.5 text-zinc-600 hover:text-zinc-900 dark:text-slate-400 dark:hover:text-white bg-stone-100 hover:bg-stone-200 dark:bg-slate-900/60 dark:hover:bg-slate-900 border border-stone-200 dark:border-slate-800 rounded-xl focus:outline-none transition-all shadow-sm">
+                class="p-2 sm:p-2.5 text-zinc-600 hover:text-zinc-900 dark:text-slate-400 dark:hover:text-white bg-stone-100 hover:bg-stone-200 dark:bg-slate-900/60 dark:hover:bg-slate-900 border border-stone-200 dark:border-slate-800 rounded-xl focus:outline-none transition-all shadow-sm">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
           </svg>
         </button>
 
         <!-- Brand Context Badge -->
-        <div class="flex items-center gap-2 min-w-0">
-          <span class="font-extrabold text-sm tracking-tight text-zinc-900 dark:text-white hidden sm:inline">Aurora Store</span>
-          <span class="hidden sm:inline text-zinc-400 dark:text-slate-600">•</span>
+        <div class="flex items-center gap-1.5 sm:gap-2 min-w-0">
+          <span class="font-extrabold text-sm tracking-tight text-zinc-900 dark:text-white hidden md:inline">Aurora Store</span>
+          <span class="hidden md:inline text-zinc-400 dark:text-slate-600">•</span>
           
           <!-- Context Pill -->
-          <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-bold tracking-wide uppercase transition-all"
+          <div class="flex items-center gap-1 sm:gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg border text-[10px] sm:text-xs font-bold tracking-wide uppercase transition-all"
                [ngClass]="scopeContext.badgeClass">
-            <span class="w-2 h-2 rounded-full"
+            <span class="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full"
                   [ngClass]="{
                     'bg-indigo-500': scopeContext.scope === 'PLATAFORMA',
                     'bg-emerald-500': scopeContext.scope === 'EMPRESA',
                     'bg-amber-500': scopeContext.scope === 'SUCURSAL'
                   }"></span>
-            <span>{{ scopeContext.headerSubtitle }}</span>
+            <span class="truncate max-w-[80px] xs:max-w-[130px] sm:max-w-none">{{ scopeContext.headerSubtitle }}</span>
           </div>
         </div>
       </div>
 
       <!-- Right: Global Actions + Selectors + Status -->
-      <div class="flex items-center gap-2.5 sm:gap-3" *ngIf="usuarioActual">
+      <div class="flex items-center gap-1.5 sm:gap-3" *ngIf="usuarioActual">
 
         <!-- =================================================================== -->
         <!-- SELECTOR DE EMPRESA / TENANT                                        -->
@@ -205,15 +205,15 @@
         <div class="relative" data-tenant-panel *ngIf="scopeContext.canSelectCompany">
           <button (click)="toggleTenantDropdown()"
                   data-tenant-panel
-                  class="flex items-center gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/70 dark:hover:bg-indigo-900/80 border border-indigo-200 dark:border-indigo-800 text-xs font-bold text-indigo-700 dark:text-indigo-300 transition-all shadow-sm focus:outline-none cursor-pointer">
-            <i class="ph ph-buildings text-base text-indigo-600 dark:text-indigo-400"></i>
+                  class="flex items-center gap-1.5 sm:gap-2 px-2 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/70 dark:hover:bg-indigo-900/80 border border-indigo-200 dark:border-indigo-800 text-xs font-bold text-indigo-700 dark:text-indigo-300 transition-all shadow-sm focus:outline-none cursor-pointer">
+            <i class="ph ph-buildings text-sm sm:text-base text-indigo-600 dark:text-indigo-400 shrink-0"></i>
             <div class="flex flex-col text-left">
-              <span class="text-[9px] uppercase tracking-wider text-indigo-400 dark:text-indigo-500 font-extrabold leading-none">Empresa</span>
-              <span class="max-w-[110px] sm:max-w-[150px] truncate leading-tight mt-0.5">
-                {{ tiendaActiva ? tiendaActiva.nombre_empresa : 'Todas las Empresas' }}
+              <span class="text-[8px] sm:text-[9px] uppercase tracking-wider text-indigo-400 dark:text-indigo-500 font-extrabold leading-none hidden xs:block">Empresa</span>
+              <span class="max-w-[65px] xs:max-w-[100px] sm:max-w-[150px] truncate leading-tight mt-0.5 text-[11px] sm:text-xs">
+                {{ tiendaActiva ? tiendaActiva.nombre_empresa : 'Todas' }}
               </span>
             </div>
-            <i class="ph ph-caret-down text-xs text-indigo-500"></i>
+            <i class="ph ph-caret-down text-[10px] sm:text-xs text-indigo-500 shrink-0"></i>
           </button>
 
           <!-- Dropdown de Empresas -->
@@ -281,15 +281,15 @@
         <div class="relative" data-branch-panel *ngIf="scopeContext.canSelectBranch">
           <button (click)="toggleSucursalDropdown()"
                   data-branch-panel
-                  class="flex items-center gap-2 px-3 py-1.5 sm:px-3 sm:py-2 rounded-xl bg-stone-100 hover:bg-stone-200 dark:bg-slate-900/80 dark:hover:bg-slate-800 border border-stone-200 dark:border-slate-800 text-xs font-bold text-zinc-700 dark:text-slate-300 transition-all shadow-sm focus:outline-none cursor-pointer">
-            <i class="ph ph-map-pin text-amber-500 text-sm"></i>
+                  class="flex items-center gap-1.5 sm:gap-2 px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl bg-stone-100 hover:bg-stone-200 dark:bg-slate-900/80 dark:hover:bg-slate-800 border border-stone-200 dark:border-slate-800 text-xs font-bold text-zinc-700 dark:text-slate-300 transition-all shadow-sm focus:outline-none cursor-pointer">
+            <i class="ph ph-map-pin text-amber-500 text-xs sm:text-sm shrink-0"></i>
             <div class="flex flex-col text-left">
-              <span class="text-[9px] uppercase tracking-wider text-zinc-400 dark:text-slate-500 font-extrabold leading-none">Sucursal</span>
-              <span class="max-w-[100px] sm:max-w-[130px] truncate leading-tight mt-0.5 text-zinc-900 dark:text-white">
-                {{ sucursalActiva ? sucursalActiva.nombre : (scopeContext.scope === 'PLATAFORMA' ? 'Todas' : 'Todas las autorizadas') }}
+              <span class="text-[8px] sm:text-[9px] uppercase tracking-wider text-zinc-400 dark:text-slate-500 font-extrabold leading-none hidden xs:block">Sucursal</span>
+              <span class="max-w-[60px] xs:max-w-[90px] sm:max-w-[130px] truncate leading-tight mt-0.5 text-zinc-900 dark:text-white text-[11px] sm:text-xs">
+                {{ sucursalActiva ? sucursalActiva.nombre : (scopeContext.scope === 'PLATAFORMA' ? 'Todas' : 'Autorizadas') }}
               </span>
             </div>
-            <i class="ph ph-caret-down text-xs text-zinc-400"></i>
+            <i class="ph ph-caret-down text-[10px] sm:text-xs text-zinc-400 shrink-0"></i>
           </button>
 
           <!-- Dropdown de Sucursales -->
@@ -376,12 +376,12 @@
         <div class="relative" data-notif-panel>
           <button (click)="toggleNotificaciones()"
                   data-notif-panel
-                  class="p-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 dark:bg-slate-900/60 dark:hover:bg-slate-900 border border-stone-200 dark:border-slate-800 text-zinc-600 hover:text-zinc-900 dark:text-slate-400 dark:hover:text-white transition-all relative focus:outline-none shadow-sm">
+                  class="p-2 sm:p-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 dark:bg-slate-900/60 dark:hover:bg-slate-900 border border-stone-200 dark:border-slate-800 text-zinc-600 hover:text-zinc-900 dark:text-slate-400 dark:hover:text-white transition-all relative focus:outline-none shadow-sm">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
             </svg>
-            <span *ngIf="cantidadNoLeidas > 0" class="absolute top-2 right-2 flex h-2.5 w-2.5">
+            <span *ngIf="cantidadNoLeidas > 0" class="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 flex h-2.5 w-2.5">
               <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
               <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-indigo-500"></span>
             </span>
@@ -389,7 +389,7 @@
 
           <!-- Notifications Popup Panel -->
           <div *ngIf="mostrarNotificaciones"
-               class="absolute right-0 mt-3 w-80 sm:w-96 rounded-2xl bg-white dark:bg-slate-950 border border-stone-200 dark:border-slate-800 shadow-2xl z-50 overflow-hidden animate-slide-up">
+               class="absolute right-0 mt-3 w-72 sm:w-80 md:w-96 rounded-2xl bg-white dark:bg-slate-950 border border-stone-200 dark:border-slate-800 shadow-2xl z-50 overflow-hidden animate-slide-up">
             <div class="p-4 border-b border-stone-200 dark:border-slate-800 flex items-center justify-between">
               <div class="flex items-center gap-2">
                 <span class="text-xs font-bold text-zinc-900 dark:text-white uppercase tracking-wider">Notificaciones</span>
@@ -421,7 +421,7 @@
 
         <!-- Dark Mode Toggle Button -->
         <button (click)="alternarModoOscuro()"
-                class="p-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 dark:bg-slate-900/60 dark:hover:bg-slate-900 border border-stone-200 dark:border-slate-800 text-amber-600 dark:text-amber-400 transition-all shadow-sm"
+                class="p-2 sm:p-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 dark:bg-slate-900/60 dark:hover:bg-slate-900 border border-stone-200 dark:border-slate-800 text-amber-600 dark:text-amber-400 transition-all shadow-sm"
                 [title]="modoOscuro ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'">
           <svg *ngIf="!modoOscuro" class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
           <svg *ngIf="modoOscuro" class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
@@ -431,7 +431,37 @@
     </header>
 
     <!-- Route Content Canvas -->
-    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 w-full relative scrollbar-thin">
+    <main class="flex-1 overflow-y-auto p-3 sm:p-6 lg:p-8 w-full relative scrollbar-thin">
+      <!-- Banner de Restricción Operativa por Suscripción Inactiva / Vencida (CU06W) -->
+      <div *ngIf="planVigencia && !planVigencia.vigente && planVigencia.estado !== 'PENDIENTE_ACTIVACION' && planVigencia.solicitud_contratacion?.estado_contratacion !== 'PENDIENTE_PAGO'"
+           role="alert"
+           class="mb-6 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-950 dark:text-rose-200 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm animate-fadeIn">
+        <div class="flex items-start sm:items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+          <div>
+            <p class="font-bold text-rose-900 dark:text-rose-100 text-sm flex items-center gap-2">
+              <span>Operaciones Comerciales Restringidas</span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-wider bg-rose-500/20 text-rose-700 dark:text-rose-300">
+                {{ planVigencia.estado === 'VENCIDA' ? 'Suscripción Vencida' : (planVigencia.estado === 'CANCELADA' ? 'Suscripción Cancelada' : 'Sin Suscripción Activa') }}
+              </span>
+            </p>
+            <p class="text-[11px] text-rose-700/90 dark:text-rose-300/80 mt-0.5">
+              Esta tienda no cuenta con una suscripción activa vigente. Las operaciones de apertura de caja, ventas POS, movimientos de inventario y edición de catálogo se encuentran bloqueadas hasta regularizar tu suscripción.
+            </p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <a routerLink="/admin/suscripciones"
+             class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm">
+            Activar / Regularizar Suscripción →
+          </a>
+        </div>
+      </div>
+
       <!-- Banner de Activación / Pago Pendiente SaaS -->
       <div *ngIf="planVigencia?.estado === 'PENDIENTE_ACTIVACION' || planVigencia?.solicitud_contratacion?.estado_contratacion === 'PENDIENTE_PAGO'"
            role="alert"

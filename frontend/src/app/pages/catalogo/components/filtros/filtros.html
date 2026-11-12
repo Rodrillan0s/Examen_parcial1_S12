@@ -87,7 +87,7 @@
         
         <div class="flex items-center space-x-2.5">
           <div 
-            class="w-4 h-4 rounded border flex items-center justify-center transition-colors"
+            class="w-4 h-4 rounded border flex items-center justify-center transition-colors shrink-0"
             [class.bg-amber-600]="selectedCategory === cat.id_categoria"
             [class.border-amber-600]="selectedCategory === cat.id_categoria"
             [class.text-white]="selectedCategory === cat.id_categoria"
@@ -98,6 +98,11 @@
             <svg *ngIf="selectedCategory === cat.id_categoria" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
             </svg>
+          </div>
+
+          <!-- Miniatura visual de la categoría -->
+          <div *ngIf="cat.imagen_url" class="w-5 h-5 rounded-md overflow-hidden bg-stone-100 dark:bg-zinc-800 shrink-0 border border-stone-200 dark:border-zinc-700">
+            <img [src]="cat.imagen_url" [alt]="cat.nombre" loading="lazy" class="w-full h-full object-cover">
           </div>
           
           <span 
@@ -313,8 +318,9 @@
               (click)="toggleCategoria(cat.id_categoria)"
               [class.bg-amber-600]="selectedCategory === cat.id_categoria"
               [class.text-white]="selectedCategory === cat.id_categoria"
-              class="px-2.5 py-1 rounded-lg border border-stone-200 dark:border-zinc-800 text-xs">
-        {{ cat.nombre }}
+              class="px-2.5 py-1 rounded-lg border border-stone-200 dark:border-zinc-800 text-xs flex items-center gap-1.5 cursor-pointer">
+        <img *ngIf="cat.imagen_url" [src]="cat.imagen_url" [alt]="cat.nombre" class="w-4 h-4 rounded object-cover">
+        <span>{{ cat.nombre }}</span>
       </button>
     </div>
   </div>

@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../../services/auth';
+import { SaasService } from '../../../services/saas';
 import {
   CajaService,
   VentaParaPago,
@@ -24,8 +25,11 @@ export class CajaPagoComponent implements OnInit {
   public router = inject(Router);
   private cajaService = inject(CajaService);
   public authService = inject(AuthService);
+  private saasService = inject(SaasService);
   private cdr = inject(ChangeDetectorRef);
   private destroyRef = inject(DestroyRef);
+
+  planVigente: boolean = true;
 
   // Parámetros y Venta
   idVenta: number = 0;
@@ -57,6 +61,33 @@ export class CajaPagoComponent implements OnInit {
   correoFacturacion: string = '';
 
   ngOnInit(): void {
+    this.saasService.planActual$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(plan => {
+        if (this.authService.isGlobalAdmin()) {
+          this.planVigente = true;
+        } else if (plan) {
+          this.planVigente = plan.vigente === true;
+        }
+        this.cdr.detectChanges();
+      });
+
+    const empId = this.authService.getEffectiveCompanyId();
+    if (empId && !this.authService.isGlobalAdmin()) {
+      this.saasService.consultarPlan(empId).subscribe({
+        next: (res) => {
+          if (res?.data) {
+            this.planVigente = res.data.vigente;
+            this.cdr.detectChanges();
+          }
+        },
+        error: () => {
+          this.planVigente = false;
+          this.cdr.detectChanges();
+        }
+      });
+    }
+
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
       const idStr = params.get('id');
       if (idStr) {
@@ -284,6 +315,7 @@ export class CajaPagoComponent implements OnInit {
   }
 
   get puedeCobrar(): boolean {
+    if (!this.authService.isGlobalAdmin() && !this.planVigente) return false;
     if (this.procesando || !this.venta) return false;
     if (this.metodoSeleccionadoTipo === 'EFECTIVO') {
       return (Number(this.montoRecibido) || 0) >= this.totalVenta;
@@ -295,6 +327,10 @@ export class CajaPagoComponent implements OnInit {
   }
 
   procesarPago(): void {
+    if (!this.authService.isGlobalAdmin() && !this.planVigente) {
+      this.mensajeError = 'Operación restringida: La tienda no cuenta con una suscripción activa para procesar cobros.';
+      return;
+    }
     if (!this.puedeCobrar || !this.venta) return;
 
     this.procesando = true;

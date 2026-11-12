@@ -5,6 +5,8 @@ import { NetworkStatusService } from '../../core/network/network-status.service'
 import { PendingOperation, SyncQueueService } from '../../core/sync/sync-queue.service';
 import { PwaUpdateService } from '../../core/pwa/pwa-update.service';
 import { IndexedDbService } from '../../core/storage/indexed-db.service';
+import { CatalogoPublicoService } from '../../services/catalogo-publico';
+import { AuthService } from '../../services/auth';
 
 @Component({
   selector: 'app-pwa-status-bar',
@@ -196,6 +198,60 @@ import { IndexedDbService } from '../../core/storage/indexed-db.service';
           </div>
         </div>
 
+        <!-- Tarjeta de Auditoría y Descarga de Datos Offline (IndexedDB) -->
+        <div class="px-6 py-3.5 bg-zinc-100/70 dark:bg-zinc-950/40 border-b border-zinc-200 dark:border-zinc-800 space-y-2 text-xs">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-zinc-800 dark:text-zinc-200">
+                Caché de Datos Locales (IndexedDB)
+              </span>
+              <span
+                *ngIf="cacheAudit() as ca"
+                class="px-2 py-0.5 rounded text-[10px] font-bold"
+                [ngClass]="{
+                  'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400': ca.status === 'COMPLETO',
+                  'bg-amber-500/15 text-amber-600 dark:text-amber-400': ca.status === 'PARCIAL',
+                  'bg-rose-500/15 text-rose-600 dark:text-rose-400': ca.status === 'VACIO'
+                }">
+                {{ ca.status === 'COMPLETO' ? 'Caché Listo' : ca.status === 'PARCIAL' ? 'Caché Parcial' : 'Sin Datos Previos' }}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              [disabled]="isDownloadingCache() || !networkStatus.isOnline()"
+              (click)="descargarDatosOffline()"
+              class="px-2.5 py-1 rounded bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold disabled:opacity-40 transition cursor-pointer flex items-center gap-1.5 text-[11px]">
+              <span *ngIf="isDownloadingCache()" class="inline-block w-2.5 h-2.5 rounded-full border-2 border-zinc-950 border-t-transparent animate-spin"></span>
+              <span>{{ isDownloadingCache() ? 'Descargando (' + cacheProgress() + '%)' : 'Descargar Datos Offline' }}</span>
+            </button>
+          </div>
+
+          <!-- Barra de progreso si está descargando en segundo plano -->
+          <div *ngIf="isDownloadingCache()" class="w-full bg-zinc-200 dark:bg-zinc-800 rounded-full h-1.5 overflow-hidden">
+            <div class="bg-amber-500 h-1.5 rounded-full transition-all duration-300" [style.width.%]="cacheProgress()"></div>
+          </div>
+
+          <!-- Estadísticas del caché local -->
+          <div *ngIf="cacheAudit() as ca" class="grid grid-cols-3 gap-2 text-center pt-1 text-[11px]">
+            <div class="p-1.5 rounded bg-white dark:bg-zinc-900 border border-zinc-200/60 dark:border-zinc-800/60">
+              <span class="block font-bold text-sm text-zinc-900 dark:text-zinc-100">{{ ca.totalProducts }}</span>
+              <span class="text-[10px] text-zinc-500">Prendas</span>
+            </div>
+            <div class="p-1.5 rounded bg-white dark:bg-zinc-900 border border-zinc-200/60 dark:border-zinc-800/60">
+              <span class="block font-bold text-sm text-zinc-900 dark:text-zinc-100">{{ ca.totalBranches }}</span>
+              <span class="text-[10px] text-zinc-500">Sucursales</span>
+            </div>
+            <div class="p-1.5 rounded bg-white dark:bg-zinc-900 border border-zinc-200/60 dark:border-zinc-800/60">
+              <span class="block font-bold text-sm text-zinc-900 dark:text-zinc-100">{{ ca.hasFilters ? 'Sí' : 'No' }}</span>
+              <span class="text-[10px] text-zinc-500">Categorías/Filtros</span>
+            </div>
+          </div>
+          <p *ngIf="cacheAudit()?.lastFetchedAt as dt" class="text-[10px] text-zinc-400 text-right">
+            Última actualización: {{ dt | date:'short' }}
+          </p>
+        </div>
+
         <!-- Barra de acción CU38W -->
         <div class="px-6 py-3 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-3">
           <div class="text-xs text-zinc-600 dark:text-zinc-400">
@@ -373,10 +429,16 @@ export class PwaStatusBarComponent {
   public syncQueue = inject(SyncQueueService);
   public pwaUpdate = inject(PwaUpdateService);
   public indexedDb = inject(IndexedDbService);
+  public catalogoService = inject(CatalogoPublicoService, { optional: true });
+  public authService = inject(AuthService, { optional: true });
 
   public panelOpen = signal<boolean>(false);
   public reconcilingOpId = signal<string | null>(null);
   public reconciliationNote: string = '';
+
+  public cacheAudit = computed(() => this.catalogoService?.cacheAudit() ?? null);
+  public isDownloadingCache = computed(() => this.catalogoService?.isDownloadingCache() ?? false);
+  public cacheProgress = computed(() => this.catalogoService?.cacheDownloadProgress() ?? 0);
 
   constructor() {
     this.pwaUpdate.initServiceWorker();
@@ -457,7 +519,17 @@ export class PwaStatusBarComponent {
 
   public abrirPanel(): void {
     void this.syncQueue.refreshOperations();
+    const tenantId = Number(this.authService?.getEffectiveCompanyId?.() || 1);
+    if (this.catalogoService) {
+      void this.catalogoService.auditarCacheTenant(tenantId);
+    }
     this.panelOpen.set(true);
+  }
+
+  public async descargarDatosOffline(): Promise<void> {
+    if (!this.catalogoService) return;
+    const tenantId = Number(this.authService?.getEffectiveCompanyId?.() || 1);
+    await this.catalogoService.precargarDatosCompletosPwa(tenantId, { force: true });
   }
 
   public cerrarPanel(): void {

@@ -14,6 +14,7 @@ router = APIRouter(prefix="/api/caja", tags=["W24 - Control de Caja y Arqueo"])
 class ConteoDenominacionItemDTO(BaseModel):
     id_denominacion: int = Field(..., gt=0)
     cantidad: int = Field(..., ge=0)
+    valor: Optional[float] = Field(None, ge=0, description="Valor nominal (solo para resolver ids de catálogos offline; el monto se recalcula en servidor)")
 
 class AbrirCajaDTO(BaseModel):
     id_caja: Optional[int] = Field(None, gt=0, description="ID de la caja física opcional")
@@ -176,16 +177,38 @@ def abrir_caja(
         id_emp = _obtener_empresa_efectiva(token_data, body.id_empresa)
         id_suc = _obtener_sucursal_efectiva(token_data, body.id_sucursal, id_emp)
 
-        # Si no se pasó id_caja, obtener o crear la caja por defecto de la sucursal
+        from app.core.tenant_guard import exigir_suscripcion_activa
+        exigir_suscripcion_activa(id_emp, token_data)
+
+        # Idempotencia: si el usuario ya tiene un turno ABIERTO en esta sucursal,
+        # se devuelve ese turno en lugar de fallar con 400.
+        sesion_existente = caja_repos.obtener_sesion_activa_usuario(id_usuario, id_suc)
+        if sesion_existente:
+            return {
+                "success": True,
+                "message": f"Ya tienes un turno abierto en {sesion_existente.get('nombre_caja') or 'esta caja'}.",
+                "ya_abierta": True,
+                "sesion": sesion_existente,
+                "data": sesion_existente
+            }
+
+        # Resolver la caja física: debe pertenecer a la sucursal efectiva y estar libre.
+        # Si el cliente envía una caja de otra sucursal (cambio de sucursal en UI) u ocupada
+        # por otro turno, se asigna automáticamente una caja libre de la sucursal.
         id_caja = body.id_caja
+        if id_caja:
+            caja_info = caja_repos.obtener_caja_por_id(id_caja)
+            if (
+                not caja_info
+                or caja_info.get("id_sucursal") != id_suc
+                or caja_info.get("estado") != 'ACTIVA'
+                or caja_repos.verificar_caja_ocupada(id_caja)
+            ):
+                id_caja = None
         if not id_caja:
-            caja_info = caja_repos.obtener_caja_disponible_sucursal(id_suc, id_emp)
-            id_caja = caja_info["id_caja"]
+            id_caja = caja_repos.obtener_caja_disponible_sucursal(id_suc, id_emp)["id_caja"]
 
         conteo_raw = body.conteo or body.conteo_items or []
-        if not conteo_raw:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Debe ingresar el conteo físico de billetes y monedas.")
-
         conteo_dicts = [item.dict() for item in conteo_raw]
         obs = body.observacion or body.observaciones
         sesion = caja_repos.abrir_caja_sesion(
@@ -372,6 +395,9 @@ def registrar_caja(
     try:
         id_emp = _obtener_empresa_efectiva(token_data, body.id_empresa)
         id_suc = _obtener_sucursal_efectiva(token_data, body.id_sucursal, id_emp)
+
+        from app.core.tenant_guard import exigir_suscripcion_activa
+        exigir_suscripcion_activa(id_emp, token_data)
 
         nueva_caja = caja_repos.crear_nueva_caja(
             id_sucursal=id_suc,

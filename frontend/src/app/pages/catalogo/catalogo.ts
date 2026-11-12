@@ -234,6 +234,9 @@ export class CatalogoComponent implements OnInit, OnDestroy {
     this.cargandoFiltros = true;
     this.cdr.markForCheck();
 
+    // Iniciar auditoría y precarga no bloqueante en IndexedDB para este tenant
+    this.catalogoService.precargarCatalogoInicial(this.selectedTenantId);
+
     // Ejecutar carga de filtros y primera página de productos en paralelo para eliminar cascada secuencial
     this.aplicarFiltros();
 

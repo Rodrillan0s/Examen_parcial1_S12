@@ -30,14 +30,26 @@ export interface CachedRecord<T = any> {
   is_partial?: boolean;
 }
 
+export interface TenantCacheAudit {
+  tenantId: number;
+  totalProducts: number;
+  totalDetails: number;
+  totalBranches: number;
+  hasFilters: boolean;
+  hasTenants: boolean;
+  status: 'COMPLETO' | 'PARCIAL' | 'VACIO';
+  lastFetchedAt: string | null;
+  lastFetchedAtMs: number;
+}
+
 export type StorageHealthStatus = 'OK' | 'QUOTA_WARNING' | 'FALLBACK_MEMORY';
 
 const DB_NAME = 'aurora_store_pwa_db';
 const DB_VERSION = 4;
 const DURABLE_STORES: ReadonlySet<StoreName> = new Set(['pending_operations', 'sync_attempts', 'sync_receipts']);
 
-const MAX_PAGES_PER_SCOPE = 20;
-const MAX_DETAILS_PER_SCOPE = 60;
+const MAX_PAGES_PER_SCOPE = 40;
+const MAX_DETAILS_PER_SCOPE = 150;
 
 @Injectable({
   providedIn: 'root'
@@ -439,6 +451,126 @@ export class IndexedDbService {
         await this.delete(storeName, sorted[i].key);
       }
     }
+  }
+
+  public async countByScope(storeName: StoreName, scopePrefix: string): Promise<number> {
+    const items = await this.getAllByScope(storeName, scopePrefix);
+    return items.length;
+  }
+
+  public async saveBranches(tenantId: number, branches: any[]): Promise<void> {
+    const scopeKey = this.buildPublicScopeKey(tenantId);
+    const now = Date.now();
+    const nowIso = new Date(now).toISOString();
+    const ttl = 24 * 60 * 60 * 1000;
+
+    await this.put<CachedRecord>('branches', {
+      key: `branches_e:${tenantId}`,
+      scope_key: scopeKey,
+      tenant_id: tenantId,
+      data: branches,
+      fetched_at: nowIso,
+      fetched_at_ms: now,
+      expires_at_ms: now + ttl
+    });
+  }
+
+  public async getBranches<T = any>(tenantId: number): Promise<T[] | null> {
+    const cached = await this.get<CachedRecord<T[]>>('branches', `branches_e:${tenantId}`);
+    if (cached?.data && Array.isArray(cached.data)) {
+      return cached.data;
+    }
+    return null;
+  }
+
+  public async auditTenantCache(tenantId: number): Promise<TenantCacheAudit> {
+    const scopeKey = this.buildPublicScopeKey(tenantId);
+    const now = Date.now();
+
+    // 1. Contar productos únicos disponibles offline
+    const pages = await this.getAllByScope<CachedRecord>('products', scopeKey);
+    const uniqueProductIds = new Set<number>();
+    let lastFetchedMs = 0;
+    let lastFetchedAt: string | null = null;
+
+    for (const page of pages) {
+      if ((page.fetched_at_ms || 0) > lastFetchedMs) {
+        lastFetchedMs = page.fetched_at_ms;
+        lastFetchedAt = page.fetched_at;
+      }
+      const list = Array.isArray(page.data) ? page.data : (page.data?.data || page.data?.productos || []);
+      for (const item of list) {
+        const pId = item?.id_producto || item?.id;
+        if (pId) uniqueProductIds.add(Number(pId));
+      }
+    }
+
+    // 2. Contar detalles cacheados
+    const details = await this.getAllByScope<CachedRecord>('product_details', scopeKey);
+    for (const d of details) {
+      if ((d.fetched_at_ms || 0) > lastFetchedMs) {
+        lastFetchedMs = d.fetched_at_ms;
+        lastFetchedAt = d.fetched_at;
+      }
+      const prod = d.data;
+      const pId = prod?.id_producto || prod?.id;
+      if (pId) uniqueProductIds.add(Number(pId));
+    }
+
+    // 3. Verificar filtros y categorías
+    const filters = await this.get<CachedRecord>('catalog_filters', `filters_e:${tenantId}`);
+    const hasFilters = Boolean(filters?.data?.data?.categorias?.length || filters?.data?.categorias?.length);
+    if (filters && (filters.fetched_at_ms || 0) > lastFetchedMs) {
+      lastFetchedMs = filters.fetched_at_ms;
+      lastFetchedAt = filters.fetched_at;
+    }
+
+    // 4. Verificar tenants públicos
+    const tenants = await this.get<CachedRecord>('catalog_filters', 'public_tenants_list');
+    const hasTenants = Boolean(tenants?.data?.data?.length || tenants?.data?.length);
+
+    // 5. Verificar sucursales
+    const branches = await this.getBranches(tenantId);
+    let totalBranches = branches?.length || 0;
+    if (totalBranches === 0 && filters?.data?.data?.sucursales?.length) {
+      totalBranches = filters.data.data.sucursales.length;
+    }
+
+    // Determinar estado de salud del almacenamiento local para este tenant
+    let status: 'COMPLETO' | 'PARCIAL' | 'VACIO' = 'VACIO';
+    const totalProducts = uniqueProductIds.size;
+    if (totalProducts >= 4 && totalBranches >= 1 && hasFilters) {
+      status = 'COMPLETO';
+    } else if (totalProducts > 0 || totalBranches > 0 || hasFilters) {
+      status = 'PARCIAL';
+    }
+
+    const audit: TenantCacheAudit = {
+      tenantId,
+      totalProducts,
+      totalDetails: details.length,
+      totalBranches,
+      hasFilters,
+      hasTenants,
+      status,
+      lastFetchedAt,
+      lastFetchedAtMs: lastFetchedMs
+    };
+
+    // Guardar metadata del diagnóstico
+    try {
+      await this.put<CachedRecord>('metadata', {
+        key: `cache_audit_e:${tenantId}`,
+        scope_key: scopeKey,
+        tenant_id: tenantId,
+        data: audit,
+        fetched_at: new Date(now).toISOString(),
+        fetched_at_ms: now,
+        expires_at_ms: now + (24 * 60 * 60 * 1000)
+      });
+    } catch (_) {}
+
+    return audit;
   }
 }
 

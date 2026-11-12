@@ -132,6 +132,8 @@ def confirmar_importacion_lote(
             datos.get('id_empresa'),
             permitir_global=False
         )
+        from app.core.tenant_guard import exigir_suscripcion_activa
+        exigir_suscripcion_activa(datos['id_empresa'], token_data)
         resolver_sucursal_autorizada(token_data, datos.get('id_sucursal'))
         resultado = compras_lotes_services.confirmar_e_importar_lote_db(
             datos,
@@ -192,6 +194,8 @@ def crear_orden_compra(
             datos.get('id_empresa'),
             permitir_global=False
         )
+        from app.core.tenant_guard import exigir_suscripcion_activa
+        exigir_suscripcion_activa(datos['id_empresa'], token_data)
         datos['id_sucursal'] = resolver_sucursal_autorizada(token_data, datos.get('id_sucursal'))
         nueva_oc = compras_lotes_services.crear_orden_compra_db(datos, token_data)
         return {

@@ -71,6 +71,9 @@ def validar_pedido_para_pago(id_pedido: int, id_usuario: int, id_empresa: Option
         if id_empresa and row[3] != id_empresa:
             raise ValueError("El pedido no pertenece a la tienda (Tenant) activa.")
 
+        from app.modules.saas.services.saas_services import exigir_vigencia
+        exigir_vigencia(row[3])
+
         estado_pago = row[6]
         if estado_pago == 'PAGADO' and row[13] is None:
             raise HTTPException(409, 'PAYMENT_RECONCILIATION_REQUIRED: pedido pagado sin venta comprobable.')

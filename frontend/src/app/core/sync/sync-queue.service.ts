@@ -6,6 +6,7 @@ import { AuthService } from '../../services/auth';
 import { IndexedDbService, CachedRecord } from '../storage/indexed-db.service';
 import { NetworkStatusService } from '../network/network-status.service';
 import { hasVerifiedConfirmation, sameOperationRequest, VerifiedSyncResult } from './sync-confirmation';
+import { CatalogoPublicoService } from '../../services/catalogo-publico';
 
 export type SyncOperationKind =
   | 'CART_ADD_ITEM'
@@ -87,6 +88,7 @@ export class SyncQueueService {
   private readonly authService = inject(AuthService);
   private readonly idb = inject(IndexedDbService);
   private readonly network = inject(NetworkStatusService);
+  private readonly catalogoService = inject(CatalogoPublicoService, { optional: true });
   private readonly syncLoteUrl = `${environment.apiUrl}/api/sync/lote`;
 
   private readonly loadedOperations = signal<PendingOperation[]>([]);
@@ -133,13 +135,21 @@ export class SyncQueueService {
     this.network.reconnected$.subscribe((ts) => {
       if (ts > 0) {
         void this.syncNow(false);
+        const scope = this.getCurrentScope();
+        if (scope.tenantId && this.catalogoService) {
+          void this.catalogoService.precargarDatosCompletosPwa(scope.tenantId);
+        }
       }
     });
 
-    this.authService.companyChanged$.subscribe(() => {
+    this.authService.companyChanged$.subscribe((companyId) => {
       this.loadedOperations.set([]);
       this.loadedHistory.set([]);
       void this.refreshOperationsSafely();
+      const tenantId = Number(companyId || this.authService.getEffectiveCompanyId() || 1);
+      if (tenantId && this.catalogoService) {
+        void this.catalogoService.precargarDatosCompletosPwa(tenantId);
+      }
     });
 
     this.authService.branchChanged$.subscribe(() => {

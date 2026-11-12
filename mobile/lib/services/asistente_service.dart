@@ -2,7 +2,9 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 import 'api_client.dart';
+import 'catalogo_service.dart';
 import '../core/tenant/tenant_context_manager.dart';
+import '../core/database/database_helper.dart';
 
 class ChatMessageModel {
   final String id;
@@ -118,17 +120,87 @@ class AsistenteService extends ChangeNotifier {
 
       _mensajes.add(botMsg);
     } catch (e) {
-      _mensajes.add(
-        ChatMessageModel(
-          id: 'msg_err_${DateTime.now().millisecondsSinceEpoch}',
-          role: 'assistant',
-          content: 'No pude procesar la consulta en este momento. Las demás funciones de Aurora Store continúan funcionando normalmente.',
-          timestamp: DateTime.now(),
-        ),
-      );
+      // Extracción y procesamiento inteligente desde la base de datos SQLite local
+      final botOfflineMsg = await _procesarConsultaOffline(mensajeLimpio);
+      _mensajes.add(botOfflineMsg);
     } finally {
       _cargando = false;
       notifyListeners();
+    }
+  }
+
+  Future<ChatMessageModel> _procesarConsultaOffline(String mensajeLimpio) async {
+    final dbHelper = DatabaseHelper();
+    final idEmpresa = _tenantManager.idEmpresaActiva ?? 1;
+    final tienda = _tenantManager.nombreTiendaActiva;
+
+    // Palabras comunes a ignorar para extraer palabras clave reales
+    final palabrasDescartadas = {
+      'hola', 'buenos', 'dias', 'tardes', 'noches', 'quisiera', 'saber', 'sobre',
+      'consulta', 'consultar', 'producto', 'productos', 'prenda', 'prendas',
+      'tienen', 'tiene', 'hay', 'precio', 'costo', 'disponible', 'disponibles',
+      'un', 'una', 'el', 'la', 'los', 'las', 'de', 'en', 'para', 'por', 'con',
+    };
+
+    final tokens = mensajeLimpio
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^\w\s]'), ' ')
+        .split(RegExp(r'\s+'))
+        .where((t) => t.length > 2 && !palabrasDescartadas.contains(t))
+        .toList();
+
+    List<PrendaModel> resultados = [];
+    if (tokens.isNotEmpty) {
+      for (final t in tokens) {
+        final matches = await dbHelper.searchProductsOffline(t, idEmpresa: idEmpresa);
+        for (final m in matches) {
+          if (!resultados.any((p) => p.idProducto == m.idProducto)) {
+            resultados.add(m);
+          }
+        }
+      }
+    }
+
+    // Si no hubo coincidencias exactas con tokens, obtener productos del tenant
+    if (resultados.isEmpty) {
+      resultados = await dbHelper.getProducts(idEmpresa);
+    }
+
+    final topItems = resultados.take(3).toList();
+
+    if (topItems.isNotEmpty) {
+      final itemsSummary = topItems
+          .map((p) => '• ${p.nombre} — Bs. ${p.precio.toStringAsFixed(2)} (${p.categoriaNombre})')
+          .join('\n');
+
+      final content = '✨ [Aurora Advisor - Modo Offline]\n'
+          'Actualmente tu dispositivo se encuentra sin conexión a internet. Sin embargo, he consultado la base de datos local en tu móvil para responder a tu consulta en $tienda.\n\n'
+          'Prendas disponibles en tu catálogo local:\n'
+          '$itemsSummary\n\n'
+          'Toca cualquiera de las opciones para ver detalles, verificar stock o reservarla:';
+
+      return ChatMessageModel(
+        id: 'msg_bot_offline_${DateTime.now().millisecondsSinceEpoch}',
+        role: 'assistant',
+        content: content,
+        timestamp: DateTime.now(),
+        tipo: 'productos',
+        datos: topItems.map((p) => {
+          'id_producto': p.idProducto,
+          'nombre': p.nombre,
+          'precio': p.precio.toStringAsFixed(2),
+          'categoria': p.categoriaNombre,
+          'marca': p.marca,
+        }).toList(),
+      );
+    } else {
+      return ChatMessageModel(
+        id: 'msg_bot_offline_${DateTime.now().millisecondsSinceEpoch}',
+        role: 'assistant',
+        content: '✨ [Aurora Advisor - Modo Offline]\n'
+            'Actualmente estás sin conexión a internet. Puedes explorar el catálogo guardado en tu dispositivo, gestionar tu bolsa o confirmar tus compras con sincronización diferida.',
+        timestamp: DateTime.now(),
+      );
     }
   }
 }

@@ -124,6 +124,49 @@ class TestSeguridadMultitenant(unittest.TestCase):
             _validar_permisos_ia(self.token_tenant_1, id_empresa_param=2)
         self.assertEqual(ctx.exception.status_code, 403)
 
+    def test_exigir_suscripcion_activa_sin_empresa_deniega_operacion(self):
+        """exigir_suscripcion_activa sin ID de empresa lanza 403 SUSCRIPCION_NO_VIGENTE."""
+        from app.core.tenant_guard import exigir_suscripcion_activa
+        with self.assertRaises(HTTPException) as ctx:
+            exigir_suscripcion_activa(None, self.token_tenant_1)
+        self.assertEqual(ctx.exception.status_code, 403)
+        self.assertEqual(ctx.exception.detail.get("code"), "SUSCRIPCION_NO_VIGENTE")
+
+    def test_exigir_suscripcion_activa_vencida_deniega_operacion(self):
+        """CU06W: Empresa sin suscripción activa debe ser restringida de realizar operaciones comerciales."""
+        from app.core.tenant_guard import exigir_suscripcion_activa
+        from unittest.mock import patch
+
+        with patch("app.modules.saas.services.saas_services.consultar_plan") as mock_plan:
+            mock_plan.return_value = {
+                "id_empresa": 1,
+                "estado": "VENCIDA",
+                "vigente": False,
+                "capacidades": {"reportes_generativos": False}
+            }
+            with self.assertRaises(HTTPException) as ctx:
+                exigir_suscripcion_activa(1, self.token_tenant_1)
+            self.assertEqual(ctx.exception.status_code, 403)
+            self.assertEqual(ctx.exception.detail.get("code"), "SUSCRIPCION_NO_VIGENTE")
+
+    def test_exigir_suscripcion_activa_vigente_permite_operacion(self):
+        """CU06W: Empresa con suscripción vigente realiza operaciones comerciales sin restricción."""
+        from app.core.tenant_guard import exigir_suscripcion_activa
+        from unittest.mock import patch
+
+        with patch("app.modules.saas.services.saas_services.consultar_plan") as mock_plan:
+            mock_plan.return_value = {
+                "id_empresa": 1,
+                "estado": "VIGENTE",
+                "vigente": True,
+                "capacidades": {"reportes_generativos": True}
+            }
+            # No debe lanzar ninguna excepción
+            try:
+                exigir_suscripcion_activa(1, self.token_tenant_1)
+            except HTTPException:
+                self.fail("exigir_suscripcion_activa no debió lanzar excepción para una suscripción VIGENTE.")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -10,6 +10,7 @@ import { SucursalService, Sucursal } from '../../../services/sucursales';
 import { TallasColoresService, Talla, ColorPrenda } from '../../../services/tallas-colores';
 import { EmpresaService, Empresa } from '../../../services/empresa';
 import { ProveedoresService, Proveedor } from '../../../services/proveedores';
+import { SaasService } from '../../../services/saas';
 import { 
   ComprasLotesService, 
   PreviewResultadoData, 
@@ -36,9 +37,12 @@ export class ListaInventarioComponent implements OnInit {
   private proveedoresService = inject(ProveedoresService);
   public comprasLotesService = inject(ComprasLotesService);
   public authService = inject(AuthService);
+  private saasService = inject(SaasService);
   private cdr = inject(ChangeDetectorRef);
   private destroyRef = inject(DestroyRef);
   private recargarInventario$ = new Subject<void>();
+
+  planVigente: boolean = true;
 
   // Navegación por pestañas
   tabActiva: TabInventario = 'stock';
@@ -185,7 +189,32 @@ export class ListaInventarioComponent implements OnInit {
   cargandoLotes: boolean = false;
 
   get puedeGestionar(): boolean {
+    if (!this.esSuperAdmin && !this.planVigente) return false;
     return this.authService.hasPermission('inventario.gestionar');
+  }
+
+  verificarVigenciaSuscripcion(): void {
+    if (this.esSuperAdmin) {
+      this.planVigente = true;
+      return;
+    }
+    const empId = this.empresaActivaId || this.authService.getEffectiveCompanyId();
+    if (!empId) {
+      this.planVigente = true;
+      return;
+    }
+    this.saasService.consultarPlan(empId).subscribe({
+      next: (res) => {
+        if (res && res.data) {
+          this.planVigente = res.data.vigente;
+          this.cdr.detectChanges();
+        }
+      },
+      error: () => {
+        this.planVigente = false;
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   get esNivelSucursal(): boolean {
@@ -197,6 +226,18 @@ export class ListaInventarioComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.saasService.planActual$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(plan => {
+        if (this.esSuperAdmin) {
+          this.planVigente = true;
+        } else if (plan) {
+          this.planVigente = plan.vigente === true;
+        }
+        this.cdr.detectChanges();
+      });
+
+    this.verificarVigenciaSuscripcion();
     if (this.esSuperAdmin) {
       this.cargarEmpresas();
     }
@@ -471,6 +512,11 @@ export class ListaInventarioComponent implements OnInit {
 
   // MODAL DE MOVIMIENTOS
   abrirModalMovimiento(item: ItemInventario, tipo: 'ENTRADA' | 'SALIDA' | 'AJUSTE'): void {
+    if (!this.esSuperAdmin && !this.planVigente) {
+      this.mensajeError = 'Operación restringida: La tienda no cuenta con una suscripción activa para registrar movimientos de inventario.';
+      this.cdr.detectChanges();
+      return;
+    }
     this.itemSeleccionado = item;
     this.tipoMovimientoModal = tipo;
     this.cantidadMovimiento = tipo === 'AJUSTE' ? item.stock_actual : 1;
@@ -836,6 +882,11 @@ export class ListaInventarioComponent implements OnInit {
   }
 
   abrirModalCrearOrden(): void {
+    if (!this.esSuperAdmin && !this.planVigente) {
+      this.mensajeError = 'Operación restringida: La tienda no cuenta con una suscripción activa para emitir órdenes de compra.';
+      this.cdr.detectChanges();
+      return;
+    }
     this.cargarProveedores();
     const actBranch = this.authService.activeBranch();
     const resolvedSucursal = this.filtroSucursal 
@@ -1009,6 +1060,11 @@ export class ListaInventarioComponent implements OnInit {
   }
 
   abrirModalRechazar(orden: OrdenCompraItem): void {
+    if (!this.esSuperAdmin && !this.planVigente) {
+      this.mensajeError = 'Operación restringida: La tienda no cuenta con una suscripción activa.';
+      this.cdr.detectChanges();
+      return;
+    }
     this.ordenSeleccionada = orden;
     this.motivoRechazo = '';
     this.mostrarModalRechazar = true;
@@ -1041,6 +1097,11 @@ export class ListaInventarioComponent implements OnInit {
   }
 
   abrirModalRecepcion(orden: OrdenCompraItem): void {
+    if (!this.esSuperAdmin && !this.planVigente) {
+      this.mensajeError = 'Operación restringida: La tienda no cuenta con una suscripción activa para recepcionar inventario.';
+      this.cdr.detectChanges();
+      return;
+    }
     this.ordenSeleccionada = orden;
     this.loteRecepcionInput = `LOT-${orden.numero_orden}`;
     this.guiaRecepcionInput = '';

@@ -25,21 +25,27 @@
       <button 
         *ngIf="tabActivo === 'TALLAS'"
         (click)="abrirModalCrearTalla()"
-        class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-zinc-950 font-semibold shadow-lg shadow-amber-500/20 transition-all duration-200 active:scale-95 text-sm cursor-pointer">
+        [disabled]="!planVigente && !esSuperAdmin"
+        [class.opacity-50]="!planVigente && !esSuperAdmin"
+        [class.cursor-not-allowed]="!planVigente && !esSuperAdmin"
+        class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-zinc-950 font-semibold shadow-lg shadow-amber-500/20 transition-all duration-200 active:scale-95 text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 4v16m8-8H4"/>
         </svg>
-        <span>Nueva Talla</span>
+        <span>{{ (!planVigente && !esSuperAdmin) ? 'Creación Bloqueada' : 'Nueva Talla' }}</span>
       </button>
 
       <button 
         *ngIf="tabActivo === 'COLORES'"
         (click)="abrirModalCrearColor()"
-        class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-zinc-950 font-semibold shadow-lg shadow-amber-500/20 transition-all duration-200 active:scale-95 text-sm cursor-pointer">
+        [disabled]="!planVigente && !esSuperAdmin"
+        [class.opacity-50]="!planVigente && !esSuperAdmin"
+        [class.cursor-not-allowed]="!planVigente && !esSuperAdmin"
+        class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-zinc-950 font-semibold shadow-lg shadow-amber-500/20 transition-all duration-200 active:scale-95 text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 4v16m8-8H4"/>
         </svg>
-        <span>Nuevo Color</span>
+        <span>{{ (!planVigente && !esSuperAdmin) ? 'Creación Bloqueada' : 'Nuevo Color' }}</span>
       </button>
     </div>
   </div>
@@ -157,7 +163,8 @@
 
     <!-- Tabla de Tallas -->
     <div class="rounded-2xl bg-white dark:bg-zinc-900/60 border border-stone-200 dark:border-zinc-800/80 overflow-hidden shadow-sm dark:shadow-xl dark:shadow-zinc-950/50">
-      <table class="w-full text-left text-sm text-zinc-700 dark:text-zinc-300">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm text-zinc-700 dark:text-zinc-300 min-w-[650px]">
         <thead class="bg-stone-50/90 dark:bg-zinc-950/60 text-xs uppercase font-semibold text-zinc-600 dark:text-zinc-400 border-b border-stone-200 dark:border-zinc-800">
           <tr>
             <th class="px-5 py-4">Talla</th>
@@ -206,8 +213,12 @@
             <td class="px-5 py-3.5 text-center">
               <button 
                 (click)="toggleEstadoTalla(talla, $event)"
-                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold cursor-pointer transition-all border"
-                [ngClass]="talla.activo ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-zinc-800 border-zinc-700 text-zinc-500'">
+                [disabled]="!planVigente && !esSuperAdmin"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all border"
+                [ngClass]="[
+                  talla.activo ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-zinc-800 border-zinc-700 text-zinc-500',
+                  (!planVigente && !esSuperAdmin) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                ]">
                 <span class="w-1.5 h-1.5 rounded-full" [ngClass]="talla.activo ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-500'"></span>
                 {{ talla.activo ? 'Activa' : 'Inactiva' }}
               </button>
@@ -215,6 +226,7 @@
             <td class="px-5 py-3.5 text-right">
               <div class="flex items-center justify-end gap-1.5">
                 <button 
+                  *ngIf="esSuperAdmin || planVigente"
                   (click)="abrirModalEditarTalla(talla)"
                   title="Editar talla"
                   class="p-2 rounded-lg text-amber-400/80 hover:text-amber-400 hover:bg-amber-500/10 transition-colors cursor-pointer">
@@ -223,6 +235,7 @@
                   </svg>
                 </button>
                 <button 
+                  *ngIf="esSuperAdmin || planVigente"
                   (click)="confirmarEliminacion('TALLA', talla)"
                   title="Eliminar talla"
                   class="p-2 rounded-lg text-rose-400/80 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer">
@@ -235,6 +248,7 @@
           </tr>
         </tbody>
       </table>
+      </div>
     </div>
   </div>
 
@@ -301,7 +315,8 @@
 
     <!-- Tabla de Colores -->
     <div class="rounded-2xl bg-white dark:bg-zinc-900/60 border border-stone-200 dark:border-zinc-800/80 overflow-hidden shadow-sm dark:shadow-xl dark:shadow-zinc-950/50">
-      <table class="w-full text-left text-sm text-zinc-700 dark:text-zinc-300">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm text-zinc-700 dark:text-zinc-300 min-w-[650px]">
         <thead class="bg-stone-50/90 dark:bg-zinc-950/60 text-xs uppercase font-semibold text-zinc-600 dark:text-zinc-400 border-b border-stone-200 dark:border-zinc-800">
           <tr>
             <th class="px-5 py-4">Muestra Visual</th>
@@ -365,8 +380,12 @@
             <td class="px-5 py-3.5 text-center">
               <button 
                 (click)="toggleEstadoColor(color, $event)"
-                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold cursor-pointer transition-all border"
-                [ngClass]="color.activo ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-zinc-800 border-zinc-700 text-zinc-500'">
+                [disabled]="!planVigente && !esSuperAdmin"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all border"
+                [ngClass]="[
+                  color.activo ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-zinc-800 border-zinc-700 text-zinc-500',
+                  (!planVigente && !esSuperAdmin) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                ]">
                 <span class="w-1.5 h-1.5 rounded-full" [ngClass]="color.activo ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-500'"></span>
                 {{ color.activo ? 'Activo' : 'Inactivo' }}
               </button>
@@ -375,6 +394,7 @@
             <td class="px-5 py-3.5 text-right">
               <div class="flex items-center justify-end gap-1.5">
                 <button 
+                  *ngIf="esSuperAdmin || planVigente"
                   (click)="abrirModalEditarColor(color)"
                   title="Editar color"
                   class="p-2 rounded-lg text-amber-400/80 hover:text-amber-400 hover:bg-amber-500/10 transition-colors cursor-pointer">
@@ -383,6 +403,7 @@
                   </svg>
                 </button>
                 <button 
+                  *ngIf="esSuperAdmin || planVigente"
                   (click)="confirmarEliminacion('COLOR', color)"
                   title="Eliminar color"
                   class="p-2 rounded-lg text-rose-400/80 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer">
@@ -395,6 +416,7 @@
           </tr>
         </tbody>
       </table>
+      </div>
     </div>
   </div>
 

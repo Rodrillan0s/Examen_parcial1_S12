@@ -23,10 +23,10 @@
         <span>↗</span>
       </a>
       <button type="button"
-              [disabled]="guardando"
+              [disabled]="guardando || (!authService.isGlobalAdmin() && !planVigente)"
               (click)="guardarConfiguracion()"
-              class="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl transition-all shadow-sm disabled:opacity-50 cursor-pointer">
-        <span>{{ guardando ? 'Guardando...' : 'Guardar Cambios' }}</span>
+              class="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
+        <span>{{ (!authService.isGlobalAdmin() && !planVigente) ? 'Guardado Restringido (Suscripción Inactiva)' : (guardando ? 'Guardando...' : 'Guardar Cambios') }}</span>
       </button>
     </div>
   </div>
@@ -57,8 +57,9 @@
       </div>
       <button *ngIf="!prog.onboarding_completado"
               type="button"
+              [disabled]="!authService.isGlobalAdmin() && !planVigente"
               (click)="guardarConfiguracion(true)"
-              class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold self-start cursor-pointer">
+              class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold self-start cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
         Marcar configuración inicial como completada ✓
       </button>
     </div>

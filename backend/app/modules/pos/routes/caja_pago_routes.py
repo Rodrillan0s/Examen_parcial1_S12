@@ -95,6 +95,9 @@ def procesar_pago_caja(
         sucursales = token_data.get("sucursales", [])
         id_suc_efectiva = body.id_sucursal or (sucursales[0] if sucursales else None)
 
+        from app.core.tenant_guard import exigir_suscripcion_activa
+        exigir_suscripcion_activa(id_empresa, token_data)
+
         datos_fac_dict = {}
         if body.datos_facturacion:
             datos_fac_dict.update({k: v for k, v in body.datos_facturacion.dict().items() if v is not None})

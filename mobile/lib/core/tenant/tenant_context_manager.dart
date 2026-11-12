@@ -107,6 +107,25 @@ class TenantContextManager extends ChangeNotifier {
   }
 
   Future<void> cargarSucursalesTenant(int idEmpresa) async {
+    // 1. Cargar inmediatamente desde SQLite si existen para modo offline
+    try {
+      final localSucs = await _dbHelper.getSucursales(idEmpresa);
+      if (localSucs.isNotEmpty) {
+        _sucursalesDisponibles = localSucs;
+        final savedSucId = await TokenStorage.getSucursalId();
+        if (savedSucId != null) {
+          _sucursalActual = _sucursalesDisponibles.firstWhere(
+            (s) => s.idSucursal == savedSucId,
+            orElse: () => _sucursalesDisponibles.first,
+          );
+        } else if (_sucursalesDisponibles.isNotEmpty) {
+          _sucursalActual = _sucursalesDisponibles.first;
+        }
+        notifyListeners();
+      }
+    } catch (_) {}
+
+    // 2. Intentar actualizar desde el servidor remoto
     try {
       final res = await _dio.get('/api/pedidos/sucursales', queryParameters: {'id_empresa': idEmpresa});
       if (res.data['success'] == true && res.data['data'] != null) {
@@ -116,7 +135,12 @@ class TenantContextManager extends ChangeNotifier {
           idEmpresa: idEmpresa,
           nombre: s['nombre'] ?? '',
           direccion: s['direccion'] ?? '',
+          telefono: s['telefono']?.toString(),
+          ciudad: s['ciudad']?.toString(),
         )).toList();
+
+        // Persistir en SQLite para futuras sesiones offline
+        await _dbHelper.saveSucursales(idEmpresa, _sucursalesDisponibles);
 
         final savedSucId = await TokenStorage.getSucursalId();
         if (savedSucId != null) {
@@ -130,7 +154,7 @@ class TenantContextManager extends ChangeNotifier {
         notifyListeners();
       }
     } catch (_) {
-      // Ignorar si está offline
+      // Si está offline continúa con la lista de SQLite
     }
   }
 

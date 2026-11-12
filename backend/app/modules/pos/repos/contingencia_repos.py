@@ -9,6 +9,46 @@ logger = logging.getLogger(__name__)
 def _get_schema() -> str:
     return Config.SCHEMA or 'comercio'
 
+_MIGRACION_008_OK: Dict[str, bool] = {}
+
+def migracion_contingencia_aplicada(db: Optional[PostgreSQL] = None) -> bool:
+    """
+    Indica si la migración 008 (contingencia offline POS) está aplicada en el esquema.
+    Usa information_schema (consulta que nunca falla) para no provocar errores SQL que
+    revertirían la transacción del llamador (apertura/cierre de caja).
+    Solo se cachea el resultado positivo, para detectar la migración si se aplica luego.
+    """
+    schema = _get_schema()
+    if _MIGRACION_008_OK.get(schema):
+        return True
+    own_conn = False
+    if db is None:
+        db = PostgreSQL()
+        db.create_connection()
+        own_conn = True
+    try:
+        row = db.execute_query(
+            """
+            SELECT
+                EXISTS (SELECT 1 FROM information_schema.tables
+                        WHERE table_schema = %s AND table_name = 't_caja_cuota_contingencia'),
+                EXISTS (SELECT 1 FROM information_schema.columns
+                        WHERE table_schema = %s AND table_name = 't_inventario'
+                          AND column_name = 'stock_contingencia');
+            """,
+            (schema, schema),
+            fetchone=True
+        )
+        ok = bool(row and row[0] and row[1])
+        if ok:
+            _MIGRACION_008_OK[schema] = True
+        else:
+            logger.info("Migración 008 (contingencia POS) no aplicada: se omite la gestión de cuotas.")
+        return ok
+    finally:
+        if own_conn:
+            db.close_connection()
+
 def obtener_politica_contingencia(id_empresa: int) -> Dict[str, Any]:
     """
     Obtiene la política de contingencia offline configurada para el tenant.
@@ -17,12 +57,6 @@ def obtener_politica_contingencia(id_empresa: int) -> Dict[str, Any]:
     db.create_connection()
     try:
         schema = _get_schema()
-        q = f"""
-            SELECT COALESCE(politica_contingencia_pos, '{{}}'::jsonb)
-            FROM {schema}.empresa
-            WHERE id_empresa = %s;
-        """
-        row = db.execute_query(q, (id_empresa,), fetchone=True)
         politica_defecto = {
             "habilitado": True,
             "modo": "PORCENTAJE",
@@ -33,6 +67,15 @@ def obtener_politica_contingencia(id_empresa: int) -> Dict[str, Any]:
             "permitir_sobreventa_con_incidencia": True,
             "solo_efectivo_offline": True
         }
+        if not migracion_contingencia_aplicada(db):
+            politica_defecto["habilitado"] = False
+            return politica_defecto
+        q = f"""
+            SELECT COALESCE(politica_contingencia_pos, '{{}}'::jsonb)
+            FROM {schema}.empresa
+            WHERE id_empresa = %s;
+        """
+        row = db.execute_query(q, (id_empresa,), fetchone=True)
         if row and row[0]:
             if isinstance(row[0], dict):
                 politica_defecto.update(row[0])
@@ -84,6 +127,8 @@ def calcular_y_asignar_cuotas_sesion(
 
     try:
         schema = _get_schema()
+        if not migracion_contingencia_aplicada(db):
+            return []
         politica = obtener_politica_contingencia(id_empresa)
         if not politica.get("habilitado", True):
             return []
@@ -222,6 +267,8 @@ def obtener_cuotas_activas_sesion(id_sesion_caja: int, id_empresa: Optional[int]
     db.create_connection()
     try:
         schema = _get_schema()
+        if not migracion_contingencia_aplicada(db):
+            return []
         emp_filter = "AND c.id_empresa = %s" if id_empresa else ""
         params: List[Any] = [id_sesion_caja]
         if id_empresa:
@@ -283,6 +330,8 @@ def consumir_cuota_contingencia_transaccional(
     Retorna el id_cuota si fue cubierto total o parcialmente por contingencia.
     """
     schema = _get_schema()
+    if not migracion_contingencia_aplicada(db):
+        return None
     q_cuota = f"""
         SELECT id_cuota, cuota_asignada, cuota_consumida
         FROM {schema}.t_caja_cuota_contingencia
@@ -366,6 +415,8 @@ def liberar_cuotas_sesion_caja(id_sesion_caja: int, db: Optional[PostgreSQL] = N
 
     try:
         schema = _get_schema()
+        if not migracion_contingencia_aplicada(db):
+            return 0
         # 1. Obtener cuotas no consumidas de la sesión
         q = f"""
             SELECT id_cuota, id_sucursal, id_variante, (cuota_asignada - cuota_consumida) AS remanente
@@ -420,6 +471,8 @@ def listar_incidencias_sobreventa(id_empresa: int, estado: Optional[str] = None)
     db.create_connection()
     try:
         schema = _get_schema()
+        if not migracion_contingencia_aplicada(db):
+            return []
         estado_clause = "AND inc.estado = %s" if estado else ""
         params = [id_empresa]
         if estado:

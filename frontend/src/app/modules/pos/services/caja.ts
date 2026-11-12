@@ -44,6 +44,7 @@ export interface CajaEstadoResponse {
 export interface ConteoItemPayload {
   id_denominacion: number;
   cantidad: number;
+  valor?: number;
 }
 
 export interface AbrirCajaPayload {

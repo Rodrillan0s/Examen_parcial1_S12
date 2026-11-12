@@ -159,6 +159,8 @@ class ReservaService extends ChangeNotifier {
         _misReservas = rawList
             .map((e) => ReservaModel.fromJson(Map<String, dynamic>.from(e)))
             .toList();
+        // Persistir reservas confirmadas en SQLite para acceso offline
+        await _dbHelper.saveLocalReservations(activeEmpresa, userId, _misReservas);
       } else {
         _misReservas = [];
       }
@@ -166,18 +168,20 @@ class ReservaService extends ChangeNotifier {
       if (e.response?.statusCode == 401) {
         _misReservas = [];
       } else {
-        // Fallback a reservas guardadas localmente
-        final localDrafts = await _dbHelper.getReservationDrafts(activeEmpresa, userId);
-        if (localDrafts.isNotEmpty) {
-          _misReservas = localDrafts;
+        // Fallback a reservas guardadas localmente (confirmadas y borradores)
+        final localReservas = await _dbHelper.getLocalReservations(activeEmpresa, userId);
+        if (localReservas.isNotEmpty) {
+          _misReservas = localReservas;
+          _error = null;
         } else {
           _error = e.response?.data?['detail'] ?? 'Error al cargar reservas.';
         }
       }
     } catch (_) {
-      final localDrafts = await _dbHelper.getReservationDrafts(activeEmpresa, userId);
-      if (localDrafts.isNotEmpty) {
-        _misReservas = localDrafts;
+      final localReservas = await _dbHelper.getLocalReservations(activeEmpresa, userId);
+      if (localReservas.isNotEmpty) {
+        _misReservas = localReservas;
+        _error = null;
       } else {
         _error = 'Error de conexión con el servicio de reservas.';
       }

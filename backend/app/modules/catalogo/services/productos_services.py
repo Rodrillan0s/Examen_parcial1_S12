@@ -109,7 +109,8 @@ from app.core.tenant_guard import (
     es_administrador_global,
     resolver_tenant_operacion,
     validar_acceso_recurso_tenant,
-    validar_relaciones_tenant
+    validar_relaciones_tenant,
+    exigir_suscripcion_activa
 )
 
 def listar_productos_service(
@@ -168,6 +169,7 @@ def crear_producto_service(datos: dict, token_data: dict, ip_cliente: str = "") 
         id_empresa_solicitado = int(id_empresa_solicitado)
 
     id_empresa = resolver_tenant_operacion(token_data, id_empresa_solicitado, permitir_global=False)
+    exigir_suscripcion_activa(id_empresa, token_data)
 
     # 2. Validar campos obligatorios
     nombre = datos.get("nombre")
@@ -283,6 +285,7 @@ def actualizar_producto_service(
         raise HTTPException(status_code=404, detail="Producto no encontrado.")
 
     validar_acceso_recurso_tenant(token_data, producto_actual["id_empresa"], "producto")
+    exigir_suscripcion_activa(producto_actual["id_empresa"], token_data)
 
     id_empresa = producto_actual["id_empresa"]
 
@@ -391,6 +394,7 @@ def cambiar_estado_service(
         raise HTTPException(status_code=404, detail="Producto no encontrado.")
 
     validar_acceso_recurso_tenant(token_data, prod.get("id_empresa"), "producto")
+    exigir_suscripcion_activa(prod.get("id_empresa"), token_data)
 
     ok = productos_repos.cambiar_estado_producto(id_producto, activo)
     estado_str = "Activo" if activo else "Inactivo"
@@ -431,6 +435,7 @@ def agregar_imagen_service(
         raise HTTPException(status_code=404, detail="Producto no encontrado.")
 
     validar_acceso_recurso_tenant(token_data, prod.get("id_empresa"), "producto")
+    exigir_suscripcion_activa(prod.get("id_empresa"), token_data)
 
     id_img = productos_repos.agregar_imagen_producto(id_producto, imagen_url, public_id, es_principal)
     return {
@@ -451,6 +456,7 @@ def marcar_portada_service(id_producto: int, id_imagen: int, token_data: dict) -
         raise HTTPException(status_code=404, detail="Producto no encontrado.")
 
     validar_acceso_recurso_tenant(token_data, prod.get("id_empresa"), "producto")
+    exigir_suscripcion_activa(prod.get("id_empresa"), token_data)
 
     ok = productos_repos.marcar_imagen_principal(id_imagen, id_producto)
     if not ok:
@@ -467,6 +473,7 @@ def eliminar_imagen_service(id_producto: int, id_imagen: int, token_data: dict) 
         raise HTTPException(status_code=404, detail="Producto no encontrado.")
 
     validar_acceso_recurso_tenant(token_data, prod.get("id_empresa"), "producto")
+    exigir_suscripcion_activa(prod.get("id_empresa"), token_data)
 
     pub_id = productos_repos.eliminar_imagen_producto(id_imagen, id_producto)
     if pub_id:
@@ -490,6 +497,7 @@ def eliminar_producto_service(
         raise HTTPException(status_code=404, detail="Producto no encontrado.")
 
     validar_acceso_recurso_tenant(token_data, prod.get("id_empresa"), "producto")
+    exigir_suscripcion_activa(prod.get("id_empresa"), token_data)
 
     accion_resultado, public_ids = productos_repos.eliminar_producto_seguro(id_producto)
 
@@ -572,6 +580,7 @@ def actualizar_precios_variantes_service(
         raise HTTPException(status_code=404, detail="Producto no encontrado.")
 
     validar_acceso_recurso_tenant(token_data, producto["id_empresa"], "producto")
+    exigir_suscripcion_activa(producto["id_empresa"], token_data)
 
     actualizadas = productos_repos.actualizar_precios_variantes_producto(
         id_producto=id_producto,
@@ -613,6 +622,7 @@ def actualizar_precios_variantes_service(
         raise HTTPException(status_code=404, detail="Producto no encontrado.")
 
     validar_acceso_recurso_tenant(token_data, producto["id_empresa"], "producto")
+    exigir_suscripcion_activa(producto["id_empresa"], token_data)
 
     actualizadas = productos_repos.actualizar_precios_variantes_producto(
         id_producto=id_producto,
@@ -781,6 +791,7 @@ def actualizar_precios_variantes_service(
         raise HTTPException(status_code=404, detail="Producto no encontrado.")
 
     validar_acceso_recurso_tenant(token_data, producto["id_empresa"], "producto")
+    exigir_suscripcion_activa(producto["id_empresa"], token_data)
 
     actualizadas = productos_repos.actualizar_precios_variantes_producto(
         id_producto=id_producto,

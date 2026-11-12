@@ -24,11 +24,14 @@
     <div class="flex items-center gap-3">
       <button 
         (click)="abrirModalCrear()"
-        class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-zinc-950 font-semibold shadow-lg shadow-amber-500/20 transition-all duration-200 active:scale-95 text-sm cursor-pointer">
+        [disabled]="!planVigente && !esSuperAdmin"
+        [class.opacity-50]="!planVigente && !esSuperAdmin"
+        [class.cursor-not-allowed]="!planVigente && !esSuperAdmin"
+        class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-zinc-950 font-semibold shadow-lg shadow-amber-500/20 transition-all duration-200 active:scale-95 text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 4v16m8-8H4"/>
         </svg>
-        <span>Nueva Categoría</span>
+        <span>{{ (!planVigente && !esSuperAdmin) ? 'Creación Bloqueada' : 'Nueva Categoría' }}</span>
       </button>
     </div>
   </div>
@@ -176,7 +179,7 @@
   <!-- TABLA DE CATEGORÍAS -->
   <div class="rounded-2xl bg-white dark:bg-zinc-900/60 border border-stone-200 dark:border-zinc-800/80 overflow-hidden shadow-sm dark:shadow-xl dark:shadow-zinc-950/50">
     <div class="overflow-x-auto">
-      <table class="w-full text-left text-sm text-zinc-700 dark:text-zinc-300">
+      <table class="w-full text-left text-sm text-zinc-700 dark:text-zinc-300 min-w-[700px]">
         <thead class="bg-stone-50/90 dark:bg-zinc-950/60 text-xs uppercase font-semibold text-zinc-600 dark:text-zinc-400 border-b border-stone-200 dark:border-zinc-800">
           <tr>
             <th class="px-5 py-4">Categoría / Foto</th>
@@ -293,9 +296,13 @@
             <td class="px-5 py-3.5 text-center">
               <button 
                 (click)="toggleEstado(cat, $event)"
-                [title]="cat.activo ? 'Click para desactivar' : 'Click para activar'"
-                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold cursor-pointer transition-all duration-200 border"
-                [ngClass]="cat.activo ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20' : 'bg-stone-100 dark:bg-zinc-800 border-stone-200 dark:border-zinc-700 text-zinc-500 hover:bg-stone-200 dark:hover:bg-zinc-700/60'">
+                [disabled]="!planVigente && !esSuperAdmin"
+                [title]="!planVigente && !esSuperAdmin ? 'Modificación bloqueada por suscripción inactiva' : (cat.activo ? 'Click para desactivar' : 'Click para activar')"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all duration-200 border"
+                [ngClass]="[
+                  cat.activo ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20' : 'bg-stone-100 dark:bg-zinc-800 border-stone-200 dark:border-zinc-700 text-zinc-500 hover:bg-stone-200 dark:hover:bg-zinc-700/60',
+                  (!planVigente && !esSuperAdmin) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                ]">
                 <span class="w-1.5 h-1.5 rounded-full" [ngClass]="cat.activo ? 'bg-emerald-500 dark:bg-emerald-400 animate-pulse' : 'bg-zinc-400 dark:bg-zinc-500'"></span>
                 {{ cat.activo ? 'Activa' : 'Inactiva' }}
               </button>
@@ -317,6 +324,7 @@
 
                 <!-- Editar -->
                 <button 
+                  *ngIf="esSuperAdmin || planVigente"
                   (click)="abrirModalEditar(cat)"
                   title="Editar categoría"
                   class="p-2 rounded-lg text-amber-400/80 hover:text-amber-400 hover:bg-amber-500/10 transition-colors cursor-pointer">
@@ -327,6 +335,7 @@
 
                 <!-- Eliminar / Desactivar -->
                 <button 
+                  *ngIf="esSuperAdmin || planVigente"
                   (click)="confirmarEliminacion(cat)"
                   title="Eliminar o desactivar categoría"
                   class="p-2 rounded-lg text-rose-400/80 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer">

@@ -141,7 +141,7 @@
       </div>
 
       <!-- Skeletons de Carga Shimmer -->
-      <div *ngIf="cargando" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 animate-pulse">
+      <div *ngIf="cargando" class="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 animate-pulse">
         <div *ngFor="let i of [1,2,3,4,5,6,7,8,9,10]" class="rounded-2xl bg-white dark:bg-zinc-900/60 border border-stone-200 dark:border-zinc-800 p-3 space-y-3 shadow-xs">
           <div class="aspect-[3/4] rounded-xl bg-stone-200 dark:bg-zinc-800/60"></div>
           <div class="h-4 bg-stone-200 dark:bg-zinc-800/70 rounded w-3/4"></div>
@@ -149,9 +149,9 @@
         </div>
       </div>
 
-      <!-- Cuadrícula de 5 Columnas (Exacta a la Maqueta) -->
+      <!-- Cuadrícula de Prendas (Responsive 1 a 5 columnas) -->
       <div *ngIf="!cargando && productos.length > 0" class="space-y-8">
-        <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div class="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
           <app-producto-card
             *ngFor="let prod of productos"
             [prenda]="prod"

@@ -20,6 +20,7 @@ export class MiTiendaComponent implements OnInit {
 
   cargando = false;
   guardando = false;
+  planVigente = true;
   mensajeError = '';
   mensajeExito = '';
 
@@ -89,6 +90,10 @@ export class MiTiendaComponent implements OnInit {
 
   ngOnInit(): void {
     this.cargarConfiguracion();
+    this.saasService.planActual$.subscribe(estado => {
+      this.planVigente = estado ? !!estado.vigente : true;
+      this.cdr.markForCheck();
+    });
   }
 
   cargarConfiguracion(): void {
@@ -158,6 +163,10 @@ export class MiTiendaComponent implements OnInit {
 
   guardarConfiguracion(marcarOnboardingListo = false): void {
     if (!this.datos) return;
+    if (!this.authService.isGlobalAdmin() && !this.planVigente) {
+      this.mensajeError = 'Operación restringida: La tienda no cuenta con una suscripción activa o su vigencia ha expirado.';
+      return;
+    }
     this.guardando = true;
     this.mensajeError = '';
     this.mensajeExito = '';

@@ -148,4 +148,54 @@ describe('IndexedDbService: evidencia durable de sincronización', () => {
     await storage.acknowledgeOperation(op, receipt(op));
     expect(await storage.get('sync_receipts', op.operation_id)).toBeTruthy();
   });
+
+  it('guarda y recupera sucursales en el store branches', async () => {
+    const sucursales = [
+      { id_sucursal: 1, nombre: 'Sucursal Central', ciudad: 'Cochabamba' },
+      { id_sucursal: 2, nombre: 'Sucursal Norte', ciudad: 'La Paz' }
+    ];
+    await storage.saveBranches(1, sucursales);
+    const recuperadas = await storage.getBranches(1);
+    expect(recuperadas).toHaveLength(2);
+    expect(recuperadas![0].nombre).toBe('Sucursal Central');
+  });
+
+  it('audita correctamente el estado del caché para un tenant (VACIO -> PARCIAL -> COMPLETO)', async () => {
+    // 1. Inicialmente VACÍO
+    const auditVacio = await storage.auditTenantCache(2);
+    expect(auditVacio.status).toBe('VACIO');
+    expect(auditVacio.totalProducts).toBe(0);
+
+    // 2. Con filtros agregados pasa a PARCIAL
+    await storage.put('catalog_filters', {
+      key: 'filters_e:2',
+      scope_key: 'public|e:2',
+      tenant_id: 2,
+      data: { data: { categorias: [{ id_categoria: 10, nombre: 'Camisas' }] } },
+      fetched_at: new Date().toISOString(),
+      fetched_at_ms: Date.now(),
+      expires_at_ms: Date.now() + 86400000
+    });
+    const auditParcial = await storage.auditTenantCache(2);
+    expect(auditParcial.status).toBe('PARCIAL');
+    expect(auditParcial.hasFilters).toBe(true);
+
+    // 3. Con sucursales y más de 4 productos pasa a COMPLETO
+    await storage.saveBranches(2, [{ id_sucursal: 10, nombre: 'Sucursal 1' }]);
+    for (let i = 1; i <= 5; i++) {
+      await storage.put('products', {
+        key: `page_e:2_${i}`,
+        scope_key: 'public|e:2',
+        tenant_id: 2,
+        data: { data: [{ id_producto: 100 + i, nombre: `Producto ${i}` }] },
+        fetched_at: new Date().toISOString(),
+        fetched_at_ms: Date.now(),
+        expires_at_ms: Date.now() + 86400000
+      });
+    }
+    const auditCompleto = await storage.auditTenantCache(2);
+    expect(auditCompleto.status).toBe('COMPLETO');
+    expect(auditCompleto.totalProducts).toBe(5);
+    expect(auditCompleto.totalBranches).toBe(1);
+  });
 });

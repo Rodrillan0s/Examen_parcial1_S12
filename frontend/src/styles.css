@@ -268,3 +268,49 @@ html:not(.dark) {
     border-color: #f1f5f9 !important;
   }
 }
+
+/* ==========================================================================
+   GLOBAL RESPONSIVE OPTIMIZATIONS (MOBILE 320px–480px, TABLET 640px–1024px)
+   ========================================================================== */
+
+/* Touch-optimized horizontal scrolling containers */
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+}
+
+/* Universal table safety guard: prevents cramped crushed columns on mobile */
+@media (max-width: 768px) {
+  .overflow-x-auto > table {
+    min-width: 600px;
+  }
+}
+
+/* Hide scrollbars cleanly on horizontal chips/tabs while preserving touch scroll */
+.no-scrollbar::-webkit-scrollbar,
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar,
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Prevent unwanted iOS / mobile browser auto-zoom when focusing form inputs */
+@media (max-width: 768px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Mobile-safe dialog/modal bounds */
+@media (max-width: 640px) {
+  .modal-responsive-card {
+    max-width: calc(100vw - 1.25rem) !important;
+    margin: 0.625rem auto !important;
+  }
+}

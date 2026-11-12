@@ -154,6 +154,8 @@ def registrar_sucursal(
         id_empresa_solicitado,
         permitir_global=False
     )
+    from app.core.tenant_guard import exigir_suscripcion_activa
+    exigir_suscripcion_activa(id_empresa, payload)
 
     # Coordenadas por defecto según departamento / ciudad
     DEPARTAMENTO_COORDS = {
@@ -326,6 +328,8 @@ def actualizar_sucursal(
         sucursal_db.get('id_empresa'),
         "sucursal"
     )
+    from app.core.tenant_guard import exigir_suscripcion_activa
+    exigir_suscripcion_activa(sucursal_db.get('id_empresa'), payload)
 
     if not is_global_admin(payload):
 
@@ -432,6 +436,8 @@ def cambiar_estado_sucursal(
         sucursal_db.get('id_empresa'),
         "sucursal"
     )
+    from app.core.tenant_guard import exigir_suscripcion_activa
+    exigir_suscripcion_activa(sucursal_db.get('id_empresa'), payload)
 
     nuevo_activo = bool(data.get('activo', False))
 

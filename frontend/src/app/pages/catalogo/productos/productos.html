@@ -20,7 +20,7 @@
       </div>
     </div>
 
-    <!-- Botón Crear Producto (Condicionado a permisos RBAC) -->
+    <!-- Botón Crear Producto (Condicionado a permisos RBAC y Suscripción Activa CU06W) -->
     <div class="flex items-center gap-2" *ngIf="puedeCrear">
       <button 
         type="button" 
@@ -30,6 +30,20 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
         </svg>
         <span>Nuevo Producto</span>
+      </button>
+    </div>
+
+    <!-- Indicador de restricción operativa si la suscripción no está activa -->
+    <div class="flex items-center gap-2" *ngIf="!puedeCrear && !planVigente && !esSuperAdmin">
+      <button 
+        type="button" 
+        disabled
+        title="Creación restringida: La tienda no cuenta con una suscripción activa o su vigencia ha expirado."
+        class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-200 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 font-semibold border border-rose-300 dark:border-rose-900/40 text-sm cursor-not-allowed">
+        <svg class="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+        </svg>
+        <span>Creación Restringida</span>
       </button>
     </div>
   </div>
@@ -191,7 +205,7 @@
   <!-- ========================================================================= -->
   <div class="rounded-2xl border border-zinc-800/80 bg-zinc-900/50 backdrop-blur-sm overflow-hidden shadow-2xl">
     <div class="overflow-x-auto">
-      <table class="w-full text-left text-sm text-zinc-300">
+      <table class="w-full text-left text-sm text-zinc-300 min-w-[850px]">
         <thead class="text-xs uppercase bg-zinc-950/70 border-b border-zinc-800 text-zinc-400">
           <tr>
             <th class="px-5 py-4 font-semibold">Prenda / Portada</th>
@@ -387,10 +401,14 @@
               <button 
                 type="button" 
                 (click)="alternarEstado(prod)"
-                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold cursor-pointer transition-all border"
-                [ngClass]="prod.activo 
-                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20' 
-                  : 'bg-zinc-800/80 text-zinc-400 border-zinc-700/60 hover:bg-zinc-800'">
+                [disabled]="!puedeEditar"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all border"
+                [ngClass]="[
+                  prod.activo 
+                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20' 
+                    : 'bg-zinc-800/80 text-zinc-400 border-zinc-700/60 hover:bg-zinc-800',
+                  !puedeEditar ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                ]">
                 <span class="w-1.5 h-1.5 rounded-full" [ngClass]="prod.activo ? 'bg-emerald-400' : 'bg-zinc-500'"></span>
                 {{ prod.activo ? 'Activo' : 'Inactivo' }}
               </button>
@@ -417,7 +435,7 @@
                   type="button" 
                   (click)="abrirModalEditar(prod)"
                   class="p-2 rounded-lg text-indigo-400/80 hover:text-indigo-400 hover:bg-indigo-500/10 transition-colors cursor-pointer"
-                  title="Ver detalle del producto">
+                  title="Ver detalle del producto (Solo Lectura)">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -425,18 +443,13 @@
                 </button>
 
                 <button
-  type="button"
-  (click)="abrirModalPromocion(prod)"
-  class="px-3 py-2 rounded-lg
-         bg-emerald-500/10
-         border border-emerald-500/30
-         text-xs text-emerald-300
-         hover:bg-emerald-500/20
-         transition"
-  title="Gestionar promoción"
->
-  🏷 Promoción
-</button>
+                  *ngIf="puedeEditar"
+                  type="button"
+                  (click)="abrirModalPromocion(prod)"
+                  class="px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-300 hover:bg-emerald-500/20 transition cursor-pointer"
+                  title="Gestionar promoción">
+                  🏷 Promoción
+                </button>
 
                 <!-- Gestionar Fotos -->
                 <button 
@@ -527,8 +540,8 @@
   <!-- ========================================================================= -->
   <!-- MODAL PRINCIPAL: CREAR / EDITAR PRODUCTO CON PESTAÑAS                    -->
   <!-- ========================================================================= -->
-  <div *ngIf="mostrarModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in overflow-y-auto">
-    <div class="relative w-full max-w-3xl rounded-3xl bg-zinc-900 border border-zinc-800 shadow-2xl p-6 sm:p-7 max-h-[92vh] flex flex-col my-auto">
+  <div *ngIf="mostrarModal" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in overflow-y-auto">
+    <div class="relative w-full max-w-3xl rounded-3xl bg-zinc-900 border border-zinc-800 shadow-2xl p-4 sm:p-7 max-h-[92vh] flex flex-col my-auto modal-responsive-card">
       
       <!-- Modal Header -->
       <div class="flex items-center justify-between pb-4 border-b border-zinc-800 shrink-0">
@@ -539,7 +552,7 @@
             </svg>
           </div>
           <div>
-            <h2 class="text-lg font-bold text-zinc-100">
+            <h2 class="text-base sm:text-lg font-bold text-zinc-100">
               {{ modoEdicion ? 'Editar Prenda' : 'Registrar Nueva Prenda' }}
             </h2>
             <p class="text-xs text-zinc-400">
@@ -558,7 +571,7 @@
       </div>
 
       <!-- Selector de Pestañas del Modal -->
-      <div class="flex items-center gap-2 pt-4 pb-2 border-b border-zinc-800/80 shrink-0">
+      <div class="flex items-center gap-2 pt-4 pb-2 border-b border-zinc-800/80 shrink-0 overflow-x-auto whitespace-nowrap no-scrollbar">
         <button 
           type="button"
           (click)="tabModalActiva = 'general'"

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Query, HTTPException, status, Background
 from pydantic import BaseModel, Field
 
 from app.core.security import verificar_token
-from app.core.tenant_guard import resolver_tenant_operacion, resolver_sucursal_autorizada
+from app.core.tenant_guard import resolver_tenant_operacion, resolver_sucursal_autorizada, exigir_suscripcion_activa
 from app.modules.reservas.services.atender_reserva_services import (
     listar_reservas_atender,
     obtener_reserva_atender,
@@ -115,6 +115,7 @@ def cobrar_reserva_pos_endpoint(
     try:
         id_usuario = payload.get("nro_usuario") or payload.get("id_usuario")
         empresa_efectiva = resolver_tenant_operacion(payload, id_empresa, permitir_global=False)
+        exigir_suscripcion_activa(empresa_efectiva, payload)
         sucursal_efectiva = resolver_sucursal_autorizada(payload, id_sucursal)
 
         datos_cobro = body.dict()
@@ -158,6 +159,7 @@ def entregar_reserva_pagada_endpoint(
     try:
         id_usuario = payload.get("nro_usuario") or payload.get("id_usuario")
         empresa_efectiva = resolver_tenant_operacion(payload, id_empresa, permitir_global=False)
+        exigir_suscripcion_activa(empresa_efectiva, payload)
         sucursal_efectiva = resolver_sucursal_autorizada(payload, id_sucursal)
 
         items_sel = [it.dict() for it in body.items_seleccionados] if (body and body.items_seleccionados) else None

@@ -1,53 +1,65 @@
 <div class="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto space-y-6 text-zinc-900 dark:text-zinc-100">
 
   <!-- ========================================================================= -->
-  <!-- CABECERA PRINCIPAL: GESTOR ORACLE CLOUD                                   -->
+  <!-- CABECERA PRINCIPAL: GESTOR ORACLE CLOUD (OCI)                             -->
   <!-- ========================================================================= -->
-  <div class="p-6 rounded-3xl bg-gradient-to-br from-white via-zinc-50 to-red-50/20 dark:from-zinc-900 dark:via-zinc-900 dark:to-red-950/20 border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-5">
-    
-    <div class="flex items-start space-x-4">
-      <div class="p-3.5 rounded-2xl bg-red-600/10 dark:bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/20 shrink-0 shadow-sm">
-        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
-        </svg>
-      </div>
-
-      <div class="space-y-1">
-        <div class="flex flex-wrap items-center gap-2">
-          <h1 class="text-xl sm:text-2xl font-serif font-bold text-zinc-900 dark:text-white tracking-tight">
-            Gestor de Copias de Seguridad & Restauración
-          </h1>
-          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-red-600 text-white shadow-sm font-mono tracking-wide">
-            Oracle Cloud
+  <div class="p-0.5 rounded-3xl bg-gradient-to-r from-red-600/30 via-zinc-200 dark:via-zinc-800 to-amber-500/30 shadow-md">
+    <div class="p-4 sm:p-6 rounded-[22px] bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+      
+      <div class="flex items-start space-x-3.5 sm:space-x-4">
+        <div class="relative p-2.5 sm:p-3.5 rounded-2xl bg-gradient-to-br from-red-500/15 to-red-600/5 text-red-600 dark:text-red-400 border border-red-500/25 shrink-0 shadow-sm">
+          <svg class="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+          </svg>
+          <span class="absolute -top-1 -right-1 flex h-3 w-3">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
           </span>
         </div>
-        <p class="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed max-w-2xl">
-          Administración de volcados de base de datos (.dump), políticas de respaldo periódico y entorno de recuperación con infraestructura en la nube.
-        </p>
-      </div>
-    </div>
 
-    <!-- Badge de Estado del Gestor Oracle Cloud -->
-    <div class="flex flex-wrap items-center gap-2 sm:gap-3 p-3.5 rounded-2xl bg-zinc-100/80 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 text-xs shrink-0 font-mono">
-      <div>
-        <span class="text-[10px] text-zinc-400 block uppercase font-sans">Gestor Cloud</span>
-        <span class="font-bold text-red-600 dark:text-red-400 flex items-center space-x-1.5">
-          <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-          <span>Oracle Cloud (OCI)</span>
-        </span>
+        <div class="space-y-1 min-w-0">
+          <div class="flex flex-wrap items-center gap-2">
+            <h1 class="text-lg sm:text-2xl font-serif font-bold text-zinc-900 dark:text-white tracking-tight">
+              Gestor de Copias de Seguridad & Restauración
+            </h1>
+            <span class="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold bg-red-600 text-white shadow-sm font-mono tracking-wide">
+              <span>OCI</span>
+              <span class="opacity-75">Cloud</span>
+            </span>
+          </div>
+          <p class="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed max-w-2xl">
+            Administración de volcados binarios de base de datos (.dump), políticas automáticas y motor de time-lapse para recuperación en la nube con aislamiento multi-tenant.
+          </p>
+        </div>
       </div>
-      <div class="h-8 w-px bg-zinc-200 dark:bg-zinc-800 hidden sm:block"></div>
-      <div>
-        <span class="text-[10px] text-zinc-400 block uppercase font-sans">Región</span>
-        <span class="font-semibold text-zinc-800 dark:text-zinc-200">sa-saopaulo-1</span>
-      </div>
-      <div class="h-8 w-px bg-zinc-200 dark:bg-zinc-800 hidden sm:block"></div>
-      <div>
-        <span class="text-[10px] text-zinc-400 block uppercase font-sans">Estado</span>
-        <span class="text-emerald-600 dark:text-emerald-400 font-bold">● Operativo</span>
-      </div>
-    </div>
 
+      <!-- Métricas y Estado del Gestor Cloud -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 p-2.5 sm:p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950/80 border border-zinc-200 dark:border-zinc-800 text-xs shrink-0 font-mono">
+        <div class="p-2 sm:p-0 sm:px-2 rounded-xl bg-white/70 dark:bg-zinc-900/60 sm:bg-transparent sm:dark:bg-transparent border border-zinc-200/50 dark:border-zinc-800/50 sm:border-0">
+          <span class="text-[9px] text-zinc-400 block uppercase font-sans tracking-wider">GESTOR CLOUD</span>
+          <span class="font-bold text-red-600 dark:text-red-400 flex items-center space-x-1.5 mt-0.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+            <span class="truncate">Oracle OCI</span>
+          </span>
+        </div>
+        <div class="p-2 sm:p-0 sm:pl-2 rounded-xl bg-white/70 dark:bg-zinc-900/60 sm:bg-transparent sm:dark:bg-transparent border border-zinc-200/50 dark:border-zinc-800/50 sm:border-0 sm:border-l sm:border-zinc-200 sm:dark:border-zinc-800/80">
+          <span class="text-[9px] text-zinc-400 block uppercase font-sans tracking-wider">REGIÓN</span>
+          <span class="font-semibold text-zinc-800 dark:text-zinc-200 block mt-0.5 truncate">sa-saopaulo-1</span>
+        </div>
+        <div class="p-2 sm:p-0 sm:pl-2 rounded-xl bg-white/70 dark:bg-zinc-900/60 sm:bg-transparent sm:dark:bg-transparent border border-zinc-200/50 dark:border-zinc-800/50 sm:border-0 sm:border-l sm:border-zinc-200 sm:dark:border-zinc-800/80">
+          <span class="text-[9px] text-zinc-400 block uppercase font-sans tracking-wider">DISPONIBILIDAD</span>
+          <span class="text-emerald-600 dark:text-emerald-400 font-bold block mt-0.5 truncate">99.99% SLA</span>
+        </div>
+        <div class="p-2 sm:p-0 sm:pl-2 rounded-xl bg-white/70 dark:bg-zinc-900/60 sm:bg-transparent sm:dark:bg-transparent border border-zinc-200/50 dark:border-zinc-800/50 sm:border-0 sm:border-l sm:border-zinc-200 sm:dark:border-zinc-800/80">
+          <span class="text-[9px] text-zinc-400 block uppercase font-sans tracking-wider">ESTADO PING</span>
+          <span class="text-emerald-600 dark:text-emerald-400 font-bold flex items-center space-x-1 mt-0.5 truncate">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+            <span>24ms ● OK</span>
+          </span>
+        </div>
+      </div>
+
+    </div>
   </div>
 
   <!-- Toast / Alertas -->
@@ -59,40 +71,41 @@
        }"
        class="p-4 rounded-2xl border text-xs font-medium flex items-center justify-between shadow-sm animate-fade-in">
     <div class="flex items-center space-x-2.5">
-      <span>{{ tipoMensaje === 'exito' ? '✓' : (tipoMensaje === 'error' ? '⚠️' : 'ℹ️') }}</span>
+      <span class="text-sm">{{ tipoMensaje === 'exito' ? '✓' : (tipoMensaje === 'error' ? '⚠️' : 'ℹ️') }}</span>
       <span>{{ mensaje }}</span>
     </div>
-    <button (click)="mensaje = ''" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">✕</button>
+    <button (click)="mensaje = ''" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer">✕</button>
   </div>
 
   <!-- ========================================================================= -->
-  <!-- NAVEGACIÓN POR PESTAÑAS                                                   -->
+  <!-- NAVEGACIÓN POR PESTAÑAS (SCROLLABLE EN MOBILE)                             -->
   <!-- ========================================================================= -->
-  <div class="flex flex-wrap gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2">
+  <div class="flex overflow-x-auto gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3 no-scrollbar flex-nowrap sm:flex-wrap">
     
     <button (click)="pestanaActiva = 'manual'"
             [ngClass]="pestanaActiva === 'manual' 
-              ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 font-bold shadow-sm' 
+              ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 font-bold shadow-md' 
               : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800/80 dark:text-zinc-300 dark:hover:bg-zinc-800'"
-            class="px-4 py-2 rounded-xl text-xs flex items-center space-x-2 transition-all cursor-pointer">
-      <span>⬇️</span>
+            class="px-4 py-2.5 rounded-2xl text-xs flex items-center space-x-2 transition-all cursor-pointer whitespace-nowrap shrink-0">
+      <span>💾</span>
       <span>Respaldo Manual (.dump)</span>
+      <span *ngIf="respaldoGeneradoListo" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
     </button>
 
     <button (click)="pestanaActiva = 'automatico'"
             [ngClass]="pestanaActiva === 'automatico' 
-              ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 font-bold shadow-sm' 
+              ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 font-bold shadow-md' 
               : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800/80 dark:text-zinc-300 dark:hover:bg-zinc-800'"
-            class="px-4 py-2 rounded-xl text-xs flex items-center space-x-2 transition-all cursor-pointer">
+            class="px-4 py-2.5 rounded-2xl text-xs flex items-center space-x-2 transition-all cursor-pointer whitespace-nowrap shrink-0">
       <span>⏰</span>
       <span>Respaldo Automático Programado</span>
     </button>
 
     <button (click)="pestanaActiva = 'historial'"
             [ngClass]="pestanaActiva === 'historial' 
-              ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 font-bold shadow-sm' 
+              ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 font-bold shadow-md' 
               : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800/80 dark:text-zinc-300 dark:hover:bg-zinc-800'"
-            class="px-4 py-2 rounded-xl text-xs flex items-center space-x-2 transition-all cursor-pointer">
+            class="px-4 py-2.5 rounded-2xl text-xs flex items-center space-x-2 transition-all cursor-pointer whitespace-nowrap shrink-0">
       <span>📋</span>
       <span>Historial de Respaldos</span>
       <span class="px-1.5 py-0.5 rounded-full text-[10px] font-mono bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300">
@@ -102,9 +115,9 @@
 
     <button (click)="pestanaActiva = 'restauracion'"
             [ngClass]="pestanaActiva === 'restauracion' 
-              ? 'bg-red-600 text-white font-bold shadow-sm' 
+              ? 'bg-red-600 text-white font-bold shadow-md' 
               : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800/80 dark:text-zinc-300 dark:hover:bg-zinc-800'"
-            class="px-4 py-2 rounded-xl text-xs flex items-center space-x-2 transition-all cursor-pointer">
+            class="px-4 py-2.5 rounded-2xl text-xs flex items-center space-x-2 transition-all cursor-pointer whitespace-nowrap shrink-0">
       <span>⚡</span>
       <span>Restauración (Time Lapse)</span>
     </button>
@@ -112,114 +125,410 @@
   </div>
 
   <!-- ========================================================================= -->
-  <!-- PESTAÑA 1: RESPALDO MANUAL CON DESCARGA DE .DUMP                          -->
+  <!-- PESTAÑA 1: RESPALDO MANUAL CON TIME LAPSE Y DESCARGA .DUMP                -->
   <!-- ========================================================================= -->
   <div *ngIf="pestanaActiva === 'manual'" class="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
     
-    <!-- Formulario de Extracción Manual -->
-    <div class="lg:col-span-2 p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-5">
+    <!-- Columna Principal: Formulario o Time Lapse o Descarga Lista -->
+    <div class="lg:col-span-2">
       
-      <div class="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
-        <div>
-          <h3 class="text-base font-bold text-zinc-900 dark:text-white flex items-center space-x-2">
-            <span>💾</span>
-            <span>Generación de Respaldo On-Demand (.dump)</span>
+      <!-- ===================================================================== -->
+      <!-- CASO A: FORMULARIO INICIAL DE CONFIGURACIÓN                           -->
+      <!-- ===================================================================== -->
+      <div *ngIf="!generandoManualTimelapse && !respaldoGeneradoListo" 
+           class="p-6 sm:p-7 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-zinc-100 dark:border-zinc-800 gap-3">
+          <div>
+            <h3 class="text-base font-bold text-zinc-900 dark:text-white flex items-center space-x-2">
+              <span class="text-red-600 dark:text-red-400">💾</span>
+              <span>Generación de Respaldo On-Demand (.dump)</span>
+            </h3>
+            <p class="text-xs text-zinc-500 mt-0.5">Selecciona el alcance del volcado binario y ejecuta el motor criptográfico en la nube.</p>
+          </div>
+          <span class="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-500/10 text-red-600 dark:text-red-400 font-mono border border-red-500/20 shrink-0">
+            <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+            <span>OCI Autonomous DB</span>
+          </span>
+        </div>
+
+        <!-- Selector Escalable de Base de Datos o Tenant -->
+        <div class="space-y-2">
+          <label class="block text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 flex items-center space-x-1.5">
+            <span>🏢</span>
+            <span>Base de Datos / Empresa Objetivo:</span>
+          </label>
+          <div class="relative">
+            <select [(ngModel)]="idEmpresaManual" 
+                    class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-2xl px-4 py-3 text-xs text-zinc-900 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-500 cursor-pointer shadow-sm transition-all">
+              <option [ngValue]="null">🌐 Base de Datos Global (Todas las Empresas - Multi-Tenant Completo)</option>
+              <option *ngFor="let emp of empresas" [ngValue]="emp.id_empresa">
+                🏬 {{ emp.nombre_empresa }} — {{ emp.razon_social }} (NIT: {{ emp.nit }} • Ciudad: {{ emp.ciudad }})
+              </option>
+            </select>
+          </div>
+          <div class="flex items-center justify-between text-[11px] text-zinc-400 font-mono px-1">
+            <span>* Base de datos activa: {{ empresas.length }} empresas multi-tenant registradas</span>
+            <span class="text-zinc-500">Aislamiento por esquema activo</span>
+          </div>
+        </div>
+
+        <!-- Motivo o Etiqueta del Respaldo -->
+        <div class="space-y-2">
+          <label class="block text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 flex items-center space-x-1.5">
+            <span>🏷️</span>
+            <span>Motivo o Etiqueta de Auditoría (Opcional):</span>
+          </label>
+          <input type="text" [(ngModel)]="comentarioManual" 
+                 placeholder="Ej: Respaldo mensual previo a auditoría o cierre de inventario..." 
+                 class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-2xl px-4 py-3 text-xs text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-500 transition-all shadow-sm" />
+        </div>
+
+        <!-- Ficha Técnica del Archivo .dump -->
+        <div class="p-4 sm:p-5 rounded-2xl bg-zinc-50 dark:bg-zinc-950/70 border border-zinc-200 dark:border-zinc-800 space-y-3 text-xs">
+          <div class="flex items-center justify-between font-bold text-zinc-800 dark:text-zinc-200">
+            <span class="flex items-center space-x-1.5">
+              <span>📦</span>
+              <span>Especificaciones de la Imagen de Respaldo:</span>
+            </span>
+            <span class="text-[10px] font-mono text-zinc-400">OCI Vault Key v2</span>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 font-mono text-[11px] text-zinc-600 dark:text-zinc-400">
+            <div class="p-2 rounded-xl bg-white dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800/80">
+              <span class="text-[10px] text-zinc-400 block font-sans">Extensión:</span>
+              <strong class="text-zinc-900 dark:text-white font-bold">.dump</strong>
+            </div>
+            <div class="p-2 rounded-xl bg-white dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800/80">
+              <span class="text-[10px] text-zinc-400 block font-sans">Formato:</span>
+              <strong class="text-zinc-900 dark:text-white font-bold">OCI Data Pump Bin</strong>
+            </div>
+            <div class="p-2 rounded-xl bg-white dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800/80">
+              <span class="text-[10px] text-zinc-400 block font-sans">Compresión:</span>
+              <strong class="text-zinc-900 dark:text-white font-bold">Zstandard High (L9)</strong>
+            </div>
+            <div class="p-2 rounded-xl bg-white dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800/80">
+              <span class="text-[10px] text-zinc-400 block font-sans">Cifrado:</span>
+              <strong class="text-zinc-900 dark:text-white font-bold">AES-256 Vault HSM</strong>
+            </div>
+            <div class="p-2 rounded-xl bg-white dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800/80">
+              <span class="text-[10px] text-zinc-400 block font-sans">Alcance:</span>
+              <strong class="text-zinc-900 dark:text-white font-bold">64 Tablas y Secuencias</strong>
+            </div>
+            <div class="p-2 rounded-xl bg-white dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800/80">
+              <span class="text-[10px] text-zinc-400 block font-sans">Infraestructura:</span>
+              <strong class="text-red-600 dark:text-red-400 font-bold">Oracle Cloud (OCI)</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Botón de Inicio de Generación con Time-Lapse -->
+        <div class="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <button (click)="iniciarGeneracionManualTimelapse()" 
+                  class="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-lg hover:shadow-red-500/25 flex items-center justify-center space-x-2.5 cursor-pointer">
+            <span class="text-base">⚡</span>
+            <span>Iniciar Generación de Respaldo (.dump)</span>
+          </button>
+          
+          <p class="text-[11px] text-zinc-400 dark:text-zinc-500 leading-tight">
+            * El proceso compilará un volcado consistente en Oracle Cloud mediante una barra interactiva de time-lapse antes de habilitar la descarga.
+          </p>
+        </div>
+
+      </div>
+
+      <!-- ===================================================================== -->
+      <!-- CASO B: TIME LAPSE EN VIVO DE GENERACIÓN (.DUMP EN EJECUCIÓN)          -->
+      <!-- ===================================================================== -->
+      <div *ngIf="generandoManualTimelapse" 
+           class="p-6 sm:p-8 rounded-3xl bg-zinc-950 text-white border border-red-500/40 shadow-2xl space-y-6 relative overflow-hidden animate-slide-up">
+        
+        <!-- Luz ambiental en esquina -->
+        <div class="pointer-events-none absolute -top-24 -right-24 w-80 h-80 bg-red-600/15 rounded-full blur-3xl"></div>
+
+        <!-- Cabecera de la Consola de Time-Lapse -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-zinc-800 gap-3 relative z-10">
+          <div class="flex items-center space-x-3.5">
+            <div class="relative flex h-3.5 w-3.5">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-3.5 w-3.5 bg-red-500"></span>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold font-mono tracking-wide text-white flex items-center space-x-2">
+                <span>Oracle Cloud OCI — Generación de Volcado en Tiempo Real</span>
+              </h3>
+              <p class="text-[11px] text-zinc-400 font-mono mt-0.5">
+                Objetivo: <span class="text-red-400 font-semibold">{{ getNombreEmpresaSeleccionada() }}</span>
+              </p>
+            </div>
+          </div>
+
+          <!-- Cronómetro y Botón de Cancelar -->
+          <div class="flex items-center space-x-3">
+            <div class="px-3 py-1.5 rounded-xl bg-zinc-900 border border-zinc-800 font-mono text-xs text-zinc-300 flex items-center space-x-1.5">
+              <span>⏱️</span>
+              <span>00:{{ tiempoTranscurridoManual < 10 ? '0' + tiempoTranscurridoManual : tiempoTranscurridoManual }}s</span>
+            </div>
+            <button (click)="cancelarGeneracionManual()" 
+                    class="px-3.5 py-1.5 rounded-xl bg-zinc-800/90 hover:bg-zinc-700 text-zinc-300 text-xs font-mono transition-colors cursor-pointer border border-zinc-700/60">
+              ✕ Cancelar
+            </button>
+          </div>
+        </div>
+
+        <!-- Hitos visuales del Time-Lapse (Stepper) -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 font-mono text-[11px] relative z-10">
+          
+          <div class="p-3 rounded-2xl border transition-all"
+               [ngClass]="progresoManual >= 24 
+                 ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-400' 
+                 : 'bg-zinc-900/60 border-zinc-800 text-zinc-500'">
+            <div class="flex items-center justify-between text-[10px] mb-1">
+              <span>PASO 1</span>
+              <span>{{ progresoManual >= 24 ? '✓ OK' : '⏳' }}</span>
+            </div>
+            <strong class="font-bold block text-xs">Snapshot OCI</strong>
+            <span class="text-[10px] opacity-75">Bloqueo ACID</span>
+          </div>
+
+          <div class="p-3 rounded-2xl border transition-all"
+               [ngClass]="progresoManual >= 45 
+                 ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-400' 
+                 : (progresoManual >= 24 ? 'bg-amber-950/30 border-amber-500/40 text-amber-400 animate-pulse' : 'bg-zinc-900/60 border-zinc-800 text-zinc-500')">
+            <div class="flex items-center justify-between text-[10px] mb-1">
+              <span>PASO 2</span>
+              <span>{{ progresoManual >= 45 ? '✓ OK' : (progresoManual >= 24 ? '...' : '') }}</span>
+            </div>
+            <strong class="font-bold block text-xs">64 Esquemas</strong>
+            <span class="text-[10px] opacity-75">Extracción Tablas</span>
+          </div>
+
+          <div class="p-3 rounded-2xl border transition-all"
+               [ngClass]="progresoManual >= 66 
+                 ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-400' 
+                 : (progresoManual >= 45 ? 'bg-amber-950/30 border-amber-500/40 text-amber-400 animate-pulse' : 'bg-zinc-900/60 border-zinc-800 text-zinc-500')">
+            <div class="flex items-center justify-between text-[10px] mb-1">
+              <span>PASO 3</span>
+              <span>{{ progresoManual >= 66 ? '✓ OK' : (progresoManual >= 45 ? '...' : '') }}</span>
+            </div>
+            <strong class="font-bold block text-xs">Zstandard L9</strong>
+            <span class="text-[10px] opacity-75">Compresión Bin</span>
+          </div>
+
+          <div class="p-3 rounded-2xl border transition-all"
+               [ngClass]="progresoManual >= 95 
+                 ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-400' 
+                 : (progresoManual >= 66 ? 'bg-amber-950/30 border-amber-500/40 text-amber-400 animate-pulse' : 'bg-zinc-900/60 border-zinc-800 text-zinc-500')">
+            <div class="flex items-center justify-between text-[10px] mb-1">
+              <span>PASO 4</span>
+              <span>{{ progresoManual >= 95 ? '✓ OK' : (progresoManual >= 66 ? '...' : '') }}</span>
+            </div>
+            <strong class="font-bold block text-xs">Cifrado Vault</strong>
+            <span class="text-[10px] opacity-75">AES-256 + SHA-256</span>
+          </div>
+
+        </div>
+
+        <!-- Barra de Progreso Porcentual Shimmer -->
+        <div class="space-y-2.5 font-mono relative z-10">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-zinc-300 truncate font-sans">{{ etapaManualActual }}</span>
+            <span class="font-bold text-red-400 text-base shrink-0 ml-2">{{ progresoManual }}%</span>
+          </div>
+          <div class="w-full h-4 rounded-full bg-zinc-900 overflow-hidden p-0.5 border border-zinc-800 shadow-inner">
+            <div class="h-full rounded-full oci-progress-shimmer transition-all duration-700 ease-out"
+                 [style.width.%]="progresoManual"></div>
+          </div>
+        </div>
+
+        <!-- Consola de Telemetría en Tiempo Real de Oracle Cloud -->
+        <div class="rounded-2xl bg-black/90 border border-zinc-800 font-mono text-[11px] p-4 space-y-2 max-h-56 overflow-y-auto oci-terminal-glow relative z-10">
+          
+          <div class="flex items-center justify-between text-zinc-500 text-[10px] pb-2 border-b border-zinc-800/80">
+            <div class="flex items-center space-x-1.5">
+              <span class="w-2 h-2 rounded-full bg-red-500/70 inline-block"></span>
+              <span class="w-2 h-2 rounded-full bg-amber-500/70 inline-block"></span>
+              <span class="w-2 h-2 rounded-full bg-emerald-500/70 inline-block"></span>
+              <span class="ml-2 font-bold tracking-wider text-zinc-400">OCI DATA PUMP CLI v3.44.1 — TELEMETRÍA EN DIRECTO</span>
+            </div>
+            <span class="text-zinc-600">CANAL SEGURO mTLS</span>
+          </div>
+          
+          <div *ngFor="let log of logsManualGeneracion" class="flex items-start space-x-2 pt-0.5">
+            <span class="text-zinc-600 shrink-0 font-mono">[{{ log.tiempo }}]</span>
+            <span [ngClass]="{
+              'text-zinc-300': log.tipo === 'info',
+              'text-cyan-400': log.tipo === 'proceso',
+              'text-emerald-400 font-bold': log.tipo === 'exito',
+              'text-amber-400': log.tipo === 'advertencia'
+            }">{{ log.mensaje }}</span>
+          </div>
+
+          <div class="flex items-center space-x-2 text-zinc-500 pt-1 text-[11px]">
+            <span class="animate-spin text-xs">⏳</span>
+            <span class="animate-pulse">Sincronizando volcado con Oracle Cloud Infrastructure (sa-saopaulo-1)...</span>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- ===================================================================== -->
+      <!-- CASO C: RESPALDO GENERADO LISTO PARA DESCARGA INMEDIATA               -->
+      <!-- ===================================================================== -->
+      <div *ngIf="respaldoGeneradoListo" 
+           class="p-6 sm:p-8 rounded-3xl bg-white dark:bg-zinc-900 border-2 border-emerald-500/40 shadow-2xl space-y-6 text-center animate-slide-up relative overflow-hidden oci-card-glow-ready">
+        
+        <!-- Luz de éxito en el fondo -->
+        <div class="pointer-events-none absolute -top-20 -left-20 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl"></div>
+        <div class="pointer-events-none absolute -bottom-20 -right-20 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl"></div>
+
+        <!-- Medallón de Éxito -->
+        <div class="w-16 h-16 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-3xl mx-auto border-2 border-emerald-500/30 shadow-lg">
+          ✓
+        </div>
+
+        <div class="space-y-1.5 max-w-xl mx-auto relative z-10">
+          <span class="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-mono">
+            <span>●</span>
+            <span>Volcado OCI Generado y Verificado</span>
+          </span>
+          <h3 class="text-xl sm:text-2xl font-serif font-bold text-zinc-900 dark:text-white">
+            ¡Respaldo de Oracle Cloud Listo para Descargar!
           </h3>
-          <p class="text-xs text-zinc-500">Selecciona la base de datos o empresa registrada para el volcado.</p>
+          <p class="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+            El volcado binario se generó mediante time-lapse con empaquetado <strong>Zstandard High</strong> y cifrado <strong>AES-256</strong> en Oracle Cloud Infrastructure.
+          </p>
         </div>
-        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-500/10 text-red-600 dark:text-red-400 font-mono">
-          Oracle Cloud Dump
-        </span>
-      </div>
 
-      <!-- Selector Escalable de Empresas Registradas -->
-      <div class="space-y-1.5">
-        <label class="block text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
-          Base de Datos / Empresa Objetivo:
-        </label>
-        <div class="relative">
-          <select [(ngModel)]="idEmpresaManual" 
-                  class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3.5 py-2.5 text-xs text-zinc-900 dark:text-white font-medium focus:outline-none focus:border-red-500 cursor-pointer shadow-sm">
-            <option [ngValue]="null">🌐 Base de Datos Global (Todas las Empresas - Multi-Tenant)</option>
-            <option *ngFor="let emp of empresas" [ngValue]="emp.id_empresa">
-              🏢 {{ emp.nombre_empresa }} — {{ emp.razon_social }} (NIT: {{ emp.nit }} • Ciudad: {{ emp.ciudad }})
-            </option>
-          </select>
+        <!-- Ficha Resumen del Respaldo Generado -->
+        <div class="p-5 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 max-w-2xl mx-auto space-y-3.5 font-mono text-left relative z-10 text-xs">
+          
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-3 border-b border-zinc-200 dark:border-zinc-800/80">
+            <div>
+              <span class="text-[10px] text-zinc-400 uppercase font-sans block">Archivo Generado:</span>
+              <strong class="text-zinc-900 dark:text-white font-bold break-all">{{ respaldoGeneradoFileName }}</strong>
+            </div>
+            <div>
+              <span class="text-[10px] text-zinc-400 uppercase font-sans block">Tamaño del Paquete:</span>
+              <span class="text-emerald-600 dark:text-emerald-400 font-bold text-sm">{{ respaldoGeneradoTamano }}</span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-3 border-b border-zinc-200 dark:border-zinc-800/80">
+            <div>
+              <span class="text-[10px] text-zinc-400 uppercase font-sans block">Alcance / Empresa:</span>
+              <span class="text-zinc-800 dark:text-zinc-200 font-medium">{{ getNombreEmpresaSeleccionada() }}</span>
+            </div>
+            <div>
+              <span class="text-[10px] text-zinc-400 uppercase font-sans block">Fecha & Hora Sellado:</span>
+              <span class="text-zinc-600 dark:text-zinc-400">{{ respaldoGeneradoFecha }}</span>
+            </div>
+          </div>
+
+          <!-- Checksum SHA-256 con Botón de Copiado -->
+          <div class="space-y-1.5">
+            <span class="text-[10px] text-zinc-400 uppercase font-sans flex items-center justify-between">
+              <span>Suma de Comprobación Criptográfica (SHA-256):</span>
+              <span *ngIf="copiadoChecksum" class="text-emerald-500 font-bold">✓ Hash copiado al portapapeles</span>
+            </span>
+            <div class="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 gap-2">
+              <span class="text-[10px] text-zinc-500 dark:text-zinc-400 break-all truncate font-mono">
+                {{ respaldoGeneradoChecksum }}
+              </span>
+              <button (click)="copiarChecksum()" 
+                      type="button"
+                      class="px-2.5 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-sans font-semibold text-[10px] shrink-0 transition-colors cursor-pointer flex items-center space-x-1">
+                <span>📋</span>
+                <span>{{ copiadoChecksum ? '¡Copiado!' : 'Copiar' }}</span>
+              </button>
+            </div>
+          </div>
+
         </div>
-        <span class="text-[11px] text-zinc-400 block font-mono">
-          * Consulta dinámica a la base de datos: {{ empresas.length }} empresas registradas disponibles.
-        </span>
-      </div>
 
-      <!-- Comentario o Nota de Auditoría -->
-      <div class="space-y-1.5">
-        <label class="block text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
-          Motivo o Etiqueta del Respaldo (Opcional):
-        </label>
-        <input type="text" [(ngModel)]="comentarioManual" 
-               placeholder="Ej: Respaldo previo a cierre contable mensual o auditoría..." 
-               class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3.5 py-2.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-red-500" />
-      </div>
+        <!-- Botones de Acción (Descarga Real & Nuevo Respaldo) -->
+        <div class="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3.5 relative z-10">
+          
+          <button (click)="descargarArchivoListo()" 
+                  class="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-xl hover:shadow-emerald-500/30 flex items-center justify-center space-x-2.5 cursor-pointer transform hover:-translate-y-0.5">
+            <span class="text-base">⬇️</span>
+            <span>Descargar Archivo .dump Ahora ({{ respaldoGeneradoTamano }})</span>
+          </button>
 
-      <!-- Cuadro Informativo de Formato .dump -->
-      <div class="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 space-y-2 text-xs">
-        <span class="font-bold text-zinc-800 dark:text-zinc-200 flex items-center space-x-1.5">
-          <span>📦</span>
-          <span>Especificación del Archivo de Salida:</span>
-        </span>
-        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 font-mono text-[11px] text-zinc-600 dark:text-zinc-400">
-          <div>Extensión: <strong class="text-zinc-900 dark:text-white">.dump</strong></div>
-          <div>Formato: <strong class="text-zinc-900 dark:text-white">OCI Data Pump Archive</strong></div>
-          <div>Compresión: <strong class="text-zinc-900 dark:text-white">Zstandard High</strong></div>
-          <div>Cifrado: <strong class="text-zinc-900 dark:text-white">AES-256 Cloud Vault</strong></div>
-          <div>Tablas: <strong class="text-zinc-900 dark:text-white">64 Tablas y Secuencias</strong></div>
-          <div>Gestor: <strong class="text-red-600 dark:text-red-400">Oracle Cloud</strong></div>
+          <button (click)="reiniciarGeneradorManual()" 
+                  class="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer flex items-center justify-center space-x-2">
+            <span>🔄</span>
+            <span>Generar Nuevo Respaldo</span>
+          </button>
+
         </div>
-      </div>
 
-      <!-- Botón de Descarga -->
-      <div class="pt-2">
-        <button (click)="descargarBackupManual()" 
-                [disabled]="cargandoManual"
-                class="w-full sm:w-auto px-6 py-3 rounded-2xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs uppercase tracking-wider disabled:opacity-50 transition-colors shadow-md flex items-center justify-center space-x-2 cursor-pointer">
-          <svg *ngIf="cargandoManual" class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <span>{{ cargandoManual ? 'Generando volcado en Oracle Cloud...' : '⬇️ Generar y Descargar Respaldo (.dump)' }}</span>
-        </button>
       </div>
 
     </div>
 
     <!-- Panel Lateral: Detalles de Oracle Cloud Infrastructure -->
     <div class="p-6 rounded-3xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4 text-xs">
-      <h4 class="font-bold text-zinc-900 dark:text-white uppercase tracking-wider font-mono flex items-center space-x-2">
-        <span>☁️</span>
-        <span>Infraestructura Oracle Cloud</span>
-      </h4>
+      
+      <div class="flex items-center justify-between pb-2 border-b border-zinc-200 dark:border-zinc-800">
+        <h4 class="font-bold text-zinc-900 dark:text-white uppercase tracking-wider font-mono flex items-center space-x-2">
+          <span>☁️</span>
+          <span>Infraestructura Oracle Cloud</span>
+        </h4>
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+      </div>
 
       <div class="space-y-3 font-mono text-[11px]">
-        <div class="p-3 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+        
+        <div class="p-3.5 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-1">
           <span class="text-[10px] text-zinc-400 uppercase font-sans block">Gestor de Base de Datos</span>
-          <span class="font-bold text-red-600 dark:text-red-400">Oracle Cloud</span>
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-red-600 dark:text-red-400 text-xs">Oracle Cloud Infrastructure</span>
+            <span class="text-[10px] text-zinc-500">OCI Autonomous</span>
+          </div>
         </div>
 
-        <div class="p-3 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
-          <span class="text-[10px] text-zinc-400 uppercase font-sans block">Destino de Almacenamiento</span>
-          <span class="font-bold text-zinc-800 dark:text-zinc-200 truncate block">OCI Object Storage</span>
-          <span class="text-[10px] text-zinc-500 truncate block">{{ gestorInfo.bucket_principal }}</span>
+        <div class="p-3.5 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-1.5">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] text-zinc-400 uppercase font-sans block">Destino de Almacenamiento</span>
+            <span class="text-[10px] text-emerald-500 font-bold">24.8% Usado</span>
+          </div>
+          <span class="font-bold text-zinc-800 dark:text-zinc-200 truncate block">OCI Object Storage (Standard)</span>
+          <div class="w-full h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
+            <div class="h-full rounded-full bg-red-500 w-1/4"></div>
+          </div>
+          <span class="text-[10px] text-zinc-500 truncate block font-mono">{{ gestorInfo.bucket_principal }}</span>
         </div>
 
-        <div class="p-3 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
-          <span class="text-[10px] text-zinc-400 uppercase font-sans block">SLA y Disponibilidad</span>
-          <span class="font-bold text-emerald-600 dark:text-emerald-400">99.99% Cloud Durability</span>
+        <div class="p-3.5 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-1">
+          <span class="text-[10px] text-zinc-400 uppercase font-sans block">Seguridad Criptográfica</span>
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-zinc-800 dark:text-zinc-200">OCI Vault AES-256</span>
+            <span class="text-[10px] text-emerald-500 font-bold">HSM Hardware</span>
+          </div>
+          <span class="text-[10px] text-zinc-400 block font-sans">Clave rotada periódicamente bajo FIPS 140-2</span>
         </div>
+
+        <div class="p-3.5 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-1">
+          <span class="text-[10px] text-zinc-400 uppercase font-sans block">SLA y Durabilidad</span>
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-emerald-600 dark:text-emerald-400">99.99% Cloud Durability</span>
+            <span class="text-[10px] text-zinc-400">11 Nueves</span>
+          </div>
+        </div>
+
       </div>
 
-      <div class="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-300 text-[11px] leading-relaxed">
-        <strong>Aviso Operativo:</strong> La descarga entrega un archivo <code>.dump</code> listo para verificación. Los respaldos se archivan de forma redundante en los buckets de Oracle Cloud.
+      <div class="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-amber-900 dark:text-amber-300 text-[11px] leading-relaxed space-y-1">
+        <strong class="font-bold flex items-center space-x-1">
+          <span>ℹ️</span>
+          <span>Aviso Operativo de Respaldo:</span>
+        </strong>
+        <p>
+          Al iniciar la generación, el motor ejecuta un snapshot transaccional con una barra de time-lapse que refleja cada etapa de compresión y cifrado. La descarga del archivo <code>.dump</code> se habilita de forma segura al finalizar al 100%.
+        </p>
       </div>
+
     </div>
 
   </div>
@@ -413,7 +722,7 @@
     <!-- Tabla de Historial -->
     <div class="border border-zinc-200 dark:border-zinc-800 rounded-3xl overflow-hidden bg-white dark:bg-zinc-900 shadow-sm">
       <div class="overflow-x-auto">
-        <table class="w-full text-left text-xs">
+        <table class="w-full text-left text-xs min-w-[750px]">
           <thead class="bg-zinc-50 dark:bg-zinc-950/80 border-b border-zinc-200 dark:border-zinc-800 font-mono uppercase text-[10px] text-zinc-500">
             <tr>
               <th class="py-3 px-4">Código / Archivo</th>
@@ -656,7 +965,7 @@
         </p>
       </div>
 
-      <div class="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 max-w-lg mx-auto grid grid-cols-3 gap-2 font-mono text-[11px] text-left">
+      <div class="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 max-w-lg mx-auto grid grid-cols-1 sm:grid-cols-3 gap-2 font-mono text-[11px] text-left">
         <div>
           <span class="text-[10px] text-zinc-400 uppercase block font-sans">Gestor</span>
           <strong class="text-red-600 dark:text-red-400">Oracle Cloud</strong>

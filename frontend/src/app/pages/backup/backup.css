@@ -1,17 +1,72 @@
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
+  from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(12px); }
+  from { opacity: 0; transform: translateY(14px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes shimmerProgress {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes ociPulseGlow {
+  0%, 100% { 
+    box-shadow: 0 0 15px rgba(220, 38, 38, 0.25), inset 0 0 10px rgba(220, 38, 38, 0.15); 
+  }
+  50% { 
+    box-shadow: 0 0 30px rgba(220, 38, 38, 0.5), inset 0 0 18px rgba(220, 38, 38, 0.3); 
+  }
+}
+
+@keyframes emeraldPulseGlow {
+  0%, 100% { 
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.25); 
+  }
+  50% { 
+    box-shadow: 0 0 35px rgba(16, 185, 129, 0.55); 
+  }
+}
+
+@keyframes scanlineScroll {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(1000%); }
+}
+
 .animate-fade-in {
-  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .animate-slide-up {
   animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.oci-progress-shimmer {
+  background-size: 200% 100%;
+  background-image: linear-gradient(
+    90deg, 
+    #dc2626 0%, 
+    #f59e0b 35%, 
+    #10b981 70%, 
+    #38bdf8 85%, 
+    #dc2626 100%
+  );
+  animation: shimmerProgress 2.2s infinite linear;
+}
+
+.oci-terminal-glow {
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05), 0 20px 40px -15px rgba(0, 0, 0, 0.7);
+}
+
+.oci-card-bezel {
+  position: relative;
+  border-radius: 1.5rem;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+}
+
+.oci-card-glow-ready {
+  animation: emeraldPulseGlow 3s infinite ease-in-out;
 }

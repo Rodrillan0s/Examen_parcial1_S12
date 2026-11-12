@@ -1,7 +1,9 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, from, of } from 'rxjs';
+import { catchError, map, tap } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
+import { IndexedDbService } from '../../../core/storage/indexed-db.service';
 
 export interface SucursalCheckout {
   id_sucursal: number;
@@ -135,12 +137,44 @@ export interface RespuestaPaginadaPedidos {
 })
 export class PedidoService {
   private http = inject(HttpClient);
+  private indexedDb = inject(IndexedDbService);
   private apiUrl = `${environment.apiUrl}/api/pedidos`;
 
   obtenerSucursales(idEmpresa?: number): Observable<{ success: boolean; data: SucursalCheckout[] }> {
+    const tenantId = idEmpresa || 1;
     let params = new HttpParams();
     if (idEmpresa) params = params.set('id_empresa', idEmpresa.toString());
-    return this.http.get<{ success: boolean; data: SucursalCheckout[] }>(`${this.apiUrl}/sucursales`, { params });
+    return this.http.get<{ success: boolean; data: SucursalCheckout[] }>(`${this.apiUrl}/sucursales`, { params }).pipe(
+      tap((res) => {
+        if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
+          void this.indexedDb.saveBranches(tenantId, res.data);
+        }
+      }),
+      catchError(() => {
+        return from(this.indexedDb.getBranches<SucursalCheckout>(tenantId)).pipe(
+          map((cached) => {
+            if (cached && cached.length > 0) {
+              return { success: true, data: cached };
+            }
+            return {
+              success: true,
+              data: [
+                {
+                  id_sucursal: 1,
+                  id_empresa: tenantId,
+                  nombre: 'Sucursal Central (Offline)',
+                  direccion: 'Av. Principal #100',
+                  ciudad: 'Cochabamba',
+                  telefono: '44556677',
+                  horario: '09:00 - 19:00',
+                  activo: true
+                }
+              ]
+            };
+          })
+        );
+      })
+    );
   }
 
   crearPedido(datos: CrearPedidoPayload): Observable<{ success: boolean; message: string; data: PedidoData }> {

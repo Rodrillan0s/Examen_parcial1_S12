@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../config/app_config.dart';
+import '../core/connectivity/connectivity_service.dart';
+import '../core/sync/sync_coordinator.dart';
 import '../core/tenant/tenant_context_manager.dart';
 import '../services/catalogo_service.dart';
 import '../services/carrito_service.dart';
@@ -20,6 +22,7 @@ class CatalogoScreen extends StatefulWidget {
 class _CatalogoScreenState extends State<CatalogoScreen> {
   final TextEditingController _searchController = TextEditingController();
   bool _selectorMostrado = false;
+  int _reintentosSelector = 0;
 
   @override
   void dispose() {
@@ -42,9 +45,10 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
     if (catalogo.cargando ||
         catalogo.tenants.isEmpty ||
         catalogo.tenantSeleccionado != null) {
-      if (catalogo.tenants.isEmpty) {
+      if (catalogo.tenants.isEmpty && _reintentosSelector < 5) {
+        _reintentosSelector++;
         Future.delayed(
-            const Duration(milliseconds: 300), _mostrarSelectorInicial);
+            const Duration(milliseconds: 350), _mostrarSelectorInicial);
       }
       return;
     }
@@ -477,6 +481,8 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
   @override
   Widget build(BuildContext context) {
     final catalogo = context.watch<CatalogoService>();
+    final connectivity = context.watch<ConnectivityService>();
+    final syncCoordinator = context.watch<SyncCoordinator>();
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -504,6 +510,19 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: Badge(
+              isLabelVisible: syncCoordinator.pendingCount > 0,
+              label: Text('${syncCoordinator.pendingCount}'),
+              backgroundColor: Colors.amber.shade800,
+              child: Icon(
+                connectivity.isOnline ? Icons.cloud_sync_outlined : Icons.cloud_off_outlined,
+                color: connectivity.isOnline ? AppTheme.primaryGold : Colors.amber.shade800,
+              ),
+            ),
+            tooltip: 'Sincronización y estado offline',
+            onPressed: () => _mostrarEstadoOfflineYSincronizar(context),
+          ),
           IconButton(
             icon: const Icon(Icons.wifi_tethering),
             tooltip: 'Configurar conexión',
@@ -538,9 +557,80 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
             ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () => catalogo.cargarProductos(),
-        child: CustomScrollView(
+      body: Column(
+        children: [
+          // Banner de estado Offline
+          if (connectivity.isOffline)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              color: Colors.amber.shade900.withAlpha(30),
+              child: Row(
+                children: [
+                  Icon(Icons.wifi_off, size: 16, color: Colors.amber.shade800),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Modo sin conexión (SQLite) • Catálogo local activo',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.amber.shade900,
+                      ),
+                    ),
+                  ),
+                  if (syncCoordinator.pendingCount > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade800,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '${syncCoordinator.pendingCount} pend.',
+                        style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+
+          // Banner de sincronización en progreso
+          if (syncCoordinator.isSyncing)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              color: AppTheme.primaryGold.withAlpha(38),
+              child: Row(
+                children: [
+                  const SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryGold),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Sincronizando operaciones pendientes con el servidor...',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.primaryGold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: () async {
+                final tenantId = catalogo.tenantSeleccionado?.idEmpresa ?? 1;
+                await syncCoordinator.verificarYPrecargarTenant(tenantId, forzar: true);
+                await catalogo.cargarProductos();
+              },
+              child: CustomScrollView(
           slivers: [
             // Barra de Búsqueda y Botón de Filtros
             if (catalogo.tenantSeleccionado == null)
@@ -735,6 +825,155 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
           ],
         ),
       ),
+    ),
+  ],
+),
+);
+  }
+
+  Future<void> _mostrarEstadoOfflineYSincronizar(BuildContext context) async {
+    final catalogo = context.read<CatalogoService>();
+    final syncCoordinator = context.read<SyncCoordinator>();
+    final connectivity = context.read<ConnectivityService>();
+    final tenantId = catalogo.tenantSeleccionado?.idEmpresa ?? 1;
+
+    final estado = await syncCoordinator.verificarEstadoCacheLocal(tenantId);
+
+    if (!context.mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (modalCtx, setModalState) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.sync_alt_rounded, color: AppTheme.primaryGold),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Sincronización & Almacén Offline',
+                      style: GoogleFonts.playfairDisplay(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: connectivity.isOnline ? Colors.green.shade50 : Colors.amber.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: connectivity.isOnline ? Colors.green : Colors.amber.shade700,
+                        ),
+                      ),
+                      child: Text(
+                        connectivity.isOnline ? 'EN LÍNEA' : 'OFFLINE',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: connectivity.isOnline ? Colors.green.shade800 : Colors.amber.shade900,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const Divider(height: 1),
+                const SizedBox(height: 12),
+                _itemEstadoOffline(
+                  icon: Icons.inventory_2_outlined,
+                  titulo: 'Productos en SQLite Local',
+                  valor: '${estado['productos_en_cache']} prendas guardadas',
+                ),
+                const SizedBox(height: 8),
+                _itemEstadoOffline(
+                  icon: Icons.store_outlined,
+                  titulo: 'Sucursales en SQLite Local',
+                  valor: '${estado['sucursales_en_cache']} sucursales disponibles',
+                ),
+                const SizedBox(height: 8),
+                _itemEstadoOffline(
+                  icon: Icons.category_outlined,
+                  titulo: 'Categorías & Filtros',
+                  valor: estado['filtros_disponibles'] == true
+                      ? '✓ Guardados en SQLite'
+                      : 'Reconstruidos desde catálogo',
+                ),
+                const SizedBox(height: 8),
+                _itemEstadoOffline(
+                  icon: Icons.cloud_upload_outlined,
+                  titulo: 'Operaciones Pendientes de Sync',
+                  valor: '${estado['operaciones_pendientes']} en cola local',
+                  destacado: (estado['operaciones_pendientes'] as int? ?? 0) > 0,
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryGold,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: () async {
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Verificando y sincronizando con SQLite...'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                      await syncCoordinator.verificarYPrecargarTenant(tenantId, forzar: true);
+                      await syncCoordinator.sincronizarLote();
+                      await catalogo.cargarProductos();
+                    },
+                    icon: const Icon(Icons.downloading_outlined),
+                    label: const Text('Descargar Datos Previos / Sincronizar'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _itemEstadoOffline({
+    required IconData icon,
+    required String titulo,
+    required String valor,
+    bool destacado = false,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: destacado ? Colors.amber.shade800 : AppTheme.textSecondary),
+        const SizedBox(width: 10),
+        Text(
+          titulo,
+          style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textSecondary),
+        ),
+        const Spacer(),
+        Text(
+          valor,
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: destacado ? Colors.amber.shade900 : AppTheme.textPrimary,
+          ),
+        ),
+      ],
     );
   }
 

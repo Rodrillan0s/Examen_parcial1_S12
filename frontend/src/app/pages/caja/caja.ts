@@ -17,6 +17,7 @@ import {
   ResumenCajaResponse
 } from '../../services/caja';
 import { CategoriasService, Categoria } from '../../services/categorias';
+import { SaasService } from '../../services/saas';
 import { extraerMensajeError } from '../../utils/error-helper';
 import { NetworkStatusService } from '../../core/network/network-status.service';
 import { SyncQueueService } from '../../core/sync/sync-queue.service';
@@ -57,10 +58,13 @@ export class CajaComponent implements OnInit {
   private cajaService = inject(CajaService);
   private categoriasService = inject(CategoriasService);
   private empresaService = inject(EmpresaService);
+  private saasService = inject(SaasService);
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
   private destroyRef = inject(DestroyRef);
   private searchTimer: any = null;
+
+  planVigente: boolean = true;
 
   // --- CONTEXTO MULTI-TENANT & ALCANCE ---
   empresasDisponibles: Empresa[] = [];
@@ -177,6 +181,7 @@ export class CajaComponent implements OnInit {
 
   // --- PERMISOS ---
   get puedeAbrirCaja(): boolean {
+    if (!this.esSuperAdmin && !this.planVigente) return false;
     return this.authService.hasPermission('caja.abrir');
   }
 
@@ -185,6 +190,7 @@ export class CajaComponent implements OnInit {
   }
 
   get puedeVender(): boolean {
+    if (!this.esSuperAdmin && !this.planVigente) return false;
     return this.authService.hasPermission('pos.vender');
   }
 
@@ -243,6 +249,17 @@ export class CajaComponent implements OnInit {
     if (this.esSuperAdmin) {
       this.cargarEmpresas();
     }
+
+    this.saasService.planActual$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(plan => {
+        if (this.esSuperAdmin) {
+          this.planVigente = true;
+        } else if (plan) {
+          this.planVigente = plan.vigente === true;
+        }
+        this.cdr.detectChanges();
+      });
 
     this.authService.companyChanged$
       .pipe(
@@ -365,8 +382,33 @@ export class CajaComponent implements OnInit {
     }
   }
 
+  verificarVigenciaSuscripcion(): void {
+    if (this.esSuperAdmin) {
+      this.planVigente = true;
+      return;
+    }
+    const empId = this.empresaActivaId;
+    if (!empId) {
+      this.planVigente = true;
+      return;
+    }
+    this.saasService.consultarPlan(empId).subscribe({
+      next: (res) => {
+        if (res && res.data) {
+          this.planVigente = res.data.vigente;
+          this.cdr.detectChanges();
+        }
+      },
+      error: () => {
+        this.planVigente = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
   cargarDatosIniciales(): void {
     this.cargando = true;
+    this.verificarVigenciaSuscripcion();
     this.cajaService.obtenerDenominaciones().subscribe({
       next: (res) => {
         if (res.success) {
@@ -433,7 +475,7 @@ export class CajaComponent implements OnInit {
       },
       error: (err) => {
         this.cargando = false;
-        this.mostrarError('Error al consultar estado de caja: ' + (err.error?.message || err.message));
+        this.mostrarError(extraerMensajeError(err, 'Error al consultar estado de caja.'));
       }
     });
   }
@@ -459,12 +501,17 @@ export class CajaComponent implements OnInit {
   // APERTURA DE CAJA
   // -------------------------------------------------------------
   abrirModalApertura(): void {
+    if (!this.esSuperAdmin && !this.planVigente) {
+      this.mostrarError('Operación restringida: La tienda no cuenta con una suscripción activa para abrir caja.');
+      return;
+    }
     if (!this.puedeAbrirCaja) {
       this.mostrarError('No tiene permisos para abrir caja.');
       return;
     }
     this.inicializarConteos();
     this.observacionApertura = '';
+    this.mensajeError = '';
     this.modalAbrirAbierto = true;
   }
 
@@ -493,27 +540,35 @@ export class CajaComponent implements OnInit {
 
     const conteoItems = this.conteoApertura.map(f => ({
       id_denominacion: f.id_denominacion,
-      cantidad: f.cantidad || 0
+      cantidad: f.cantidad || 0,
+      valor: f.valor
     }));
 
+    const cajaAsignada: any = this.estadoCaja.caja_asignada;
+    const estado: any = this.estadoCaja;
+    this.mensajeError = '';
     this.procesando = true;
     this.cajaService.abrirCaja({
-      id_caja: this.estadoCaja.caja_asignada.id_caja,
-      id_sucursal: this.estadoCaja.caja_asignada.id_sucursal || this.sucursalActiva?.id,
-      id_empresa: this.empresaActivaId || undefined,
+      id_caja: cajaAsignada.id_caja,
+      id_sucursal: cajaAsignada.id_sucursal || estado.id_sucursal || this.sucursalActiva?.id,
+      id_empresa: this.empresaActivaId || cajaAsignada.id_empresa || estado.id_empresa || undefined,
       conteo: conteoItems,
       conteo_items: conteoItems,
       observacion: this.observacionApertura.trim() || undefined
-    }).subscribe({
+    } as any).subscribe({
       next: (res) => {
         this.procesando = false;
         this.modalAbrirAbierto = false;
-        this.mostrarExito(`Caja abierta exitosamente con un fondo de Bs. ${res.sesion.monto_inicial.toFixed(2)}.`);
+        const monto = Number(res?.sesion?.monto_inicial || 0);
+        this.mostrarExito((res as any)?.ya_abierta
+          ? ((res as any).message || 'Ya tienes un turno de caja abierto.')
+          : `Caja abierta exitosamente con un fondo de Bs. ${monto.toFixed(2)}.`);
         this.verificarEstadoCaja();
       },
       error: (err) => {
         this.procesando = false;
-        this.mostrarError(err.error?.message || err.message || 'Error al abrir caja.');
+        this.mostrarError(extraerMensajeError(err, 'Error al abrir caja.'));
+        this.cdr.detectChanges();
       }
     });
   }
@@ -612,16 +667,18 @@ export class CajaComponent implements OnInit {
 
     const conteoItems = this.conteoCierre.map(f => ({
       id_denominacion: f.id_denominacion,
-      cantidad: f.cantidad || 0
+      cantidad: f.cantidad || 0,
+      valor: f.valor
     }));
 
+    this.mensajeError = '';
     this.procesando = true;
     this.cajaService.cerrarCaja({
       id_sesion_caja: this.estadoCaja.sesion_activa.id_sesion_caja,
       conteo: conteoItems,
       conteo_items: conteoItems,
       observacion: this.observacionCierre.trim() || undefined
-    }).subscribe({
+    } as any).subscribe({
       next: (res) => {
         this.procesando = false;
         this.modalCerrarAbierto = false;
@@ -634,7 +691,8 @@ export class CajaComponent implements OnInit {
       },
       error: (err) => {
         this.procesando = false;
-        this.mostrarError(err.error?.message || err.message || 'Error al cerrar caja.');
+        this.mostrarError(extraerMensajeError(err, 'Error al cerrar caja.'));
+        this.cdr.detectChanges();
       }
     });
   }
@@ -696,6 +754,11 @@ export class CajaComponent implements OnInit {
   // GESTIÓN DE PRODUCTO / VARIANTE Y AGREGAR A LA VENTA
   // -------------------------------------------------------------
   seleccionarProducto(producto: ProductoPos): void {
+    if (!this.esSuperAdmin && !this.planVigente) {
+      this.mostrarError('Operación restringida: La tienda no cuenta con una suscripción activa para agregar productos o vender en caja.');
+      return;
+    }
+
     if (producto.stock_total_sucursal <= 0) {
       this.mostrarError(`El producto ${producto.nombre} no cuenta con stock disponible en esta sucursal.`);
       return;
@@ -736,6 +799,11 @@ export class CajaComponent implements OnInit {
   }
 
   agregarVarianteAlCarrito(producto: ProductoPos, variante: VariantePos): void {
+    if (!this.esSuperAdmin && !this.planVigente) {
+      this.mostrarError('Operación restringida: La suscripción de la tienda no se encuentra activa.');
+      return;
+    }
+
     if (variante.stock_disponible <= 0) {
       this.mostrarError(`La variante ${variante.talla_nombre || ''} / ${variante.color_nombre || ''} no tiene stock disponible.`);
       return;
@@ -819,6 +887,10 @@ export class CajaComponent implements OnInit {
   // BÚSQUEDA Y ASIGNACIÓN DE CLIENTE
   // -------------------------------------------------------------
   setTipoCliente(tipo: 'SIN_CLIENTE' | 'CON_CLIENTE'): void {
+    if (tipo === 'CON_CLIENTE' && !this.esSuperAdmin && !this.planVigente) {
+      this.mostrarError('Operación restringida: La tienda no cuenta con una suscripción activa para asignar clientes.');
+      return;
+    }
     this.tipoCliente = tipo;
     if (tipo === 'SIN_CLIENTE') {
       this.clienteSeleccionado = null;
@@ -863,6 +935,11 @@ export class CajaComponent implements OnInit {
   // REGISTRAR VENTA POS (TRANSACCIÓN)
   // -------------------------------------------------------------
   abrirModalConfirmarVenta(): void {
+    if (!this.esSuperAdmin && !this.planVigente) {
+      this.mostrarError('Operación restringida: La tienda no cuenta con una suscripción activa para registrar ventas.');
+      return;
+    }
+
     if (!this.estadoCaja?.tiene_sesion_activa || !this.estadoCaja.sesion_activa) {
       this.mostrarError('No puede registrar ventas sin una caja abierta.');
       return;
@@ -909,6 +986,10 @@ export class CajaComponent implements OnInit {
   }
 
   procesarVentaPos(): void {
+    if (!this.esSuperAdmin && !this.planVigente) {
+      this.mostrarError('Operación restringida: La tienda no cuenta con una suscripción activa para procesar ventas.');
+      return;
+    }
     if (!this.estadoCaja?.sesion_activa) return;
 
     // Si estamos sin conexión o el cajero eligió cobro directo en efectivo (CU24W)
@@ -972,6 +1053,10 @@ export class CajaComponent implements OnInit {
   }
 
   private async ejecutarVentaEfectivoOffline(): Promise<void> {
+    if (!this.esSuperAdmin && !this.planVigente) {
+      this.mostrarError('Operación restringida: La tienda no cuenta con una suscripción activa para procesar ventas.');
+      return;
+    }
     if (!this.estadoCaja?.sesion_activa) return;
     this.procesando = true;
     this.cdr.detectChanges();
@@ -1067,6 +1152,10 @@ export class CajaComponent implements OnInit {
   }
 
   irACobrar(idVenta: number): void {
+    if (!this.esSuperAdmin && !this.planVigente) {
+      this.mostrarError('Operación restringida: La tienda no cuenta con una suscripción activa para procesar cobros.');
+      return;
+    }
     this.cerrarModalVentaExitosa();
     this.modalHistorialAbierto = false;
     this.modalDetalleVentaAbierto = false;

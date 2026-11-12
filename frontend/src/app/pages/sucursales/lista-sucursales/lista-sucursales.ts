@@ -7,6 +7,7 @@ import { AuthService } from '../../../services/auth';
 import { Sucursal, SucursalService } from '../../../services/sucursales';
 import { Ciudad, CiudadService } from '../../../services/ciudades';
 import { Empresa, EmpresaService } from '../../../services/empresa';
+import { SaasService } from '../../../services/saas';
 import { MapaSucursalComponent } from '../mapa-sucursal/mapa-sucursal';
 import { extraerMensajeError } from '../../../utils/error-helper';
 
@@ -26,12 +27,14 @@ export class ListaSucursalesComponent implements OnInit {
   private ciudadService = inject(CiudadService);
   private empresaService = inject(EmpresaService);
   public authService = inject(AuthService);
+  private saasService = inject(SaasService);
   private cdr = inject(ChangeDetectorRef);
   private ngZone = inject(NgZone);
   private destroyRef = inject(DestroyRef);
   private busquedaSucursalSubject = new Subject<string>();
   private busquedaCiudadSubject = new Subject<string>();
   ciudadesCargadas: boolean = false;
+  planVigente: boolean = true;
 
   // Tab navigation
 tabActiva: 'SUCURSALES' | 'CIUDADES' | 'MAPA' = 'SUCURSALES';
@@ -136,7 +139,43 @@ get sucursalesParaMapa(): Sucursal[] {
 
   return this.sucursales;
 }
-  ngOnInit() {
+  verificarVigenciaSuscripcion(): void {
+  if (this.isGlobalAdmin) {
+    this.planVigente = true;
+    return;
+  }
+  const empId = this.authService.getEffectiveCompanyId();
+  if (!empId) {
+    this.planVigente = true;
+    return;
+  }
+  this.saasService.consultarPlan(empId).subscribe({
+    next: (res) => {
+      if (res && res.data) {
+        this.planVigente = res.data.vigente;
+        this.cdr.detectChanges();
+      }
+    },
+    error: () => {
+      this.planVigente = false;
+      this.cdr.detectChanges();
+    }
+  });
+}
+
+ngOnInit() {
+  this.saasService.planActual$
+    .pipe(takeUntilDestroyed(this.destroyRef))
+    .subscribe(plan => {
+      if (this.isGlobalAdmin) {
+        this.planVigente = true;
+      } else if (plan) {
+        this.planVigente = plan.vigente === true;
+      }
+      this.cdr.detectChanges();
+    });
+
+  this.verificarVigenciaSuscripcion();
     this.busquedaSucursalSubject
       .pipe(debounceTime(200), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.aplicarFiltrosSucursales());
@@ -509,6 +548,10 @@ get sucursalesParaMapa(): Sucursal[] {
   // ============================================================
 
   abrirModalNuevaSucursal() {
+    if (!this.isGlobalAdmin && !this.planVigente) {
+      this.mensajeError = 'Operación restringida: La tienda no cuenta con una suscripción activa para crear sucursales.';
+      return;
+    }
     if (!this.ciudadesCargadas) {
       this.cargarCiudades();
     }
@@ -525,6 +568,10 @@ get sucursalesParaMapa(): Sucursal[] {
   }
 
   abrirModalEditarSucursal(sucursal: Sucursal) {
+    if (!this.isGlobalAdmin && !this.planVigente) {
+      this.mensajeError = 'Operación restringida: La tienda no cuenta con una suscripción activa para editar sucursales.';
+      return;
+    }
     if (!this.ciudadesCargadas) {
       this.cargarCiudades();
     }
@@ -570,6 +617,10 @@ get sucursalesParaMapa(): Sucursal[] {
 
   guardarSucursal() {
     this.mensajeModalError = '';
+    if (!this.isGlobalAdmin && !this.planVigente) {
+      this.mensajeModalError = 'Operación restringida: Se requiere una suscripción activa para gestionar sucursales.';
+      return;
+    }
 
     if (
       !this.sucursalForm.nombre ||
@@ -748,7 +799,10 @@ get sucursalesParaMapa(): Sucursal[] {
   // ============================================================
 
   cambiarEstadoSucursal(s: Sucursal) {
-
+    if (!this.isGlobalAdmin && !this.planVigente) {
+      this.mensajeError = 'Operación restringida: La tienda no cuenta con una suscripción activa para modificar estados de sucursal.';
+      return;
+    }
     if (!s.id_sucursal) return;
 
     const nuevoEstado = !s.activo;

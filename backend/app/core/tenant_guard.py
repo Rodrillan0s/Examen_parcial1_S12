@@ -333,3 +333,29 @@ def validar_relaciones_tenant(
 
     finally:
         db.close_connection()
+
+
+# --- VALIDACIÓN DE SUSCRIPCIÓN ACTIVA PARA OPERACIONES (CU06W) ---
+
+def exigir_suscripcion_activa(id_empresa: Optional[int], payload: Optional[dict] = None) -> None:
+    """
+    Exige que la empresa cuente con una suscripción SaaS activa y vigente en t_suscripcion.
+    Si el usuario tiene alcance PLATAFORMA (SuperAdmin) sin empresa fija, no se le bloquea
+    salvo que opere explícitamente en el contexto de una empresa sin suscripción.
+    Lanza HTTP 403 con código 'SUSCRIPCION_NO_VIGENTE' si no cumple.
+    """
+    if payload and es_administrador_global(payload) and not id_empresa:
+        return
+
+    if not id_empresa:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "SUSCRIPCION_NO_VIGENTE",
+                "message": "Operación restringida: Se requiere identificar una empresa con suscripción activa."
+            }
+        )
+
+    from app.modules.saas.services.saas_services import exigir_vigencia
+    exigir_vigencia(int(id_empresa))
+

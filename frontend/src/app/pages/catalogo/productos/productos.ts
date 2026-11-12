@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, PLATFORM_ID, DestroyRef } from '@angular/core';
+import { Component, OnInit, inject, PLATFORM_ID, DestroyRef, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -16,6 +16,7 @@ import { CategoriasService, Categoria } from '../../../services/categorias';
 import { TallasColoresService, Talla, ColorPrenda } from '../../../services/tallas-colores';
 import { AuthService } from '../../../services/auth';
 import { EmpresaService, Empresa } from '../../../services/empresa';
+import { SaasService } from '../../../services/saas';
 
 @Component({
   selector: 'app-productos',
@@ -29,9 +30,13 @@ export class ProductosComponent implements OnInit {
   private tallasColoresService = inject(TallasColoresService);
   private empresaService = inject(EmpresaService);
   private authService = inject(AuthService);
+  private saasService = inject(SaasService);
   private platformId = inject(PLATFORM_ID);
   private destroyRef = inject(DestroyRef);
+  private cdr = inject(ChangeDetectorRef);
   private busquedaSubject$ = new Subject<string>();
+
+  planVigente: boolean = true;
 
   // Estados de lista
   productos: Producto[] = [];
@@ -119,14 +124,17 @@ guardandoPromocion: boolean = false;
   }
 
   get puedeCrear(): boolean {
+    if (!this.esSuperAdmin && !this.planVigente) return false;
     return this.authService.hasPermission('productos.crear');
   }
 
   get puedeEditar(): boolean {
+    if (!this.esSuperAdmin && !this.planVigente) return false;
     return this.authService.hasPermission('productos.editar');
   }
 
   get puedeEliminar(): boolean {
+    if (!this.esSuperAdmin && !this.planVigente) return false;
     return this.authService.hasPermission('productos.eliminar');
   }
 
@@ -221,6 +229,18 @@ guardandoPromocion: boolean = false;
 
   ngOnInit(): void {
     if (!isPlatformBrowser(this.platformId)) return;
+
+    this.saasService.planActual$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(plan => {
+        if (this.esSuperAdmin) {
+          this.planVigente = true;
+        } else if (plan) {
+          this.planVigente = plan.vigente === true;
+        }
+        this.cdr.detectChanges();
+      });
+
     this.cargarDatosIniciales();
 
     this.busquedaSubject$
@@ -241,6 +261,7 @@ guardandoPromocion: boolean = false;
           const nuevoFiltro = empresa ? empresa.id_empresa : null;
           if (this.filtroEmpresa !== nuevoFiltro) {
             this.filtroEmpresa = nuevoFiltro;
+            this.verificarVigenciaSuscripcion();
             this.productos = [];
             this.paginaActual = 1;
             this.mostrarModal = false;
@@ -260,6 +281,28 @@ guardandoPromocion: boolean = false;
     this.busquedaSubject$.next(val);
   }
 
+  verificarVigenciaSuscripcion(): void {
+    if (this.esSuperAdmin) {
+      this.planVigente = true;
+      return;
+    }
+    const empId = this.filtroEmpresa || this.userCompanyId;
+    if (!empId) {
+      this.planVigente = true;
+      return;
+    }
+    this.saasService.consultarPlan(empId).subscribe({
+      next: (res) => {
+        if (res && res.data) {
+          this.planVigente = res.data.vigente;
+        }
+      },
+      error: () => {
+        this.planVigente = false;
+      }
+    });
+  }
+
   cargarDatosIniciales(): void {
     if (this.esSuperAdmin) {
       this.cargarEmpresas();
@@ -267,6 +310,7 @@ guardandoPromocion: boolean = false;
     } else {
       this.filtroEmpresa = this.userCompanyId || null;
     }
+    this.verificarVigenciaSuscripcion();
     this.cargarProductos();
     // Solo cargar categorías al entrar; tallas y colores se difieren hasta abrir el modal Crear/Editar
     this.cargarCategoriasActivas(this.filtroEmpresa || undefined);
@@ -386,6 +430,10 @@ guardandoPromocion: boolean = false;
   // ==============================================================================
 
   abrirModalCrear(): void {
+    if (!this.esSuperAdmin && !this.planVigente) {
+      this.mostrarAlerta('Operación restringida: La tienda no cuenta con una suscripción activa para crear productos.', 'error');
+      return;
+    }
     this.modoEdicion = false;
     this.tabModalActiva = 'general';
     this.productoForm = this.getFormVacio();
@@ -405,6 +453,10 @@ guardandoPromocion: boolean = false;
   }
 
   abrirModalEditar(prod: Producto): void {
+    if (!this.esSuperAdmin && !this.planVigente) {
+      this.mostrarAlerta('Operación restringida: La tienda no cuenta con una suscripción activa para editar productos.', 'error');
+      return;
+    }
     if (this.filtroEmpresa && prod.id_empresa !== this.filtroEmpresa) {
       this.mostrarAlerta('El producto seleccionado no pertenece al Tenant activo.', 'error');
       return;
@@ -471,6 +523,10 @@ guardandoPromocion: boolean = false;
   }
 
   guardarProducto(): void {
+    if (!this.esSuperAdmin && !this.planVigente) {
+      this.mostrarAlerta('Operación restringida: La tienda no cuenta con una suscripción activa para crear o editar productos.', 'error');
+      return;
+    }
     // Validaciones previas
     if (!this.productoForm.nombre.trim()) {
       this.mostrarAlerta('El nombre de la prenda es obligatorio.', 'error');
@@ -880,6 +936,10 @@ guardandoPromocion: boolean = false;
 // ==============================================================================
 
 abrirModalPromocion(prod: Producto): void {
+  if (!this.esSuperAdmin && !this.planVigente) {
+    this.mostrarAlerta('Operación restringida: La tienda no cuenta con una suscripción activa para gestionar promociones.', 'error');
+    return;
+  }
   this.productoPromocionSeleccionado = prod;
   this.promocionSeleccionada = null;
   this.porcentajeDescuento = null;
@@ -1027,6 +1087,10 @@ eliminarPromocionProducto(promocion: PromocionProducto): void {
   // ==============================================================================
 
   alternarEstado(prod: Producto): void {
+    if (!this.esSuperAdmin && !this.planVigente) {
+      this.mostrarAlerta('Operación restringida: La tienda no cuenta con una suscripción activa para cambiar el estado de productos.', 'error');
+      return;
+    }
     const nuevoEstado = !prod.activo;
     this.productosService.cambiarEstado(prod.id_producto!, nuevoEstado).subscribe({
       next: () => {
@@ -1040,6 +1104,10 @@ eliminarPromocionProducto(promocion: PromocionProducto): void {
   }
 
   confirmarEliminar(prod: Producto): void {
+    if (!this.esSuperAdmin && !this.planVigente) {
+      this.mostrarAlerta('Operación restringida: La tienda no cuenta con una suscripción activa para eliminar productos.', 'error');
+      return;
+    }
     this.productoAeliminar = prod;
     this.mostrarModalEliminar = true;
   }

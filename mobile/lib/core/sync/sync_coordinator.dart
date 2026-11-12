@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 import '../../services/api_client.dart';
+import '../../services/catalogo_service.dart';
 import '../../services/token_storage.dart';
 import '../database/database_helper.dart';
 
@@ -47,6 +48,43 @@ class SyncCoordinator extends ChangeNotifier {
     final pending = await _dbHelper.getPendingSyncOperations();
     _pendingCount = pending.length;
     notifyListeners();
+  }
+
+  /// Conecta con SQLite para auditar lo faltante en el dispositivo para un tenant
+  Future<Map<String, dynamic>> verificarEstadoCacheLocal(int idEmpresa) async {
+    final prodCount = await _dbHelper.countProducts(idEmpresa);
+    final sucCount = await _dbHelper.countSucursales(idEmpresa);
+    final filtros = await _dbHelper.getFiltros(idEmpresa);
+    final pending = await _dbHelper.getPendingSyncOperations(idEmpresa: idEmpresa);
+
+    final requiereDescarga = (prodCount == 0 || sucCount == 0 || filtros == null);
+
+    return {
+      'id_empresa': idEmpresa,
+      'productos_en_cache': prodCount,
+      'sucursales_en_cache': sucCount,
+      'filtros_disponibles': filtros != null,
+      'operaciones_pendientes': pending.length,
+      'requiere_descarga': requiereDescarga,
+    };
+  }
+
+  /// Verifica si SQLite carece de datos y los descarga preventivamente si hay conexión
+  Future<bool> verificarYPrecargarTenant(int idEmpresa, {bool forzar = false}) async {
+    try {
+      final estado = await verificarEstadoCacheLocal(idEmpresa);
+      if (forzar || (estado['requiere_descarga'] == true)) {
+        debugPrint('[SyncCoordinator] Datos faltantes en SQLite para tenant $idEmpresa. Precargando datos previos...');
+        final catalogo = CatalogoService();
+        await catalogo.precargarDatosCompletos(idEmpresa);
+        await actualizarContadorPendientes();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('[SyncCoordinator] Error en verificación/precarga de SQLite: $e');
+      return false;
+    }
   }
 
   /// Encola una operación offline con un UUID estable (idempotente)

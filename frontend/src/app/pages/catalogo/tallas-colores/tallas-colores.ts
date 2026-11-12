@@ -6,6 +6,7 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { AuthService } from '../../../services/auth';
 import { Talla, ColorPrenda, TallasColoresService } from '../../../services/tallas-colores';
 import { Empresa, EmpresaService } from '../../../services/empresa';
+import { SaasService } from '../../../services/saas';
 
 @Component({
   selector: 'app-tallas-colores',
@@ -17,11 +18,14 @@ export class TallasColoresComponent implements OnInit {
   private tallasColoresService = inject(TallasColoresService);
   private empresaService = inject(EmpresaService);
   public authService = inject(AuthService);
+  private saasService = inject(SaasService);
   private cdr = inject(ChangeDetectorRef);
   private ngZone = inject(NgZone);
   private destroyRef = inject(DestroyRef);
   private busquedaTallasSubject = new Subject<string>();
   private busquedaColoresSubject = new Subject<string>();
+
+  planVigente: boolean = true;
 
   // Tab activo: 'TALLAS' | 'COLORES'
   tabActivo: 'TALLAS' | 'COLORES' = 'TALLAS';
@@ -70,6 +74,33 @@ export class TallasColoresComponent implements OnInit {
   elementoAeliminar: { tipo: 'TALLA' | 'COLOR', id: number, nombre: string, variantes: number } | null = null;
 
   ngOnInit(): void {
+    this.saasService.planActual$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(plan => {
+        if (this.esSuperAdmin) {
+          this.planVigente = true;
+        } else if (plan) {
+          this.planVigente = plan.vigente === true;
+        }
+        this.cdr.detectChanges();
+      });
+
+    const empId = this.esSuperAdmin ? this.filtroEmpresaId : this.tenantActualId;
+    if (empId && !this.esSuperAdmin) {
+      this.saasService.consultarPlan(empId).subscribe({
+        next: (res) => {
+          if (res?.data) {
+            this.planVigente = res.data.vigente;
+            this.cdr.detectChanges();
+          }
+        },
+        error: () => {
+          this.planVigente = false;
+          this.cdr.detectChanges();
+        }
+      });
+    }
+
     this.busquedaTallasSubject
       .pipe(debounceTime(200), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.aplicarFiltrosTallas());
@@ -328,6 +359,10 @@ export class TallasColoresComponent implements OnInit {
 
   // --- ACCIONES TALLA ---
   abrirModalCrearTalla(): void {
+    if (!this.esSuperAdmin && !this.planVigente) {
+      this.mensajeError = 'Operación restringida: La tienda no cuenta con una suscripción activa para crear tallas.';
+      return;
+    }
     this.modoEdicionTalla = false;
     this.tallaForm = this.inicializarTalla();
     this.mensajeModalError = '';
@@ -336,6 +371,10 @@ export class TallasColoresComponent implements OnInit {
   }
 
   abrirModalEditarTalla(talla: Talla): void {
+    if (!this.esSuperAdmin && !this.planVigente) {
+      this.mensajeError = 'Operación restringida: La tienda no cuenta con una suscripción activa para editar tallas.';
+      return;
+    }
     this.modoEdicionTalla = true;
     this.tallaForm = { ...talla };
     this.mensajeModalError = '';
@@ -351,6 +390,10 @@ export class TallasColoresComponent implements OnInit {
   }
 
   guardarTalla(): void {
+    if (!this.esSuperAdmin && !this.planVigente) {
+      this.mensajeModalError = 'Operación restringida: Suscripción no vigente.';
+      return;
+    }
     if (!this.tallaForm.nombre || !this.tallaForm.nombre.trim()) {
       this.mensajeModalError = 'El nombre de la talla es obligatorio (ej. XS, M, 38).';
       return;
@@ -411,6 +454,10 @@ export class TallasColoresComponent implements OnInit {
 
   toggleEstadoTalla(talla: Talla, event: Event): void {
     event.stopPropagation();
+    if (!this.esSuperAdmin && !this.planVigente) {
+      this.mensajeError = 'Operación restringida: La tienda no cuenta con una suscripción activa para modificar tallas.';
+      return;
+    }
     const nuevoEstado = !talla.activo;
     this.tallasColoresService.cambiarEstadoTalla(talla.id_talla!, nuevoEstado)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -432,6 +479,10 @@ export class TallasColoresComponent implements OnInit {
 
   // --- ACCIONES COLOR ---
   abrirModalCrearColor(): void {
+    if (!this.esSuperAdmin && !this.planVigente) {
+      this.mensajeError = 'Operación restringida: La tienda no cuenta con una suscripción activa para crear colores.';
+      return;
+    }
     this.modoEdicionColor = false;
     this.colorForm = this.inicializarColor();
     this.mensajeModalError = '';
@@ -440,6 +491,10 @@ export class TallasColoresComponent implements OnInit {
   }
 
   abrirModalEditarColor(color: ColorPrenda): void {
+    if (!this.esSuperAdmin && !this.planVigente) {
+      this.mensajeError = 'Operación restringida: La tienda no cuenta con una suscripción activa para editar colores.';
+      return;
+    }
     this.modoEdicionColor = true;
     this.colorForm = { ...color };
     this.mensajeModalError = '';
@@ -455,6 +510,10 @@ export class TallasColoresComponent implements OnInit {
   }
 
   guardarColor(): void {
+    if (!this.esSuperAdmin && !this.planVigente) {
+      this.mensajeModalError = 'Operación restringida: Suscripción no vigente.';
+      return;
+    }
     if (!this.colorForm.nombre || !this.colorForm.nombre.trim()) {
       this.mensajeModalError = 'El nombre del color es obligatorio (ej. Rosa Empolvado).';
       return;
@@ -519,6 +578,10 @@ export class TallasColoresComponent implements OnInit {
 
   toggleEstadoColor(color: ColorPrenda, event: Event): void {
     event.stopPropagation();
+    if (!this.esSuperAdmin && !this.planVigente) {
+      this.mensajeError = 'Operación restringida: La tienda no cuenta con una suscripción activa para modificar colores.';
+      return;
+    }
     const nuevoEstado = !color.activo;
     this.tallasColoresService.cambiarEstadoColor(color.id_color!, nuevoEstado)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -540,6 +603,10 @@ export class TallasColoresComponent implements OnInit {
 
   // --- ELIMINACIÓN CON REGLA DE INTEGRIDAD ---
   confirmarEliminacion(tipo: 'TALLA' | 'COLOR', item: any): void {
+    if (!this.esSuperAdmin && !this.planVigente) {
+      this.mensajeError = 'Operación restringida: La tienda no cuenta con una suscripción activa para eliminar elementos.';
+      return;
+    }
     this.elementoAeliminar = {
       tipo,
       id: tipo === 'TALLA' ? item.id_talla : item.id_color,
@@ -557,6 +624,10 @@ export class TallasColoresComponent implements OnInit {
   }
 
   ejecutarEliminacion(): void {
+    if (!this.esSuperAdmin && !this.planVigente) {
+      this.mensajeError = 'Operación restringida: Suscripción no vigente.';
+      return;
+    }
     if (!this.elementoAeliminar) return;
 
     this.guardando = true;

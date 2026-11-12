@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
-import { Observable, shareReplay, catchError, tap } from 'rxjs';
+import { Observable, BehaviorSubject, shareReplay, catchError, tap } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { AuthService } from '../../auth/services/auth';
 import { ConfiguracionStorefront, SeccionStorefront } from '../../catalogo/services/catalogo-publico';
@@ -388,6 +388,9 @@ export class SaasService {
   private planCache = new Map<string, { obs$: Observable<{ success: boolean; data: PlanVigenciaData }>; timestamp: number }>();
   private readonly PLAN_CACHE_TTL = 20000; // 20s en memoria
 
+  private _planActualSubject = new BehaviorSubject<PlanVigenciaData | null>(null);
+  public planActual$ = this._planActualSubject.asObservable();
+
   /**
    * Consulta de plan actual, vigencia, capacidades y límites de sucursales activas (suscripciones.ver)
    */
@@ -409,6 +412,11 @@ export class SaasService {
       `${this.apiUrl}/api/mi-empresa/plan`,
       { headers: this.getHeaders(), params }
     ).pipe(
+      tap((res) => {
+        if (res && res.data) {
+          this._planActualSubject.next(res.data);
+        }
+      }),
       shareReplay({ bufferSize: 1, refCount: false }),
       catchError((err) => {
         this.planCache.delete(cacheKey);
@@ -418,6 +426,21 @@ export class SaasService {
 
     this.planCache.set(cacheKey, { obs$, timestamp: ahora });
     return obs$;
+  }
+
+  /**
+   * Indica si la empresa del contexto actual tiene suscripción activa/vigente
+   * para habilitar operaciones comerciales. Administradores globales siempre retornan true.
+   */
+  esPlanVigente(): boolean {
+    if (this.authService.getScopeLevel() === 'PLATAFORMA') return true;
+    const actual = this._planActualSubject.value;
+    if (!actual) return true;
+    return actual.vigente === true;
+  }
+
+  obtenerPlanActual(): PlanVigenciaData | null {
+    return this._planActualSubject.value;
   }
 
   invalidarCachePlan(idEmpresa?: number): void {

@@ -41,8 +41,21 @@ void main() async {
   final syncCoordinator = SyncCoordinator();
 
   await tenantManager.inicializar();
-  connectivity.inicializar();
-  syncCoordinator.inicializar();
+  connectivity.inicializar(onRegainedConnection: () async {
+    debugPrint('[Connectivity] Conexión recuperada. Sincronizando operaciones pendientes y conciliando SQLite...');
+    await syncCoordinator.sincronizarLote();
+    final activeEmpresa = tenantManager.idEmpresaActiva;
+    if (activeEmpresa != null) {
+      await syncCoordinator.verificarYPrecargarTenant(activeEmpresa);
+    }
+  });
+  await syncCoordinator.inicializar();
+
+  // Verificar estado local de SQLite y precargar datos faltantes si hay red
+  final activeEmpresa = tenantManager.idEmpresaActiva;
+  if (activeEmpresa != null) {
+    syncCoordinator.verificarYPrecargarTenant(activeEmpresa);
+  }
 
   runApp(AuroraStoreApp(
     authProvider: authProvider,

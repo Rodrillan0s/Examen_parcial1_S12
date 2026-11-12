@@ -411,10 +411,10 @@
               type="button"
               class="btn-cobrar-pos"
               (click)="abrirModalCobro()"
-              [disabled]="procesando || !cajaAbierta || prendasAceptadas.length === 0"
+              [disabled]="procesando || !cajaAbierta || prendasAceptadas.length === 0 || (!authService.isGlobalAdmin() && !planVigente)"
             >
               <span class="btn-icon">💰</span>
-              <span>Cobrar en Mostrador (Bs. {{ totalCobrar | number:'1.2-2' }})</span>
+              <span>{{ (!authService.isGlobalAdmin() && !planVigente) ? 'Cobro Restringido (Suscripción Inactiva)' : ('Cobrar en Mostrador (Bs. ' + (totalCobrar | number:'1.2-2') + ')') }}</span>
             </button>
 
             <!-- Opción si cliente devolvió todo -->

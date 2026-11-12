@@ -6,6 +6,7 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth';
 import { AtenderReservaService, ReservaItem, PrendaReserva, CobroReservaPayload } from '../../services/atender-reserva';
 import { CajaService } from '../../services/caja';
+import { SaasService } from '../../services/saas';
 
 @Component({
   selector: 'app-atender-reserva',
@@ -19,10 +20,13 @@ import { CajaService } from '../../services/caja';
 })
 export class AtenderReservaComponent implements OnInit {
 
-  private authService = inject(AuthService);
+  public authService = inject(AuthService);
   private atenderReservaService = inject(AtenderReservaService);
   private cajaService = inject(CajaService);
+  private saasService = inject(SaasService);
   private router = inject(Router);
+
+  planVigente: boolean = true;
 
   // --- Estado general ---
   reservas: ReservaItem[] = [];
@@ -68,6 +72,28 @@ export class AtenderReservaComponent implements OnInit {
   resultadoExito: any = null;
 
   ngOnInit(): void {
+    this.saasService.planActual$.subscribe(plan => {
+      if (this.authService.isGlobalAdmin()) {
+        this.planVigente = true;
+      } else if (plan) {
+        this.planVigente = plan.vigente === true;
+      }
+    });
+
+    const empId = this.authService.getEffectiveCompanyId();
+    if (empId && !this.authService.isGlobalAdmin()) {
+      this.saasService.consultarPlan(empId).subscribe({
+        next: (res) => {
+          if (res?.data) {
+            this.planVigente = res.data.vigente;
+          }
+        },
+        error: () => {
+          this.planVigente = false;
+        }
+      });
+    }
+
     this.sucursalActiva = this.authService.activeBranch();
     this.empresaActiva = this.authService.selectedCompany();
 
@@ -243,6 +269,11 @@ export class AtenderReservaComponent implements OnInit {
   abrirModalCobro(): void {
     if (!this.reservaSeleccionada) return;
 
+    if (!this.authService.isGlobalAdmin() && !this.planVigente) {
+      this.error = 'Operación restringida: La tienda no cuenta con una suscripción activa para cobrar reservas en caja.';
+      return;
+    }
+
     if (!this.cajaAbierta) {
       this.error = 'Debe abrir una sesión de caja antes de realizar cobros en mostrador.';
       return;
@@ -300,6 +331,11 @@ export class AtenderReservaComponent implements OnInit {
   // --- Confirmar Venta POS y Entrega ---
   confirmarCobroPos(): void {
     if (!this.reservaSeleccionada || !this.sucursalActiva?.id) return;
+
+    if (!this.authService.isGlobalAdmin() && !this.planVigente) {
+      this.error = 'Operación restringida: La tienda no cuenta con una suscripción activa para cobrar reservas en caja.';
+      return;
+    }
 
     if (this.metodoPagoSeleccionado === 3 && (this.montoRecibido < this.totalCobrar)) {
       this.error = `Efectivo insuficiente. El cliente debe abonar al menos Bs. ${this.totalCobrar.toFixed(2)}.`;

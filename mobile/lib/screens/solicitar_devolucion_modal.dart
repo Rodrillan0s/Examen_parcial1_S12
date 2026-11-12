@@ -163,6 +163,7 @@ class _SolicitarDevolucionModalState extends State<SolicitarDevolucionModal> {
 
   void _mostrarExitoDialog(SolicitudDevolucionModel sol) {
     final esCambio = sol.tipoResolucion == 'CAMBIO_PRENDA';
+    final esOffline = sol.estado == 'PENDIENTE_SYNC';
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -170,14 +171,20 @@ class _SolicitarDevolucionModalState extends State<SolicitarDevolucionModal> {
         title: Row(
           children: [
             Icon(
-              esCambio ? Icons.swap_horiz : Icons.assignment_turned_in,
-              color: esCambio ? Colors.cyan.shade700 : AppTheme.primaryGold,
+              esOffline
+                  ? Icons.cloud_off
+                  : (esCambio ? Icons.swap_horiz : Icons.assignment_turned_in),
+              color: esOffline
+                  ? Colors.amber.shade700
+                  : (esCambio ? Colors.cyan.shade700 : AppTheme.primaryGold),
               size: 26,
             ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                esCambio ? 'Solicitud de Cambio Registrada' : 'Solicitud Registrada',
+                esOffline
+                    ? 'Solicitud Guardada Sin Conexión'
+                    : (esCambio ? 'Solicitud de Cambio Registrada' : 'Solicitud Registrada'),
                 style: GoogleFonts.playfairDisplay(fontSize: 18, fontWeight: FontWeight.w700),
               ),
             ),
@@ -188,9 +195,11 @@ class _SolicitarDevolucionModalState extends State<SolicitarDevolucionModal> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              esCambio
-                  ? 'Hemos recibido tu solicitud de cambio de talla correctamente:'
-                  : 'Hemos recibido tu solicitud de devolución correctamente:',
+              esOffline
+                  ? 'Tu solicitud se guardó localmente en SQLite y se enviará a la tienda automáticamente al reconectar:'
+                  : (esCambio
+                      ? 'Hemos recibido tu solicitud de cambio de talla correctamente:'
+                      : 'Hemos recibido tu solicitud de devolución correctamente:'),
               style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textSecondary),
             ),
             const SizedBox(height: 8),

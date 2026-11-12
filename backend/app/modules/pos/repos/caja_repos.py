@@ -93,11 +93,34 @@ def obtener_sesion_activa_usuario(id_usuario: int, id_sucursal: Optional[int] = 
             "codigo_caja": row[9],
             "nombre_caja": row[10],
             "nombre_sucursal": row[11],
+            "sucursal_nombre": row[11],
             "nombre_empresa": row[12] or "Aurora Store",
-            "cajero_nombre_completo": f"{row[13]} {row[14]}".strip()
+            "cajero_nombre_completo": f"{row[13]} {row[14]}".strip(),
+            "cajero_nombre": f"{row[13]} {row[14]}".strip()
         }
     finally:
         db.close_connection()
+
+def _resolver_id_denominacion(id_denom: Any, valor: Any, denominaciones: Dict[int, Dict[str, Any]]) -> Optional[int]:
+    """
+    Resuelve la denominación enviada por el cliente contra las activas del servidor.
+    Acepta el id directo; si no coincide (p. ej. catálogo offline con otros ids),
+    intenta por valor nominal. El monto siempre se recalcula con el valor del servidor.
+    """
+    try:
+        if id_denom is not None and int(id_denom) in denominaciones:
+            return int(id_denom)
+    except (TypeError, ValueError):
+        pass
+    if valor is not None:
+        try:
+            v = round(float(valor), 2)
+        except (TypeError, ValueError):
+            return None
+        for did, d in denominaciones.items():
+            if round(float(d["valor"]), 2) == v:
+                return did
+    return None
 
 def obtener_sesion_caja_por_id(id_sesion_caja: int) -> Optional[Dict[str, Any]]:
     """
@@ -150,17 +173,24 @@ def obtener_sesion_caja_por_id(id_sesion_caja: int) -> Optional[Dict[str, Any]]:
 
 def obtener_caja_disponible_sucursal(id_sucursal: int, id_empresa: int) -> Dict[str, Any]:
     """
-    Retorna la caja principal de la sucursal o crea una si no existe.
+    Retorna una caja ACTIVA de la sucursal que no tenga un turno ABIERTO.
+    Si todas las cajas activas están ocupadas por otros turnos (o no existe ninguna),
+    crea la siguiente caja física de la sucursal para que el cajero pueda aperturar.
     """
     db = PostgreSQL()
     db.create_connection()
     try:
         schema = _get_schema()
         q = f"""
-            SELECT id_caja, codigo_caja, nombre, estado
-            FROM {schema}.t_caja
-            WHERE id_sucursal = %s AND estado = 'ACTIVA'
-            ORDER BY id_caja ASC
+            SELECT c.id_caja, c.codigo_caja, c.nombre, c.estado, suc.nombre
+            FROM {schema}.t_caja c
+            LEFT JOIN {schema}.t_sucursal suc ON suc.id_sucursal = c.id_sucursal
+            WHERE c.id_sucursal = %s AND c.estado = 'ACTIVA'
+              AND NOT EXISTS (
+                  SELECT 1 FROM {schema}.t_caja_sesion cs
+                  WHERE cs.id_caja = c.id_caja AND cs.estado = 'ABIERTA'
+              )
+            ORDER BY c.id_caja ASC
             LIMIT 1;
         """
         row = db.execute_query(q, (id_sucursal,), fetchone=True)
@@ -169,28 +199,63 @@ def obtener_caja_disponible_sucursal(id_sucursal: int, id_empresa: int) -> Dict[
                 "id_caja": row[0],
                 "codigo_caja": row[1],
                 "nombre": row[2],
-                "estado": row[3]
+                "estado": row[3],
+                "sucursal_nombre": row[4],
+                "id_sucursal": id_sucursal,
+                "id_empresa": id_empresa
             }
 
-        # Si no existe, crear Caja 01
+        # No hay caja libre: crear la siguiente caja física de la sucursal
         q_suc = f"SELECT nombre FROM {schema}.t_sucursal WHERE id_sucursal = %s;"
         nom_suc_row = db.execute_query(q_suc, (id_sucursal,), fetchone=True)
         nombre_suc = nom_suc_row[0] if nom_suc_row else f"Sucursal {id_sucursal}"
+
+        q_count = f"SELECT COUNT(*) FROM {schema}.t_caja WHERE id_sucursal = %s;"
+        total_row = db.execute_query(q_count, (id_sucursal,), fetchone=True)
+        siguiente = int(total_row[0] if total_row else 0) + 1
+
+        # Evitar colisiones de código si existen cajas inactivas/eliminadas
+        while db.execute_query(
+            f"SELECT 1 FROM {schema}.t_caja WHERE codigo_caja = %s;",
+            (f"CAJA-SUC-{id_sucursal}-{siguiente:02d}",),
+            fetchone=True
+        ):
+            siguiente += 1
 
         q_insert = f"""
             INSERT INTO {schema}.t_caja (id_sucursal, id_empresa, codigo_caja, nombre, estado)
             VALUES (%s, %s, %s, %s, 'ACTIVA')
             RETURNING id_caja, codigo_caja, nombre, estado;
         """
-        cod = f"CAJA-SUC-{id_sucursal}-01"
-        nom = f"Caja 01 - {nombre_suc}"
+        cod = f"CAJA-SUC-{id_sucursal}-{siguiente:02d}"
+        nom = f"Caja {siguiente:02d} - {nombre_suc}"
         new_row = db.execute_query(q_insert, (id_sucursal, id_empresa, cod, nom), fetchone=True, commit=True)
         return {
             "id_caja": new_row[0],
             "codigo_caja": new_row[1],
             "nombre": new_row[2],
-            "estado": new_row[3]
+            "estado": new_row[3],
+            "sucursal_nombre": nombre_suc,
+            "id_sucursal": id_sucursal,
+            "id_empresa": id_empresa
         }
+    finally:
+        db.close_connection()
+
+def obtener_caja_por_id(id_caja: int) -> Optional[Dict[str, Any]]:
+    """Retorna los datos base de una caja física (sucursal/empresa/estado)."""
+    db = PostgreSQL()
+    db.create_connection()
+    try:
+        schema = _get_schema()
+        row = db.execute_query(
+            f"SELECT id_caja, id_sucursal, id_empresa, estado FROM {schema}.t_caja WHERE id_caja = %s;",
+            (id_caja,),
+            fetchone=True
+        )
+        if not row:
+            return None
+        return {"id_caja": row[0], "id_sucursal": row[1], "id_empresa": row[2], "estado": row[3]}
     finally:
         db.close_connection()
 
@@ -239,14 +304,18 @@ def abrir_caja_sesion(
         if cant is None or cant < 0:
             raise ValueError("Las cantidades de denominaciones no pueden ser negativas.")
 
-        if id_denom not in denominaciones:
-            raise ValueError(f"Denominación con ID {id_denom} no es válida o se encuentra inactiva.")
+        # Filas con cantidad 0 no aportan al fondo: no se validan ni se registran.
+        if not cant:
+            continue
 
-        if cant > 0:
-            val = denominaciones[id_denom]["valor"]
-            subtot = round(val * cant, 2)
-            total_recalculado += subtot
-            detalles_para_insertar.append((id_denom, val, cant, subtot))
+        id_denom = _resolver_id_denominacion(id_denom, item.get("valor"), denominaciones)
+        if id_denom is None:
+            raise ValueError(f"Denominación con ID {item.get('id_denominacion')} no es válida o se encuentra inactiva.")
+
+        val = denominaciones[id_denom]["valor"]
+        subtot = round(val * cant, 2)
+        total_recalculado += subtot
+        detalles_para_insertar.append((id_denom, val, cant, subtot))
 
     total_recalculado = round(total_recalculado, 2)
 
@@ -576,14 +645,17 @@ def cerrar_caja_sesion(
         if cant is None or cant < 0:
             raise ValueError("Las cantidades de denominaciones no pueden ser negativas.")
 
-        if id_denom not in denominaciones:
-            raise ValueError(f"Denominación con ID {id_denom} no es válida.")
+        if not cant:
+            continue
 
-        if cant > 0:
-            val = denominaciones[id_denom]["valor"]
-            subtot = round(val * cant, 2)
-            efectivo_contado += subtot
-            detalles_para_insertar.append((id_denom, val, cant, subtot))
+        id_denom = _resolver_id_denominacion(id_denom, item.get("valor"), denominaciones)
+        if id_denom is None:
+            raise ValueError(f"Denominación con ID {item.get('id_denominacion')} no es válida.")
+
+        val = denominaciones[id_denom]["valor"]
+        subtot = round(val * cant, 2)
+        efectivo_contado += subtot
+        detalles_para_insertar.append((id_denom, val, cant, subtot))
 
     efectivo_contado = round(efectivo_contado, 2)
 
@@ -640,15 +712,17 @@ def cerrar_caja_sesion(
             """
             db.execute_query(q_conteo, (id_sesion_caja, id_denom, val, cant, subtot))
 
+        # Confirmar primero el cierre: un fallo posterior en contingencia no debe revertirlo.
+        db.conn.commit()
+
         # Liberar cuotas de contingencia no consumidas de regreso al inventario vendible
+        # (en conexión/transacción propia; no bloqueante).
         cuotas_liberadas = 0
         try:
             from app.modules.pos.repos import contingencia_repos
-            cuotas_liberadas = contingencia_repos.liberar_cuotas_sesion_caja(id_sesion_caja, db=db)
+            cuotas_liberadas = contingencia_repos.liberar_cuotas_sesion_caja(id_sesion_caja)
         except Exception as e_lib:
             logger.warning(f"Aviso no bloqueante: no se pudieron liberar cuotas de contingencia al cerrar caja: {e_lib}")
-
-        db.conn.commit()
 
         return {
             "id_sesion_caja": id_sesion_caja,

@@ -1,6 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'api_client.dart';
+import 'token_storage.dart';
+import '../core/sync/sync_coordinator.dart';
 
 class ItemResumenPagoModel {
   final int idVariante;
@@ -227,19 +229,19 @@ class PagoService extends ChangeNotifier {
     _error = null;
     notifyListeners();
 
-    try {
-      final payload = <String, dynamic>{
-        'id_pedido': idPedido,
-        'titular': titular.trim(),
-        'numero_tarjeta': numeroTarjeta.replaceAll(' ', ''),
-        'mes_exp': mesExp.trim(),
-        'anio_exp': anioExp.trim(),
-        'cvv': cvv.trim(),
-        if (nitCi != null && nitCi.trim().isNotEmpty) 'nit_ci': nitCi.trim(),
-        if (razonSocial != null && razonSocial.trim().isNotEmpty) 'razon_social': razonSocial.trim(),
-        if (idEmpresa != null) 'id_empresa': idEmpresa,
-      };
+    final payload = <String, dynamic>{
+      'id_pedido': idPedido,
+      'titular': titular.trim(),
+      'numero_tarjeta': numeroTarjeta.replaceAll(' ', ''),
+      'mes_exp': mesExp.trim(),
+      'anio_exp': anioExp.trim(),
+      'cvv': cvv.trim(),
+      if (nitCi != null && nitCi.trim().isNotEmpty) 'nit_ci': nitCi.trim(),
+      if (razonSocial != null && razonSocial.trim().isNotEmpty) 'razon_social': razonSocial.trim(),
+      if (idEmpresa != null) 'id_empresa': idEmpresa,
+    };
 
+    try {
       final res = await _dio.post('/api/pagos/tarjeta/procesar', data: payload);
       if (res.data['success'] == true && res.data['data'] != null) {
         _resultado = ResultadoPagoModel.fromJson(res.data['data']);
@@ -251,10 +253,33 @@ class PagoService extends ChangeNotifier {
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) {
         _error = 'Tu sesión ha expirado. Por favor inicia sesión nuevamente.';
+        return null;
+      } else if (e.type == DioExceptionType.connectionError ||
+                 e.type == DioExceptionType.connectionTimeout) {
+        // Encolar pago con tarjeta para sincronización diferida cuando vuelva la conexión
+        final activeEmp = (idEmpresa != null && idEmpresa > 0)
+            ? idEmpresa
+            : (await TokenStorage.getEmpresaId()) ?? 1;
+        await SyncCoordinator().enqueueOperation(
+          kind: 'PAYMENT_TARJETA',
+          tenantId: activeEmp,
+          payload: payload,
+        );
+        _resultado = ResultadoPagoModel(
+          idPedido: idPedido,
+          codigoPedido: 'PED-OFFLINE',
+          idVenta: 0,
+          numeroVenta: 'VTA-OFFLINE-PENDIENTE',
+          tipoDocumento: 'RECIBO_OFFLINE',
+          total: 0.0,
+          metodoPago: 'TARJETA',
+          codigoTransaccion: 'TX-OFFLINE-${DateTime.now().millisecondsSinceEpoch}',
+        );
+        return _resultado;
       } else {
         _error = e.response?.data?['detail'] ?? 'Error al procesar el pago con tarjeta.';
+        return null;
       }
-      return null;
     } catch (e) {
       _error = 'Error inesperado al conectar con la pasarela bancaria.';
       return null;

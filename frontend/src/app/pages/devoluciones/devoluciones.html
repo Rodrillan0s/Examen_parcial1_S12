@@ -38,7 +38,7 @@
         </button>
 
         <!-- Registro Presencial para Cajeros / Encargados -->
-        <button *ngIf="authService.hasPermission('devoluciones.crear_presencial')"
+        <button *ngIf="authService.hasPermission('devoluciones.crear_presencial') && (authService.isGlobalAdmin() || planVigente)"
                 (click)="abrirModalPresencial()"
                 class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs uppercase tracking-wider transition-all shadow-md shadow-amber-500/20 flex items-center space-x-2 cursor-pointer">
           <span>🏪</span>
@@ -156,7 +156,7 @@
 
     <!-- Tabla de Devoluciones -->
     <div *ngIf="!cargando && devoluciones.length > 0" class="overflow-x-auto">
-      <table class="w-full text-left border-collapse text-xs">
+      <table class="w-full text-left border-collapse text-xs min-w-[780px]">
         <thead>
           <tr class="border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 font-mono text-[10px] uppercase">
             <th class="py-3 px-3">Código / Tipo</th>

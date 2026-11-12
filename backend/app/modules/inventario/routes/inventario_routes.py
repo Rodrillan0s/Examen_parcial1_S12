@@ -165,6 +165,15 @@ def registrar_movimiento(
 
     resolver_sucursal_autorizada(payload, int(id_sucursal))
 
+    if not id_empresa:
+        from app.modules.inventario.repos import sucursales_repos
+        suc_item = sucursales_repos.obtener_sucursal_por_id(int(id_sucursal))
+        if suc_item:
+            id_empresa = suc_item.get("id_empresa")
+
+    from app.core.tenant_guard import exigir_suscripcion_activa
+    exigir_suscripcion_activa(id_empresa, payload)
+
     # 3. Invocar registro atómico
     resultado = inventario_repos.registrar_movimiento_inventario(
         id_sucursal=int(id_sucursal),

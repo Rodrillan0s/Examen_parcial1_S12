@@ -4,7 +4,7 @@ Lógica de negocio, orquestación de permisos, auditoría en t_bitacora y multit
 """
 from typing import Optional, Dict, Any, List
 from fastapi import HTTPException, status
-from app.core.tenant_guard import resolver_tenant_operacion, obtener_sucursales_autorizadas, obtener_alcance_usuario, es_administrador_global
+from app.core.tenant_guard import resolver_tenant_operacion, obtener_sucursales_autorizadas, obtener_alcance_usuario, es_administrador_global, exigir_suscripcion_activa
 from app.core.security import tiene_permiso
 from app.modules.admin.repos.bitacora_repos import registrar_evento_db
 from app.modules.pedidos.repos import devoluciones_repos
@@ -32,6 +32,7 @@ def _authorize_return(id_devolucion, datos, token_data, permission):
     branches = obtener_sucursales_autorizadas(token_data)
     if branches is not None and (branch not in branches or sale_branch not in branches):
         raise HTTPException(403, 'Devolución fuera de las sucursales autorizadas.')
+    exigir_suscripcion_activa(tenant, token_data)
     return tenant
 
 
@@ -167,6 +168,7 @@ def registrar_devolucion_presencial_mostrador(
     _require_permission(token_data,'devoluciones.crear_presencial')
     id_usuario = token_data.get('nro_usuario') or token_data.get('id_usuario')
     id_empresa = resolver_tenant_operacion(token_data, datos.get("id_empresa"))
+    exigir_suscripcion_activa(id_empresa, token_data)
     sucursales_aut = obtener_sucursales_autorizadas(token_data)
 
     id_sucursal = datos.get("id_sucursal")
@@ -506,6 +508,7 @@ def actualizar_politicas_tienda(datos: dict, token_data: dict) -> Dict[str, Any]
     """
     _require_permission(token_data, "devoluciones.politicas")
     id_empresa = resolver_tenant_operacion(token_data, datos.get("id_empresa"))
+    exigir_suscripcion_activa(id_empresa, token_data)
     id_usuario = token_data.get('nro_usuario') or token_data.get('id_usuario')
 
     politica_actualizada = devoluciones_repos.guardar_politica_devolucion(id_empresa, datos.get("politica", {}))

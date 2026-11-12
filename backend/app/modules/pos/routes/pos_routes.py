@@ -197,8 +197,8 @@ def registrar_venta_presencial(
         id_usuario = token_data.get("nro_usuario") or token_data.get("id_usuario")
         id_emp = _obtener_empresa_contexto(token_data, body.id_empresa)
         id_suc = _obtener_sucursal_contexto(token_data, body.id_sucursal, id_emp)
-        from app.modules.saas.services.saas_services import exigir_vigencia
-        exigir_vigencia(id_emp)
+        from app.core.tenant_guard import exigir_suscripcion_activa
+        exigir_suscripcion_activa(id_emp, token_data)
 
         # 1. Validar que el cajero tenga una caja ABIERTA en esta sucursal (Regla RB03 y RB12)
         sesion_activa = caja_repos.obtener_sesion_activa_usuario(id_usuario, id_suc)
@@ -394,8 +394,9 @@ def actualizar_politica_contingencia_route(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Permiso 'pos.contingencia' requerido.")
 
     try:
-        from app.core.tenant_guard import resolver_tenant_operacion
+        from app.core.tenant_guard import resolver_tenant_operacion, exigir_suscripcion_activa
         id_empresa = resolver_tenant_operacion(token_data)
+        exigir_suscripcion_activa(id_empresa, token_data)
         nueva = contingencia_repos.actualizar_politica_contingencia(id_empresa, dto.dict())
         return {"success": True, "politica": nueva}
     except HTTPException:

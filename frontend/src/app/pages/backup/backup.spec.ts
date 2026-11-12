@@ -161,4 +161,34 @@ describe('BackupComponent - Oracle Cloud Gestor & Time Lapse Tests', () => {
     component.cancelarRestauracion();
     expect(component.restaurando).toBe(false);
   });
+
+  it('6. Time Lapse Manual: transiciona a respaldoGeneradoListo y habilita descarga diferida', () => {
+    component.ngOnInit();
+    component.idEmpresaManual = 1;
+    component.iniciarGeneracionManualTimelapse();
+
+    expect(mockBackupService.generarBackupManual).toHaveBeenCalledWith(1, 'SHOPPING BOLIVIA');
+    expect(component.respaldoGeneradoBlob).toBeDefined();
+
+    // Completar el timelapse
+    component.completarGeneracionManual();
+
+    expect(component.generandoManualTimelapse).toBe(false);
+    expect(component.respaldoGeneradoListo).toBe(true);
+    expect(component.respaldoGeneradoFileName).toContain('.dump');
+    expect(component.respaldoGeneradoChecksum.length).toBe(64);
+
+    // Cancelar o reiniciar limpia el estado
+    component.reiniciarGeneradorManual();
+    expect(component.respaldoGeneradoListo).toBe(false);
+  });
+
+  it('7. Cancelación de Time Lapse Manual: aborta temporizadores y limpia estado', () => {
+    component.iniciarGeneracionManualTimelapse();
+    expect(component.generandoManualTimelapse).toBe(true);
+
+    component.cancelarGeneracionManual();
+    expect(component.generandoManualTimelapse).toBe(false);
+    expect(component.cargandoManual).toBe(false);
+  });
 });
